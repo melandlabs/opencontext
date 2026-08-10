@@ -6,7 +6,7 @@
 
 一个时序上下文图谱、一套内存 API、检索原语,
 和一个多平台集成网格，设计上可被嵌入到任何宿主进程。
-已在 [opencontext](https://github.com/melandlabs/opencontext) 中经过实战检验。
+已在 [openloomi](https://github.com/melandlabs/openloomi) 中经过实战检验。
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -210,9 +210,9 @@ OpenContext 既不是内存库,也不是向量数据库。它是一个运行时�
 
 ```
                        ┌────────────────────────────┐
-                       │     宿主应用                  │   ← 你的 UI、CLI 或 daemon
-                       │   (opencontext、一个例子、        │
-                       │    或你自己的 embedder)        │
+                       │     宿主应用                │   ← 你的 UI、CLI 或 daemon
+                       │   (openloomi               │
+                       │    或你自己的 embedder)      │
                        └─────────────┬──────────────┘
                                      │
             ┌────────────────────────┴────────────────────────┐

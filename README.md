@@ -6,7 +6,7 @@
 
 A temporal context graph, a memory API, retrieval primitives,
 and a multiple-platform integration mesh — designed to be embedded into any
-host process. Battle-tested inside [opencontext](https://github.com/melandlabs/opencontext).
+host process. Battle-tested inside [openloomi](https://github.com/melandlabs/openloomi).
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -237,7 +237,7 @@ from the boundary layer.
 ```
                        ┌────────────────────────────┐
                        │     Host application       │   ← your UI, CLI, or daemon
-                       │   (opencontext, an example,  │
+                       │   (openloomi, an example,  │
                        │    or your own embedder)   │
                        └─────────────┬──────────────┘
                                      │
