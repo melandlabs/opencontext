@@ -278,8 +278,8 @@ in [`docs/architecture.md`](./docs/architecture.md).
 
 ## Documentation
 
-- [`docs/architecture.md`](./docs/architecture.md) — data model, lifecycle, transport surfaces
-- [`docs/philosophy.md`](./docs/philosophy.md) — why this shape, why this split
+- [`docs/architecture.md`](./docs/architecture.md) — data model, lifecycle, data plane and control plane
+- [`docs/philosophy.md`](./docs/philosophy.md) — why this shape
 - Each package's `README.md` — API surface, examples, migration notes
 
 ## Contributing

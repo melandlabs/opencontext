@@ -259,8 +259,8 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 
 ## 文档
 
-- [`docs/architecture.md`](./docs/architecture.md) — 数据模型、生命周期、传输面
-- [`docs/philosophy.md`](./docs/philosophy.md) — 为什么是这种形态,为什么这样拆分
+- [`docs/architecture.md`](./docs/architecture.md) — 数据模型、生命周期、数据面和控制面
+- [`docs/philosophy.md`](./docs/philosophy.md) — 为什么是这种形态
 - 每个包的 `README.md` — API 面、示例、迁移说明
 
 ## 贡献

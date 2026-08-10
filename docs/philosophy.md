@@ -74,7 +74,7 @@ The graph is implemented as a directed acyclic graph on top of the raw
 message store. It is not a separate database; it is a way of looking at
 the same data.
 
-## Why a 27-platform integration mesh
+## Why a multiple-platform integration mesh
 
 The first version of opencontext had three integrations: Gmail, Slack,
 and Google Calendar. Within a year, the user-facing product needed
@@ -95,80 +95,6 @@ returns a uniform `IntegrationRecord` shape on the read side and accepts
 a uniform `IntegrationAction` shape on the write side. The cost is N
 packages; the benefit is that each one is small enough to read in one
 sitting, and the cost of adding a 28th platform is bounded.
-
-## Why split from opencontext
-
-opencontext — the desktop companion that consumes opencontext — is a
-Next.js + Tauri application. It owns:
-
-- A user interface (chat surface, settings, integrations list, etc.)
-- A Tauri runtime that wraps the web UI for desktop distribution
-- A configuration UI for OAuth flows
-- An integration with native OS surfaces (notifications, file system)
-
-These are UI concerns. They evolve on a different cadence than the
-runtime. They depend on different toolchains. They attract different
-contributors.
-
-The runtime (memory, RAG, agent, integrations, scheduling) is what
-_other_ projects want to embed. It has nothing to do with the UI.
-Keeping them in the same monorepo meant:
-
-- Every UI change touched the runtime's release process.
-- Every runtime change risked breaking a UI build.
-- Contributors who wanted to use opencontext in their own UI had to
-  depend on the entire opencontext monorepo.
-
-The split solves all three. After the split:
-
-- Runtime releases follow changesets and publish to npm under
-  `@melandlabs/*`. UI releases stay private to the opencontext
-  monorepo.
-- A UI change cannot accidentally trigger a runtime version bump.
-- An open-source embedder can `pnpm add @melandlabs/opencontext`
-  without pulling in any UI code.
-
-## Why a monorepo, not a polyrepo
-
-We considered publishing each of the 49 packages to its own git repo.
-We decided against it because:
-
-- **Atomic refactors** — most refactors touch more than one package at
-  once. A monorepo lets us change `@melandlabs/opencontext` and
-  `@melandlabs/opencontext` in a single PR.
-- **Shared infrastructure** — biome, tsconfig, the tsup preset, and the
-  CI matrix are all defined once and inherited. In a polyrepo they
-  drift.
-- **Discoverability** — a contributor who clones the monorepo can read
-  every package in their editor at once. Polyrepos force a "clone 49
-  repos to understand one feature" workflow.
-
-The cost is a longer initial clone and a more complex CI matrix. Both
-are bounded.
-
-## Why pnpm
-
-pnpm's content-addressable store means the 49 packages share
-`node_modules` only where they need to, and never accidentally
-cross-pollute transitive dependencies. Its workspace protocol
-(`"workspace:*"`) is the cleanest way to declare that one package
-depends on another package in the same repo.
-
-## Why changesets, not semantic-release
-
-Semantic-release would infer version bumps from commit messages. That
-makes version numbers contingent on PR titles, which are written by
-humans under time pressure. Changesets make the version bump an
-explicit, reviewable decision at PR time. They also let us batch
-releases — useful when several PRs land on the same day and we want
-one published version instead of five.
-
-## Why biome, not eslint + prettier
-
-Biome is a single Rust binary that does formatting, linting, and import
-sorting. It runs in under a second on the full monorepo. The
-eslint + prettier combo was a 30-second affair that occasionally
-disagreed with itself on import order. Biome is the modern choice.
 
 ## What we did not do
 
