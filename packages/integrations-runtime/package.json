@@ -1,0 +1,48 @@
+{
+  "name": "@openloomi/integrations-runtime",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./authorization-errors": "./dist/authorization-errors.js",
+    "./platform-visuals": "./dist/platform-visuals.js",
+    "./platform-connectability": "./dist/platform-connectability.js",
+    "./task-integration-inference": "./dist/task-integration-inference.js",
+    "./oauth-callback-script": "./dist/oauth-callback-script.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/integrations-runtime"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations-runtime",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi · integrations runtime glue",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@openloomi/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

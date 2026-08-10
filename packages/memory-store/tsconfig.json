@@ -1,0 +1,22 @@
+{
+  "extends": "../config/src/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "incremental": false,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "noEmit": false,
+    "paths": {
+      "@openloomi/indexeddb": ["../../packages/indexeddb/src/index.ts"],
+      "@openloomi/indexeddb/*": ["../../packages/indexeddb/src/*"],
+      "@openloomi/sqlite": ["../../packages/sqlite/src/index.ts"],
+      "@openloomi/sqlite/*": ["../../packages/sqlite/src/*"],
+      "@openloomi/ai": ["../../packages/ai/src/index.ts"],
+      "@openloomi/ai/*": ["../../packages/ai/src/*"],
+      "@openloomi/rag": ["../../packages/ai/rag/src/index.ts"],
+      "@openloomi/rag/*": ["../../packages/ai/rag/src/*"],
+      "@openloomi/shared": ["../../packages/shared/src/index.ts"],
+      "@openloomi/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src"]
+}

@@ -1,0 +1,18 @@
+# `@openloomi/db`
+
+Building blocks shared between OpenLoomi runtime and UI sub-projects.
+
+Phase 4 of the [runtime/UI split plan](../../docs/split-runtime-ui.md) — currently
+ships only the dependency-free helpers extracted from `apps/web/lib/db`:
+
+| Subpath                                | Source                              | Notes                                                      |
+| -------------------------------------- | ----------------------------------- | ---------------------------------------------------------- |
+| `@openloomi/db`                        | barrel                              | Re-exports the subpaths below                              |
+| `@openloomi/db/batch`                  | `apps/web/lib/db/batch.ts`          | `batchInsert`, `DB_INSERT_CHUNK_SIZE`                      |
+| `@openloomi/db/utils`                  | `apps/web/lib/db/utils.ts`          | `generateHashedPassword`, `generateDummyPassword`          |
+| `@openloomi/db/agent-goal-runtime-schema-types` | `apps/web/lib/db/agent-goal-runtime-schema-types.ts` | Type aliases re-exporting `@openloomi/ai/agent/runtime-instructions` shapes |
+
+The bigger pieces (`schema.ts`, `schema.pg.ts`, `schema-sqlite.ts`, `queries.ts`,
+`adapters/*`) stay inside `apps/web/lib/db/` until a later phase — they pull in
+`@/lib/env`, `drizzle-orm` table definitions, and the giant Postgres+SQLite
+schema files, and we want to keep the first extraction small and low-risk.

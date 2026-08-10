@@ -1,0 +1,47 @@
+{
+  "name": "@openloomi/integrations-imessage",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./adapter": "./dist/adapter.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/integrations/imessage"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/imessage",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi \u00b7 integrations/imessage module",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@openloomi/integrations": "workspace:*",
+    "@openloomi/integrations-channels": "workspace:*",
+    "@openloomi/shared": "workspace:*",
+    "@photon-ai/imessage-kit": "^2.1.2"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

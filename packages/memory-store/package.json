@@ -1,0 +1,70 @@
+{
+  "name": "@openloomi/memory-store",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "README.md", "LICENSE"],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./contracts": "./dist/contracts.js",
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp.d.ts",
+      "import": "./dist/mcp.js"
+    },
+    "./raw-message-store": "./dist/storage/raw-message-store.js",
+    "./sqlite-raw-message-store": "./dist/storage/sqlite-raw-message-store.js",
+    "./postgres-raw-message-factory": "./dist/storage/postgres-raw-message-factory.js",
+    "./sqlite-vector-index": "./dist/storage/sqlite-vector-index.js",
+    "./chroma-memory-index": "./dist/storage/chroma-memory-index.js",
+    "./unified-search": "./dist/search/unified-search.js",
+    "./memory-graph-write-policy": "./dist/policies/memory-graph-write-policy.js",
+    "./memory-graph-correction-policy": "./dist/policies/memory-graph-correction-policy.js"
+  },
+  "bin": {
+    "openloomi-memory-http": "./dist/server/cli-http.js",
+    "openloomi-memory-mcp": "./dist/server/cli-mcp.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/memory-store"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi memory storage + search SDK with HTTP and MCP server entry points.",
+  "keywords": ["openloomi", "memory", "storage", "search", "sdk", "mcp", "http"],
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "@openloomi/ai": "workspace:*",
+    "@openloomi/rag": "workspace:*",
+    "@openloomi/shared": "workspace:*",
+    "@openloomi/sqlite": "workspace:*",
+    "hono": "^4.6.14",
+    "zod": "^4.3.6"
+  },
+  "peerDependencies": {
+    "@openloomi/indexeddb": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@openloomi/indexeddb": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "@types/node": "^22.13.10",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

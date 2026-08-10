@@ -1,0 +1,45 @@
+{
+  "name": "@openloomi/integrations-x",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/integrations/x"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/x",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi \u00b7 integrations/x module",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@openloomi/integrations": "workspace:*",
+    "@openloomi/shared": "workspace:*",
+    "@xdevplatform/xdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

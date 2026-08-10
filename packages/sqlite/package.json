@@ -1,0 +1,48 @@
+{
+  "name": "@openloomi/sqlite",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./raw-message-manager": "./dist/raw-message-manager.js",
+    "./schema": "./dist/schema.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/sqlite"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/sqlite",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi · sqlite module",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@openloomi/indexeddb": "workspace:*",
+    "better-sqlite3": "^11.10.0",
+    "sqlite-vec": "^0.1.9"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

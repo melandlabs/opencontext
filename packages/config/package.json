@@ -1,0 +1,40 @@
+{
+  "name": "@openloomi/config",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "src/tsup-preset.mjs", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./eslint": "./dist/eslint.js",
+    "./tsconfig": "./src/tsconfig.json",
+    "./tsup-preset": "./src/tsup-preset.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/config"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/config",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "Shared tsup preset and lint/tsconfig presets for OpenLoomi packages.",
+  "keywords": ["openloomi", "tsup", "monorepo"],
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "tsup": {
+    "entry": {
+      "index": "src/index.js",
+      "eslint": "src/eslint.js"
+    }
+  }
+}

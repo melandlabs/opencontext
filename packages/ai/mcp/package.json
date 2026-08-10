@@ -1,0 +1,51 @@
+{
+  "name": "@openloomi/mcp",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/ai/mcp"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/ai/mcp",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi · mcp module",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "@types/node": "^22.13.10",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  },
+  "bin": {
+    "openloomi-mcp": "./dist/cli.js"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@openloomi/db",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./batch": "./dist/batch.js",
+    "./utils": "./dist/utils.js",
+    "./agent-goal-runtime-schema-types": "./dist/agent-goal-runtime-schema-types.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/db"
+  },
+  "license": "Apache-2.0",
+  "description": "Database building blocks (batch helpers, crypto utilities, agent-goal runtime schema types) shared between OpenLoomi runtime and UI.",
+  "keywords": ["openloomi", "db", "database", "drizzle"],
+  "dependencies": {
+    "ai": "^3",
+    "bcrypt-ts": "^5"
+  },
+  "devDependencies": {
+    "@openloomi/ai": "workspace:*",
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

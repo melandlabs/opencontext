@@ -1,0 +1,34 @@
+{
+  "name": "@openloomi/loop",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./paths": "./dist/paths.js",
+    "./cli-path": "./dist/cli-path.js",
+    "./preferences": "./dist/preferences.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/loop"
+  },
+  "license": "Apache-2.0",
+  "description": "Loop filesystem paths, CLI shim resolver, and preferences (zero-DB, zero-agent) shared between OpenLoomi runtime and UI.",
+  "keywords": ["openloomi", "loop", "filesystem", "preferences"],
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

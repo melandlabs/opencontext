@@ -1,0 +1,37 @@
+{
+  "name": "@openloomi/cron",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./types": "./dist/types.js",
+    "./scheduler": "./dist/scheduler.js",
+    "./stream-response": "./dist/stream-response.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/cron"
+  },
+  "license": "Apache-2.0",
+  "description": "Cron scheduling primitives (types, schedule math, SSE stream response) shared between OpenLoomi runtime and UI.",
+  "keywords": ["openloomi", "cron", "scheduler"],
+  "dependencies": {
+    "croner": "^8"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

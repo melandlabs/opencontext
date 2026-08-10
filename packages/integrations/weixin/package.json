@@ -1,0 +1,53 @@
+{
+  "name": "@openloomi/integrations-weixin",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./ws-listener": "./dist/ws-listener.js",
+    "./conversation-store": "./dist/conversation-store.js",
+    "./ilink-client": "./dist/ilink-client.js",
+    "./cdn/aes-ecb": "./dist/cdn/aes-ecb.js",
+    "./cdn/cdn-upload": "./dist/cdn/cdn-upload.js",
+    "./cdn/cdn-url": "./dist/cdn/cdn-url.js",
+    "./cdn/pic-decrypt": "./dist/cdn/pic-decrypt.js",
+    "./qr-login": "./dist/qr-login.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/integrations/weixin"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/weixin",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi \u00b7 integrations/weixin module",
+  "keywords": [
+    "openloomi"
+  ],
+  "dependencies": {
+    "@openloomi/ai": "workspace:*",
+    "@openloomi/integrations": "workspace:*",
+    "@tencent-weixin/openclaw-weixin": "^2.1.9"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

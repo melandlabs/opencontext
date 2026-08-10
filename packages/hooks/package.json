@@ -1,0 +1,52 @@
+{
+  "name": "@openloomi/hooks",
+  "version": "0.9.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./use-local-storage": "./dist/use-local-storage.js",
+    "./use-is-mobile": "./dist/use-is-mobile.js",
+    "./use-on-click-outside": "./dist/use-on-click-outside.js",
+    "./use-custom-event": "./dist/use-custom-event.js",
+    "./use-mobile-bottom-spacing": "./dist/use-mobile-bottom-spacing.js",
+    "./use-enter-send-ime": "./dist/use-enter-send-ime.js",
+    "./use-pull-to-refresh": "./dist/use-pull-to-refresh.js",
+    "./use-scroll-to-bottom": "./dist/use-scroll-to-bottom.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/hooks"
+  },
+  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/hooks",
+  "bugs": {
+    "url": "https://github.com/melandlabs/openloomi/issues"
+  },
+  "license": "Apache-2.0",
+  "description": "OpenLoomi · hooks module",
+  "keywords": [
+    "openloomi"
+  ],
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "swr": ">=2.0.0"
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

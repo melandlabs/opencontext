@@ -1,0 +1,44 @@
+{
+  "name": "@openloomi/contracts",
+  "version": "0.9.0",
+  "type": "module",
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./user-type": "./dist/user-type.js",
+    "./integration-id": "./dist/integration-id.js",
+    "./errors": "./dist/errors.js",
+    "./schemas": "./dist/schemas.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "directory": "packages/contracts"
+  },
+  "license": "Apache-2.0",
+  "description": "Cross-cutting type contracts (UserType, IntegrationId, error codes, zod schemas) shared between OpenLoomi runtime and UI sub-projects.",
+  "keywords": ["openloomi", "contracts", "types", "schemas"],
+  "peerDependencies": {
+    "zod": "^4.3.6"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@openloomi/config": "workspace:*",
+    "typescript": "^5.6.3",
+    "zod": "^4.3.6"
+  },
+  "scripts": {
+    "build": "tsup",
+    "prepublishOnly": "pnpm build"
+  }
+}

@@ -1,0 +1,16 @@
+# @openloomi/integrations-imessage
+
+[iMessage](https://support.apple.com/messages) integration for OpenLoomi,
+powered by [`@photon-ai/imessage-kit`](https://www.npmjs.com/package/@photon-ai/imessage-kit)
+on macOS. Lets bots send and receive iMessage / SMS conversations.
+
+## Installation
+
+```sh
+pnpm add @openloomi/integrations-imessage
+```
+
+## Subpath Exports
+
+- `@openloomi/integrations-imessage` — Main entrypoint
+- `@openloomi/integrations-imessage/adapter` — `IMessageAdapter` class

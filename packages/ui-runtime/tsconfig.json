@@ -1,0 +1,12 @@
+{
+  "extends": "../config/src/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "incremental": false,
+    "tsBuildInfoFile": "./dist/.tsbuildinfo",
+    "noEmit": false,
+    "lib": ["dom", "dom.iterable", "esnext"]
+  },
+  "include": ["src"]
+}

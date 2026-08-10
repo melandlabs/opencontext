@@ -1,0 +1,237 @@
+# @openloomi/memory-consolidation
+
+Experimental memory consolidation utilities for evaluating repeated evidence,
+cluster-level signals, and diagnostics before changing runtime memory behavior.
+
+This package currently provides pure helpers only. It does not modify forgetting,
+storage, retrieval, or summarization behavior.
+
+## Design position
+
+Long-term memory should not be treated as an append-only log. A practical memory
+system usually needs an online capture phase and an offline consolidation phase:
+raw events are first kept as traces, then repeated evidence, conflict, recency,
+and activation decide which traces may become stable semantic memory candidates.
+
+This package focuses on the offline consolidation phase:
+
+```text
+episodic traces
+  -> relation diagnostics
+  -> consolidation report
+  -> semantic memory candidates
+```
+
+It helps inspect whether existing traces form stable clusters, compete with
+other clusters, remain weak observations, or should decay instead of being
+promoted. The output is diagnostic: `preservedClusters` are candidates for later
+semantic consolidation, `contestedClusters` show conflicting or changing memory
+patterns, and `decayedRecords` are signals to avoid promotion rather than direct
+delete instructions.
+
+## Roadmap
+
+Dynamic Memory Cluster Evolution is the active track. Its authority set is
+[requirements](./docs/memory-graph-evolution-requirements.md) for product
+outcomes, [architecture](./docs/memory-graph-evolution-architecture.md) for
+boundaries and invariants, the [ADR index](./docs/adr/README.md) for durable
+decisions, and the
+[execution plan](./docs/memory-graph-evolution-execution-plan.md) for delivery
+status, phase numbering, and authorization.
+
+Earlier package-local planning notes are kept in
+[docs/archive](./docs/archive/README.md) for history only.
+
+## Scope
+
+- Build evidence clusters from `MemoryEvidenceRecord[]` or structurally compatible memory records.
+- Build bounded relation candidates from explicit record keys.
+- Judge relation candidates into `support`, `compete`, `related`, or `uncertain`.
+- Assign graph clusters and competition groups from explicit trace relation edges.
+- Score clusters with evidence, record score, activation, and recency signals.
+- Produce per-record diagnostics for low individual scores inside high-scoring clusters.
+- Build an explainable consolidation plan with `preserve`, `observe`, and `decay`
+  recommendations.
+- Build summary candidates from preserved consolidation plan entries.
+- Adapt structurally compatible memory records into an offline relation pipeline
+  diagnostics view.
+
+## Non-goals
+
+- No runtime integration with the forgetting engine.
+- No storage schema changes.
+- No retrieval behavior changes.
+- No online importance scoring at memory-ingest time.
+- No automatic relation generation with embeddings or LLMs.
+- No automatic summary text generation.
+- No final semantic memory generation.
+- No direct deletion or archival of source records.
+
+## Consolidation plan
+
+`buildMemoryConsolidationPlan` turns cluster signals into a decision plan without
+changing runtime behavior. It groups related clusters by an optional competition
+key, ranks competing clusters, and emits explainable recommendations.
+
+- `preserve`: repeated evidence is strong enough to become a consolidation candidate.
+- `observe`: evidence is ambiguous, outscored, or not strong enough yet.
+- `decay`: isolated or weak competing evidence should not be promoted into long-term consolidation.
+
+## Relation graph prototype
+
+`assignMemoryRelationGraph` is a small pure helper for the upstream side of
+consolidation. Given trace nodes, records, and explicit `support` / `compete` /
+`related` edges, it applies edge reinforcement and decay, forms graph clusters
+from strong support edges, keeps related edges as observation signals, forms
+competition groups from strong compete edges, and returns `getClusterKey` /
+`getCompetitionKey` resolvers that can be passed into
+`buildMemoryConsolidationPlan`.
+
+`deriveMemoryRelationGraphLifecycle` can then mark preserved graph clusters as
+`consolidated` after a consolidation plan is produced. The relation graph itself
+only assigns `tentative`, `stable`, and `contested` graph states.
+
+## Relation pipeline prototype
+
+`buildMemoryRelationPipeline` wires the pure helpers into a small offline
+prototype:
+
+```text
+records
+  -> buildMemoryRelationCandidates
+  -> judgeMemoryRelationCandidates
+  -> assignMemoryRelationGraph
+  -> buildMemoryConsolidationPlan
+  -> buildMemorySummaryCandidates
+```
+
+The candidate and judgment steps are intentionally lightweight. They can use
+explicit record keys, relation groups, relation values, and caller-provided
+judgment logic, but they do not call embedding models, LLMs, storage, retrieval,
+or runtime memory behavior.
+
+## Diagnostics adapter
+
+`buildMemoryRelationPipelineDiagnostics` is an adapter around the offline
+pipeline. It accepts source records with caller-provided selectors, normalizes
+them into `MemoryEvidenceRecord[]`, runs the relation pipeline, and returns
+per-record diagnostics plus aggregate counts.
+
+The adapter is intentionally observational:
+
+- It skips incomplete source records instead of inventing missing identity or
+  timestamp fields.
+- It uses explicit relation group / value selectors as conservative default
+  candidate keys.
+- It can keep temporary or ephemeral traces as `related` signals instead of
+  promoting them into support or competition edges.
+- It reports cluster keys, competition keys, graph status, plan action, relation
+  counts, and summary-candidate selection without changing runtime memory
+  behavior.
+
+`buildMemoryConsolidationDiagnosticsReport` can then format the raw diagnostics
+into a compact report with summary counts, preserved clusters, contested
+clusters, decayed records, skipped records, and per-record signals. It is a view
+over `MemoryRelationPipelineDiagnostics`; it does not rerun the pipeline or make
+new consolidation decisions.
+
+`buildSemanticMemoryDraftCandidates` can then turn preserved clusters from the
+compact report into semantic draft candidates for a later summarizer boundary.
+It keeps the package observational: it does not generate summary text, call an
+LLM, write storage, or change retrieval behavior.
+
+`summarizeSemanticMemoryDraftCandidate` defines the next boundary by delegating a
+single draft candidate and its source records to a caller-provided summarizer.
+The package still does not provide a concrete LLM summarizer or persist the
+result.
+
+`analyzeSemanticMemoryDraftReadiness` can inspect whether a draft candidate has
+enough source records, text, confidence, and provenance before it is sent to a
+summarizer.
+
+The summarizer provider boundary can format request/response diagnostics, build a
+stable caller-provided input contract, and wrap fake or external adapters with
+readiness checks. It still does not ship or call a concrete model provider.
+Batch provider reports can invoke the same caller-provided adapter across
+multiple draft candidates and summarize `summarized`, `skipped`, and `failed`
+results without adding provider wiring.
+Persistence preparation reports can then select safe summarized drafts from a
+provider batch while keeping skipped, failed, or response-issue results
+observable before any storage write.
+
+`buildMemoryConsolidationShadowReport` composes diagnostics, semantic draft
+candidates, optional caller-provided summarizer batches, and persistence
+preparation into a report-only shadow result before runtime integration.
+`runMemoryConsolidationShadowDiagnostics` adds the smallest runtime-facing
+enabled/dry-run/log boundary while still avoiding runtime, storage, and retrieval
+mutation.
+
+`calculateMemoryConsolidationEvalMetrics` provides a small scenario metrics
+helper for comparing expected preservation, temporary/noise leakage, contested
+cluster coverage, and decay precision proxies in focused eval suites.
+
+`runMemoryConsolidationDiagnostics` is an opt-in dry-run runner. Callers provide
+a record reader, and the runner returns diagnostics, a compact report, and draft
+candidates without writing semantic memory, archiving source records, or changing
+retrieval behavior.
+
+`adaptRuntimeMemoryRecordsForConsolidation` and
+`buildMemoryConsolidationRuntimeRecordSelectors` adapt structurally compatible
+runtime memory records into the dry-run diagnostics pipeline.
+
+`buildMemoryConsolidationDiagnosticsRunReport` turns a diagnostics dry-run
+result into a compact batch report for skipped, preserved, and suppressed
+records.
+
+`logMemoryConsolidationDiagnosticsRun` can pass that report to a caller-provided
+log sink only when explicitly enabled.
+
+`persistSemanticMemoryDrafts` defines a controlled persistence boundary for
+semantic drafts. It only writes through a caller-provided draft store when
+explicitly enabled with `dryRun: false`; otherwise it returns the planned draft
+artifacts for review without changing storage or retrieval behavior.
+
+`serializeSemanticMemoryArtifactStorageRecord` and
+`deserializeSemanticMemoryArtifactStorageRecord` provide a package-local artifact
+round-trip boundary for future storage adapters.
+
+`buildSemanticMemoryArtifactStorageDryRunReport` describes planned semantic
+artifact writes without calling a storage adapter.
+
+`buildMemorySemanticRetrievalPlan` and
+`buildMemorySemanticRetrievalDryRunReport` describe how semantic drafts can be
+inspected for retrieval impact without changing production retrieval ranking.
+Opt-in retrieval helpers can merge raw trace fallback with eligible semantic
+drafts, evaluate selected or suppressed drafts, and produce log-only comparison
+reports without injecting results into runtime context.
+
+Revision helpers model active, deprecated, and conflicted semantic memories as
+diagnostic artifacts. They can explain supersedes / deprecated-by relations and
+recency-aware competition without applying replacements or changing retrieval.
+
+Governance helpers turn revision signals into explanation reports, correction
+command dry-runs, and polluted-memory audit fixtures without applying changes.
+
+`buildMemoryConsolidationDiagnosticsBundle` can stitch the existing diagnostics,
+weak relation observations, draft candidates, storage dry-runs, and
+revision/governance reports into one offline review bundle. It is still
+report-only and marks runtime, storage, and retrieval mutation as disabled.
+
+Callers can keep the full diagnostics for debugging and derive the compact
+report for review or logging:
+
+```ts
+const diagnostics = buildMemoryRelationPipelineDiagnostics({
+  records,
+  now,
+  selectors: {
+    getId: (record) => record.id,
+    getTimestamp: (record) => record.timestamp,
+    getText: (record) => record.text,
+    getRelationGroup: (record) => record.metadata?.relationGroup,
+    getRelationValue: (record) => record.metadata?.relationValue,
+    getRelationScope: (record) => record.metadata?.relationScope,
+  },
+});
+const report = buildMemoryConsolidationDiagnosticsReport(diagnostics);
+```
