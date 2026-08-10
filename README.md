@@ -1,66 +1,78 @@
+<div align="center">
+
 # opencontext
 
-> An open-source runtime substrate for agentic applications.
-> A temporal context graph, a four-verb memory API, retrieval-augmented
-> generation primitives, and a 27-platform integration mesh — designed
-> to be embedded into any host process, battle-tested inside
-> [openloomi](https://github.com/melandlabs/openloomi).
+**The runtime substrate that powers agentic applications.**
 
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
-[![Monorepo: pnpm](https://img.shields.io/badge/pnpm-10.14-orange.svg)](https://pnpm.io)
-[![Node: 20](https://img.shields.io/badge/node-20-green.svg)](https://nodejs.org)
-[![Status: v0.10.0](https://img.shields.io/badge/status-v0.10.0-yellow.svg)](#status)
+A temporal context graph, a four-verb memory API, retrieval primitives,
+and a 27-platform integration mesh — designed to be embedded into any
+host process. Battle-tested inside [openloomi](https://github.com/melandlabs/openloomi).
+
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-F8D52A?logo=apache)](./LICENSE)
+[![pnpm: 10.14](https://img.shields.io/badge/pnpm-10.14-F69220?logo=pnpm)](https://pnpm.io)
+[![Node: 20](https://img.shields.io/badge/Node-20-339933?logo=node.js&logoColor=white)](https://nodejs.org)
+[![Status: v0.10.0](https://img.shields.io/badge/status-v0.10.0-yellow)](#status)
+
+</div>
+
+---
 
 ## What is opencontext?
 
-**opencontext** is the runtime layer that an agentic application sits on top
-of. It is not a UI, a chat surface, or a model provider — it is the
-glue between the things that make an agent useful: durable memory,
-retrieval, context correction, multi-platform connectivity, scheduled
-awareness, and the embedding-shaped persistence that holds all of it
-together.
+**opencontext** is the runtime layer that sits underneath an agentic
+application. It is not a UI, a chat surface, or a model provider — it
+is the glue between the things that make an agent useful: durable
+memory, retrieval, context correction, multi-platform connectivity,
+scheduled awareness, and the embedding-shaped persistence that holds
+all of it together.
 
-It is published as a pnpm monorepo of focused packages (`@opencontext/*`)
-that you can install individually. Each package is small, independently
-versioned, and has a single responsibility. Most packages have **zero**
-runtime dependencies on each other beyond a handful of well-defined
-boundary types (`@opencontext/contracts`).
+It ships as a pnpm monorepo of 49 focused packages under
+`@opencontext/*`. Each one is small, independently versioned, has a
+single responsibility, and depends on almost nothing beyond a handful
+of well-defined boundary types in `@opencontext/contracts`.
 
-## Why opencontext exists
+## What is it for?
 
-Three observations shaped it:
+- 🧠 **Give your agent durable memory.** The temporal context graph
+  remembers what the user said last week and forgets what they said
+  yesterday that turned out to be wrong. No vector-only "throw it all
+  into the prompt" hacks.
+- 🔌 **Connect the user's world.** A 27-platform integration mesh
+  (Gmail, Slack, Telegram, Linear, Jira, iMessage, Feishu, …) returns
+  structured records behind a uniform interface, so you do not have to
+  learn 27 APIs.
+- ⏰ **Wake up on a schedule.** A small deterministic Loop engine
+  decides when to draft a morning brief, summarize the inbox, or
+  remind about an unanswered message. LLM calls happen only when there
+  is real work.
+- 🪶 **Ship a desktop companion in weeks, not months.** All the
+  hard parts — auth flows, rate limits, credential rotation, OAuth
+  callbacks — live behind the mesh. The host application is just a UI.
 
-1. **Stateless LLMs are not enough.** Without a memory layer, an agent
-   forgets what you told it five minutes ago, repeats itself, and cannot
-   personalize. The naïve fix — "throw context into the prompt" —
-   collapses under its own weight past a few thousand tokens.
-2. **Static vector search is not enough either.** A flat similarity index
-   loses the temporal and relational structure of real memory: that you
-   said *X* yesterday, that *X* contradicts *Y* you said last week,
-   that *Z* is a more recent and more authoritative replacement. Good
-   recall needs a graph.
-3. **One integration per platform is not enough.** A useful agent reaches
-   into the user's world — email, calendar, chat, documents, ticketing
-   systems, social surfaces. Each platform has its own quirks and each
-   deserves a first-class adapter behind a uniform interface.
+## Why opencontext?
 
-The packages in this repo address each of those problems in isolation,
-and then wire them together in `@opencontext/memory-store` and
-`@opencontext/ai`.
+| Compared with…                                       | opencontext adds                                                                                                  |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| A flat vector DB (Pinecone, Weaviate, Qdrant)        | A **temporal graph** — facts have `valid_from` / `valid_until` and get superseded, not just similarity-matched     |
+| A memory library (mem0, cognee, letta, graphiti)     | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine       |
+| Building your own connectors                        | **27 first-class platform adapters** with credential rotation, rate-limit handling, and structured-record returns  |
+| Wiring your own agent loop                          | A **separable Loop engine** that schedules when to call `@opencontext/ai`, instead of an LLM loop all the way down |
+| Embedding openloomi just to get its integrations     | **Library-first API surface** — every package is independently published, no React/Next/Tauri required to use    |
 
-## Core concepts
+## Quick start
 
-Five ideas come up everywhere in the codebase. If you understand these,
-the rest is implementation.
+```bash
+# Install the runtime into your own project
+pnpm add @opencontext/memory-store @opencontext/contracts
 
-### 1. The Memory Store
+# Or, build this monorepo from source
+git clone https://github.com/melandlabs/opencontext.git
+cd opencontext
+pnpm install
+pnpm -r build
+```
 
-A single façade (`@opencontext/memory-store`) that gives you:
-
-- a **raw message store** (durable, append-mostly, browser or server),
-- a **vector index** (SQLite-vec, pgvector, or Chroma),
-- a **unified search** that ranks across raw text, semantic similarity,
-  knowledge-graph facts, and recent insights in one call.
+A 30-second example of the four-verb API:
 
 ```ts
 import { createMemoryStore } from "@opencontext/memory-store";
@@ -70,264 +82,132 @@ const store = createMemoryStore({
   vector: { provider: "openai", model: "text-embedding-3-small" },
 });
 
-// remember — durable, indexed, graph-aware
 await store.remember({
   content: "User prefers dark mode in all tools",
-  source: "settings-sync",
   scope: "user:42",
 });
 
-// recall — cross-source, ranked
 const hits = await store.recall({
   query: "What does the user prefer?",
   topK: 5,
 });
+
+await store.improve({
+  target: hits[0].id,
+  kind: "supersedes",
+  evidence: "User toggled to light mode in settings on 2026-08-10",
+});
+
+await store.forget({ id: hits[0].id, reason: "superseded" });
 ```
 
-### 2. The Temporal Context Graph
+## Concepts
 
-Inside the memory store, facts are not just rows. Each `remember()` call
-becomes a node, and corrections or supersedes become edges. The graph
-records **when** a fact was true, **when** it stopped being true, and
-**why** — so a recall that happens months later can ask "what was true
-as of last Tuesday?" rather than only "what is currently true?".
+Five ideas come up everywhere in the codebase. If you understand these,
+the rest is implementation. See
+[`docs/architecture.md`](./docs/architecture.md) for the full data
+model.
 
-This is the same problem temporal databases have solved for decades,
-applied to natural-language facts. See
-[`docs/architecture.md`](./docs/architecture.md#the-temporal-context-graph)
-for the data model.
-
-### 3. The Four-Verb API
-
-Every persistent operation against memory is one of four verbs:
-
-| Verb | Meaning |
-| --- | --- |
-| `remember` | Persist a fact, message, or relationship. Idempotent on `(scope, content-hash)`. |
-| `recall` | Retrieve facts relevant to a query, scoped to a time window and a graph traversal depth. |
-| `forget` | Soft-remove a fact. The fact remains in cold storage with a tombstone so future corrections can be traced. Hard-delete is reserved for compliance. |
-| `improve` | Apply a correction, supersession, or merge based on new evidence. |
-
-The verbs are deliberately small. Everything else — chunking, embedding,
-graph traversal, ranking — is an implementation detail of a verb.
-
-### 4. The Loop Engine
-
-`@opencontext/loop` is the part of the runtime that wakes up on a
-schedule and decides whether there is anything worth doing — drafting a
-morning brief, summarizing yesterday's inbox, reminding the user about
-an unanswered message. It is **deliberately not** an LLM-driven agent
-loop; it is a small, deterministic scheduler that calls into
-`@opencontext/ai` only when there is real work.
-
-This separation matters. Most "agent runtimes" are LLM loops all the way
-down. When the LLM call fails, you do not know whether the bug is in the
-prompt, the tool, or the orchestration. opencontext's Loop is small
-enough that you can read it in one sitting, and big enough to host
-arbitrary side-effects.
-
-### 5. The Integration Mesh
-
-`@opencontext/integrations` (with 21 platform-specific sub-packages)
-exposes a uniform adapter interface over: Gmail, Google Calendar,
-Google Meet, Slack, Discord, Microsoft Teams, Telegram, WhatsApp,
-LinkedIn, Instagram, X (Twitter), Facebook Messenger, HubSpot, Notion,
-Asana, Jira, Linear, iMessage, Feishu, Dingtalk, QQbot, Weixin, RSS,
-Google Drive, Google Docs, and Jira.
-
-The mesh is the surface area where openloomi-style "connect your tools"
-experiences live. Adapters return structured records (not raw API
-shapes) so callers do not have to learn 27 APIs.
+| Concept | Package(s) | One-line summary |
+| --- | --- | --- |
+| **Memory Store** | `@opencontext/memory-store` | One façade for raw store + vector index + unified search. |
+| **Temporal Context Graph** | `@opencontext/memory-store`, `@opencontext/ai/memory-consolidation` | Facts carry `valid_from` / `valid_until`; corrections are append-only. |
+| **Four-Verb API** | `@opencontext/memory-store` | `remember` / `recall` / `forget` / `improve` — everything else is implementation. |
+| **Loop Engine** | `@opencontext/loop`, `@opencontext/cron` | Deterministic scheduler that wakes up and calls into `@opencontext/ai` only when needed. |
+| **Integration Mesh** | `@opencontext/integrations`, `@opencontext/integrations-runtime` | 27 platform adapters behind a uniform `IntegrationRecord` shape. |
 
 ## Package catalog
 
-### Core runtime
-
 | Package | Role |
 | --- | --- |
-| `@opencontext/contracts` | Boundary types shared between runtime and host apps (no React/Next/Tauri). |
-| `@opencontext/memory-store` | The single façade: raw store + vector index + unified search. |
+| `@opencontext/contracts` | Boundary types — no React/Next/Tauri allowed. The one every other package depends on. |
+| `@opencontext/memory-store` | The single façade: raw store + vector index + unified search + four-verb API. |
 | `@opencontext/rag` | Chunking, embeddings, parsers (PDF/ZIP/text), sqlite-vec + pgvector adapters. |
-| `@opencontext/search` | Web search client (Brave) + a heuristic for "is this a real-time question?". |
+| `@opencontext/search` | Brave Search client + heuristic for "is this a real-time question?". |
 | `@opencontext/db` | `batchInsert`, password hashing, agent-goal runtime schema types. |
 | `@opencontext/sqlite` | SQLite-vec raw-message manager + schema. |
-| `@opencontext/indexeddb` | Browser-side raw-message storage, embedding helpers, extractor, memory-graph evolution/lifecycle/governance. |
-| `@opencontext/storage` | Generic key/value `StorageProvider` + adapters (local fs, Vercel Blob, in-memory). |
+| `@opencontext/indexeddb` | Browser-side mirror of the raw store + memory-graph evolution. |
+| `@opencontext/storage` | Generic `StorageProvider` + adapters (local fs, Vercel Blob, in-memory). |
+| `@opencontext/loop` | Loop engine leaves (paths, cli-path, preferences). |
+| `@opencontext/cron` | Cron scheduling primitives + SSE stream response. |
 | `@opencontext/insights` | Pure algorithm/filter logic for insight/event management. |
 | `@opencontext/audit` | Structured audit logging to `~/.opencontext/logs/audit.jsonl`. |
 | `@opencontext/security` | Fernet symmetric encryption, URL allowlist/blocklist, pluggable key manager. |
-
-### Engine
-
-| Package | Role |
-| --- | --- |
-| `@opencontext/loop` | Leaf filesystem + preferences for the Loop engine. |
-| `@opencontext/cron` | Cron scheduling primitives + SSE stream response. |
-
-### AI / Agent
-
-| Package | Role |
-| --- | --- |
 | `@opencontext/ai` | AI SDK wrappers, agent runtime, sandbox providers (native / Claude / Vercel), image + audio. |
 | `@opencontext/ai/memory-consolidation` | Offline evidence clustering, relation graphs, semantic draft candidates. |
 | `@opencontext/ai/mcp` | Stdio MCP server exposing opencontext to MCP-capable agent runtimes. |
-
-### Integrations
-
-| Package | Role |
-| --- | --- |
-| `@opencontext/integrations` | Umbrella re-export of every platform adapter. |
-| `@opencontext/integrations-runtime` | Dep-free authorization-error + platform-visuals glue. |
-| `@opencontext/integrations/{asana,calendar,channels,composio,…}` | 21 platform-specific adapters (Gmail, Slack, Telegram, …). |
-
-### UI-side (optional peers)
-
-| Package | Role |
-| --- | --- |
-| `@opencontext/ui-runtime` | Tauri platform detection + browser/Tauri filesystem adapters. |
-| `@opencontext/hooks` | React hooks: useLocalStorage, useIsMobile, useOnClickOutside, … |
-
-### Shared utilities
-
-| Package | Role |
-| --- | --- |
-| `@opencontext/shared` | `cn()`, UUID, sanitize, formatBytes, errors, types, tokens, locale, platform, soul. |
-| `@opencontext/env-config` | Env/deployment-mode/Tauri-path constants. |
-| `@opencontext/api` | `fetchApi<T>()` HTTP wrapper + `ApiError`. |
-| `@opencontext/config` | Shared tsup preset, ESLint preset, tsconfig preset. |
-| `@opencontext/i18n` | Locale message bundles (`en-US`, `zh-Hans`). |
-| `@opencontext/voice-kokoro` | Kokoro TTS provider. |
-| `@opencontext/voice-whisper` | Whisper STT provider. |
-
-## Architecture diagram
-
-```
-                          ┌─────────────────────────────┐
-                          │       Host application       │
-                          │   (openloomi, an example,    │
-                          │    or your own integration)  │
-                          └──────────────┬───────────────┘
-                                         │
-                                         ▼
-        ┌──────────────────────────────────────────────────────────┐
-        │                    Boundary layer                        │
-        │           @opencontext/contracts   @opencontext/api      │
-        └──────────────────────────────────────────────────────────┘
-                                         │
-                                         ▼
-        ┌──────────────────────────────────────────────────────────┐
-        │               Memory substrate                            │
-        │                                                            │
-        │   @opencontext/memory-store                               │
-        │     ├── raw-message-store   (sqlite-vec / postgres / …)   │
-        │     ├── vector-index        (sqlite-vec / pgvector / …)   │
-        │     ├── unified-search      (semantic + graph + recency)  │
-        │     ├── graph-write-policy                                 │
-        │     └── graph-correction-policy                            │
-        │                                                            │
-        │   @opencontext/rag        (chunking + embeddings + parser) │
-        │   @opencontext/sqlite     (sqlite-vec raw-message)        │
-        │   @opencontext/indexeddb  (browser-side mirror)            │
-        └──────────────────────────────────────────────────────────┘
-                                         │
-                                         ▼
-        ┌──────────────────────────────────────────────────────────┐
-        │               Engine + scheduling                         │
-        │   @opencontext/loop      @opencontext/cron                │
-        │   @opencontext/insights  @opencontext/audit               │
-        └──────────────────────────────────────────────────────────┘
-                                         │
-                                         ▼
-        ┌──────────────────────────────────────────────────────────┐
-        │               Agent runtime                               │
-        │   @opencontext/ai                                            │
-        │     ├── agent (native-cli / native-runner / runtime)      │
-        │     ├── memory-consolidation                              │
-        │     ├── mcp  (stdio server: setup / search / kb / …)     │
-        │     ├── sandbox  (native / claude / vercel)              │
-        │     ├── image-gen / audio                                 │
-        │     └── runtime-instructions                              │
-        └──────────────────────────────────────────────────────────┘
-                                         │
-                                         ▼
-        ┌──────────────────────────────────────────────────────────┐
-        │               Integration mesh                            │
-        │   @opencontext/integrations                                │
-        │     ├── @opencontext/integrations-gmail                    │
-        │     ├── @opencontext/integrations-slack                    │
-        │     ├── @opencontext/integrations-telegram                 │
-        │     ├── … (21 platforms)                                   │
-        │     └── @opencontext/integrations-runtime                  │
-        │           (authz + platform-visuals glue)                  │
-        └──────────────────────────────────────────────────────────┘
-```
-
-## Getting started
-
-```bash
-# 1. Install dependencies
-pnpm install
-
-# 2. Build everything
-pnpm -r build
-
-# 3. Run the type checker
-pnpm -r typecheck
-
-# 4. Run the test suite
-pnpm -r test
-```
-
-To use opencontext in your own project, install the packages you need:
-
-```bash
-pnpm add @opencontext/memory-store @opencontext/contracts
-```
-
-…and follow the README of each package. The
-[`CONTRIBUTING.md`](./CONTRIBUTING.md) document covers how to add new
-packages, run the linter, and prepare a release.
+| `@opencontext/integrations` | Umbrella re-export of all 21 platform adapters. |
+| `@opencontext/integrations-runtime` | Dep-free authz + platform-visuals glue. |
+| `@opencontext/integrations/{asana,calendar,channels,…}` | 21 platform adapters (Gmail, Slack, Telegram, …). |
+| `@opencontext/ui-runtime` | Tauri platform detection + browser/Tauri filesystem adapters. *(optional peers)* |
+| `@opencontext/hooks` | React hooks: useLocalStorage, useIsMobile, useOnClickOutside, … *(optional peers)* |
+| `@opencontext/shared`, `@opencontext/env-config`, `@opencontext/api`, `@opencontext/config`, `@opencontext/i18n`, `@opencontext/voice-kokoro`, `@opencontext/voice-whisper` | Shared utilities (cn, errors, locale, TTS/STT, build presets). |
 
 ## Provider matrix
 
 | Concern | Providers |
 | --- | --- |
 | Vector index | SQLite-vec (default), pgvector, Chroma |
-| Embeddings | OpenAI, Anthropic, Cohere, local models via `@opencontext/rag/universal-embeddings` |
+| Embeddings | OpenAI, Anthropic, Cohere, local via `@opencontext/rag/universal-embeddings` |
 | Raw message store | SQLite-vec, Postgres |
 | Web search | Brave Search |
 | Sandboxes | Native CLI, Claude, Vercel Sandbox |
 | TTS / STT | Kokoro (TTS), Whisper (STT) |
 | Integrations | Gmail, Outlook, Google Calendar, Google Meet, Slack, Discord, Teams, Telegram, WhatsApp, LinkedIn, Instagram, X, Facebook Messenger, HubSpot, Notion, Asana, Jira, Linear, iMessage, Feishu, Dingtalk, QQbot, Weixin, RSS, Google Drive, Google Docs |
 
+## Architecture at a glance
+
+```
+                       ┌────────────────────────────┐
+                       │     Host application       │   ← your UI, CLI, or daemon
+                       │   (openloomi, an example,  │
+                       │    or your own embedder)   │
+                       └─────────────┬──────────────┘
+                                     │
+            ┌────────────────────────┴────────────────────────┐
+            │   Boundary:  @opencontext/contracts  ·  api     │
+            └────────────────────────┬────────────────────────┘
+                                     │
+       ┌─────────────────────────────┴─────────────────────────────┐
+       │   Memory substrate                                         │
+       │   @opencontext/memory-store · rag · sqlite · indexeddb     │
+       └─────────────────────────────┬──────────────────────────────-┘
+                                     │
+       ┌─────────────────────────────┴─────────────────────────────┐
+       │   Engine        @opencontext/loop · cron · insights       │
+       │   Agent runtime @opencontext/ai                            │
+       │   Mesh          @opencontext/integrations (21 platforms)  │
+       └────────────────────────────────────────────────────────────┘
+```
+
+Full data-flow diagrams, transport surfaces, and storage backends are
+in [`docs/architecture.md`](./docs/architecture.md).
+
 ## Documentation
 
 - [`docs/architecture.md`](./docs/architecture.md) — data model, lifecycle, transport surfaces
-- [`docs/philosophy.md`](./docs/philosophy.md) — why this split, why this shape
+- [`docs/philosophy.md`](./docs/philosophy.md) — why this shape, why this split
 - [`docs/split-from-openloomi.md`](./docs/split-from-openloomi.md) — history of the carve-out
-- Each package's `README.md` — API surface, examples, and migration notes
+- Each package's `README.md` — API surface, examples, migration notes
 
 ## Status
 
-opencontext is **v0.10.0**. The internal API has stabilized enough to
-publish, and the major-version interface (`createMemoryStore()`,
-`remember()`, `recall()`, `forget()`, `improve()`) is unlikely to
-change in incompatible ways before v1.0. Sub-packages under
-`@opencontext/ai/*` and `@opencontext/integrations/*` are still evolving.
+opencontext is **v0.10.0** — early-stage but feature-complete enough
+that openloomi ships against it. The major-version interface
+(`createMemoryStore()`, `remember()`, `recall()`, `forget()`,
+`improve()`) is unlikely to change incompatibly before v1.0.
+Sub-packages under `@opencontext/ai/*` and `@opencontext/integrations/*`
+are still evolving.
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md). All changes require a
-changeset entry. Run `pnpm changeset` after editing any package.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Every change needs a
+changeset entry — run `pnpm changeset` after editing any package.
 
 ## Security
 
 See [`SECURITY.md`](./SECURITY.md). Report vulnerabilities to
 **security@opencontext.dev**.
-
-## Code of conduct
-
-See [`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md).
 
 ## License
 
@@ -342,5 +222,5 @@ projects [graphiti](https://github.com/getzep/graphiti),
 [letta](https://github.com/letta-ai/letta), and
 [cognee](https://github.com/topoteretes/cognee). No prose in this
 repository is copied from those projects. The four-verb semantics, the
-temporal correction model, the integration-mesh framing, and every line
-of documentation are original to this project.
+temporal correction model, the integration-mesh framing, and every
+line of documentation are original to this project.
