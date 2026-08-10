@@ -33,6 +33,11 @@
     "@tauri-apps/plugin-dialog": "^2.7.1",
     "@tauri-apps/plugin-fs": "^2.5.1"
   },
+  "peerDependenciesMeta": {
+    "@tauri-apps/api": { "optional": true },
+    "@tauri-apps/plugin-dialog": { "optional": true },
+    "@tauri-apps/plugin-fs": { "optional": true }
+  },
   "devDependencies": {
     "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
