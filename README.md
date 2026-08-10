@@ -126,6 +126,20 @@ Four tools become available inside the editor: `memory.health`,
 `memory.searchUnified`, `memory.writeRawMessage`,
 `memory.getRawMessage`.
 
+## Examples
+
+The [`examples/`](./examples/) workspace ships a runnable example per
+capability area. Clone, install, and run:
+
+```bash
+git clone https://github.com/melandlabs/opencontext.git
+cd opencontext/examples
+pnpm install
+pnpm test
+```
+
+See [`examples/README.md`](./examples/README.md) for the full walkthrough.
+
 ## Common usage patterns
 
 ### The memory API
@@ -228,7 +242,7 @@ the agent runtime behind one dependency.
 | TTS / STT         | Kokoro (TTS), Whisper (STT)                                                                                                                                                                                                                          |
 | Integrations      | Gmail, Outlook, Google Calendar, Google Meet, Slack, Discord, Teams, Telegram, WhatsApp, LinkedIn, Instagram, X, Facebook Messenger, HubSpot, Notion, Asana, Jira, Linear, iMessage, Feishu, Dingtalk, QQbot, Weixin, RSS, Google Drive, Google Docs |
 
-## Architecture at a glance
+## Architecture
 
 ```
                        ┌────────────────────────────┐
@@ -254,6 +268,13 @@ the agent runtime behind one dependency.
 
 Full data-flow diagrams, transport surfaces, and storage backends are
 in [`docs/architecture.md`](./docs/architecture.md).
+
+## Used in production
+
+- **[OpenLoomi](https://github.com/melandlabs/openloomi)** — a
+  cross-platform desktop "Attention Agent" built on top of OpenContext.
+  See the [OpenLoomi README](https://github.com/melandlabs/openloomi)
+  for how the same primitives wire up into a real product.
 
 ## Documentation
 

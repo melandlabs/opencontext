@@ -124,6 +124,20 @@ curl http://127.0.0.1:7421/health
 编辑器中会立即可用四个工具:`memory.health`、`memory.searchUnified`、
 `memory.writeRawMessage`、`memory.getRawMessage`。
 
+## 示例
+
+[`examples/`](./examples/) 这个目录按能力域给每个 API 都配了一份可运行的示例。
+clone 下来直接跑:
+
+```bash
+git clone https://github.com/melandlabs/opencontext.git
+cd opencontext/examples
+pnpm install
+pnpm test
+```
+
+完整说明见 [`examples/README.md`](./examples/README.md)。
+
 ## 常用使用模式
 
 ### 四动词 API
@@ -208,7 +222,7 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 | TTS / STT    | Kokoro(TTS)、Whisper(STT)                                                                                                                                                                                                                            |
 | 集成         | Gmail、Outlook、Google Calendar、Google Meet、Slack、Discord、Teams、Telegram、WhatsApp、LinkedIn、Instagram、X、Facebook Messenger、HubSpot、Notion、Asana、Jira、Linear、iMessage、Feishu、Dingtalk、QQbot、Weixin、RSS、Google Drive、Google Docs |
 
-## 架构一览
+## 架构
 
 ```
                        ┌────────────────────────────┐
@@ -235,6 +249,13 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 
 完整的数据流图、传输面与存储后端见
 [`docs/architecture.md`](./docs/architecture.md)。
+
+## 真实使用
+
+- **[OpenLoomi](https://github.com/melandlabs/openloomi)** —— 构建在
+  OpenContext 之上的跨平台桌面 "Attention Agent"。读
+  [OpenLoomi README](https://github.com/melandlabs/openloomi) 看同一套
+  原语如何被接成一个真实产品。
 
 ## 文档
 
