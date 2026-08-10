@@ -292,7 +292,7 @@ export function assignMemoryRelationGraph(
 		const supportScore = mean(supportEdges.map((edge) => edge.effectiveWeight));
 		const latestTimestamp = Math.max(
 			...recordIdsInCluster.map(
-				(recordId) => nodesByRecordId.get(recordId)?.timestamp ?? recordsById.get(recordId)?.timestamp,
+				(recordId) => nodesByRecordId.get(recordId)!.timestamp ?? recordsById.get(recordId)!.timestamp,
 			),
 		);
 		const status: MemoryGraphClusterStatus =

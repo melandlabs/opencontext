@@ -1,5 +1,5 @@
 import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type { At, Image, Message, Messages } from "@opencontext/integrations/channels";
+import type { At, Image, Message, Messages, Unknown } from "@opencontext/integrations/channels";
 import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
 import type { DialogInfo, ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
 
@@ -131,7 +131,7 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 			.join("\n");
 	}
 
-	private isPlainText(item: Message): item is { text?: string } {
+	private isPlainText(item: Message): item is Unknown {
 		return typeof item === "object" && item !== null && "text" in item;
 	}
 

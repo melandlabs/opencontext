@@ -1385,7 +1385,7 @@ export function opencontextMessageToTgText(message: Message): string {
 		return `@${message.target}`;
 	}
 	if ("nodes" in message) {
-		return message.nodes.map((node) => opencontextMessageToTgText(node as Message)).join("");
+		return message.nodes.map((node) => opencontextMessageToTgText(node as unknown as Message)).join("");
 	}
 	return "";
 }
