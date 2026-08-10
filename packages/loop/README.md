@@ -1,4 +1,4 @@
-# `@openloomi/loop`
+# `@opencontext/loop`
 
 Loop filesystem + CLI shim resolver shared between OpenLoomi runtime and UI sub-projects.
 
@@ -8,10 +8,10 @@ integration dependencies:
 
 | Subpath                | Source                          | Notes                                              |
 | ---------------------- | ------------------------------- | -------------------------------------------------- |
-| `@openloomi/loop`      | barrel                          | Re-exports the subpaths below                      |
-| `@openloomi/loop/paths`| `apps/web/lib/loop/paths.ts`    | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate` |
-| `@openloomi/loop/cli-path` | `apps/web/lib/loop/cli-path.ts` | Resolves absolute path to the `loop-cli.mjs` shim |
-| `@openloomi/loop/preferences` | `apps/web/lib/loop/preferences.ts` | `readPreferences`, `writePreferences` (depends on `@openloomi/loop/paths`) |
+| `@opencontext/loop`      | barrel                          | Re-exports the subpaths below                      |
+| `@opencontext/loop/paths`| `apps/web/lib/loop/paths.ts`    | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate` |
+| `@opencontext/loop/cli-path` | `apps/web/lib/loop/cli-path.ts` | Resolves absolute path to the `loop-cli.mjs` shim |
+| `@opencontext/loop/preferences` | `apps/web/lib/loop/preferences.ts` | `readPreferences`, `writePreferences` (depends on `@opencontext/loop/paths`) |
 
 The bigger pieces (`store.ts`, `runner.ts`, `tick.ts`, `brief.ts`, `wrap.ts`,
 `connectors.ts`, `composio-bridge.ts`, `composio-cli.ts`, `handlers.ts`,

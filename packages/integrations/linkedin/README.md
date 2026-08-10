@@ -1,4 +1,4 @@
-# @openloomi/integrations-linkedin
+# @opencontext/integrations-linkedin
 
 [LinkedIn](https://www.linkedin.com/) messaging adapter for OpenLoomi.
 Authenticates with LinkedIn OAuth 2.0 and exchanges direct messages on
@@ -7,7 +7,7 @@ behalf of the connected user.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-linkedin
+pnpm add @opencontext/integrations-linkedin
 ```
 
 ## Exports

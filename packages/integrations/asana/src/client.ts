@@ -1,4 +1,4 @@
-import { AppError } from "@openloomi/shared";
+import { AppError } from "@opencontext/shared";
 
 export type AsanaCredentials = {
   accessToken: string;

@@ -11,7 +11,7 @@ import {
 } from "./openloomi/token";
 import { registerOpenLoomiTools } from "./tools";
 
-const DEFAULT_SERVER_NAME = "@openloomi/mcp";
+const DEFAULT_SERVER_NAME = "@opencontext/mcp";
 const DEFAULT_SERVER_VERSION = "0.9.0";
 
 export interface CreateOpenLoomiMcpServerOptions extends OpenLoomiClientOptions {

@@ -1,6 +1,6 @@
-import { AppError } from "@openloomi/shared/errors";
-import type { ExtractedMessageInfo } from "@openloomi/shared";
-import type { Platform } from "@openloomi/integrations/channels/sources/types";
+import { AppError } from "@opencontext/shared/errors";
+import type { ExtractedMessageInfo } from "@opencontext/shared";
+import type { Platform } from "@opencontext/integrations/channels/sources/types";
 
 export type LinkedInCredentials = {
   accessToken?: string | null;

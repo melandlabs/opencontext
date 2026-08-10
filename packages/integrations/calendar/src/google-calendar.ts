@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import {
   type ComposioCredentials,
   isComposioCredentials,
-} from "@openloomi/integrations/composio";
+} from "@opencontext/integrations/composio";
 import { ComposioGoogleCalendarProxy } from "./composio-google-calendar";
 
 // ---------------------------------------------------------------------------

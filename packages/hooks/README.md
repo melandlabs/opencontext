@@ -1,11 +1,11 @@
-# @openloomi/hooks
+# @opencontext/hooks
 
 A collection of pure React hooks.
 
 ## Installation
 
 ```sh
-pnpm add @openloomi/hooks
+pnpm add @opencontext/hooks
 ```
 
 ## Hooks

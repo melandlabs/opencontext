@@ -1,4 +1,4 @@
 export {
   BrowserFileSystem,
   browserFileSystem,
-} from "@openloomi/ui-runtime/platform/adapters/browser/filesystem";
+} from "@opencontext/ui-runtime/platform/adapters/browser/filesystem";

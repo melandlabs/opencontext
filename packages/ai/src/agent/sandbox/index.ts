@@ -1,5 +1,5 @@
 /**
- * @openloomi/agent/sandbox - Sandbox Provider System
+ * @opencontext/agent/sandbox - Sandbox Provider System
  *
  * Extensible sandbox providers for isolated code execution.
  * Supports: Native (no isolation), Claude (srt), Vercel (MicroVM).

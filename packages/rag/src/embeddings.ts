@@ -5,7 +5,7 @@
  */
 
 import OpenAI from "openai";
-import { estimateTokens } from "@openloomi/shared";
+import { estimateTokens } from "@opencontext/shared";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const EMBEDDING_BASE_URL = "https://openrouter.ai/api/v1";

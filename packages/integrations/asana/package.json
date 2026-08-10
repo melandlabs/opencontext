@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/integrations-asana",
+  "name": "@opencontext/integrations-asana",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -31,14 +31,14 @@
     "openloomi"
   ],
   "dependencies": {
-    "@openloomi/shared": "workspace:*",
+    "@opencontext/shared": "workspace:*",
     "zod": "^4.3.6"
   },
   "peerDependencies": {
     "react": ">=18.0.0"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

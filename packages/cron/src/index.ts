@@ -1,4 +1,4 @@
-// @openloomi/cron — scheduling primitives shared by runtime + UI
+// @opencontext/cron — scheduling primitives shared by runtime + UI
 // See `docs/split-runtime-ui.md` for boundary contract.
 
 export * from "./types";

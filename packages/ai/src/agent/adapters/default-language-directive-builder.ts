@@ -15,7 +15,7 @@
  * rewriting downstream code.
  */
 
-import type { UserLocale } from "@openloomi/shared";
+import type { UserLocale } from "@opencontext/shared";
 
 import type {
   DirectiveChannel,

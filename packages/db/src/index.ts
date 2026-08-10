@@ -1,4 +1,4 @@
-// @openloomi/db — building blocks shared by runtime + UI
+// @opencontext/db — building blocks shared by runtime + UI
 // See `docs/split-runtime-ui.md` for boundary contract.
 
 export * from "./batch";

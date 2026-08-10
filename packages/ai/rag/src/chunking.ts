@@ -7,7 +7,7 @@
  * - "atomic": LLM-driven decomposition into single-proposition facts.
  */
 
-import { estimateTokens } from "@openloomi/shared";
+import { estimateTokens } from "@opencontext/shared";
 import {
   chunkAtomicFacts,
   type AtomicFactChunk,

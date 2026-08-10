@@ -14,7 +14,7 @@
  * call site.
  */
 
-import type { UserLocale } from "@openloomi/shared";
+import type { UserLocale } from "@opencontext/shared";
 
 export type DirectiveChannel = "conversational" | "artifact";
 

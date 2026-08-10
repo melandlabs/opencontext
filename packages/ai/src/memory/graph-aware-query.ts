@@ -4,7 +4,7 @@ import type {
   MemoryApplicabilityContext,
   MemoryGraphSnapshot,
   OwnerScope,
-} from "@openloomi/memory-consolidation/graph-contracts";
+} from "@opencontext/memory-consolidation/graph-contracts";
 import {
   applicabilityEquivalent,
   sameOwnerScope,

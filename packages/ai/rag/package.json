@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/ai-rag",
+  "name": "@opencontext/ai-rag",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -46,7 +46,7 @@
     "@langchain/community": "^1.1.1",
     "@langchain/core": "^1.1.8",
     "@langchain/textsplitters": "^1.0.1",
-    "@openloomi/shared": "workspace:*",
+    "@opencontext/shared": "workspace:*",
     "better-sqlite3": "^11.7.0",
     "chromadb": "^3.4.3",
     "jszip": "^3.10.1",
@@ -58,7 +58,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

@@ -1,4 +1,4 @@
-// @openloomi/loop — leaf filesystems / preferences shared by runtime + UI
+// @opencontext/loop — leaf filesystems / preferences shared by runtime + UI
 // See `docs/split-runtime-ui.md` for boundary contract.
 //
 // `paths` and `cli-path` are pure node:fs/path; `preferences` depends on

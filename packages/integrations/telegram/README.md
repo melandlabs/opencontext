@@ -1,4 +1,4 @@
-# @openloomi/integrations-telegram
+# @opencontext/integrations-telegram
 
 [Telegram](https://telegram.org/) integration for OpenLoomi, powered by the
 [`telegram`](https://www.npmjs.com/package/telegram) (MTProto) client.
@@ -8,19 +8,19 @@ container, and TData decryption / conversion helpers.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-telegram
+pnpm add @opencontext/integrations-telegram
 ```
 
 ## Subpath Exports
 
-- `@openloomi/integrations-telegram` — Main entrypoint
-- `@openloomi/integrations-telegram/adapter` — `TelegramAdapter`
-- `@openloomi/integrations-telegram/markdown` — Markdown ↔ Telegram entity
+- `@opencontext/integrations-telegram` — Main entrypoint
+- `@opencontext/integrations-telegram/adapter` — `TelegramAdapter`
+- `@opencontext/integrations-telegram/markdown` — Markdown ↔ Telegram entity
   converter
-- `@openloomi/integrations-telegram/conversation-store` — Conversation
+- `@opencontext/integrations-telegram/conversation-store` — Conversation
   persistence
-- `@openloomi/integrations-telegram/state` — Runtime state container
-- `@openloomi/integrations-telegram/tdata-decrypter` — Decrypt Telegram
+- `@opencontext/integrations-telegram/state` — Runtime state container
+- `@opencontext/integrations-telegram/tdata-decrypter` — Decrypt Telegram
   Desktop `tdata` sessions
-- `@openloomi/integrations-telegram/tdata-converter` — Convert `tdata` to
+- `@opencontext/integrations-telegram/tdata-converter` — Convert `tdata` to
   standalone session strings

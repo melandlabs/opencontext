@@ -1,5 +1,5 @@
 /**
- * @openloomi/ai - Routing: intelligent model call routing
+ * @opencontext/ai - Routing: intelligent model call routing
  */
 
 export {

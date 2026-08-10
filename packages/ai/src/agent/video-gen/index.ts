@@ -1,5 +1,5 @@
 /**
- * @openloomi/ai - Video Generation Provider
+ * @opencontext/ai - Video Generation Provider
  *
  * Video generation provider abstraction with OpenAI Sora support.
  */

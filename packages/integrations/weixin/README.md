@@ -1,4 +1,4 @@
-# @openloomi/integrations-weixin
+# @opencontext/integrations-weixin
 
 [WeChat](https://www.wechat.com/) (微信) integration for OpenLoomi. Built on
 the official
@@ -9,20 +9,20 @@ reverse-engineered listeners.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-weixin
+pnpm add @opencontext/integrations-weixin
 ```
 
 ## Subpath Exports
 
-- `@openloomi/integrations-weixin` — Main entrypoint
-- `@openloomi/integrations-weixin/ws-listener` — WebSocket listener for the
+- `@opencontext/integrations-weixin` — Main entrypoint
+- `@opencontext/integrations-weixin/ws-listener` — WebSocket listener for the
   iLink client
-- `@openloomi/integrations-weixin/conversation-store` — Conversation
+- `@opencontext/integrations-weixin/conversation-store` — Conversation
   persistence
-- `@openloomi/integrations-weixin/ilink-client` — iLink protocol client
-- `@openloomi/integrations-weixin/cdn/aes-ecb` — AES-ECB decryption helper
-- `@openloomi/integrations-weixin/cdn/cdn-upload` — CDN upload helper
-- `@openloomi/integrations-weixin/cdn/cdn-url` — CDN URL signing helper
-- `@openloomi/integrations-weixin/cdn/pic-decrypt` — Decrypt CDN-hosted
+- `@opencontext/integrations-weixin/ilink-client` — iLink protocol client
+- `@opencontext/integrations-weixin/cdn/aes-ecb` — AES-ECB decryption helper
+- `@opencontext/integrations-weixin/cdn/cdn-upload` — CDN upload helper
+- `@opencontext/integrations-weixin/cdn/cdn-url` — CDN URL signing helper
+- `@opencontext/integrations-weixin/cdn/pic-decrypt` — Decrypt CDN-hosted
   pictures
-- `@openloomi/integrations-weixin/qr-login` — QR-code login flow
+- `@opencontext/integrations-weixin/qr-login` — QR-code login flow

@@ -1,8 +1,8 @@
 /**
- * @openloomi/integrations/core - Shared interfaces for integration platform implementations
+ * @opencontext/integrations/core - Shared interfaces for integration platform implementations
  *
  * These interfaces define the contract between the platform-agnostic integration code
- * in @openloomi/integrations and the application-specific implementations provided by
+ * in @opencontext/integrations and the application-specific implementations provided by
  * the consuming application (e.g., apps/web).
  *
  * The consuming application must provide implementations of these interfaces

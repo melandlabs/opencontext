@@ -37,7 +37,7 @@ Summary 是稳定记忆的可读表达
 
 ## 当前 package 范围
 
-`@openloomi/memory-consolidation` 目前只提供纯函数能力：
+`@opencontext/memory-consolidation` 目前只提供纯函数能力：
 
 - 构建 evidence clusters。
 - 从显式 record keys 中构建有上限的 relation candidates。

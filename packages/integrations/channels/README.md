@@ -1,4 +1,4 @@
-# @openloomi/integrations-channels
+# @opencontext/integrations-channels
 
 Multi-channel integration framework for OpenLoomi. Provides the shared
 `Channel`, `Platform`, and `ExtractedMessageInfo` types, plus re-exports of
@@ -8,21 +8,21 @@ Discord, Gmail, iMessage, Docs, HubSpot).
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-channels
+pnpm add @opencontext/integrations-channels
 ```
 
 ## Subpath Exports
 
-- `@openloomi/integrations-channels` — Main entrypoint
-- `@openloomi/integrations-channels/telegram` — Telegram adapter
-- `@openloomi/integrations-channels/whatsapp` — WhatsApp adapter
-- `@openloomi/integrations-channels/weixin` — WeChat adapter
-- `@openloomi/integrations-channels/dingtalk` — DingTalk adapter
-- `@openloomi/integrations-channels/feishu` — Feishu (Lark) adapter
-- `@openloomi/integrations-channels/qqbot` — QQ Bot adapter
-- `@openloomi/integrations-channels/discord` — Discord adapter
-- `@openloomi/integrations-channels/gmail` — Gmail adapter
-- `@openloomi/integrations-channels/imessage` — iMessage adapter
-- `@openloomi/integrations-channels/docs` — Google Docs adapter
-- `@openloomi/integrations-channels/hubspot` — HubSpot adapter
-- `@openloomi/integrations-channels/sources/types` — Shared source types
+- `@opencontext/integrations-channels` — Main entrypoint
+- `@opencontext/integrations-channels/telegram` — Telegram adapter
+- `@opencontext/integrations-channels/whatsapp` — WhatsApp adapter
+- `@opencontext/integrations-channels/weixin` — WeChat adapter
+- `@opencontext/integrations-channels/dingtalk` — DingTalk adapter
+- `@opencontext/integrations-channels/feishu` — Feishu (Lark) adapter
+- `@opencontext/integrations-channels/qqbot` — QQ Bot adapter
+- `@opencontext/integrations-channels/discord` — Discord adapter
+- `@opencontext/integrations-channels/gmail` — Gmail adapter
+- `@opencontext/integrations-channels/imessage` — iMessage adapter
+- `@opencontext/integrations-channels/docs` — Google Docs adapter
+- `@opencontext/integrations-channels/hubspot` — HubSpot adapter
+- `@opencontext/integrations-channels/sources/types` — Shared source types

@@ -5,7 +5,7 @@
  * sqlite-vec store. The DB path is resolved via `MemoryStoreEnv`.
  */
 
-import type { VectorSearchResult } from "@openloomi/rag/vector-service";
+import type { VectorSearchResult } from "@opencontext/rag/vector-service";
 import type { MemoryStoreEnv } from "../config";
 
 export interface SQLiteInsightVectorInput {
@@ -65,7 +65,7 @@ function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
 async function getInsightSQLiteVecStore(env: MemoryStoreEnv) {
   const e = resolveEnv(env);
   const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
-  const { getSQLiteVecStore } = await import("@openloomi/rag/sqlite-vec-store");
+  const { getSQLiteVecStore } = await import("@opencontext/rag/sqlite-vec-store");
   return await getSQLiteVecStore(dbPath, undefined, {
     collectionName:
       process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "openloomi_insights",

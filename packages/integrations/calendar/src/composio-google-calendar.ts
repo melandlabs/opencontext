@@ -1,4 +1,4 @@
-import { ComposioClient } from "@openloomi/integrations/composio";
+import { ComposioClient } from "@opencontext/integrations/composio";
 
 export class ComposioGoogleCalendarProxy {
   private readonly connectedAccountId: string;

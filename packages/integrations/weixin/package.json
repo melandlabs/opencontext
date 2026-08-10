@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/integrations-weixin",
+  "name": "@opencontext/integrations-weixin",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -38,12 +38,12 @@
     "openloomi"
   ],
   "dependencies": {
-    "@openloomi/ai": "workspace:*",
-    "@openloomi/integrations": "workspace:*",
+    "@opencontext/ai": "workspace:*",
+    "@opencontext/integrations": "workspace:*",
     "@tencent-weixin/openclaw-weixin": "^2.1.9"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

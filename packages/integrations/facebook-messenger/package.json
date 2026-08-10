@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/integrations-facebook-messenger",
+  "name": "@opencontext/integrations-facebook-messenger",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -30,11 +30,11 @@
     "openloomi"
   ],
   "dependencies": {
-    "@openloomi/integrations": "workspace:*",
-    "@openloomi/integrations-channels": "workspace:*"
+    "@opencontext/integrations": "workspace:*",
+    "@opencontext/integrations-channels": "workspace:*"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

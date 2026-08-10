@@ -1,5 +1,5 @@
 /**
- * @openloomi/memory-store/mcp — MCP server entry.
+ * @opencontext/memory-store/mcp — MCP server entry.
  *
  * Spawns an MCP server (stdio transport by default) that exposes the
  * memory-store as tools any MCP client (Claude Code, etc.) can invoke.
@@ -11,7 +11,7 @@
  *   - memory.health          → { ok: true }
  *
  * Usage:
- *   import { startMcpServer } from "@openloomi/memory-store/mcp";
+ *   import { startMcpServer } from "@opencontext/memory-store/mcp";
  *   await startMcpServer({ db: { getDb }, env: { isTauriMode } });
  */
 
@@ -31,7 +31,7 @@ export interface StartMcpServerOptions extends MemoryStoreConfig {
   version?: string;
 }
 
-const DEFAULT_NAME = "@openloomi/memory-store";
+const DEFAULT_NAME = "@opencontext/memory-store";
 const DEFAULT_VERSION = "0.9.0";
 
 export async function startMcpServer(

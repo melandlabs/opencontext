@@ -2,7 +2,7 @@ import {
   ComposioClient,
   type ComposioCredentials,
   isComposioCredentials,
-} from "@openloomi/integrations/composio";
+} from "@opencontext/integrations/composio";
 
 export class AppError extends Error {
   constructor(

@@ -1,24 +1,24 @@
-# @openloomi/memory-store
+# @opencontext/memory-store
 
 OpenLoomi memory storage + search SDK with optional HTTP and MCP server
 entry points. The package is intentionally decoupled from the openloomi
 web app's database and env layers — every consumer wires up its own
 implementation via `MemoryStoreConfig`.
 
-- **SDK** (`@openloomi/memory-store`) — embed in a Node.js host
-- **HTTP** (`@openloomi/memory-store/http`) — REST daemon
-- **MCP** (`@openloomi/memory-store/mcp`) — stdio tools for Claude Desktop / Cursor
+- **SDK** (`@opencontext/memory-store`) — embed in a Node.js host
+- **HTTP** (`@opencontext/memory-store/http`) — REST daemon
+- **MCP** (`@opencontext/memory-store/mcp`) — stdio tools for Claude Desktop / Cursor
 
 ## Install
 
 ```bash
-pnpm add @openloomi/memory-store
+pnpm add @opencontext/memory-store
 ```
 
 ## Quick start
 
 ```ts
-import { createMemoryStore } from "@openloomi/memory-store";
+import { createMemoryStore } from "@opencontext/memory-store";
 
 const store = await createMemoryStore({
   db: { getDb: () => drizzleDb() },
@@ -36,9 +36,9 @@ const hits = await store.searchUnifiedMemory({ userId, query });
 
 | Import | What you get |
 | --- | --- |
-| `@openloomi/memory-store` | `createMemoryStore(config)` facade |
-| `@openloomi/memory-store/http` | `startHttpServer(options)` — Hono app on a port |
-| `@openloomi/memory-store/mcp` | `startMcpServer()` — stdio MCP server |
+| `@opencontext/memory-store` | `createMemoryStore(config)` facade |
+| `@opencontext/memory-store/http` | `startHttpServer(options)` — Hono app on a port |
+| `@opencontext/memory-store/mcp` | `startMcpServer()` — stdio MCP server |
 
 CLI bins ship with the package:
 
@@ -81,7 +81,7 @@ import {
   createMemoryStore,
   registerPostgresFactory,
   type PostgresRawMessageManagerLike,
-} from "@openloomi/memory-store";
+} from "@opencontext/memory-store";
 import { myPostgresRawMessageManager } from "./postgres-raw-message-store";
 import * as schema from "./schema";
 
@@ -157,7 +157,7 @@ the fallback — same semantics as the web app.
 You don't need to wire all of them; the ones you omit just emit a warning:
 
 ```ts
-import { createUnifiedSearch } from "@openloomi/memory-store/unified-search";
+import { createUnifiedSearch } from "@opencontext/memory-store/unified-search";
 
 const search = createUnifiedSearch({
   embedQuery: async ({ userId, query, authToken }) =>
@@ -197,12 +197,12 @@ existing Drizzle-based repo), register it via the factory pattern. The
 memory-store package will resolve it on first use:
 
 ```ts
-import { registerPostgresFactory } from "@openloomi/memory-store/postgres-raw-message-factory";
+import { registerPostgresFactory } from "@opencontext/memory-store/postgres-raw-message-factory";
 import { myPostgresManager } from "./managers/postgres-raw-message";
 
 registerPostgresFactory(async () => myPostgresManager);
 // Later — anywhere in the codebase:
-import { getRawMessageManager } from "@openloomi/memory-store";
+import { getRawMessageManager } from "@opencontext/memory-store";
 const manager = await getRawMessageManager();
 ```
 
@@ -213,7 +213,7 @@ registering the factory is mandatory.
 ### 6. HTTP daemon
 
 ```ts
-import { startHttpServer } from "@openloomi/memory-store/http";
+import { startHttpServer } from "@opencontext/memory-store/http";
 
 const { url, port, stop } = await startHttpServer({
   port: 7421,
@@ -275,7 +275,7 @@ Tools exposed over stdio:
   "mcpServers": {
     "openloomi-memory": {
       "command": "npx",
-      "args": ["-y", "@openloomi/memory-store", "memory-mcp"],
+      "args": ["-y", "@opencontext/memory-store", "memory-mcp"],
       "env": {
         "DATABASE_URL": "postgres://user:pass@host:5432/openloomi"
       }
@@ -321,17 +321,17 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 | Subpath | Contents |
 | --- | --- |
-| `@openloomi/memory-store` | `createMemoryStore`, top-level types |
-| `@openloomi/memory-store/http` | `startHttpServer`, `StartedHttpServer` |
-| `@openloomi/memory-store/mcp` | `startMcpServer` |
-| `@openloomi/memory-store/unified-search` | `createUnifiedSearch(deps)` factory + result types |
-| `@openloomi/memory-store/raw-message-store` | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
-| `@openloomi/memory-store/sqlite-raw-message-store` | SQLite-vec raw-message manager (Tauri / desktop) |
-| `@openloomi/memory-store/postgres-raw-message-factory` | `registerPostgresFactory`, `resolvePostgresFactory` |
-| `@openloomi/memory-store/sqlite-vector-index` | Direct sqlite-vec insight index helpers |
-| `@openloomi/memory-store/chroma-memory-index` | Direct chroma upsert / search helpers |
-| `@openloomi/memory-store/memory-graph-write-policy` | `resolveMemoryGraphWritePolicy`, allowlist gating |
-| `@openloomi/memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy` |
+| `@opencontext/memory-store` | `createMemoryStore`, top-level types |
+| `@opencontext/memory-store/http` | `startHttpServer`, `StartedHttpServer` |
+| `@opencontext/memory-store/mcp` | `startMcpServer` |
+| `@opencontext/memory-store/unified-search` | `createUnifiedSearch(deps)` factory + result types |
+| `@opencontext/memory-store/raw-message-store` | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
+| `@opencontext/memory-store/sqlite-raw-message-store` | SQLite-vec raw-message manager (Tauri / desktop) |
+| `@opencontext/memory-store/postgres-raw-message-factory` | `registerPostgresFactory`, `resolvePostgresFactory` |
+| `@opencontext/memory-store/sqlite-vector-index` | Direct sqlite-vec insight index helpers |
+| `@opencontext/memory-store/chroma-memory-index` | Direct chroma upsert / search helpers |
+| `@opencontext/memory-store/memory-graph-write-policy` | `resolveMemoryGraphWritePolicy`, allowlist gating |
+| `@opencontext/memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy` |
 
 ## Behaviour notes
 

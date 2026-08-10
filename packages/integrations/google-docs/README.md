@@ -1,4 +1,4 @@
-# @openloomi/integrations-google-docs
+# @opencontext/integrations-google-docs
 
 [Google Docs](https://developers.google.com/docs) integration for OpenLoomi.
 Built on the official `googleapis` SDK with OAuth credential management.
@@ -6,7 +6,7 @@ Built on the official `googleapis` SDK with OAuth credential management.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-google-docs
+pnpm add @opencontext/integrations-google-docs
 ```
 
 ## Exports

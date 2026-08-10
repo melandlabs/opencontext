@@ -1,4 +1,4 @@
-# @openloomi/memory-consolidation
+# @opencontext/memory-consolidation
 
 Experimental memory consolidation utilities for evaluating repeated evidence,
 cluster-level signals, and diagnostics before changing runtime memory behavior.

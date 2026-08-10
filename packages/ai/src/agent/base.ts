@@ -6,7 +6,7 @@
 
 import { nanoid } from "nanoid";
 
-import { UserLocale } from "@openloomi/shared";
+import { UserLocale } from "@opencontext/shared";
 
 import { defaultLanguageDirectiveBuilder } from "./adapters/default-language-directive-builder";
 import type {

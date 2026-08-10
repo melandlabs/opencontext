@@ -1,8 +1,8 @@
 /**
- * @openloomi/memory-store/http — HTTP server entry.
+ * @opencontext/memory-store/http — HTTP server entry.
  *
  * Usage:
- *   import { startHttpServer } from "@openloomi/memory-store/http";
+ *   import { startHttpServer } from "@opencontext/memory-store/http";
  *   const { url, stop } = await startHttpServer({
  *     port: 7421,
  *     db: { getDb: () => drizzleDb() },

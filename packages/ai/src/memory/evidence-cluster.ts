@@ -1,1 +1,1 @@
-export * from "@openloomi/memory-consolidation";
+export * from "@opencontext/memory-consolidation";

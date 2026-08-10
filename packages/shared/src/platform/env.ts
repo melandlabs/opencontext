@@ -4,4 +4,4 @@ export {
   isBrowser,
   getPlatformKind,
   type PlatformKind,
-} from "@openloomi/ui-runtime/platform/env";
+} from "@opencontext/ui-runtime/platform/env";

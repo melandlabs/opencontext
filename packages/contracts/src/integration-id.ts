@@ -4,7 +4,7 @@
  *
  * Source of truth: this file.
  * Re-exported (for one release) by `apps/web/hooks/use-integrations.ts` for
- * backward compatibility; new code MUST import from `@openloomi/contracts`.
+ * backward compatibility; new code MUST import from `@opencontext/contracts`.
  *
  * The branded-type wrapper prevents accidental mixing with arbitrary strings
  * (e.g. a raw platform slug from an untrusted API response).

@@ -2,7 +2,7 @@
 
 ## 目标
 
-当前 `@openloomi/memory-consolidation` 已经具备从 `cluster` 到
+当前 `@opencontext/memory-consolidation` 已经具备从 `cluster` 到
 `consolidation plan` 的决策能力：
 
 ```text

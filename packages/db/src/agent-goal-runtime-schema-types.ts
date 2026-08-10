@@ -16,7 +16,7 @@ import type {
   RuntimeInstructionSource,
   RuntimeProvider,
   RuntimeSessionState,
-} from "@openloomi/ai/agent/runtime-instructions";
+} from "@opencontext/ai/agent/runtime-instructions";
 
 export type AgentGoalSourceType = AgentGoal["source"]["type"];
 export type AgentGoalSnapshot = AgentGoal;

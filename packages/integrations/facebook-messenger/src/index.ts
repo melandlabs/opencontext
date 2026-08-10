@@ -1,18 +1,18 @@
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   Message,
   At,
   Image,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   DialogInfo,
   ExtractedMessageInfo,
-} from "@openloomi/integrations/channels/sources/types";
+} from "@opencontext/integrations/channels/sources/types";
 
 type MessengerParticipant = { id: string; name?: string };
 

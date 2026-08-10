@@ -1,5 +1,5 @@
 /**
- * @openloomi/memory-store — SDK entry point.
+ * @opencontext/memory-store — SDK entry point.
  *
  * Wires up a top-level `MemoryStore` facade combining the raw message
  * manager, the unified search facade, and vector index helpers. Hosts

@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/voice-whisper",
+  "name": "@opencontext/voice-whisper",
   "version": "0.9.0",
   "type": "module",
   "files": [

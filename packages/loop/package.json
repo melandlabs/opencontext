@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/loop",
+  "name": "@opencontext/loop",
   "version": "0.9.0",
   "type": "module",
   "files": ["dist", "README.md", "LICENSE"],
@@ -24,7 +24,7 @@
   "description": "Loop filesystem paths, CLI shim resolver, and preferences (zero-DB, zero-agent) shared between OpenLoomi runtime and UI.",
   "keywords": ["openloomi", "loop", "filesystem", "preferences"],
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

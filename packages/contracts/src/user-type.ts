@@ -4,7 +4,7 @@
  *
  * Source of truth: this file.
  * Re-exported (for one release) by `apps/web/app/(auth)/auth.ts` for backward
- * compatibility; new code MUST import from `@openloomi/contracts`.
+ * compatibility; new code MUST import from `@opencontext/contracts`.
  *
  * Note: `packages/integrations/src/core/index.ts` historically had its own
  * local `UserType = "user" | "guest"`. That type describes bot-owner

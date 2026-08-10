@@ -1,4 +1,4 @@
-# `@openloomi/contracts`
+# `@opencontext/contracts`
 
 Cross-cutting type contracts shared between the OpenLoomi **runtime** sub-project
 (memory / context / environment / agent) and the **UI** sub-project (Next.js +
@@ -12,11 +12,11 @@ consume it; neither sub-project owns it.
 
 | Sub-path | What it defines | Used by |
 |---|---|---|
-| `@openloomi/contracts` (root) | barrel — re-exports everything | everyone |
-| `@openloomi/contracts/user-type` | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES` | auth, db, integrations, UI route groups |
-| `@openloomi/contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` | integrations, UI hooks, route handlers |
-| `@openloomi/contracts/errors` | `AuthErrorCode` enum | auth, UI forms, route handlers |
-| `@openloomi/contracts/schemas` | `UserTypeSchema`, `IntegrationIdSchema` (zod) | runtime parsers, UI form validation |
+| `@opencontext/contracts` (root) | barrel — re-exports everything | everyone |
+| `@opencontext/contracts/user-type` | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES` | auth, db, integrations, UI route groups |
+| `@opencontext/contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` | integrations, UI hooks, route handlers |
+| `@opencontext/contracts/errors` | `AuthErrorCode` enum | auth, UI forms, route handlers |
+| `@opencontext/contracts/schemas` | `UserTypeSchema`, `IntegrationIdSchema` (zod) | runtime parsers, UI form validation |
 
 ## Why this exists
 
@@ -43,12 +43,12 @@ canonical shape, with no NextAuth / React leakage.
 - **`zod` is an optional peer dependency.** Only `schemas.ts` imports from it;
   the rest of the package has zero runtime deps.
 - **No domain types here.** Domain-specific shapes belong in their owning
-  runtime package (e.g. memory graph contracts live in `@openloomi/memory-store`).
+  runtime package (e.g. memory graph contracts live in `@opencontext/memory-store`).
 
 ## Build
 
 ```
-pnpm --filter @openloomi/contracts build
+pnpm --filter @opencontext/contracts build
 ```
 
 Produces `dist/` with ESM + .d.ts. Bundled through the shared tsup preset

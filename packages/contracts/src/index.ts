@@ -1,5 +1,5 @@
 /**
- * @openloomi/contracts — boundary types shared between runtime and UI.
+ * @opencontext/contracts — boundary types shared between runtime and UI.
  *
  * Add new cross-cutting types here. Domain-specific types belong in their
  * owning runtime package. UI-only types belong in `apps/web`.

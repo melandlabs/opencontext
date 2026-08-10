@@ -1,4 +1,4 @@
 export {
   TauriFileSystem,
   tauriFileSystem,
-} from "@openloomi/ui-runtime/platform/adapters/tauri/filesystem";
+} from "@opencontext/ui-runtime/platform/adapters/tauri/filesystem";

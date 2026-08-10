@@ -2,7 +2,7 @@
  * Memory-graph write policy.
  *
  * Pure functions, no env imports — callers pass the env snapshot
- * explicitly. Used by the apps/web routes via `@openloomi/memory-store/memory-graph-write-policy`.
+ * explicitly. Used by the apps/web routes via `@opencontext/memory-store/memory-graph-write-policy`.
  */
 
 import { CHAT_MEMORY_EVIDENCE_ID_PREFIX } from "../contracts";

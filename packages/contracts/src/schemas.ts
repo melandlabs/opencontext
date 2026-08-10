@@ -5,7 +5,7 @@
  * runtime packages (memory-store, integrations/<platform>, ai, etc.). Only
  * schemas that genuinely straddle the runtime/UI boundary live here.
  *
- * `zod` is an optional peer dependency; importing from `@openloomi/contracts/schemas`
+ * `zod` is an optional peer dependency; importing from `@opencontext/contracts/schemas`
  * requires the consumer to have zod installed. Runtime and UI both already do.
  */
 import { z } from "zod";

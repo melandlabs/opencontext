@@ -2,7 +2,7 @@ import { customProvider } from "ai";
 import type { LanguageModel } from "ai";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { createAnthropic } from "@ai-sdk/anthropic";
-import { DEV_PORT, PROD_PORT } from "@openloomi/shared";
+import { DEV_PORT, PROD_PORT } from "@opencontext/shared";
 
 /**
  * Provider type for LLM API

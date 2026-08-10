@@ -1,5 +1,5 @@
 /**
- * @openloomi/memory-store public types re-exports.
+ * @opencontext/memory-store public types re-exports.
  */
 
 export type {

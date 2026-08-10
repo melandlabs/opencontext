@@ -11,24 +11,24 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   File as openloomiFile,
   Image as openloomiImage,
   Message as openloomiMessage,
   Messages,
-} from "@openloomi/integrations/channels";
-import type { ExtractedMessageInfo } from "@openloomi/integrations/channels/sources/types";
+} from "@opencontext/integrations/channels";
+import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
 import type {
   BaileysAuthStateProvider,
   ClientRegistry,
   ConfigProvider,
   FileIngester,
-} from "@openloomi/integrations/core";
+} from "@opencontext/integrations/core";
 import {
   type ConnectionState,
   DisconnectReason,

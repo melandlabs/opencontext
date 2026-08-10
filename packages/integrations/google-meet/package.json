@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/integrations-google-meet",
+  "name": "@opencontext/integrations-google-meet",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -30,7 +30,7 @@
     "openloomi"
   ],
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {
@@ -38,6 +38,6 @@
     "prepublishOnly": "pnpm build"
   },
   "dependencies": {
-    "@openloomi/integrations": "workspace:*"
+    "@opencontext/integrations": "workspace:*"
   }
 }

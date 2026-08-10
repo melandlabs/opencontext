@@ -1,5 +1,5 @@
 import type { TFunction } from "i18next";
-import type { IntegrationId } from "@openloomi/contracts/integration-id";
+import type { IntegrationId } from "@opencontext/contracts/integration-id";
 
 export interface PlatformDisplayInfo {
   icon: string;

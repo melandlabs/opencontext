@@ -4,17 +4,17 @@
  * Needs to work with QQ WebSocket listener to receive messages
  * Reference: https://bot.q.qq.com/wiki/
  */
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   Message,
   Image,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
-import type { Friend } from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
+import type { Friend } from "@opencontext/integrations/channels";
 
 const DEBUG = process.env.DEBUG_QQBOT === "true";
 const QQ_TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken";

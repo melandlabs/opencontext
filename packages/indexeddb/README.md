@@ -1,11 +1,11 @@
-# @openloomi/indexeddb
+# @opencontext/indexeddb
 
 Client-side IndexedDB manager for browser storage.
 
 ## Installation
 
 ```sh
-pnpm add @openloomi/indexeddb
+pnpm add @opencontext/indexeddb
 ```
 
 ## Exports

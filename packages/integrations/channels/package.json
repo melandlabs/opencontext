@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/integrations-channels",
+  "name": "@opencontext/integrations-channels",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -31,11 +31,11 @@
     "openloomi"
   ],
   "dependencies": {
-    "@openloomi/shared": "workspace:*",
+    "@opencontext/shared": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

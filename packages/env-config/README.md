@@ -1,4 +1,4 @@
-# `@openloomi/env-config`
+# `@opencontext/env-config`
 
 Dep-free env / deployment-mode / Tauri-path constants used by both the UI
 (`apps/web`) and the runtime services (`packages/*` daemons). Will live in the
@@ -6,7 +6,7 @@ runtime sub-project (`runtime/packages/env-config/` after Phase 9).
 
 | Subpath | Source | Notes |
 |---|---|---|
-| `@openloomi/env-config` | `src/index.ts` | Re-exports the subpaths below |
+| `@opencontext/env-config` | `src/index.ts` | Re-exports the subpaths below |
 | `.../client-constants` | `src/client-constants.ts` | Client-safe env constants (no `node:` deps) |
 | `.../client-mode` | `src/client-mode.ts` | `isTauriMode()` / `isServerMode()` helpers |
 | `.../tauri-paths` | `src/tauri-paths.ts` | Server-side Tauri data-dir / db / logs paths |

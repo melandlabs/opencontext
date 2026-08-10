@@ -13,7 +13,7 @@ task order, or implementation authorization from this historical roadmap.
 
 ## Goal
 
-The long-term goal of `@openloomi/memory-consolidation` is not to make agents
+The long-term goal of `@opencontext/memory-consolidation` is not to make agents
 store more raw conversation history. It is to help existing memory traces become
 less noisy, denser, explainable, updateable, and forgettable long-term memory
 structures.

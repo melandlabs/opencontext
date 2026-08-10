@@ -1,5 +1,5 @@
 /**
- * @openloomi/ai - Billing: token estimation and model pricing
+ * @opencontext/ai - Billing: token estimation and model pricing
  */
 
 export {

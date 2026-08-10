@@ -1,5 +1,5 @@
 /**
- * @openloomi/ai - Context: conversation window management
+ * @opencontext/ai - Context: conversation window management
  */
 
 export {

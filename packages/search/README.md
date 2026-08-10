@@ -1,4 +1,4 @@
-# @openloomi/search
+# @opencontext/search
 
 Web search adapters used by the OpenLoomi agent. Currently includes a Brave
 Search client; additional providers can be plugged in via the shared
@@ -7,14 +7,14 @@ interface.
 ## Installation
 
 ```sh
-pnpm add @openloomi/search
+pnpm add @opencontext/search
 ```
 
 ## Subpath Exports
 
-- `@openloomi/search` — Main entrypoint with the shared `SearchProvider`
+- `@opencontext/search` — Main entrypoint with the shared `SearchProvider`
   interface
-- `@openloomi/search/brave` — [Brave Search](https://brave.com/search/api/)
+- `@opencontext/search/brave` — [Brave Search](https://brave.com/search/api/)
   client implementation
 
 ## Environment

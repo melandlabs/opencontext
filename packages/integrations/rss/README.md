@@ -1,11 +1,11 @@
-# @openloomi/rss
+# @opencontext/rss
 
 RSS feed parsing, OPML support, and tagging utilities.
 
 ## Installation
 
 ```sh
-pnpm add @openloomi/rss
+pnpm add @opencontext/rss
 ```
 
 ## Exports

@@ -6,16 +6,16 @@
     "tsBuildInfoFile": "./dist/.tsbuildinfo",
     "noEmit": false,
     "paths": {
-      "@openloomi/indexeddb": ["../../packages/indexeddb/src/index.ts"],
-      "@openloomi/indexeddb/*": ["../../packages/indexeddb/src/*"],
-      "@openloomi/sqlite": ["../../packages/sqlite/src/index.ts"],
-      "@openloomi/sqlite/*": ["../../packages/sqlite/src/*"],
-      "@openloomi/ai": ["../../packages/ai/src/index.ts"],
-      "@openloomi/ai/*": ["../../packages/ai/src/*"],
-      "@openloomi/rag": ["../../packages/ai/rag/src/index.ts"],
-      "@openloomi/rag/*": ["../../packages/ai/rag/src/*"],
-      "@openloomi/shared": ["../../packages/shared/src/index.ts"],
-      "@openloomi/shared/*": ["../../packages/shared/src/*"]
+      "@opencontext/indexeddb": ["../../packages/indexeddb/src/index.ts"],
+      "@opencontext/indexeddb/*": ["../../packages/indexeddb/src/*"],
+      "@opencontext/sqlite": ["../../packages/sqlite/src/index.ts"],
+      "@opencontext/sqlite/*": ["../../packages/sqlite/src/*"],
+      "@opencontext/ai": ["../../packages/ai/src/index.ts"],
+      "@opencontext/ai/*": ["../../packages/ai/src/*"],
+      "@opencontext/rag": ["../../packages/ai/rag/src/index.ts"],
+      "@opencontext/rag/*": ["../../packages/ai/rag/src/*"],
+      "@opencontext/shared": ["../../packages/shared/src/index.ts"],
+      "@opencontext/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": ["src"]

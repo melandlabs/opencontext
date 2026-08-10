@@ -200,7 +200,7 @@ export class ChromaVectorStore implements IVectorStore {
         // default embedding function avoids model downloads and dimension drift.
         embeddingFunction: null,
         metadata: {
-          source: "@openloomi/rag",
+          source: "@opencontext/rag",
           store: "chroma",
         },
       });

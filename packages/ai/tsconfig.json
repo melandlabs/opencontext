@@ -6,10 +6,10 @@
     "incremental": false,
     "noEmit": false,
     "paths": {
-      "@openloomi/memory-consolidation": [
+      "@opencontext/memory-consolidation": [
         "./memory-consolidation/src/index.ts"
       ],
-      "@openloomi/memory-consolidation/*": ["./memory-consolidation/src/*"]
+      "@opencontext/memory-consolidation/*": ["./memory-consolidation/src/*"]
     }
   },
   "include": ["src/**/*"]

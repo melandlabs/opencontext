@@ -7,9 +7,9 @@
  * without an injected config.
  */
 
-import { buildMemoryRecordEmbeddingDocument } from "@openloomi/ai/memory";
-import { ChromaVectorStore } from "@openloomi/rag";
-import type { DocumentChunk } from "@openloomi/rag/vector-service";
+import { buildMemoryRecordEmbeddingDocument } from "@opencontext/ai/memory";
+import { ChromaVectorStore } from "@opencontext/rag";
+import type { DocumentChunk } from "@opencontext/rag/vector-service";
 
 import { rawMessageToMemoryRecord, type RawMessage } from "../contracts";
 

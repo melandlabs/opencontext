@@ -1,4 +1,4 @@
-# @openloomi/integrations-jira
+# @opencontext/integrations-jira
 
 [Jira](https://www.atlassian.com/software/jira) integration for OpenLoomi.
 Reads, creates, and updates Jira issues through Atlassian's REST API.
@@ -6,7 +6,7 @@ Reads, creates, and updates Jira issues through Atlassian's REST API.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-jira
+pnpm add @opencontext/integrations-jira
 ```
 
 ## Exports

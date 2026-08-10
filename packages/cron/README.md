@@ -1,4 +1,4 @@
-# `@openloomi/cron`
+# `@opencontext/cron`
 
 Scheduling primitives shared between OpenLoomi runtime and UI sub-projects.
 
@@ -8,10 +8,10 @@ integration dependencies:
 
 | Subpath                          | Source                                | Notes                                            |
 | -------------------------------- | ------------------------------------- | ------------------------------------------------ |
-| `@openloomi/cron`                | barrel                                | Re-exports the subpaths below                    |
-| `@openloomi/cron/types`          | `apps/web/lib/cron/types.ts`          | `ScheduleConfig`, `JobConfig`, `CronJob`, …      |
-| `@openloomi/cron/scheduler`      | `apps/web/lib/cron/scheduler.ts`      | `computeNextRun`, `validateCronExpression`, …    |
-| `@openloomi/cron/stream-response`| `apps/web/lib/cron/stream-response.ts`| `createJobExecutionStreamResponse` (SSE)         |
+| `@opencontext/cron`                | barrel                                | Re-exports the subpaths below                    |
+| `@opencontext/cron/types`          | `apps/web/lib/cron/types.ts`          | `ScheduleConfig`, `JobConfig`, `CronJob`, …      |
+| `@opencontext/cron/scheduler`      | `apps/web/lib/cron/scheduler.ts`      | `computeNextRun`, `validateCronExpression`, …    |
+| `@opencontext/cron/stream-response`| `apps/web/lib/cron/stream-response.ts`| `createJobExecutionStreamResponse` (SSE)         |
 
 The bigger pieces (`executor.ts`, `service.ts`, `local-scheduler.ts`,
 `insight-maintenance.ts`, `notifications.ts`) stay inside `apps/web/lib/cron/`

@@ -1,4 +1,4 @@
-# @openloomi/config
+# @opencontext/config
 
 Shared build, lint, and TypeScript presets used across every package in the
 OpenLoomi monorepo. Centralises `tsup`, ESLint, and `tsconfig` configuration so
@@ -7,12 +7,12 @@ each package's `package.json` stays minimal.
 ## Installation
 
 ```sh
-pnpm add @openloomi/config
+pnpm add @opencontext/config
 ```
 
 ## Subpath Exports
 
-- `@openloomi/config` — Main entrypoint (compiled `dist/index.js`)
-- `@openloomi/config/eslint` — Pre-bundled ESLint configuration
-- `@openloomi/config/tsconfig` — Shared `tsconfig.json` base
-- `@openloomi/config/tsup-preset` — `tsup` preset factory (`makeTsupConfig`)
+- `@opencontext/config` — Main entrypoint (compiled `dist/index.js`)
+- `@opencontext/config/eslint` — Pre-bundled ESLint configuration
+- `@opencontext/config/tsconfig` — Shared `tsconfig.json` base
+- `@opencontext/config/tsup-preset` — `tsup` preset factory (`makeTsupConfig`)

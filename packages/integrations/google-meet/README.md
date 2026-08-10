@@ -1,4 +1,4 @@
-# @openloomi/integrations-google-meet
+# @opencontext/integrations-google-meet
 
 [Google Meet](https://developers.google.com/meet) integration for OpenLoomi.
 Uses Composio under the hood to drive meeting scheduling, attendee
@@ -7,7 +7,7 @@ management, and recording retrieval.
 ## Installation
 
 ```sh
-pnpm add @openloomi/integrations-google-meet
+pnpm add @opencontext/integrations-google-meet
 ```
 
 ## Exports

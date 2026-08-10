@@ -1,5 +1,5 @@
 {
-  "name": "@openloomi/indexeddb",
+  "name": "@opencontext/indexeddb",
   "version": "0.9.0",
   "type": "module",
   "files": [
@@ -35,7 +35,7 @@
     "react": ">=18.0.0"
   },
   "devDependencies": {
-    "@openloomi/config": "workspace:*",
+    "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"
   },
   "scripts": {

@@ -1,4 +1,4 @@
-# @openloomi/audit
+# @opencontext/audit
 
 Structured audit logging for security-sensitive actions: command execution,
 file reads, and credential access. Provides logger functions plus an optional
@@ -7,7 +7,7 @@ file reads, and credential access. Provides logger functions plus an optional
 ## Installation
 
 ```sh
-pnpm add @openloomi/audit
+pnpm add @opencontext/audit
 ```
 
 ## Exports

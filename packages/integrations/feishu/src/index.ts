@@ -3,24 +3,24 @@
  * Send messages via Feishu Open Platform API using app_id / app_secret
  * Needs to work with Feishu WebSocket long-poll listener to receive messages
  */
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   Message,
   Image,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   Friend,
   Group,
   GroupMember,
-} from "@openloomi/integrations/channels";
-import { Permission } from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
+import { Permission } from "@opencontext/integrations/channels";
 import * as Lark from "@larksuiteoapi/node-sdk";
-import type { ExtractedMessageInfo } from "@openloomi/integrations/channels/sources/types";
+import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
 
 const DEBUG = process.env.DEBUG_FEISHU === "true";
 

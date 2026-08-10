@@ -1,11 +1,11 @@
-# @openloomi/shared
+# @opencontext/shared
 
 Reusable utilities, types, and constants extracted from the OpenLoomi web app.
 
 ## Installation
 
 ```sh
-pnpm add @openloomi/shared
+pnpm add @opencontext/shared
 ```
 
 ## Exports

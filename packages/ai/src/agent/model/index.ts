@@ -1,5 +1,5 @@
 /**
- * @openloomi/ai - Model: model providers and request context
+ * @opencontext/ai - Model: model providers and request context
  */
 
 export {

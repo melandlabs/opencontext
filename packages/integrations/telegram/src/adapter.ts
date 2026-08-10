@@ -8,18 +8,18 @@
 import { TelegramClient } from "telegram";
 import { StringSession } from "telegram/sessions";
 import { Api } from "telegram/tl";
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   At,
   Image,
   Message,
-} from "@openloomi/integrations/channels";
-import type { Attachment } from "@openloomi/shared";
+} from "@opencontext/integrations/channels";
+import type { Attachment } from "@opencontext/shared";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type { Entity } from "telegram/define";
 import bigInt, { type BigInteger } from "big-integer";
 import { markdownToTelegramHtml } from "./markdown";
@@ -32,16 +32,16 @@ import {
   timeBeforeHours,
   type DialogInfo,
   type ExtractedMessageInfo,
-} from "@openloomi/integrations/channels/sources/types";
+} from "@opencontext/integrations/channels/sources/types";
 import type {
   FileIngester,
   ClientRegistry,
-} from "@openloomi/integrations/core";
+} from "@opencontext/integrations/core";
 import type {
   ContactMeta,
   TelegramContactMeta,
-} from "@openloomi/integrations/contacts";
-import { isTelegramContactMeta } from "@openloomi/integrations/contacts";
+} from "@opencontext/integrations/contacts";
+import { isTelegramContactMeta } from "@opencontext/integrations/contacts";
 
 const DEBUG = process.env.DEBUG_TELEGRAM === "true";
 
@@ -1541,12 +1541,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
   }
 }
 
-export { getTgUserNameString } from "@openloomi/integrations/channels/sources/types";
+export { getTgUserNameString } from "@opencontext/integrations/channels/sources/types";
 export type {
   DialogInfo,
   TgUserInfo,
   ExtractedMessageInfo,
-} from "@openloomi/integrations/channels/sources/types";
+} from "@opencontext/integrations/channels/sources/types";
 
 export function openloomiMessageToTgText(message: Message): string {
   if (typeof message === "string") {

@@ -3,13 +3,13 @@
  * are applied on missing fields so partially-written files self-heal.
  *
  * Phase 5 of `docs/split-runtime-ui.md` lifted this into the leaf
- * `@openloomi/loop` package along with the `LoopPreferences` shape
+ * `@opencontext/loop` package along with the `LoopPreferences` shape
  * itself, so the runtime + UI can both read the same on-disk config
  * without dragging the rest of `apps/web/lib/loop/*` along.
  *
  * The huge `apps/web/lib/loop/types.ts` (843 lines, dozens of
  * unrelated types) re-exports these from here via
- * `apps/web/lib/loop/types.ts`'s `export { ... } from "@openloomi/loop/preferences"`
+ * `apps/web/lib/loop/types.ts`'s `export { ... } from "@opencontext/loop/preferences"`
  * bridge, preserving the existing public surface for the rest of the
  * Loop runtime.
  */

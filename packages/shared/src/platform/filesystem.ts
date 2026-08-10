@@ -4,4 +4,4 @@ export {
   type SaveFileOptions,
   type DirEntry,
   type ListDirectoryOptions,
-} from "@openloomi/ui-runtime/platform/filesystem";
+} from "@opencontext/ui-runtime/platform/filesystem";

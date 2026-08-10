@@ -1,5 +1,5 @@
 /**
- * @openloomi/channels - Message platform adapters and integrations
+ * @opencontext/channels - Message platform adapters and integrations
  */
 
 export { MessagePlatformAdapter } from "./adapter";

@@ -1,4 +1,4 @@
-# @openloomi/mcp
+# @opencontext/mcp
 
 Stdio MCP server for using local OpenLoomi Desktop from MCP-capable agent
 runtimes.
@@ -8,7 +8,7 @@ runtimes.
 Build the MCP server from the OpenLoomi repository:
 
 ```bash
-pnpm --filter @openloomi/mcp build
+pnpm --filter @opencontext/mcp build
 ```
 
 Then point the runtime at the built stdio entrypoint:

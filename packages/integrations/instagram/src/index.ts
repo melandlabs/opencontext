@@ -1,6 +1,6 @@
-import { AppError } from "@openloomi/shared/errors";
-import type { ExtractedMessageInfo } from "@openloomi/integrations/channels/sources/types";
-import type { Messages } from "@openloomi/integrations/channels";
+import { AppError } from "@opencontext/shared/errors";
+import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
+import type { Messages } from "@opencontext/integrations/channels";
 
 type InstagramAdapterOptions = {
   botId: string;

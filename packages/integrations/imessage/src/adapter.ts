@@ -3,20 +3,20 @@
  * Uses @photon-ai/imessage-kit library to implement macOS native iMessage integration
  * Note: This feature is only available on macOS systems
  */
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   Message as openloomiMessage,
   Image,
   File as FileMessage,
   MessageEvent,
-} from "@openloomi/integrations/channels";
-import type { MessageTarget } from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
+import type { MessageTarget } from "@opencontext/integrations/channels";
 import type {
   ExtractedMessageInfo,
   DialogInfo,
-} from "@openloomi/integrations/channels/sources/types";
-import { timeBeforeHours } from "@openloomi/shared";
+} from "@opencontext/integrations/channels/sources/types";
+import { timeBeforeHours } from "@opencontext/shared";
 import { tmpdir, homedir } from "node:os";
 import { writeFile, unlink, mkdir } from "node:fs/promises";
 import { join } from "node:path";

@@ -12,7 +12,7 @@ import {
   loadChannelDay,
   clearChannelConversationFromAllDays,
   clearChannelForUserPrefix,
-} from "@openloomi/ai/store";
+} from "@opencontext/ai/store";
 import { join } from "node:path";
 import { homedir } from "node:os";
 

@@ -10,24 +10,24 @@
  * - ilink-client utilities
  */
 
-import { MessagePlatformAdapter } from "@openloomi/integrations/channels";
+import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
   Messages,
   Message,
   Image,
   File as FileMsg,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import type {
   MessageEvent,
   MessageTarget,
-} from "@openloomi/integrations/channels";
+} from "@opencontext/integrations/channels";
 import {
   weixinSendTextMessage,
   weixinSendImageMessage,
   weixinSendFileMessage,
   CDN_BASE_URL,
-} from "@openloomi/integrations/weixin/ilink-client";
-import type { WeixinIlinkCredentials } from "@openloomi/integrations/weixin/ilink-client";
+} from "@opencontext/integrations/weixin/ilink-client";
+import type { WeixinIlinkCredentials } from "@opencontext/integrations/weixin/ilink-client";
 
 // Re-export ws-listener
 export {

@@ -1,4 +1,4 @@
-# @openloomi/api
+# @opencontext/api
 
 Lightweight HTTP client helpers used by the OpenLoomi web app and other
 packages. Wraps `fetch` with unified error handling and exposes a typed
@@ -7,7 +7,7 @@ packages. Wraps `fetch` with unified error handling and exposes a typed
 ## Installation
 
 ```sh
-pnpm add @openloomi/api
+pnpm add @opencontext/api
 ```
 
 ## Exports
