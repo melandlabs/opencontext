@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 SQLite-backed persistence layer for OpenContext. Wraps `better-sqlite3` with
 the `sqlite-vec` extension and exposes the raw message store plus the shared
 schema definitions.

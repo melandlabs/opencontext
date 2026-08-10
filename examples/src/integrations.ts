@@ -14,24 +14,20 @@
  * reported per-section instead of aborting the entire smoke run.
  */
 
+import type { Message, Messages } from "@melandlabs/integrations-channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
+import { ComposioClient } from "@melandlabs/integrations-composio";
+import { type ContactMeta, isTelegramContactMeta } from "@melandlabs/integrations/contacts";
 import {
+	createMinimalContext,
 	noopAuthProvider,
 	noopCloudSyncProvider,
 	noopConfigProvider,
 	noopCredentialStore,
 	noopFileIngester,
 	noopSessionStore,
-	createMinimalContext,
 } from "@melandlabs/integrations/core";
-import { type ContactMeta, isTelegramContactMeta } from "@melandlabs/integrations/contacts";
-import {
-	buildSnippet,
-	cleanEmailForLLM,
-	htmlToPlainText,
-} from "@melandlabs/integrations/utils";
-import { type Message, type Messages } from "@melandlabs/integrations-channels";
-import { type ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
-import { ComposioClient } from "@melandlabs/integrations-composio";
+import { buildSnippet, cleanEmailForLLM, htmlToPlainText } from "@melandlabs/integrations/utils";
 
 import * as asana from "@melandlabs/integrations-asana";
 import * as calendar from "@melandlabs/integrations-calendar";
@@ -52,7 +48,7 @@ import * as rss from "@melandlabs/rss";
 
 import * as integrationsRuntime from "@melandlabs/integrations-runtime";
 
-import { makeCheck, runSection } from "./_helpers.ts";
+import { makeCheck, makeCheckWithSkip, runSection } from "./_helpers.ts";
 
 // Packages imported lazily below because their main entry imports
 // subpaths from upstream CJS packages that don't expose ESM exports.
@@ -71,18 +67,24 @@ export default async function testIntegrations() {
 	await runSection("@melandlabs/integrations (umbrella)", async () => {
 		const check = makeCheck("integrations-umbrella");
 
-		check("core noop helpers are exported as objects", [
-			noopAuthProvider,
-			noopCloudSyncProvider,
-			noopConfigProvider,
-			noopCredentialStore,
-			noopFileIngester,
-			noopSessionStore,
-		].length === 6);
+		check(
+			"core noop helpers are exported as objects",
+			[
+				noopAuthProvider,
+				noopCloudSyncProvider,
+				noopConfigProvider,
+				noopCredentialStore,
+				noopFileIngester,
+				noopSessionStore,
+			].length === 6,
+		);
 		check("createMinimalContext is a function", typeof createMinimalContext === "function");
 
 		check("isTelegramContactMeta is a function", typeof isTelegramContactMeta === "function");
-		const probe = isTelegramContactMeta({ source: "telegram", id: "1" } as ContactMeta);
+		const probe = isTelegramContactMeta({
+			source: "telegram",
+			id: "1",
+		} as ContactMeta);
 		check("isTelegramContactMeta returns boolean", typeof probe === "boolean");
 
 		check("buildSnippet is a function", typeof buildSnippet === "function");
@@ -134,17 +136,13 @@ export default async function testIntegrations() {
 
 	for (const [name, reason] of lazyPackages) {
 		await runSection(name, async () => {
-			const check = makeCheck(name.replace("@melandlabs/", ""));
+			const { check, skip } = makeCheckWithSkip(name.replace("@melandlabs/", ""));
 			try {
 				const mod = (await import(name)) as unknown as Record<string, unknown>;
 				const exported = Object.keys(mod).filter((k) => !k.startsWith("_"));
 				check("module loads and exports symbols", exported.length > 0);
 			} catch (err) {
-				check(
-					`module loads (skipped — ${reason})`,
-					false,
-					`import failed: ${(err as Error).message}`,
-				);
+				skip("module loads", reason, `import failed: ${(err as Error).message}`);
 			}
 		});
 	}

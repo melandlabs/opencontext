@@ -39,10 +39,10 @@
 | --- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🧠  | **[时序上下文图谱](./docs/architecture.md#the-temporal-context-graph)** | 每条事实都带有 `valid_from` / `valid_until` 的有向无环图。取代、矛盾与合并是一等边 —— 修正以 append-only 方式进行,不会破坏性覆写。                 |
 | 🔌  | **[平台集成网格](./packages/integrations)**                             | Gmail、Slack、Telegram、Linear、Jira、iMessage、Feishu、Weixin……统一的 `IntegrationRecord` 形态,凭据轮换、限流处理与重连逻辑都被封装在适配器背后。 |
-| ⏰  | **[确定性 Loop 引擎](./packages/loop)**                                 | 一个会先醒来、判断是否存在真实工作,然后才会调用 `@melandlabs/opencontext` 的调度器。LLM 调用不是底座，而是最后一步。                                       |
+| ⏰  | **[确定性 Loop 引擎](./packages/loop)**                                 | 一个会先醒来、判断是否存在真实工作,然后才会调用 `@melandlabs/opencontext` 的调度器。LLM 调用不是底座，而是最后一步。                               |
 | 🔍  | **[检索原语](./packages/rag)**                                          | 分块、嵌入、解析器(PDF / ZIP / text)、sqlite-vec + pgvector + Chroma 适配器。可混用后端而无需重写召回流水线。                                      |
 | 🤖  | **[Agent 运行时](./packages/ai)**                                       | AI SDK 包装、沙箱提供商(原生 / Claude / Vercel)、MCP server、memory-consolidation 任务、图像与音频生成。                                           |
-| 🪶  | **[单包门面](./packages/opencontext)**                                  | `pnpm add @melandlabs/opencontext` 一行装下整个运行时底座。不强依赖 React、Next 或 Tauri。                                                                |
+| 🪶  | **[单包门面](./packages/opencontext)**                                  | `pnpm add @melandlabs/opencontext` 一行装下整个运行时底座。不强依赖 React、Next 或 Tauri。                                                         |
 | 🛡️  | **[审计与加密存储](./packages/audit)**                                  | 结构化审计日志写入 `~/.opencontext/logs/audit.jsonl`,使用 Fernet 对称加密保护密钥,出站调用使用 URL 白/黑名单管控。                                 |
 
 ## 快速开始
@@ -179,29 +179,29 @@ const { results, warnings } = await search.searchUnifiedMemory({
 
 每个后端在启动时通过 `MemoryStoreConfig` 选择 —— 没有抽象会隐藏每个后端能做到什么。支持混用后端:比如可以把 raw message 存放在 Postgres,同时把 Chroma 用作向量索引。
 
-| 关注点     | 后端                                                                          |
-| ---------- | ----------------------------------------------------------------------------- |
-| Raw 消息   | SQLite-vec(Tauri / 桌面)、Postgres(服务端 / daemon)、IndexedDB(浏览器)        |
-| 向量索引   | SQLite-vec(默认)、pgvector、Chroma、IndexedDB                                 |
+| 关注点     | 后端                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------ |
+| Raw 消息   | SQLite-vec(Tauri / 桌面)、Postgres(服务端 / daemon)、IndexedDB(浏览器)               |
+| 向量索引   | SQLite-vec(默认)、pgvector、Chroma、IndexedDB                                        |
 | Embeddings | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地 |
 
 ## 它有什么不同
 
 OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时底座 —— 每个包独立版本化、单一职责,并且在边界层只消费 `@melandlabs/opencontext`。
 
-| 对比对象                                         | opencontext 多出来的能力                                                                 |
-| ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| 一个扁平的向量数据库(Pinecone、Weaviate、Qdrant) | **时序图** —— 事实带有 `valid_from` / `valid_until`,会被取代,而不仅仅是按相似度匹配      |
-| 一个上下文 / 记忆库                              | **运行时而非库** —— HTTP daemon、MCP server、CLI,以及集成网格与 Loop 引擎                |
+| 对比对象                                         | opencontext 多出来的能力                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| 一个扁平的向量数据库(Pinecone、Weaviate、Qdrant) | **时序图** —— 事实带有 `valid_from` / `valid_until`,会被取代,而不仅仅是按相似度匹配              |
+| 一个上下文 / 记忆库                              | **运行时而非库** —— HTTP daemon、MCP server、CLI,以及集成网格与 Loop 引擎                        |
 | 自己接一套 agent 循环                            | **可分离的 Loop 引擎** —— 调度何时调用 `@melandlabs/opencontext`,而不是一路贯穿到底都是 LLM 循环 |
-| 为了使用集成而必须嵌入整个 opencontext           | **Library-First API 面** —— 每个包都可独立发布,使用任意一个都不要求 React / Next / Tauri |
+| 为了使用集成而必须嵌入整个 opencontext           | **Library-First API 面** —— 每个包都可独立发布,使用任意一个都不要求 React / Next / Tauri         |
 
 ## Provider 矩阵
 
 | 关注点       | 提供方                                                                                                                                                                                                                                               |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 向量索引     | SQLite-vec(默认)、pgvector、Chroma、IndexedDB(浏览器)                                                                                                                                                                                                |
-| Embeddings   | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地                                                                                                                                                                        |
+| Embeddings   | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地                                                                                                                                                                 |
 | Raw 消息存储 | SQLite-vec、Postgres                                                                                                                                                                                                                                 |
 | Web 搜索     | Brave Search                                                                                                                                                                                                                                         |
 | 沙箱         | Native CLI、Claude、Vercel Sandbox                                                                                                                                                                                                                   |
@@ -218,18 +218,18 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
                        └─────────────┬──────────────┘
                                      │
             ┌────────────────────────┴────────────────────────┐
-            │   边界层: @melandlabs/opencontext  ·  api          │
+            │   边界层: @melandlabs/opencontext  ·  api        │
             └────────────────────────┬────────────────────────┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
        │   记忆底座                                                 │
-       │   @melandlabs/opencontext · rag · sqlite · indexeddb    │
+       │   @melandlabs/opencontext · rag · sqlite · indexeddb      │
        └─────────────────────────────┬────────────────────────────-┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
-       │   引擎        @melandlabs/opencontext · cron · insights          │
-       │   Agent 运行时 @melandlabs/opencontext                             │
-       │   集成          @melandlabs/opencontext                  │
+       │   引擎        @melandlabs/opencontext · cron · insights    │
+       │   Agent 运行时 @melandlabs/opencontext                     │
+       │   集成          @melandlabs/opencontext                    │
        └───────────────────────────────────────────────────────────┘
 ```
 

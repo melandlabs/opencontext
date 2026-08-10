@@ -13,17 +13,17 @@
  * wiring it here.
  */
 
-import testOpencontext from "./opencontext.ts";
 import testAi from "./ai.ts";
-import testMemory from "./memory.ts";
-import testRag from "./rag.ts";
-import testSearch from "./search.ts";
 import testContracts from "./contracts.ts";
-import testRuntime from "./runtime.ts";
-import testStorage from "./storage.ts";
-import testSecurity from "./security.ts";
-import testUtilities from "./utilities.ts";
 import testIntegrations from "./integrations.ts";
+import testMemory from "./memory.ts";
+import testOpencontext from "./opencontext.ts";
+import testRag from "./rag.ts";
+import testRuntime from "./runtime.ts";
+import testSearch from "./search.ts";
+import testSecurity from "./security.ts";
+import testStorage from "./storage.ts";
+import testUtilities from "./utilities.ts";
 import testVoice from "./voice.ts";
 
 const sections: Array<[string, () => Promise<void>]> = [

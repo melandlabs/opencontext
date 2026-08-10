@@ -7,8 +7,8 @@
  * the factory returns an object, and the subpath entries are accessible.
  */
 
-import { createMemoryStore, createUnifiedSearch } from "@melandlabs/memory-store";
 import * as memoryConsolidation from "@melandlabs/memory-consolidation";
+import { createMemoryStore, createUnifiedSearch } from "@melandlabs/memory-store";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testMemory() {
@@ -18,10 +18,7 @@ export default async function testMemory() {
 		check("createMemoryStore returns an object", typeof store === "object");
 		check("memory-store exposes .raw", typeof store.raw === "object");
 		check("memory-store exposes .search", typeof store.search === "object");
-		check(
-			"memory-store exposes searchUnifiedMemory",
-			typeof store.searchUnifiedMemory === "function",
-		);
+		check("memory-store exposes searchUnifiedMemory", typeof store.searchUnifiedMemory === "function");
 
 		const us = createUnifiedSearch({});
 		check(

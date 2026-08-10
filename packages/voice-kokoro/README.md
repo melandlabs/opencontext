@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Kokoro](https://github.com/hexgrad/kokoro) text-to-speech provider for
 OpenContext. Streams synthesized speech from a local Kokoro model and exposes a
 common `VoiceProvider` interface.

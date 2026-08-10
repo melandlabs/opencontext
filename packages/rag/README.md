@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Core Retrieval-Augmented Generation primitives without the AI SDK runtime
 overhead. Suitable for lightweight or backend-only consumers that only need
 chunking, embeddings, parsers, and a vector store.

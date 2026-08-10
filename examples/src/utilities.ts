@@ -5,13 +5,13 @@
  * load and that the most user-visible symbols are well-shaped.
  */
 
+import * as api from "@melandlabs/api";
 import * as audit from "@melandlabs/audit";
 import * as config from "@melandlabs/config";
 import * as db from "@melandlabs/db";
+import * as i18n from "@melandlabs/i18n";
 import * as insights from "@melandlabs/insights";
 import * as shared from "@melandlabs/shared";
-import * as i18n from "@melandlabs/i18n";
-import * as api from "@melandlabs/api";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testUtilities() {

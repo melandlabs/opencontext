@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Core AI building blocks used by the OpenContext runtime. Provides the agent
 loop, memory interface, sandbox execution surface, audio helpers, and shared
 types.

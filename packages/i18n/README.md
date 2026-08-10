@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Locale message bundles used across the OpenContext web app. Ships the raw
 strings as ESM modules so they can be tree-shaken into a host app's i18n
 runtime.

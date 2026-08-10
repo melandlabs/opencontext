@@ -30,14 +30,14 @@ A host application installs one package and gets every capability —
 contracts, memory, unified search, RAG, loop, and agent runtime — behind
 a single `import { … } from "@melandlabs/opencontext"` boundary.
 
-| Concern             | Re-exported symbol                |
-| ------------------- | --------------------------------- |
-| Boundary types      | `USER_TYPES`, `isUserType`, …     |
-| Memory + search     | `createMemoryStore`, …            |
-| Unified search      | `createUnifiedSearch`, …          |
-| Chunking / RAG      | `chunkText`, `SQLiteVecStore`, …  |
-| Loop engine         | `readPreferences`, `writePreferences`, … |
-| Agent runtime       | `getModelPricing`, `calculateTotalCredits`, … |
+| Concern         | Re-exported symbol                            |
+| --------------- | --------------------------------------------- |
+| Boundary types  | `USER_TYPES`, `isUserType`, …                 |
+| Memory + search | `createMemoryStore`, …                        |
+| Unified search  | `createUnifiedSearch`, …                      |
+| Chunking / RAG  | `chunkText`, `SQLiteVecStore`, …              |
+| Loop engine     | `readPreferences`, `writePreferences`, …      |
+| Agent runtime   | `getModelPricing`, `calculateTotalCredits`, … |
 
 The internal workspace packages (`contracts`, `memory-store`, `rag`,
 `loop`, `ai`, …) are bundled into the published artifact at build

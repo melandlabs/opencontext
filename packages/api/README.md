@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Lightweight HTTP client helpers used by the OpenContext web app and other
 packages. Wraps `fetch` with unified error handling and exposes a typed
 `ApiError` for status / payload propagation.

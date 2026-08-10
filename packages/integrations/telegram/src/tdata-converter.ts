@@ -15,8 +15,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { AuthKey } from "telegram/crypto/AuthKey";
-import { StringSession } from "telegram/sessions";
+import { AuthKey } from "telegram/crypto/AuthKey.js";
+import { StringSession } from "telegram/sessions/index.js";
 import { TdataReader } from "./tdata-decrypter/index";
 
 // Get the directory name of the current module (ESM equivalent of __dirname)

@@ -2,7 +2,11 @@
 	"name": "@melandlabs/loop",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -22,7 +26,12 @@
 	},
 	"license": "Apache-2.0",
 	"description": "Loop filesystem paths, CLI shim resolver, and preferences (zero-DB, zero-agent) shared between OpenContext runtime and UI.",
-	"keywords": ["opencontext", "loop", "filesystem", "preferences"],
+	"keywords": [
+		"opencontext",
+		"loop",
+		"filesystem",
+		"preferences"
+	],
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"

@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Cryptographic and validation primitives for OpenContext: Fernet token
 encryption, URL allowlisting, and a pluggable key manager.
 

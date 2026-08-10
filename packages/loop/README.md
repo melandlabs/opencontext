@@ -5,14 +5,13 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Filesystem layout + CLI shim resolver for the Loop engine.
 
-| Subpath                         | Notes                                                                        |
-| ------------------------------- | ---------------------------------------------------------------------------- |
-| `loop`             | Barrel — re-exports the subpaths below                                       |
-| `loop/paths`       | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate`                           |
-| `loop/cli-path`    | Resolves absolute path to the `loop-cli.mjs` shim                            |
+| Subpath            | Notes                                                           |
+| ------------------ | --------------------------------------------------------------- |
+| `loop`             | Barrel — re-exports the subpaths below                          |
+| `loop/paths`       | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate`              |
+| `loop/cli-path`    | Resolves absolute path to the `loop-cli.mjs` shim               |
 | `loop/preferences` | `readPreferences`, `writePreferences` (depends on `loop/paths`) |
 
 Production location: `~/.opencontext/loop/` — see

@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Stdio MCP server for using local OpenContext Desktop from MCP-capable agent
 runtimes.
 

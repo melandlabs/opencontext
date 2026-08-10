@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Reusable utilities, types, and constants extracted from the OpenContext web app.
 
 ## Installation

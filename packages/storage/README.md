@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Storage abstraction with first-class adapters for the local filesystem and
 [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Lets the rest of
 the OpenContext stack stay agnostic of where bytes actually live.

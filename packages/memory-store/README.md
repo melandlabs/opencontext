@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 OpenContext memory storage + search SDK with optional HTTP and MCP server
 entry points. The package is intentionally decoupled from the opencontext
 web app's database and env layers — every consumer wires up its own
@@ -40,8 +39,8 @@ const hits = await store.searchUnifiedMemory({ userId, query });
 
 ## Entry points
 
-| Import                           | What you get                                    |
-| -------------------------------- | ----------------------------------------------- |
+| Import              | What you get                                    |
+| ------------------- | ----------------------------------------------- |
 | `memory-store`      | `createMemoryStore(config)` facade              |
 | `memory-store/http` | `startHttpServer(options)` — Hono app on a port |
 | `memory-store/mcp`  | `startMcpServer()` — stdio MCP server           |
@@ -339,8 +338,8 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 ## Subpath exports
 
-| Subpath                                                    | Contents                                                                        |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Subpath                                       | Contents                                                                        |
+| --------------------------------------------- | ------------------------------------------------------------------------------- |
 | `memory-store`                                | `createMemoryStore`, top-level types                                            |
 | `memory-store/http`                           | `startHttpServer`, `StartedHttpServer`                                          |
 | `memory-store/mcp`                            | `startMcpServer`                                                                |

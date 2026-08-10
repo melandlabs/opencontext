@@ -13,7 +13,9 @@ export default async function testRag() {
 	await runSection("@melandlabs/rag", async () => {
 		const check = makeCheck("rag");
 
-		const chunks = chunkText("Hello world. This is a test of the chunker.", { maxChunkSize: 12 });
+		const chunks = chunkText("Hello world. This is a test of the chunker.", {
+			maxChunkSize: 12,
+		});
 		check("chunkText returns at least one chunk", chunks.length >= 1);
 		check(
 			"each chunk has a string `content` field",

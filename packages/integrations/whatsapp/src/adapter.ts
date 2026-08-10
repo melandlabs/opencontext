@@ -35,7 +35,7 @@ import {
 	makeWASocket,
 	proto,
 } from "@whiskeysockets/baileys";
-import { downloadMediaMessage } from "@whiskeysockets/baileys/lib/Utils/messages";
+import { downloadMediaMessage } from "@whiskeysockets/baileys/lib/Utils/messages.js";
 import pino from "pino";
 import { DEBUG_WHATSAPP as DEBUG } from "./debug";
 import { MAX_PERSISTED_MESSAGES_PER_CHAT, WhatsAppMessageHistoryStore } from "./message-history-store";

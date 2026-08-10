@@ -5,11 +5,10 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Scheduling primitives.
 
-| Subpath                             | Notes                                         |
-| ----------------------------------- | --------------------------------------------- |
+| Subpath                | Notes                                         |
+| ---------------------- | --------------------------------------------- |
 | `cron`                 | Barrel — re-exports the subpaths below        |
 | `cron/types`           | `ScheduleConfig`, `JobConfig`, `CronJob`, …   |
 | `cron/scheduler`       | `computeNextRun`, `validateCronExpression`, … |

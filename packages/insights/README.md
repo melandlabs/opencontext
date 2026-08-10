@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Pure algorithm and filter logic for insight/event management.
 
 ## Installation

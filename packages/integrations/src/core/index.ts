@@ -421,7 +421,7 @@ export interface BaileysAuthStateProvider {
 	createAuthState(sessionId: string): Promise<AuthenticationState>;
 }
 
-import type { AuthenticationState } from "@whiskeysockets/baileys/lib/Types/Auth";
+import type { AuthenticationState } from "@whiskeysockets/baileys/lib/Types/Auth.js";
 
 // ============================================================================
 // Inbound Message Handler - For ws-listeners

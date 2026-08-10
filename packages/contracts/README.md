@@ -5,14 +5,13 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Cross-cutting type contracts. Types, enums, and zod schemas only — no
 runtime logic. Canonical source of truth for boundary shapes.
 
 ## Contents
 
-| Sub-path                                | What it defines                                                                               |
-| --------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Sub-path                   | What it defines                                                                               |
+| -------------------------- | --------------------------------------------------------------------------------------------- |
 | `contracts` (root)         | Barrel — re-exports everything                                                                |
 | `contracts/user-type`      | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES`  |
 | `contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` |

@@ -1,8 +1,13 @@
 {
 	"name": "@melandlabs/config",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"type": "module",
-	"files": ["dist", "src/tsup-preset.mjs", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"src/tsup-preset.mjs",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -26,7 +31,11 @@
 	},
 	"license": "Apache-2.0",
 	"description": "Shared tsup preset and lint/tsconfig presets for OpenContext packages.",
-	"keywords": ["opencontext", "tsup", "monorepo"],
+	"keywords": [
+		"opencontext",
+		"tsup",
+		"monorepo"
+	],
 	"scripts": {
 		"build": "tsup",
 		"prepublishOnly": "pnpm build",

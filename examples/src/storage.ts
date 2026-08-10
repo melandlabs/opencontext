@@ -7,9 +7,9 @@
  * and the main classes/adapters are exported.
  */
 
-import * as storage from "@melandlabs/storage";
-import * as sqlite from "@melandlabs/sqlite";
 import * as indexeddb from "@melandlabs/indexeddb";
+import * as sqlite from "@melandlabs/sqlite";
+import * as storage from "@melandlabs/storage";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testStorage() {
@@ -29,7 +29,11 @@ export default async function testStorage() {
 			check("storage/adapters exposes uploadToLocalFs", typeof adapters.uploadToLocalFs === "function");
 			check("storage/adapters exposes uploadToVercelBlob", typeof adapters.uploadToVercelBlob === "function");
 		} catch (err) {
-			check("storage/adapters loads (known issue: stale exports path)", false, `import failed: ${(err as Error).message}`);
+			check(
+				"storage/adapters loads (known issue: stale exports path)",
+				false,
+				`import failed: ${(err as Error).message}`,
+			);
 		}
 	});
 

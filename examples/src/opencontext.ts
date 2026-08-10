@@ -30,16 +30,28 @@ export default async function testOpencontext() {
 
 		const get = (key: string): unknown => mod?.[key];
 
-		check("contracts.USER_TYPES is an array of length 5", Array.isArray(get("USER_TYPES")) && (get("USER_TYPES") as unknown[]).length === 5);
+		check(
+			"contracts.USER_TYPES is an array of length 5",
+			Array.isArray(get("USER_TYPES")) && (get("USER_TYPES") as unknown[]).length === 5,
+		);
 		check("contracts.isUserType is a function", typeof get("isUserType") === "function");
 		if (typeof get("isUserType") === "function") {
-			check("contracts.isUserType('pro') === true", (get("isUserType") as (s: string) => boolean)("pro") === true);
-			check("contracts.isUserType('slack') === false", (get("isUserType") as (s: string) => boolean)("slack") === false);
+			check(
+				"contracts.isUserType('pro') === true",
+				(get("isUserType") as (s: string) => boolean)("pro") === true,
+			);
+			check(
+				"contracts.isUserType('slack') === false",
+				(get("isUserType") as (s: string) => boolean)("slack") === false,
+			);
 		}
 
 		check("rag.chunkText is a function", typeof get("chunkText") === "function");
 		if (typeof get("chunkText") === "function") {
-			const chunks = (get("chunkText") as (s: string, o: { chunkSize: number }) => unknown[])("OpenContext is a runtime substrate.", { chunkSize: 16 });
+			const chunks = (get("chunkText") as (s: string, o: { chunkSize: number }) => unknown[])(
+				"OpenContext is a runtime substrate.",
+				{ chunkSize: 16 },
+			);
 			check("rag.chunkText produces at least one chunk", chunks.length >= 1);
 		}
 		check("rag.SQLiteVecStore is a class", typeof get("SQLiteVecStore") === "function");
@@ -52,11 +64,17 @@ export default async function testOpencontext() {
 		check("ai.calculateTotalCredits is a function", typeof get("calculateTotalCredits") === "function");
 		check("ai.estimateTokens is a function", typeof get("estimateTokens") === "function");
 		if (typeof get("estimateTokens") === "function") {
-			check("ai.estimateTokens returns finite number", Number.isFinite((get("estimateTokens") as (s: string) => number)("hello world")));
+			check(
+				"ai.estimateTokens returns finite number",
+				Number.isFinite((get("estimateTokens") as (s: string) => number)("hello world")),
+			);
 		}
 		check("rag.generateEmbedding is a function", typeof get("generateEmbedding") === "function");
 
 		check("memory-store.createMemoryStore is a function", typeof get("createMemoryStore") === "function");
-		check("unified-search.createUnifiedSearch is a function", typeof get("createUnifiedSearch") === "function");
+		check(
+			"unified-search.createUnifiedSearch is a function",
+			typeof get("createUnifiedSearch") === "function",
+		);
 	});
 }

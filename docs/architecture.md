@@ -193,16 +193,16 @@ loop tick → agent.run()
 
 ## Storage backends
 
-| Concern             | Backend     | Where                                                                     |
-| ------------------- | ----------- | ------------------------------------------------------------------------- |
+| Concern             | Backend     | Where                                                                          |
+| ------------------- | ----------- | ------------------------------------------------------------------------------ |
 | Raw messages        | SQLite-vec  | `@melandlabs/opencontext` (Tauri default), `@melandlabs/opencontext` (browser) |
-| Raw messages        | Postgres    | `@melandlabs/opencontext/postgres-raw-message-factory`                  |
-| Vector index        | SQLite-vec  | `@melandlabs/opencontext/sqlite-vector-index`                           |
-| Vector index        | pgvector    | `@melandlabs/opencontext/pgvector-store`                                         |
-| Vector index        | Chroma      | `@melandlabs/opencontext/chroma-memory-index`                           |
-| Vector index        | IndexedDB   | `@melandlabs/opencontext/embedding`                                        |
-| Blobs / attachments | Local fs    | `@melandlabs/opencontext/local-fs`                                           |
-| Blobs / attachments | Vercel Blob | `@melandlabs/opencontext/vercel-blob`                                        |
+| Raw messages        | Postgres    | `@melandlabs/opencontext/postgres-raw-message-factory`                         |
+| Vector index        | SQLite-vec  | `@melandlabs/opencontext/sqlite-vector-index`                                  |
+| Vector index        | pgvector    | `@melandlabs/opencontext/pgvector-store`                                       |
+| Vector index        | Chroma      | `@melandlabs/opencontext/chroma-memory-index`                                  |
+| Vector index        | IndexedDB   | `@melandlabs/opencontext/embedding`                                            |
+| Blobs / attachments | Local fs    | `@melandlabs/opencontext/local-fs`                                             |
+| Blobs / attachments | Vercel Blob | `@melandlabs/opencontext/vercel-blob`                                          |
 
 The storage backend is chosen at boot via `MemoryStoreConfig`. Mixing
 backends is supported: a deployment can keep raw messages in Postgres
@@ -212,12 +212,12 @@ while using Chroma as the vector index, for example.
 
 `@melandlabs/opencontext` exposes the runtime over four surfaces:
 
-| Surface      | Module                                                                                   | Purpose                                                                                                         |
-| ------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Programmatic | `@melandlabs/opencontext`                                                              | Direct import from a Node/Bun/Deno process.                                                                     |
-| HTTP daemon  | `@melandlabs/opencontext/http`                                                         | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
-| MCP server   | `@melandlabs/opencontext/mcp`                                                          | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
-| CLI          | `opencontext` (shipped via `@melandlabs/opencontext`; subcommands: `mcp`, `http`)          | Run the MCP (`mcp`, default) or HTTP (`http`) daemon from a terminal.                                            |
+| Surface      | Module                                                                            | Purpose                                                                                                         |
+| ------------ | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Programmatic | `@melandlabs/opencontext`                                                         | Direct import from a Node/Bun/Deno process.                                                                     |
+| HTTP daemon  | `@melandlabs/opencontext/http`                                                    | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
+| MCP server   | `@melandlabs/opencontext/mcp`                                                     | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
+| CLI          | `opencontext` (shipped via `@melandlabs/opencontext`; subcommands: `mcp`, `http`) | Run the MCP (`mcp`, default) or HTTP (`http`) daemon from a terminal.                                           |
 
 The HTTP and MCP surfaces are thin wrappers around the programmatic
 API. They share types via `@melandlabs/opencontext` and never reimplement

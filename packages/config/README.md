@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Shared build, lint, and TypeScript presets used across every package in the
 OpenContext monorepo. Centralises `tsup`, ESLint, and `tsconfig` configuration so
 each package's `package.json` stays minimal.

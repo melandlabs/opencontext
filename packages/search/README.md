@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Web search adapters used by the OpenContext agent. Currently includes a Brave
 Search client; additional providers can be plugged in via the shared
 interface.

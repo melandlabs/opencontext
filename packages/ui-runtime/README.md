@@ -5,14 +5,13 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 UI-side runtime primitives that statically import `@tauri-apps/*`. Other
 packages must **not** import `@tauri-apps/*` directly — use this package
 instead.
 
 | Subpath                                    | Source                                        | Notes                                                 |
 | ------------------------------------------ | --------------------------------------------- | ----------------------------------------------------- |
-| `ui-runtime`                  | `src/index.ts`                                | Re-exports the subpaths below                         |
+| `ui-runtime`                               | `src/index.ts`                                | Re-exports the subpaths below                         |
 | `.../platform/env`                         | `src/platform/env.ts`                         | `isClient`, `isTauri`, `isBrowser`, `getPlatformKind` |
 | `.../platform/filesystem`                  | `src/platform/filesystem.ts`                  | `getFileSystem()` factory + interface types           |
 | `.../platform/adapters/tauri/filesystem`   | `src/platform/adapters/tauri/filesystem.ts`   | Tauri-backed `PlatformFileSystem`                     |

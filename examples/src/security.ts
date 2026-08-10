@@ -6,12 +6,7 @@
  * the crypto helpers exist as classes/functions.
  */
 
-import {
-	TokenEncryption,
-	isTrustedStorageUrl,
-	validateUrlForSSRF,
-	KeyManager,
-} from "@melandlabs/security";
+import { KeyManager, TokenEncryption, isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/security";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testSecurity() {

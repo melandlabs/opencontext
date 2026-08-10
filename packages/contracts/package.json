@@ -2,7 +2,11 @@
 	"name": "@melandlabs/contracts",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -23,7 +27,12 @@
 	},
 	"license": "Apache-2.0",
 	"description": "Cross-cutting type contracts (UserType, IntegrationId, error codes, zod schemas) shared between OpenContext runtime and UI sub-projects.",
-	"keywords": ["opencontext", "contracts", "types", "schemas"],
+	"keywords": [
+		"opencontext",
+		"contracts",
+		"types",
+		"schemas"
+	],
 	"peerDependencies": {
 		"zod": "^4.3.6"
 	},

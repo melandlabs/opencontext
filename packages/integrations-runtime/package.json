@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-runtime",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -27,7 +31,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations runtime glue",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/contracts": "workspace:*",
 		"i18next": "^26.3.6"

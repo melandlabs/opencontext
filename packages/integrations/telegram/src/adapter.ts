@@ -21,12 +21,12 @@ import type { ClientRegistry, FileIngester } from "@melandlabs/integrations/core
 import type { Attachment } from "@melandlabs/shared";
 import bigInt, { type BigInteger } from "big-integer";
 import { TelegramClient } from "telegram";
-import type { TotalList } from "telegram/Helpers";
-import { CustomFile } from "telegram/client/uploads";
-import type { Entity } from "telegram/define";
-import { StringSession } from "telegram/sessions";
-import { Api } from "telegram/tl";
-import type { Dialog } from "telegram/tl/custom/dialog";
+import type { TotalList } from "telegram/Helpers.js";
+import { CustomFile } from "telegram/client/uploads.js";
+import type { Entity } from "telegram/define.js";
+import { StringSession } from "telegram/sessions/index.js";
+import { Api } from "telegram/tl/index.js";
+import type { Dialog } from "telegram/tl/custom/dialog.js";
 import { markdownToTelegramHtml } from "./markdown";
 
 const DEBUG = process.env.DEBUG_TELEGRAM === "true";

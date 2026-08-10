@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Structured audit logging for security-sensitive actions: command execution,
 file reads, and credential access. Provides logger functions plus an optional
 `installAuditInterceptors` hook for global capture.

@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Whisper](https://openai.com/research/whisper) speech-to-text provider for
 OpenContext. Streams transcribed text from a local Whisper model and exposes a
 common `VoiceProvider` interface.

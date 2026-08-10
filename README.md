@@ -46,10 +46,10 @@ data model, the lifecycle of a fact, and the transport surface map.
 | --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 🧠  | **[Temporal Context Graph](./docs/architecture.md#the-temporal-context-graph)** | A directed acyclic graph where every fact has `valid_from` / `valid_until`. Supersession, contradiction, and merge are first-class edges — corrections are append-only, not destructive.                |
 | 🔌  | **[Platform Integration Mesh](./packages/integrations)**                        | One uniform `IntegrationRecord` shape across Gmail, Slack, Telegram, Linear, Jira, iMessage, Feishu, Weixin, … — credential rotation, rate-limit handling, and reconnect logic live behind the adapter. |
-| ⏰  | **[Deterministic Loop Engine](./packages/loop)**                                | A scheduler that wakes up, decides whether there is real work, and only then calls into the agent runtime. LLM calls are not the foundation — they are the last step.                                            |
+| ⏰  | **[Deterministic Loop Engine](./packages/loop)**                                | A scheduler that wakes up, decides whether there is real work, and only then calls into the agent runtime. LLM calls are not the foundation — they are the last step.                                   |
 | 🔍  | **[Retrieval Primitives](./packages/rag)**                                      | Chunking, embeddings, parsers (PDF/ZIP/text), sqlite-vec + pgvector + Chroma adapters. Mix backends without rewriting the recall pipeline.                                                              |
 | 🤖  | **[Agent Runtime](./packages/ai)**                                              | AI SDK wrappers, sandbox providers (native / Claude / Vercel), MCP server, memory-consolidation job, image + audio generation.                                                                          |
-| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                          |
+| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                      |
 | 🛡️  | **[Audit + Encrypted Storage](./packages/audit)**                               | Structured audit logging to `~/.opencontext/logs/audit.jsonl`, Fernet symmetric encryption for secrets, URL allowlist/blocklist for outbound calls.                                                     |
 
 ## Quick Start
@@ -200,7 +200,7 @@ vector index, for example.
 | ------------ | ----------------------------------------------------------------------------- |
 | Raw messages | SQLite-vec (Tauri / desktop), Postgres (server / daemon), IndexedDB (browser) |
 | Vector index | SQLite-vec (default), pgvector, Chroma, IndexedDB                             |
-| Embeddings   | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`     |
+| Embeddings   | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`                |
 
 ## Why It Is Different
 
@@ -209,19 +209,19 @@ runtime substrate — the `@melandlabs/opencontext` package bundles
 contracts, memory-store, retrieval primitives, the loop engine, and
 the agent runtime behind one dependency.
 
-| Compared with…                                     | opencontext adds                                                                                                   |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| A flat vector DB (Pinecone, Weaviate, Qdrant)      | A **temporal graph** — facts have `valid_from` / `valid_until` and get superseded, not just similarity-matched     |
-| A context/memory library                           | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine        |
-| Wiring your own agent loop                         | A **separable Loop engine** that schedules when to wake the agent, instead of an LLM loop all the way down         |
-| Embedding opencontext just to get its integrations | **Single-package install** — one `pnpm add` gets every capability, no React/Next/Tauri required to use              |
+| Compared with…                                     | opencontext adds                                                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| A flat vector DB (Pinecone, Weaviate, Qdrant)      | A **temporal graph** — facts have `valid_from` / `valid_until` and get superseded, not just similarity-matched |
+| A context/memory library                           | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine    |
+| Wiring your own agent loop                         | A **separable Loop engine** that schedules when to wake the agent, instead of an LLM loop all the way down     |
+| Embedding opencontext just to get its integrations | **Single-package install** — one `pnpm add` gets every capability, no React/Next/Tauri required to use         |
 
 ## Provider matrix
 
 | Concern           | Providers                                                                                                                                                                                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vector index      | SQLite-vec (default), pgvector, Chroma, IndexedDB (browser)                                                                                                                                                                                          |
-| Embeddings        | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`                                                                                                                                                                                        |
+| Embeddings        | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`                                                                                                                                                                                       |
 | Raw message store | SQLite-vec, Postgres                                                                                                                                                                                                                                 |
 | Web search        | Brave Search                                                                                                                                                                                                                                         |
 | Sandboxes         | Native CLI, Claude, Vercel Sandbox                                                                                                                                                                                                                   |
@@ -243,12 +243,12 @@ the agent runtime behind one dependency.
             └────────────────────────┬────────────────────────┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
-       │   Storage backends                                         │
+       │   Storage backends                                        │
        │   sqlite-vec · postgres · indexeddb · chroma · pgvector   │
        └─────────────────────────────┬─────────────────────────────┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
-       │   Integrations mesh  (gmail, slack, …)        │
+       │   Integrations mesh  (gmail, slack, …)                    │
        └───────────────────────────────────────────────────────────┘
 ```
 

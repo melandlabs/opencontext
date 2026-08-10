@@ -7,11 +7,11 @@
  */
 
 import {
-	USER_TYPES,
-	isUserType,
-	type UserType,
 	INTEGRATION_IDS,
+	USER_TYPES,
+	type UserType,
 	isIntegrationId,
+	isUserType,
 } from "@melandlabs/contracts";
 import { makeCheck, runSection } from "./_helpers.ts";
 
@@ -29,10 +29,7 @@ export default async function testContracts() {
 
 		check("INTEGRATION_IDS is an array", Array.isArray(INTEGRATION_IDS));
 		check("INTEGRATION_IDS has at least 5 entries", INTEGRATION_IDS.length >= 5);
-		check(
-			"isIntegrationId recognizes known id",
-			isIntegrationId(INTEGRATION_IDS[0]),
-		);
+		check("isIntegrationId recognizes known id", isIntegrationId(INTEGRATION_IDS[0]));
 		check(
 			"isIntegrationId rejects 'definitely-not-an-integration'",
 			!isIntegrationId("definitely-not-an-integration"),

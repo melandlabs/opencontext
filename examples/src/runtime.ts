@@ -8,11 +8,11 @@
  * mount React components in this smoke test.
  */
 
-import * as loop from "@melandlabs/loop";
-import * as hooks from "@melandlabs/hooks";
-import * as uiRuntime from "@melandlabs/ui-runtime";
 import * as cron from "@melandlabs/cron";
 import * as envConfig from "@melandlabs/env-config";
+import * as hooks from "@melandlabs/hooks";
+import * as loop from "@melandlabs/loop";
+import * as uiRuntime from "@melandlabs/ui-runtime";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testRuntime() {

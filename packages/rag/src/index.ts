@@ -55,7 +55,10 @@ export {
 	type DocumentChunk,
 } from "./sqlite-vec-store";
 
-export { ChromaVectorStore, type ChromaVectorStoreOptions } from "./chroma-vector-store";
+export {
+	ChromaVectorStore,
+	type ChromaVectorStoreOptions,
+} from "./chroma-vector-store";
 
 export {
 	getPGVectorStore,

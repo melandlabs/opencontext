@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Retrieval-Augmented Generation (RAG) primitives for OpenContext. Provides
 text chunking, embedding adapters (local Transformers, OpenAI, ChromaDB),
 document parsers (PDF, ZIP, etc.), and pluggable vector stores
