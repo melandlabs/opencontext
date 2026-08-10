@@ -1,0 +1,37 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 8
+    groups:
+      openloomi-major:
+        update-types:
+          - "major"
+        labels:
+          - "dependencies"
+          - "breaking"
+      openloomi-minor:
+        update-types:
+          - "minor"
+        labels:
+          - "dependencies"
+      openloomi-patch:
+        update-types:
+          - "patch"
+        labels:
+          - "dependencies"
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@biomejs/biome"
+        update-types: ["version-update:semver-major"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "ci"

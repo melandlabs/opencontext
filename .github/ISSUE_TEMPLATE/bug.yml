@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a bug in an opencontext package
+title: '[bug] '
+labels: ['bug', 'triage']
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug. Please answer the questions below so we can
+        reproduce and fix it quickly.
+
+  - type: dropdown
+    id: package
+    attributes:
+      label: Which package is affected?
+      description: Pick the @context/* package that exhibits the bug.
+      options:
+        - memory-store
+        - rag
+        - search
+        - db
+        - sqlite
+        - indexeddb
+        - storage
+        - insights
+        - audit
+        - security
+        - loop
+        - cron
+        - contracts
+        - integrations-runtime
+        - integrations
+        - ai
+        - env-config
+        - shared
+        - api
+        - voice-kokoro
+        - voice-whisper
+        - config
+        - i18n
+        - ui-runtime
+        - hooks
+        - Other (describe in description)
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear and concise description of the bug.
+      placeholder: |
+        The `recall()` method returns an empty array when…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What you expected to happen instead.
+      placeholder: |
+        I expected recall() to return the most recent 5 facts matching…
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Minimal code or commands to reproduce the behavior.
+      placeholder: |
+        ```ts
+        import { createMemoryStore } from "@context/memory-store";
+        const store = createMemoryStore({ /* … */ });
+        await store.raw.add({ /* … */ });
+        const hits = await store.search.recall({ query: "…" });
+        ```
+      render: ts
+
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Output of `pnpm --filter <pkg> why better-sqlite3` plus OS/Node/pnpm versions.
+    validations:
+      required: true

@@ -1,0 +1,13 @@
+# `services/` is reserved for long-running daemons that wrap a single
+# `@opencontext/*` package as a deployable server. Example services:
+#
+# - `services/memory-http`  — `openloomi-memory-http` daemon (Hono on :7421)
+# - `services/memory-mcp`   — `openloomi-memory-mcp` stdio MCP server
+#
+# Each service should be a thin wrapper that:
+#   1. Imports the relevant `@opencontext/*` package
+#   2. Adds a CLI front-end (commander, yargs, or @clack/prompts)
+#   3. Adds operational concerns (logging, signal handling, config)
+#
+# Avoid re-implementing business logic in services — that belongs in
+# the underlying package.

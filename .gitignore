@@ -25,7 +25,7 @@ coverage
 # nyc test coverage
 .nyc_output
 
-# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-plugins)
 .grunt
 
 # Bower dependency directory (https://bower.io/)
@@ -63,7 +63,7 @@ web_modules/
 *.tgz
 
 # Yarn Integrity file
-.yarn-integrity
+.yarn-integrals
 
 # dotenv environment variable files
 .env
@@ -85,9 +85,6 @@ dist
 
 # Gatsby files
 .cache/
-# Comment in the public line in if your project uses Gatsby and not Next.js
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# public
 
 # vuepress build output
 .vuepress/dist
@@ -141,3 +138,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# opencontext-specific
+.turbo
+.vercel
+.opencontext/
+packages/*/dist/
+packages/*/.tsbuildinfo
+packages/ai/*/dist/
+packages/integrations/*/dist/
