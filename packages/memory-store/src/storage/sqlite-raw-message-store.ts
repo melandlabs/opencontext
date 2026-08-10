@@ -7,7 +7,7 @@
 
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { SQLiteRawMessageManager } from "@opencontext/sqlite";
+import { SQLiteRawMessageManager } from "@melandlabs/sqlite";
 import type { MemoryStoreEnv } from "../config";
 import { isRawMessageChromaEnabled } from "./chroma-memory-index";
 

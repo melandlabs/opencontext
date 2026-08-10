@@ -1,4 +1,10 @@
-# @opencontext/mcp
+# mcp (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Stdio MCP server for using local OpenContext Desktop from MCP-capable agent
 runtimes.
@@ -8,7 +14,7 @@ runtimes.
 Build the MCP server from the OpenContext repository:
 
 ```bash
-pnpm --filter @opencontext/mcp build
+pnpm --filter @melandlabs/mcp build
 ```
 
 Then point the runtime at the built stdio entrypoint:

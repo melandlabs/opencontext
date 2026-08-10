@@ -1,13 +1,19 @@
-# `@opencontext/loop`
+# `loop`
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Filesystem layout + CLI shim resolver for the Loop engine.
 
 | Subpath                         | Notes                                                                        |
 | ------------------------------- | ---------------------------------------------------------------------------- |
-| `@opencontext/loop`             | Barrel — re-exports the subpaths below                                       |
-| `@opencontext/loop/paths`       | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate`                           |
-| `@opencontext/loop/cli-path`    | Resolves absolute path to the `loop-cli.mjs` shim                            |
-| `@opencontext/loop/preferences` | `readPreferences`, `writePreferences` (depends on `@opencontext/loop/paths`) |
+| `loop`             | Barrel — re-exports the subpaths below                                       |
+| `loop/paths`       | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate`                           |
+| `loop/cli-path`    | Resolves absolute path to the `loop-cli.mjs` shim                            |
+| `loop/preferences` | `readPreferences`, `writePreferences` (depends on `loop/paths`) |
 
 Production location: `~/.opencontext/loop/` — see
 [`paths.ts`](./src/paths.ts) for the full layout.

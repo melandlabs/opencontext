@@ -10,7 +10,7 @@
  * - credentialStore: CredentialStore interface for account data
  */
 
-import type { CredentialStore, InboundMessageHandler } from "@opencontext/integrations/core";
+import type { CredentialStore, InboundMessageHandler } from "@melandlabs/integrations/core";
 import {
 	CDN_BASE_URL,
 	MessageType as MSG_TYPE,
@@ -18,8 +18,8 @@ import {
 	detectImageMimeType,
 	downloadAndDecryptBuffer,
 	weixinGetUpdates,
-} from "@opencontext/integrations/weixin/ilink-client";
-import type { WeixinIlinkCredentials, WeixinMessage } from "@opencontext/integrations/weixin/ilink-client";
+} from "@melandlabs/integrations/weixin/ilink-client";
+import type { WeixinIlinkCredentials, WeixinMessage } from "@melandlabs/integrations/weixin/ilink-client";
 
 const DEBUG = process.env.DEBUG_WEIXIN === "true";
 const DEDUP_TTL_MS = 5 * 60 * 1000;

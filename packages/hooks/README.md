@@ -1,11 +1,17 @@
-# @opencontext/hooks
+# hooks (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 A collection of pure React hooks.
 
 ## Installation
 
 ```sh
-pnpm add @opencontext/hooks
+pnpm add @melandlabs/opencontext
 ```
 
 ## Hooks

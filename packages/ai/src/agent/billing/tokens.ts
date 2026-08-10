@@ -2,7 +2,7 @@ import type { ModelType } from "./model-pricing";
 import { calculateInputCredits, calculateOutputCredits, calculateTotalCredits } from "./model-pricing";
 
 // Re-export estimateTokens from shared
-export { estimateTokens } from "@opencontext/shared";
+export { estimateTokens } from "@melandlabs/shared";
 
 // Legacy constants for backward compatibility
 // These are based on Claude Sonnet pricing (default model)

@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/integrations-google-docs",
-	"version": "0.9.0",
+	"name": "@melandlabs/integrations-google-docs",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -31,7 +31,7 @@
 		"react": ">=18.0.0"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

@@ -4,7 +4,7 @@
  * The calling app is responsible for setting the appropriate env vars.
  */
 
-import { estimateTokens } from "@opencontext/shared";
+import { estimateTokens } from "@melandlabs/shared";
 import OpenAI from "openai";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;

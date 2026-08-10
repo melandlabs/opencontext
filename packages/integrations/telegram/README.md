@@ -1,4 +1,10 @@
-# @opencontext/integrations-telegram
+# integrations-telegram (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [Telegram](https://telegram.org/) integration for OpenContext, powered by the
 [`telegram`](https://www.npmjs.com/package/telegram) (MTProto) client.
@@ -8,19 +14,19 @@ container, and TData decryption / conversion helpers.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-telegram
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-telegram` — Main entrypoint
-- `@opencontext/integrations-telegram/adapter` — `TelegramAdapter`
-- `@opencontext/integrations-telegram/markdown` — Markdown ↔ Telegram entity
+- `integrations-telegram` — Main entrypoint
+- `integrations-telegram/adapter` — `TelegramAdapter`
+- `integrations-telegram/markdown` — Markdown ↔ Telegram entity
   converter
-- `@opencontext/integrations-telegram/conversation-store` — Conversation
+- `integrations-telegram/conversation-store` — Conversation
   persistence
-- `@opencontext/integrations-telegram/state` — Runtime state container
-- `@opencontext/integrations-telegram/tdata-decrypter` — Decrypt Telegram
+- `integrations-telegram/state` — Runtime state container
+- `integrations-telegram/tdata-decrypter` — Decrypt Telegram
   Desktop `tdata` sessions
-- `@opencontext/integrations-telegram/tdata-converter` — Convert `tdata` to
+- `integrations-telegram/tdata-converter` — Convert `tdata` to
   standalone session strings

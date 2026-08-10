@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/search",
-	"version": "0.9.0",
+	"name": "@melandlabs/search",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -25,7 +25,7 @@
 	"description": "OpenContext · search module",
 	"keywords": ["opencontext"],
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

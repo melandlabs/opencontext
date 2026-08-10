@@ -1,5 +1,5 @@
 /**
- * @opencontext/integrations-telegram - Telegram integration package
+ * @melandlabs/integrations-telegram - Telegram integration package
  */
 
 export { TelegramAdapter } from "./adapter";
@@ -10,11 +10,11 @@ export { TelegramConversationStore } from "./conversation-store";
 export type {
 	DialogInfo,
 	ExtractedMessageInfo,
-} from "@opencontext/integrations/channels/sources/types";
+} from "@melandlabs/integrations/channels/sources/types";
 export type {
 	TelegramContactMeta,
 	ContactMeta,
-} from "@opencontext/integrations/contacts";
+} from "@melandlabs/integrations/contacts";
 
 // Re-export utility functions
 export {

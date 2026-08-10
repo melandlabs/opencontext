@@ -1,4 +1,4 @@
-// @opencontext/loop — leaf filesystem / preferences primitives.
+// @melandlabs/loop — leaf filesystem / preferences primitives.
 //
 // `paths` and `cli-path` are pure node:fs/path; `preferences` depends on
 // `paths`. Files that need the on-disk snapshot store, agent bridge, or DB

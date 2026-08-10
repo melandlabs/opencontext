@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/hooks",
-	"version": "0.9.0",
+	"name": "@melandlabs/hooks",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -44,7 +44,7 @@
 		}
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"@types/react": "^18.3.0",
 		"react": "^18.3.0",
 		"typescript": "^5.6.3"

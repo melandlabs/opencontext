@@ -14,7 +14,7 @@ import {
 	clearChannelForUserPrefix,
 	loadChannelDay,
 	saveChannelMessage,
-} from "@opencontext/ai/store";
+} from "@melandlabs/ai/store";
 
 function getAppMemoryDir(userId?: string): string {
 	const base = join(homedir(), ".opencontext", "data", "memory");

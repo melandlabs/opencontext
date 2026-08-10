@@ -2,7 +2,7 @@ import {
 	ComposioClient,
 	type ComposioCredentials,
 	isComposioCredentials,
-} from "@opencontext/integrations/composio";
+} from "@melandlabs/integrations/composio";
 
 export class AppError extends Error {
 	constructor(

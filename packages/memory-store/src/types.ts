@@ -1,5 +1,5 @@
 /**
- * @opencontext/memory-store public types re-exports.
+ * @melandlabs/memory-store public types re-exports.
  */
 
 export type {

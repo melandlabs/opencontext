@@ -1,4 +1,4 @@
-// NOTE: @opencontext/hooks ships React-only hooks (useLocalStorage,
+// NOTE: @melandlabs/hooks ships React-only hooks (useLocalStorage,
 // useIsMobile, useOnClickOutside, useCustomEvent, useMobileBottomSpacing,
 // useEnterSendWithIme, usePullToRefresh, useScrollToBottom). React and
 // SWR are declared as optional peer dependencies so this package can be

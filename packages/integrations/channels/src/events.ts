@@ -1,4 +1,4 @@
-import type { Attachment } from "@opencontext/shared";
+import type { Attachment } from "@melandlabs/shared";
 import type { Friend, Group, GroupMember } from "./entities";
 import type { Messages } from "./message";
 

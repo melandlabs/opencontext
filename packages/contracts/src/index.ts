@@ -1,5 +1,5 @@
 /**
- * @opencontext/contracts — boundary types shared between runtime and UI.
+ * @melandlabs/contracts — boundary types shared between runtime and UI.
  *
  * Add new cross-cutting types here. Domain-specific types belong in their
  * owning runtime package.

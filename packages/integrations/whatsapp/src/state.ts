@@ -1,4 +1,4 @@
-import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
 export type { ExtractedMessageInfo };
 
 // ---------------------------------------------------------------------------

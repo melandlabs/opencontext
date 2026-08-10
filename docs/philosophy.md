@@ -29,7 +29,7 @@ That works at small scale, and it falls apart at the seams:
 
 opencontext refuses to conflate these. Each concern gets its own
 package, its own types, and its own test surface. The agent loop in
-`@opencontext/ai` is a thin coordinator on top, not the foundation.
+`@melandlabs/opencontext` is a thin coordinator on top, not the foundation.
 
 ## Why four verbs
 
@@ -122,10 +122,10 @@ Keeping them in the same monorepo meant:
 The split solves all three. After the split:
 
 - Runtime releases follow changesets and publish to npm under
-  `@opencontext/*`. UI releases stay private to the opencontext
+  `@melandlabs/*`. UI releases stay private to the opencontext
   monorepo.
 - A UI change cannot accidentally trigger a runtime version bump.
-- An open-source embedder can `pnpm add @opencontext/memory-store`
+- An open-source embedder can `pnpm add @melandlabs/opencontext`
   without pulling in any UI code.
 
 ## Why a monorepo, not a polyrepo
@@ -134,8 +134,8 @@ We considered publishing each of the 49 packages to its own git repo.
 We decided against it because:
 
 - **Atomic refactors** — most refactors touch more than one package at
-  once. A monorepo lets us change `@opencontext/memory-store` and
-  `@opencontext/contracts` in a single PR.
+  once. A monorepo lets us change `@melandlabs/opencontext` and
+  `@melandlabs/opencontext` in a single PR.
 - **Shared infrastructure** — biome, tsconfig, the tsup preset, and the
   CI matrix are all defined once and inherited. In a polyrepo they
   drift.
@@ -172,7 +172,7 @@ disagreed with itself on import order. Biome is the modern choice.
 
 ## What we did not do
 
-- We did not build a model provider abstraction. `@opencontext/ai`
+- We did not build a model provider abstraction. `@melandlabs/opencontext`
   imports the AI SDK directly. Adding an abstraction layer would have
   hidden the parts of each provider that callers actually want to use.
 - We did not build a vector-database abstraction. Each backend has its
@@ -188,7 +188,7 @@ disagreed with itself on import order. Biome is the modern choice.
 
 - The four verbs (`remember`, `recall`, `forget`, `improve`) will not
   change shape before v1.0.
-- The `@opencontext/contracts` types will only change in a major version.
+- The `@melandlabs/opencontext` types will only change in a major version.
 - The temporal graph semantics (`valid_from`, `valid_until`,
   supersession, contradiction) will not change shape before v1.0.
 

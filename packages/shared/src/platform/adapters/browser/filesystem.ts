@@ -1,4 +1,4 @@
 export {
 	BrowserFileSystem,
 	browserFileSystem,
-} from "@opencontext/ui-runtime/platform/adapters/browser/filesystem";
+} from "@melandlabs/ui-runtime/platform/adapters/browser/filesystem";

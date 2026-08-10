@@ -2,7 +2,7 @@
  * Text chunking utilities for RAG
  */
 
-import { estimateTokens } from "@opencontext/shared";
+import { estimateTokens } from "@melandlabs/shared";
 
 export interface ChunkOptions {
 	maxChunkSize?: number; // Maximum characters per chunk

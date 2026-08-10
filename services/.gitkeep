@@ -1,11 +1,11 @@
 # `services/` is reserved for long-running daemons that wrap a single
-# `@opencontext/*` package as a deployable server. Example services:
+# `@melandlabs/*` package as a deployable server. Example services:
 #
 # - `services/memory-http`  — `opencontext-memory-http` daemon (Hono on :7421)
 # - `services/memory-mcp`   — `opencontext-memory-mcp` stdio MCP server
 #
 # Each service should be a thin wrapper that:
-#   1. Imports the relevant `@opencontext/*` package
+#   1. Imports the relevant `@melandlabs/*` package
 #   2. Adds a CLI front-end (commander, yargs, or @clack/prompts)
 #   3. Adds operational concerns (logging, signal handling, config)
 #

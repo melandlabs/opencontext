@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Model: model providers and request context
+ * @melandlabs/ai - Model: model providers and request context
  */
 
 export {

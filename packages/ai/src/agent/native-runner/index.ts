@@ -3,7 +3,7 @@ import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import type { MemoryApplicabilityContext } from "@opencontext/memory-consolidation/graph-contracts";
+import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation/graph-contracts";
 import { type AgentRegistry, getAgentRegistry } from "../registry";
 import {
 	type AgentRuntimePermissionHandler,

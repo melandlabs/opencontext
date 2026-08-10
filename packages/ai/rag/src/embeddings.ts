@@ -5,7 +5,7 @@
  * Uses lazy import of OpenAI SDK to avoid loading at module load time.
  */
 
-import { estimateTokens } from "@opencontext/shared";
+import { estimateTokens } from "@melandlabs/shared";
 import type OpenAI from "openai";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;

@@ -4,4 +4,4 @@ export {
 	isBrowser,
 	getPlatformKind,
 	type PlatformKind,
-} from "@opencontext/ui-runtime/platform/env";
+} from "@melandlabs/ui-runtime/platform/env";

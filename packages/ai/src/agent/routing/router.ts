@@ -65,7 +65,7 @@ function shouldUseCloudAI(isNativeMode: boolean, options: ModelCallOptions): boo
 async function callLocalModel(isNativeModel: boolean, options: ModelCallOptions): Promise<ReadableStream> {
 	const { streamText, createUIMessageStream, JsonToSseTransformStream } = await import("ai");
 
-	const { generateUUID } = await import("@opencontext/shared");
+	const { generateUUID } = await import("@melandlabs/shared");
 
 	const model = options.model
 		? getModelProvider(isNativeModel).languageModel(options.model)

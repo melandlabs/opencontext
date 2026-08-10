@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/insights",
-	"version": "0.9.0",
+	"name": "@melandlabs/insights",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -30,8 +30,8 @@
 		"react": ">=18.0.0"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
-		"@opencontext/shared": "workspace:*",
+		"@melandlabs/config": "workspace:*",
+		"@melandlabs/shared": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

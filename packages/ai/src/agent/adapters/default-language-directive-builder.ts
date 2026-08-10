@@ -15,7 +15,7 @@
  * rewriting downstream code.
  */
 
-import type { UserLocale } from "@opencontext/shared";
+import type { UserLocale } from "@melandlabs/shared";
 
 import type { DirectiveChannel, LanguageDirectiveBuilder } from "../ports/language-directive.port";
 

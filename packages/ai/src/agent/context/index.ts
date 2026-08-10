@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Context: conversation window management
+ * @melandlabs/ai - Context: conversation window management
  */
 
 export {

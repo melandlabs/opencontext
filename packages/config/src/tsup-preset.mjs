@@ -1,7 +1,7 @@
 // Shared tsup preset for all OpenContext packages.
 // Usage in a package's tsup.config.ts:
 //
-//   import { makeTsupConfig } from "@opencontext/config/tsup-preset";
+//   import { makeTsupConfig } from "@melandlabs/config/tsup-preset";
 //   export default makeTsupConfig({ entries: { "index": "src/index.ts" } });
 //
 // Keeping one source of truth so every published package:

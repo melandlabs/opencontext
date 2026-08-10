@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/integrations-runtime",
-	"version": "0.9.0",
+	"name": "@melandlabs/integrations-runtime",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -29,11 +29,11 @@
 	"description": "OpenContext · integrations runtime glue",
 	"keywords": ["opencontext"],
 	"dependencies": {
-		"@opencontext/contracts": "workspace:*",
+		"@melandlabs/contracts": "workspace:*",
 		"i18next": "^26.3.6"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

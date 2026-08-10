@@ -4,10 +4,10 @@
  * Needs to work with QQ WebSocket listener to receive messages
  * Reference: https://bot.q.qq.com/wiki/
  */
-import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type { Image, Message, Messages } from "@opencontext/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
-import type { Friend } from "@opencontext/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
+import type { Image, Message, Messages } from "@melandlabs/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
+import type { Friend } from "@melandlabs/integrations/channels";
 
 const DEBUG = process.env.DEBUG_QQBOT === "true";
 const QQ_TOKEN_URL = "https://bots.qq.com/app/getAppAccessToken";

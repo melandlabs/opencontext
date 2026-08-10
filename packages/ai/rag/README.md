@@ -1,4 +1,10 @@
-# @opencontext/ai-rag
+# ai-rag (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Retrieval-Augmented Generation (RAG) primitives for OpenContext. Provides
 text chunking, embedding adapters (local Transformers, OpenAI, ChromaDB),
@@ -8,21 +14,21 @@ document parsers (PDF, ZIP, etc.), and pluggable vector stores
 ## Installation
 
 ```sh
-pnpm add @opencontext/ai-rag
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/ai-rag` — Main entrypoint
-- `@opencontext/ai-rag/chunking` — Document chunking strategies
-- `@opencontext/ai-rag/embeddings` — Embedding generation helpers
-- `@opencontext/ai-rag/vector-service` — High-level vector service facade
-- `@opencontext/ai-rag/unified-vector-search-service` — Unified search service
-- `@opencontext/ai-rag/parsers` — Document parsers (PDF, ZIP, plain text)
-- `@opencontext/ai-rag/embedding-provider` — Embedding provider interface
-- `@opencontext/ai-rag/local-transformers-embedding-provider` — Local
+- `ai-rag` — Main entrypoint
+- `ai-rag/chunking` — Document chunking strategies
+- `ai-rag/embeddings` — Embedding generation helpers
+- `ai-rag/vector-service` — High-level vector service facade
+- `ai-rag/unified-vector-search-service` — Unified search service
+- `ai-rag/parsers` — Document parsers (PDF, ZIP, plain text)
+- `ai-rag/embedding-provider` — Embedding provider interface
+- `ai-rag/local-transformers-embedding-provider` — Local
   HuggingFace Transformers-based embedding provider
-- `@opencontext/ai-rag/universal-embeddings` — Universal embedding interface
-- `@opencontext/ai-rag/chroma-store` — ChromaDB vector store adapter
-- `@opencontext/ai-rag/sqlite-vec-store` — sqlite-vec vector store adapter
-- `@opencontext/ai-rag/pgvector-store` — pgvector vector store adapter
+- `ai-rag/universal-embeddings` — Universal embedding interface
+- `ai-rag/chroma-store` — ChromaDB vector store adapter
+- `ai-rag/sqlite-vec-store` — sqlite-vec vector store adapter
+- `ai-rag/pgvector-store` — pgvector vector store adapter

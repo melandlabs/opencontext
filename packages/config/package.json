@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/config",
-	"version": "0.9.0",
+	"name": "@melandlabs/config",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "src/tsup-preset.mjs", "README.md", "LICENSE"],
 	"publishConfig": {

@@ -3,7 +3,7 @@
  *
  * Defines the contract for AI runtime handlers used by platform integrations.
  * The web application provides an implementation that delegates to its specific
- * AI runtime (e.g., Claude via @opencontext/ai).
+ * AI runtime (e.g., Claude via @melandlabs/ai).
  */
 
 import type { PlatformId } from "./index.js";
@@ -32,7 +32,7 @@ export interface AIHandlerOptions {
  * Interface for AI runtime handlers used by platform integrations.
  *
  * Implementations should delegate to the application's specific AI runtime
- * (e.g., Claude Agent via @opencontext/ai).
+ * (e.g., Claude Agent via @melandlabs/ai).
  */
 export interface AIHandler {
 	/**

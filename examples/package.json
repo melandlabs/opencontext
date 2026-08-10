@@ -1,0 +1,18 @@
+{
+	"name": "@melandlabs/opencontext-examples",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Smoke test for the @melandlabs/opencontext facade. Runs against the freshly published npm artifact to verify the bundle resolves and the public API surface loads.",
+	"main": "./src/index.ts",
+	"scripts": {
+		"start": "node --experimental-strip-types src/index.ts",
+		"test": "node --experimental-strip-types src/index.ts"
+	},
+	"dependencies": {
+		"@melandlabs/opencontext": "^0.1.0"
+	},
+	"engines": {
+		"node": ">=20"
+	}
+}

@@ -1,4 +1,4 @@
-# @opencontext/memory-consolidation
+# opencontext/memory-consolidation (workspace)
 
 Experimental memory consolidation utilities for evaluating repeated evidence,
 cluster-level signals, and diagnostics before changing runtime memory behavior.
@@ -28,19 +28,6 @@ promoted. The output is diagnostic: `preservedClusters` are candidates for later
 semantic consolidation, `contestedClusters` show conflicting or changing memory
 patterns, and `decayedRecords` are signals to avoid promotion rather than direct
 delete instructions.
-
-## Roadmap
-
-Dynamic Memory Cluster Evolution is the active track. Its authority set is
-[requirements](./docs/memory-graph-evolution-requirements.md) for product
-outcomes, [architecture](./docs/memory-graph-evolution-architecture.md) for
-boundaries and invariants, the [ADR index](./docs/adr/README.md) for durable
-decisions, and the
-[execution plan](./docs/memory-graph-evolution-execution-plan.md) for delivery
-status, phase numbering, and authorization.
-
-Earlier package-local planning notes are kept in
-[docs/archive](./docs/archive/README.md) for history only.
 
 ## Scope
 

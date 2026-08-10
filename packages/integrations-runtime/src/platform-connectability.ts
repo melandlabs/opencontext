@@ -1,4 +1,4 @@
-import type { IntegrationId } from "@opencontext/contracts/integration-id";
+import type { IntegrationId } from "@melandlabs/contracts/integration-id";
 
 const ALL_INTEGRATION_PLATFORMS: IntegrationId[] = [
 	"telegram",

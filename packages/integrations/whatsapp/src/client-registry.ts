@@ -4,10 +4,10 @@
  * Global registry to track all active Baileys WASocket instances.
  * Used by the self-message listener to access connected sockets.
  *
- * Implements the ClientRegistry interface from @opencontext/integrations/core
+ * Implements the ClientRegistry interface from @melandlabs/integrations/core
  */
 
-import type { ClientRegistry } from "@opencontext/integrations/core";
+import type { ClientRegistry } from "@melandlabs/integrations/core";
 import type { WASocket } from "@whiskeysockets/baileys";
 import { DEBUG_WHATSAPP } from "./debug";
 

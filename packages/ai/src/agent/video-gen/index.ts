@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Video Generation Provider
+ * @melandlabs/ai - Video Generation Provider
  *
  * Video generation provider abstraction with OpenAI Sora support.
  */

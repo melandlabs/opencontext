@@ -7,7 +7,7 @@
  * `searchMessagesSemantically` extension when present.
  */
 
-import type { RawMessageStorageManager } from "@opencontext/indexeddb/storage";
+import type { RawMessageStorageManager } from "@melandlabs/indexeddb/storage";
 import type { MemoryStoreConfig, MemoryStoreEnv } from "../config";
 import { hasPostgresFactory, resolvePostgresFactory } from "./postgres-raw-message-factory";
 import {

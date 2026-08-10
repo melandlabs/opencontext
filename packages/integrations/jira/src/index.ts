@@ -1,4 +1,4 @@
-import { AppError } from "@opencontext/shared/errors";
+import { AppError } from "@melandlabs/shared/errors";
 
 /**
  * Jira API credentials stored in the database

@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Billing: token estimation and model pricing
+ * @melandlabs/ai - Billing: token estimation and model pricing
  */
 
 export {

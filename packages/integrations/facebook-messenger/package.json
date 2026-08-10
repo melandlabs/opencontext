@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/integrations-facebook-messenger",
-	"version": "0.9.0",
+	"name": "@melandlabs/integrations-facebook-messenger",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -24,11 +24,11 @@
 	"description": "OpenContext · integrations/facebook-messenger module",
 	"keywords": ["opencontext"],
 	"dependencies": {
-		"@opencontext/integrations": "workspace:*",
-		"@opencontext/integrations-channels": "workspace:*"
+		"@melandlabs/integrations": "workspace:*",
+		"@melandlabs/integrations-channels": "workspace:*"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

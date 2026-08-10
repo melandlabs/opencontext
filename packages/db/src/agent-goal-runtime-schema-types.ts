@@ -16,7 +16,7 @@ import type {
 	RuntimeInstructionSource,
 	RuntimeProvider,
 	RuntimeSessionState,
-} from "@opencontext/ai/agent/runtime-instructions";
+} from "@melandlabs/ai/agent/runtime-instructions";
 
 export type AgentGoalSourceType = AgentGoal["source"]["type"];
 export type AgentGoalSnapshot = AgentGoal;

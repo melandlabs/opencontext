@@ -1,4 +1,10 @@
-# @opencontext/audit
+# audit (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Structured audit logging for security-sensitive actions: command execution,
 file reads, and credential access. Provides logger functions plus an optional
@@ -7,7 +13,7 @@ file reads, and credential access. Provides logger functions plus an optional
 ## Installation
 
 ```sh
-pnpm add @opencontext/audit
+pnpm add @melandlabs/opencontext
 ```
 
 ## Exports

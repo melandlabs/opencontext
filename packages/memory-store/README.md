@@ -1,24 +1,30 @@
-# @opencontext/memory-store
+# memory-store (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 OpenContext memory storage + search SDK with optional HTTP and MCP server
 entry points. The package is intentionally decoupled from the opencontext
 web app's database and env layers — every consumer wires up its own
 implementation via `MemoryStoreConfig`.
 
-- **SDK** (`@opencontext/memory-store`) — embed in a Node.js host
-- **HTTP** (`@opencontext/memory-store/http`) — REST daemon
-- **MCP** (`@opencontext/memory-store/mcp`) — stdio tools for Claude Desktop / Cursor
+- **SDK** (`memory-store`) — embed in a Node.js host
+- **HTTP** (`memory-store/http`) — REST daemon
+- **MCP** (`memory-store/mcp`) — stdio tools for Claude Desktop / Cursor
 
 ## Install
 
 ```bash
-pnpm add @opencontext/memory-store
+pnpm add @melandlabs/opencontext
 ```
 
 ## Quick start
 
 ```ts
-import { createMemoryStore } from "@opencontext/memory-store";
+import { createMemoryStore } from "memory-store";
 
 const store = await createMemoryStore({
 	db: { getDb: () => drizzleDb() },
@@ -36,9 +42,9 @@ const hits = await store.searchUnifiedMemory({ userId, query });
 
 | Import                           | What you get                                    |
 | -------------------------------- | ----------------------------------------------- |
-| `@opencontext/memory-store`      | `createMemoryStore(config)` facade              |
-| `@opencontext/memory-store/http` | `startHttpServer(options)` — Hono app on a port |
-| `@opencontext/memory-store/mcp`  | `startMcpServer()` — stdio MCP server           |
+| `memory-store`      | `createMemoryStore(config)` facade              |
+| `memory-store/http` | `startHttpServer(options)` — Hono app on a port |
+| `memory-store/mcp`  | `startMcpServer()` — stdio MCP server           |
 
 CLI bins ship with the package:
 
@@ -81,7 +87,7 @@ import {
 	createMemoryStore,
 	registerPostgresFactory,
 	type PostgresRawMessageManagerLike,
-} from "@opencontext/memory-store";
+} from "memory-store";
 import { myPostgresRawMessageManager } from "./postgres-raw-message-store";
 import * as schema from "./schema";
 
@@ -162,7 +168,7 @@ the fallback — same semantics as the web app.
 You don't need to wire all of them; the ones you omit just emit a warning:
 
 ```ts
-import { createUnifiedSearch } from "@opencontext/memory-store/unified-search";
+import { createUnifiedSearch } from "memory-store/unified-search";
 
 const search = createUnifiedSearch({
 	embedQuery: async ({ userId, query, authToken }) =>
@@ -211,12 +217,12 @@ existing Drizzle-based repo), register it via the factory pattern. The
 memory-store package will resolve it on first use:
 
 ```ts
-import { registerPostgresFactory } from "@opencontext/memory-store/postgres-raw-message-factory";
+import { registerPostgresFactory } from "memory-store/postgres-raw-message-factory";
 import { myPostgresManager } from "./managers/postgres-raw-message";
 
 registerPostgresFactory(async () => myPostgresManager);
 // Later — anywhere in the codebase:
-import { getRawMessageManager } from "@opencontext/memory-store";
+import { getRawMessageManager } from "memory-store";
 const manager = await getRawMessageManager();
 ```
 
@@ -227,7 +233,7 @@ registering the factory is mandatory.
 ### 6. HTTP daemon
 
 ```ts
-import { startHttpServer } from "@opencontext/memory-store/http";
+import { startHttpServer } from "memory-store/http";
 
 const { url, port, stop } = await startHttpServer({
 	port: 7421,
@@ -289,7 +295,7 @@ Tools exposed over stdio:
 	"mcpServers": {
 		"opencontext-memory": {
 			"command": "npx",
-			"args": ["-y", "@opencontext/memory-store", "memory-mcp"],
+			"args": ["-y", "memory-store", "memory-mcp"],
 			"env": {
 				"DATABASE_URL": "postgres://user:pass@host:5432/opencontext"
 			}
@@ -335,17 +341,17 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 | Subpath                                                    | Contents                                                                        |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `@opencontext/memory-store`                                | `createMemoryStore`, top-level types                                            |
-| `@opencontext/memory-store/http`                           | `startHttpServer`, `StartedHttpServer`                                          |
-| `@opencontext/memory-store/mcp`                            | `startMcpServer`                                                                |
-| `@opencontext/memory-store/unified-search`                 | `createUnifiedSearch(deps)` factory + result types                              |
-| `@opencontext/memory-store/raw-message-store`              | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
-| `@opencontext/memory-store/sqlite-raw-message-store`       | SQLite-vec raw-message manager (Tauri / desktop)                                |
-| `@opencontext/memory-store/postgres-raw-message-factory`   | `registerPostgresFactory`, `resolvePostgresFactory`                             |
-| `@opencontext/memory-store/sqlite-vector-index`            | Direct sqlite-vec insight index helpers                                         |
-| `@opencontext/memory-store/chroma-memory-index`            | Direct chroma upsert / search helpers                                           |
-| `@opencontext/memory-store/memory-graph-write-policy`      | `resolveMemoryGraphWritePolicy`, allowlist gating                               |
-| `@opencontext/memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy`                                            |
+| `memory-store`                                | `createMemoryStore`, top-level types                                            |
+| `memory-store/http`                           | `startHttpServer`, `StartedHttpServer`                                          |
+| `memory-store/mcp`                            | `startMcpServer`                                                                |
+| `memory-store/unified-search`                 | `createUnifiedSearch(deps)` factory + result types                              |
+| `memory-store/raw-message-store`              | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
+| `memory-store/sqlite-raw-message-store`       | SQLite-vec raw-message manager (Tauri / desktop)                                |
+| `memory-store/postgres-raw-message-factory`   | `registerPostgresFactory`, `resolvePostgresFactory`                             |
+| `memory-store/sqlite-vector-index`            | Direct sqlite-vec insight index helpers                                         |
+| `memory-store/chroma-memory-index`            | Direct chroma upsert / search helpers                                           |
+| `memory-store/memory-graph-write-policy`      | `resolveMemoryGraphWritePolicy`, allowlist gating                               |
+| `memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy`                                            |
 
 ## Behaviour notes
 

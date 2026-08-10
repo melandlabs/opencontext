@@ -7,9 +7,9 @@
  * without an injected config.
  */
 
-import { buildMemoryRecordEmbeddingDocument } from "@opencontext/ai/memory";
-import { ChromaVectorStore } from "@opencontext/rag";
-import type { DocumentChunk } from "@opencontext/rag/vector-service";
+import { buildMemoryRecordEmbeddingDocument } from "@melandlabs/ai/memory";
+import { ChromaVectorStore } from "@melandlabs/rag";
+import type { DocumentChunk } from "@melandlabs/rag/vector-service";
 
 import { type RawMessage, rawMessageToMemoryRecord } from "../contracts";
 

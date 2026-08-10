@@ -1,4 +1,10 @@
-# @opencontext/integrations-calendar
+# integrations-calendar (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Google Calendar integration for OpenContext. Built on the official
 [`googleapis`](https://www.npmjs.com/package/googleapis) SDK and supports
@@ -7,12 +13,12 @@ event listing, creation, and OAuth credential management.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-calendar
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-calendar` — Calendar adapter and helpers
+- `integrations-calendar` — Calendar adapter and helpers
 
 ## Peer Dependencies
 

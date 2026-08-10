@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/integrations-gmail",
-	"version": "0.9.0",
+	"name": "@melandlabs/integrations-gmail",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -24,10 +24,10 @@
 	"description": "OpenContext · integrations/gmail module",
 	"keywords": ["opencontext"],
 	"dependencies": {
-		"@opencontext/ai": "workspace:*"
+		"@melandlabs/ai": "workspace:*"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
 	},
 	"scripts": {

@@ -1,4 +1,10 @@
-# @opencontext/integrations-weixin
+# integrations-weixin (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [WeChat](https://www.wechat.com/) (微信) integration for OpenContext. Built on
 the official
@@ -9,20 +15,20 @@ reverse-engineered listeners.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-weixin
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-weixin` — Main entrypoint
-- `@opencontext/integrations-weixin/ws-listener` — WebSocket listener for the
+- `integrations-weixin` — Main entrypoint
+- `integrations-weixin/ws-listener` — WebSocket listener for the
   iLink client
-- `@opencontext/integrations-weixin/conversation-store` — Conversation
+- `integrations-weixin/conversation-store` — Conversation
   persistence
-- `@opencontext/integrations-weixin/ilink-client` — iLink protocol client
-- `@opencontext/integrations-weixin/cdn/aes-ecb` — AES-ECB decryption helper
-- `@opencontext/integrations-weixin/cdn/cdn-upload` — CDN upload helper
-- `@opencontext/integrations-weixin/cdn/cdn-url` — CDN URL signing helper
-- `@opencontext/integrations-weixin/cdn/pic-decrypt` — Decrypt CDN-hosted
+- `integrations-weixin/ilink-client` — iLink protocol client
+- `integrations-weixin/cdn/aes-ecb` — AES-ECB decryption helper
+- `integrations-weixin/cdn/cdn-upload` — CDN upload helper
+- `integrations-weixin/cdn/cdn-url` — CDN URL signing helper
+- `integrations-weixin/cdn/pic-decrypt` — Decrypt CDN-hosted
   pictures
-- `@opencontext/integrations-weixin/qr-login` — QR-code login flow
+- `integrations-weixin/qr-login` — QR-code login flow

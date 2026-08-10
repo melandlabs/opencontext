@@ -1,4 +1,4 @@
-// @opencontext/cron — scheduling primitives shared by runtime + UI.
+// @melandlabs/cron — scheduling primitives shared by runtime + UI.
 
 export * from "./types";
 export * from "./scheduler";

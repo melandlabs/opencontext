@@ -1,6 +1,6 @@
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { DEV_PORT, PROD_PORT } from "@opencontext/shared";
+import { DEV_PORT, PROD_PORT } from "@melandlabs/shared";
 import { customProvider } from "ai";
 import type { LanguageModel } from "ai";
 

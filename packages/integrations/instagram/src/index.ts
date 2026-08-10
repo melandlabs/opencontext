@@ -1,6 +1,6 @@
-import type { Messages } from "@opencontext/integrations/channels";
-import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
-import { AppError } from "@opencontext/shared/errors";
+import type { Messages } from "@melandlabs/integrations/channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+import { AppError } from "@melandlabs/shared/errors";
 
 type InstagramAdapterOptions = {
 	botId: string;

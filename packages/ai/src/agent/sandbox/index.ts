@@ -1,5 +1,5 @@
 /**
- * @opencontext/agent/sandbox - Sandbox Provider System
+ * @melandlabs/agent/sandbox - Sandbox Provider System
  *
  * Extensible sandbox providers for isolated code execution.
  * Supports: Native (no isolation), Claude (srt), Vercel (MicroVM).

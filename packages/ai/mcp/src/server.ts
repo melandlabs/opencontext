@@ -5,8 +5,8 @@ import { OpenContextClient, type OpenContextClientOptions } from "./opencontext/
 import { type OpenContextAuthToken, readOpenContextAuthToken } from "./opencontext/token";
 import { registerOpenContextTools } from "./tools";
 
-const DEFAULT_SERVER_NAME = "@opencontext/mcp";
-const DEFAULT_SERVER_VERSION = "0.9.0";
+const DEFAULT_SERVER_NAME = "@melandlabs/mcp";
+const DEFAULT_SERVER_VERSION = "0.1.0";
 
 export interface CreateOpenContextMcpServerOptions extends OpenContextClientOptions {
 	name?: string;

@@ -11,17 +11,17 @@ import { promisify } from "node:util";
  * Uses @photon-ai/imessage-kit library to implement macOS native iMessage integration
  * Note: This feature is only available on macOS systems
  */
-import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
 import type {
 	File as FileMessage,
 	Image,
 	MessageEvent,
 	Messages,
 	Message as opencontextMessage,
-} from "@opencontext/integrations/channels";
-import type { MessageTarget } from "@opencontext/integrations/channels";
-import type { DialogInfo, ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
-import { timeBeforeHours } from "@opencontext/shared";
+} from "@melandlabs/integrations/channels";
+import type { MessageTarget } from "@melandlabs/integrations/channels";
+import type { DialogInfo, ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+import { timeBeforeHours } from "@melandlabs/shared";
 
 // Minimal contact metadata type - only what's needed by this package
 export interface ContactMeta {

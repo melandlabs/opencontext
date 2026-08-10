@@ -5,20 +5,20 @@
  * using the gramjs library.
  */
 
-import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type { At, Image, Message, Messages } from "@opencontext/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
+import type { At, Image, Message, Messages } from "@melandlabs/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
 import {
 	type DialogInfo,
 	type ExtractedMessageInfo,
 	delay,
 	isEmptyMessage,
 	timeBeforeHours,
-} from "@opencontext/integrations/channels/sources/types";
-import type { ContactMeta, TelegramContactMeta } from "@opencontext/integrations/contacts";
-import { isTelegramContactMeta } from "@opencontext/integrations/contacts";
-import type { ClientRegistry, FileIngester } from "@opencontext/integrations/core";
-import type { Attachment } from "@opencontext/shared";
+} from "@melandlabs/integrations/channels/sources/types";
+import type { ContactMeta, TelegramContactMeta } from "@melandlabs/integrations/contacts";
+import { isTelegramContactMeta } from "@melandlabs/integrations/contacts";
+import type { ClientRegistry, FileIngester } from "@melandlabs/integrations/core";
+import type { Attachment } from "@melandlabs/shared";
 import bigInt, { type BigInteger } from "big-integer";
 import { TelegramClient } from "telegram";
 import type { TotalList } from "telegram/Helpers";
@@ -1367,12 +1367,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	}
 }
 
-export { getTgUserNameString } from "@opencontext/integrations/channels/sources/types";
+export { getTgUserNameString } from "@melandlabs/integrations/channels/sources/types";
 export type {
 	DialogInfo,
 	TgUserInfo,
 	ExtractedMessageInfo,
-} from "@opencontext/integrations/channels/sources/types";
+} from "@melandlabs/integrations/channels/sources/types";
 
 export function opencontextMessageToTgText(message: Message): string {
 	if (typeof message === "string") {

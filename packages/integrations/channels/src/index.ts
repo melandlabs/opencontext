@@ -1,5 +1,5 @@
 /**
- * @opencontext/channels - Message platform adapters and integrations
+ * @melandlabs/channels - Message platform adapters and integrations
  */
 
 export { MessagePlatformAdapter } from "./adapter";

@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/ai-rag",
-	"version": "0.9.0",
+	"name": "@melandlabs/ai-rag",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -40,7 +40,7 @@
 		"@langchain/community": "^1.1.1",
 		"@langchain/core": "^1.1.8",
 		"@langchain/textsplitters": "^1.0.1",
-		"@opencontext/shared": "workspace:*",
+		"@melandlabs/shared": "workspace:*",
 		"better-sqlite3": "^11.7.0",
 		"chromadb": "^3.4.3",
 		"jszip": "^3.10.1",
@@ -52,7 +52,7 @@
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"@types/pg": "^8.11.10",
 		"typescript": "^5.6.3"
 	},

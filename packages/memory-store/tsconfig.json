@@ -6,16 +6,16 @@
 		"tsBuildInfoFile": "./dist/.tsbuildinfo",
 		"noEmit": false,
 		"paths": {
-			"@opencontext/indexeddb": ["../../packages/indexeddb/src/index.ts"],
-			"@opencontext/indexeddb/*": ["../../packages/indexeddb/src/*"],
-			"@opencontext/sqlite": ["../../packages/sqlite/src/index.ts"],
-			"@opencontext/sqlite/*": ["../../packages/sqlite/src/*"],
-			"@opencontext/ai": ["../../packages/ai/src/index.ts"],
-			"@opencontext/ai/*": ["../../packages/ai/src/*"],
-			"@opencontext/rag": ["../../packages/ai/rag/src/index.ts"],
-			"@opencontext/rag/*": ["../../packages/ai/rag/src/*"],
-			"@opencontext/shared": ["../../packages/shared/src/index.ts"],
-			"@opencontext/shared/*": ["../../packages/shared/src/*"]
+			"@melandlabs/indexeddb": ["../../packages/indexeddb/src/index.ts"],
+			"@melandlabs/indexeddb/*": ["../../packages/indexeddb/src/*"],
+			"@melandlabs/sqlite": ["../../packages/sqlite/src/index.ts"],
+			"@melandlabs/sqlite/*": ["../../packages/sqlite/src/*"],
+			"@melandlabs/ai": ["../../packages/ai/src/index.ts"],
+			"@melandlabs/ai/*": ["../../packages/ai/src/*"],
+			"@melandlabs/rag": ["../../packages/ai/rag/src/index.ts"],
+			"@melandlabs/rag/*": ["../../packages/ai/rag/src/*"],
+			"@melandlabs/shared": ["../../packages/shared/src/index.ts"],
+			"@melandlabs/shared/*": ["../../packages/shared/src/*"]
 		}
 	},
 	"include": ["src"]

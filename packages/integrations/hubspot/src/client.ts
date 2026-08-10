@@ -1,4 +1,4 @@
-import { AppError } from "@opencontext/shared";
+import { AppError } from "@melandlabs/shared";
 
 export type HubspotCredentials = {
 	accessToken: string;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { type ComposioCredentials, isComposioCredentials } from "@opencontext/integrations/composio";
+import { type ComposioCredentials, isComposioCredentials } from "@melandlabs/integrations/composio";
 import type { OAuth2Client } from "google-auth-library";
 import { type calendar_v3, google } from "googleapis";
 import { ComposioGoogleCalendarProxy } from "./composio-google-calendar";

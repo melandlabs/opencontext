@@ -1,4 +1,10 @@
-# @opencontext/integrations-composio
+# integrations-composio (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [Composio](https://composio.dev/) adapter helpers for OpenContext. Exposes the
 shared `ComposioClient`, toolkit slug constants, and credential helpers used
@@ -7,7 +13,7 @@ by the Google Calendar / Google Meet integrations.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-composio
+pnpm add @melandlabs/opencontext
 ```
 
 ## Exports

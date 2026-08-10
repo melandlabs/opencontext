@@ -1,5 +1,5 @@
 /**
- * @opencontext/rag - RAG pipeline utilities: chunking, embeddings, and vector stores.
+ * @melandlabs/rag - RAG pipeline utilities: chunking, embeddings, and vector stores.
  */
 
 export {
@@ -54,6 +54,8 @@ export {
 	type VectorSearchResult,
 	type DocumentChunk,
 } from "./sqlite-vec-store";
+
+export { ChromaVectorStore, type ChromaVectorStoreOptions } from "./chroma-vector-store";
 
 export {
 	getPGVectorStore,

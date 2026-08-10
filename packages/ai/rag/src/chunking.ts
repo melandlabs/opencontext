@@ -7,7 +7,7 @@
  * - "atomic": LLM-driven decomposition into single-proposition facts.
  */
 
-import { estimateTokens } from "@opencontext/shared";
+import { estimateTokens } from "@melandlabs/shared";
 import {
 	type AtomicFactChunk,
 	type AtomicFactChunkerConfig,

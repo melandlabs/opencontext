@@ -1,4 +1,4 @@
-import type { ExtractedMessageInfo } from "@opencontext/shared";
+import type { ExtractedMessageInfo } from "@melandlabs/shared";
 
 /**
  * Normalize messages input to array

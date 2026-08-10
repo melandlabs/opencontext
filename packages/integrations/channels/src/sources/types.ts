@@ -1,11 +1,11 @@
-import type { ExtractedMessageInfo } from "@opencontext/shared";
+import type { ExtractedMessageInfo } from "@melandlabs/shared";
 export {
 	coerceDate,
 	timeBeforeHours,
 	timeBeforeHoursMs,
 	timeBeforeMinutes,
 	delay,
-} from "@opencontext/shared";
+} from "@melandlabs/shared";
 export type { ExtractedMessageInfo };
 
 export type DialogInfo = {

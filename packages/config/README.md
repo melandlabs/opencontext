@@ -1,4 +1,10 @@
-# @opencontext/config
+# config (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Shared build, lint, and TypeScript presets used across every package in the
 OpenContext monorepo. Centralises `tsup`, ESLint, and `tsconfig` configuration so
@@ -7,12 +13,12 @@ each package's `package.json` stays minimal.
 ## Installation
 
 ```sh
-pnpm add @opencontext/config
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/config` — Main entrypoint (compiled `dist/index.js`)
-- `@opencontext/config/eslint` — Pre-bundled ESLint configuration
-- `@opencontext/config/tsconfig` — Shared `tsconfig.json` base
-- `@opencontext/config/tsup-preset` — `tsup` preset factory (`makeTsupConfig`)
+- `config` — Main entrypoint (compiled `dist/index.js`)
+- `config/eslint` — Pre-bundled ESLint configuration
+- `config/tsconfig` — Shared `tsconfig.json` base
+- `config/tsup-preset` — `tsup` preset factory (`makeTsupConfig`)

@@ -1,4 +1,4 @@
-import type { IntegrationId } from "@opencontext/contracts/integration-id";
+import type { IntegrationId } from "@melandlabs/contracts/integration-id";
 
 export type InferredTaskSource = {
 	type: "channel";

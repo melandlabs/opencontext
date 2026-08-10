@@ -1,5 +1,5 @@
 /**
- * @opencontext/rag - RAG pipeline utilities: chunking, embeddings, and vector stores.
+ * @melandlabs/rag - RAG pipeline utilities: chunking, embeddings, and vector stores.
  */
 
 export {

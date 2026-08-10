@@ -14,7 +14,7 @@
  * call site.
  */
 
-import type { UserLocale } from "@opencontext/shared";
+import type { UserLocale } from "@melandlabs/shared";
 
 export type DirectiveChannel = "conversational" | "artifact";
 

@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/voice-whisper",
-	"version": "0.9.0",
+	"name": "@melandlabs/voice-whisper",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {

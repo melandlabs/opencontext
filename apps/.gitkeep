@@ -1,5 +1,5 @@
 # `apps/` is reserved for example host applications that demonstrate
-# the `@opencontext/*` packages. The primary consumer of this runtime
+# the `@melandlabs/*` packages. The primary consumer of this runtime
 # is a separate host application that lives in another repository and
 # is intentionally **not** duplicated here.
 #

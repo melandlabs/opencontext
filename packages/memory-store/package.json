@@ -1,6 +1,6 @@
 {
-	"name": "@opencontext/memory-store",
-	"version": "0.9.0",
+	"name": "@melandlabs/memory-store",
+	"version": "0.1.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"main": "./dist/index.js",
@@ -43,23 +43,23 @@
 	"dependencies": {
 		"@hono/node-server": "^1.13.7",
 		"@modelcontextprotocol/sdk": "^1.25.3",
-		"@opencontext/ai": "workspace:*",
-		"@opencontext/rag": "workspace:*",
-		"@opencontext/shared": "workspace:*",
-		"@opencontext/sqlite": "workspace:*",
+		"@melandlabs/ai": "workspace:*",
+		"@melandlabs/rag": "workspace:*",
+		"@melandlabs/shared": "workspace:*",
+		"@melandlabs/sqlite": "workspace:*",
 		"hono": "^4.6.14",
 		"zod": "^4.3.6"
 	},
 	"peerDependencies": {
-		"@opencontext/indexeddb": "workspace:*"
+		"@melandlabs/indexeddb": "workspace:*"
 	},
 	"peerDependenciesMeta": {
-		"@opencontext/indexeddb": {
+		"@melandlabs/indexeddb": {
 			"optional": true
 		}
 	},
 	"devDependencies": {
-		"@opencontext/config": "workspace:*",
+		"@melandlabs/config": "workspace:*",
 		"@types/node": "^22.13.10",
 		"typescript": "^5.6.3"
 	},

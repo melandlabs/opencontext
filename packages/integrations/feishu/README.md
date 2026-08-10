@@ -1,4 +1,10 @@
-# @opencontext/integrations-feishu
+# integrations-feishu (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [Feishu](https://www.feishu.cn/) (飞书, also known as Lark) integration for
 OpenContext. Wraps the official [`@larksuiteoapi/node-sdk`](https://www.npmjs.com/package/@larksuiteoapi/node-sdk)
@@ -8,13 +14,13 @@ storage, and channel adapter glue.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-feishu
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-feishu` — Main entrypoint
-- `@opencontext/integrations-feishu/app-registration` — App registration helper
-- `@opencontext/integrations-feishu/registration-cookie` — Registration cookie flow
-- `@opencontext/integrations-feishu/conversation-store` — Conversation persistence
-- `@opencontext/integrations-feishu/state` — Runtime state container
+- `integrations-feishu` — Main entrypoint
+- `integrations-feishu/app-registration` — App registration helper
+- `integrations-feishu/registration-cookie` — Registration cookie flow
+- `integrations-feishu/conversation-store` — Conversation persistence
+- `integrations-feishu/state` — Runtime state container

@@ -4,12 +4,12 @@ import * as Lark from "@larksuiteoapi/node-sdk";
  * Send messages via Feishu Open Platform API using app_id / app_secret
  * Needs to work with Feishu WebSocket long-poll listener to receive messages
  */
-import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type { Image, Message, Messages } from "@opencontext/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
-import type { Friend, Group, GroupMember } from "@opencontext/integrations/channels";
-import { Permission } from "@opencontext/integrations/channels";
-import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
+import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
+import type { Image, Message, Messages } from "@melandlabs/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
+import type { Friend, Group, GroupMember } from "@melandlabs/integrations/channels";
+import { Permission } from "@melandlabs/integrations/channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
 
 const DEBUG = process.env.DEBUG_FEISHU === "true";
 

@@ -1,4 +1,10 @@
-# @opencontext/integrations-whatsapp
+# integrations-whatsapp (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [WhatsApp](https://www.whatsapp.com/) integration for OpenContext, powered by
 [`@whiskeysockets/baileys`](https://www.npmjs.com/package/@whiskeysockets/baileys)
@@ -8,15 +14,15 @@ conversation store, markdown renderer, and a multi-account client registry.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-whatsapp
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-whatsapp` — Main entrypoint
-- `@opencontext/integrations-whatsapp/conversation-store` — Conversation
+- `integrations-whatsapp` — Main entrypoint
+- `integrations-whatsapp/conversation-store` — Conversation
   persistence
-- `@opencontext/integrations-whatsapp/markdown` — Markdown ↔ WhatsApp message
+- `integrations-whatsapp/markdown` — Markdown ↔ WhatsApp message
   converter
-- `@opencontext/integrations-whatsapp/client-registry` — Multi-account client
+- `integrations-whatsapp/client-registry` — Multi-account client
   registry

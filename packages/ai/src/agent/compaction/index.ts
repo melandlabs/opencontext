@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Compaction: conversation compaction logic
+ * @melandlabs/ai - Compaction: conversation compaction logic
  */
 
 export {

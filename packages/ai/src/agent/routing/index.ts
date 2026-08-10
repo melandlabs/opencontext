@@ -1,5 +1,5 @@
 /**
- * @opencontext/ai - Routing: intelligent model call routing
+ * @melandlabs/ai - Routing: intelligent model call routing
  */
 
 export {

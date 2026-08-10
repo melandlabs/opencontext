@@ -1,5 +1,5 @@
 /**
- * @opencontext/memory-store/mcp — MCP server entry.
+ * @melandlabs/memory-store/mcp — MCP server entry.
  *
  * Spawns an MCP server (stdio transport by default) that exposes the
  * memory-store as tools any MCP client (Claude Code, etc.) can invoke.
@@ -11,7 +11,7 @@
  *   - memory.health          → { ok: true }
  *
  * Usage:
- *   import { startMcpServer } from "@opencontext/memory-store/mcp";
+ *   import { startMcpServer } from "@melandlabs/memory-store/mcp";
  *   await startMcpServer({ db: { getDb }, env: { isTauriMode } });
  */
 
@@ -31,8 +31,8 @@ export interface StartMcpServerOptions extends MemoryStoreConfig {
 	version?: string;
 }
 
-const DEFAULT_NAME = "@opencontext/memory-store";
-const DEFAULT_VERSION = "0.9.0";
+const DEFAULT_NAME = "@melandlabs/memory-store";
+const DEFAULT_VERSION = "0.1.0";
 
 export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
 	const server = new McpServer({

@@ -1,4 +1,4 @@
-// Platform detection lives in @opencontext/ui-runtime. shared no longer
+// Platform detection lives in @melandlabs/ui-runtime. shared no longer
 // statically depends on the Tauri runtime.
 export {
 	getFileSystem,
@@ -6,11 +6,11 @@ export {
 	type SaveFileOptions,
 	type DirEntry,
 	type ListDirectoryOptions,
-} from "@opencontext/ui-runtime/platform/filesystem";
+} from "@melandlabs/ui-runtime/platform/filesystem";
 
 export {
 	isClient,
 	isTauri,
 	isBrowser,
 	getPlatformKind,
-} from "@opencontext/ui-runtime/platform/env";
+} from "@melandlabs/ui-runtime/platform/env";

@@ -1,1 +1,1 @@
-export * from "@opencontext/memory-consolidation";
+export * from "@melandlabs/memory-consolidation";

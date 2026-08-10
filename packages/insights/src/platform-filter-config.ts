@@ -2,7 +2,7 @@ import type { InsightFilterCondition } from "./filter-schema";
 
 /**
  * Structural `IntegrationId` — a string-keyed platform identifier.
- * The leaf package doesn't need the full `@opencontext/contracts/integration-id`
+ * The leaf package doesn't need the full `@melandlabs/contracts/integration-id`
  * union (that lives in apps/web) to key a `Record<>` by platform. Generic
  * over the actual union keeps the type info for callers that want it.
  */

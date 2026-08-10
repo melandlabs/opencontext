@@ -1,4 +1,10 @@
-# @opencontext/integrations-google-docs
+# integrations-google-docs (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [Google Docs](https://developers.google.com/docs) integration for OpenContext.
 Built on the official `googleapis` SDK with OAuth credential management.
@@ -6,7 +12,7 @@ Built on the official `googleapis` SDK with OAuth credential management.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-google-docs
+pnpm add @melandlabs/opencontext
 ```
 
 ## Exports

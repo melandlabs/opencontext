@@ -1,5 +1,5 @@
 /**
- * @opencontext/agent - Agent SDK Abstraction Layer
+ * @melandlabs/agent - Agent SDK Abstraction Layer
  *
  * Core types, base class, plugin system, and registry for agent providers.
  */

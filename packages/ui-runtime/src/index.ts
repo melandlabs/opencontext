@@ -1,4 +1,4 @@
-// NOTE: @opencontext/ui-runtime is a UI-side package that ships
+// NOTE: @melandlabs/ui-runtime is a UI-side package that ships
 // Tauri platform detection + browser/Tauri filesystem adapters.
 // Its Tauri dependencies (@tauri-apps/api, plugin-dialog, plugin-fs)
 // are declared as optional peers so that this package can still be

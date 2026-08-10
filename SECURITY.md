@@ -11,7 +11,7 @@
 
 Please **do not** file public GitHub issues for security vulnerabilities.
 
-Email **security@opencontext.dev** (PGP key on request) with:
+Email **developers@melandlabs.ai** (PGP key on request) with:
 
 - A description of the issue and its impact.
 - A reproducible proof-of-concept or a minimal failing test case.

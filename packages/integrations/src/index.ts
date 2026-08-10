@@ -1,11 +1,11 @@
 /**
- * @opencontext/integrations - Unified package for opencontext integration packages
+ * @melandlabs/integrations - Unified package for opencontext integration packages
  *
  * This is the main entry point that re-exports core interfaces and types.
  * Individual platform adapters are available via subpaths:
- * - @opencontext/integrations/whatsapp
- * - @opencontext/integrations/weixin
- * - @opencontext/integrations/telegram
+ * - @melandlabs/integrations/whatsapp
+ * - @melandlabs/integrations/weixin
+ * - @melandlabs/integrations/telegram
  * etc.
  */
 

@@ -1,12 +1,18 @@
-# `@opencontext/cron`
+# `cron`
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Scheduling primitives.
 
 | Subpath                             | Notes                                         |
 | ----------------------------------- | --------------------------------------------- |
-| `@opencontext/cron`                 | Barrel — re-exports the subpaths below        |
-| `@opencontext/cron/types`           | `ScheduleConfig`, `JobConfig`, `CronJob`, …   |
-| `@opencontext/cron/scheduler`       | `computeNextRun`, `validateCronExpression`, … |
-| `@opencontext/cron/stream-response` | `createJobExecutionStreamResponse` (SSE)      |
+| `cron`                 | Barrel — re-exports the subpaths below        |
+| `cron/types`           | `ScheduleConfig`, `JobConfig`, `CronJob`, …   |
+| `cron/scheduler`       | `computeNextRun`, `validateCronExpression`, … |
+| `cron/stream-response` | `createJobExecutionStreamResponse` (SSE)      |
 
 Pure functions only — no DB, insights, or integration dependencies.

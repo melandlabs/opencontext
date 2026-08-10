@@ -4,7 +4,7 @@ import type {
 	MemoryApplicabilityContext,
 	MemoryGraphSnapshot,
 	OwnerScope,
-} from "@opencontext/memory-consolidation/graph-contracts";
+} from "@melandlabs/memory-consolidation/graph-contracts";
 import { applicabilityEquivalent, sameOwnerScope } from "../../memory-consolidation/src/graph-evolution";
 import { applicabilityMatchesTrustedContexts } from "../../memory-consolidation/src/graph-retrieval";
 import type {

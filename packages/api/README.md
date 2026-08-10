@@ -1,4 +1,10 @@
-# @opencontext/api
+# api (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 Lightweight HTTP client helpers used by the OpenContext web app and other
 packages. Wraps `fetch` with unified error handling and exposes a typed
@@ -7,7 +13,7 @@ packages. Wraps `fetch` with unified error handling and exposes a typed
 ## Installation
 
 ```sh
-pnpm add @opencontext/api
+pnpm add @melandlabs/opencontext
 ```
 
 ## Exports

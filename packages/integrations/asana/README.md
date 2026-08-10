@@ -1,4 +1,10 @@
-# @opencontext/integrations-asana
+# integrations-asana (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 [Asana](https://asana.com/) integration for OpenContext. Provides a typed
 client and React UI primitives for working with Asana tasks, projects, and
@@ -7,13 +13,13 @@ workspaces.
 ## Installation
 
 ```sh
-pnpm add @opencontext/integrations-asana
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/integrations-asana` — Main entrypoint (adapters + helpers)
-- `@opencontext/integrations-asana/client` — Typed Asana REST client
+- `integrations-asana` — Main entrypoint (adapters + helpers)
+- `integrations-asana/client` — Typed Asana REST client
 
 ## Peer Dependencies
 

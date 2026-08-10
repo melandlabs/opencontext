@@ -1,4 +1,10 @@
-# @opencontext/sqlite
+# sqlite (workspace)
+
+> **Workspace package.** Internal monorepo build artifact; not published to npm.
+> End users install [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)
+> (the facade) instead. Monorepo contributors depend on this package via
+> the workspace protocol.
+
 
 SQLite-backed persistence layer for OpenContext. Wraps `better-sqlite3` with
 the `sqlite-vec` extension and exposes the raw message store plus the shared
@@ -7,15 +13,15 @@ schema definitions.
 ## Installation
 
 ```sh
-pnpm add @opencontext/sqlite
+pnpm add @melandlabs/opencontext
 ```
 
 ## Subpath Exports
 
-- `@opencontext/sqlite` — High-level helpers and the SQLite connection factory
-- `@opencontext/sqlite/raw-message-manager` — CRUD operations for raw chat
+- `sqlite` — High-level helpers and the SQLite connection factory
+- `sqlite/raw-message-manager` — CRUD operations for raw chat
   messages (used by sync pipelines)
-- `@opencontext/sqlite/schema` — Shared schema definitions and migrations
+- `sqlite/schema` — Shared schema definitions and migrations
 
 ## Peer Dependencies
 

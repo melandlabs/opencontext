@@ -1,6 +1,6 @@
-import type { Platform } from "@opencontext/integrations/channels/sources/types";
-import type { ExtractedMessageInfo } from "@opencontext/shared";
-import { AppError } from "@opencontext/shared/errors";
+import type { Platform } from "@melandlabs/integrations/channels/sources/types";
+import type { ExtractedMessageInfo } from "@melandlabs/shared";
+import { AppError } from "@melandlabs/shared/errors";
 
 export type LinkedInCredentials = {
 	accessToken?: string | null;

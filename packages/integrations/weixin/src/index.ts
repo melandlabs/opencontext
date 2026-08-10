@@ -10,16 +10,16 @@
  * - ilink-client utilities
  */
 
-import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type { File as FileMsg, Image, Message, Messages } from "@opencontext/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
+import type { File as FileMsg, Image, Message, Messages } from "@melandlabs/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
 import {
 	CDN_BASE_URL,
 	weixinSendFileMessage,
 	weixinSendImageMessage,
 	weixinSendTextMessage,
-} from "@opencontext/integrations/weixin/ilink-client";
-import type { WeixinIlinkCredentials } from "@opencontext/integrations/weixin/ilink-client";
+} from "@melandlabs/integrations/weixin/ilink-client";
+import type { WeixinIlinkCredentials } from "@melandlabs/integrations/weixin/ilink-client";
 
 // Re-export ws-listener
 export {

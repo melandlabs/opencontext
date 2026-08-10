@@ -9,21 +9,21 @@ this one explains _how_ it works.
 
 There are five distinct layers:
 
-1. **Boundary** — `@opencontext/contracts` and `@opencontext/api`.
+1. **Boundary** — `@melandlabs/opencontext` and `@melandlabs/opencontext`.
    These are the only packages that host applications are required to
    know about. They expose types and a thin HTTP client; they have no
    runtime side-effects.
-2. **Memory substrate** — `@opencontext/memory-store`, `@opencontext/rag`,
-   `@opencontext/sqlite`, `@opencontext/indexeddb`, `@opencontext/search`,
-   `@opencontext/storage`. These own durable state and the operations
+2. **Memory substrate** — `@melandlabs/opencontext`, `@melandlabs/opencontext`,
+   `@melandlabs/opencontext`, `@melandlabs/opencontext`, `@melandlabs/opencontext`,
+   `@melandlabs/opencontext`. These own durable state and the operations
    that mutate or read it.
-3. **Engine** — `@opencontext/loop`, `@opencontext/cron`,
-   `@opencontext/insights`, `@opencontext/audit`. These decide _when_ and
+3. **Engine** — `@melandlabs/opencontext`, `@melandlabs/opencontext`,
+   `@melandlabs/opencontext`, `@melandlabs/opencontext`. These decide _when_ and
    _whether_ to do work, and they record what was done.
-4. **Agent runtime** — `@opencontext/ai`. This is where LLM calls,
+4. **Agent runtime** — `@melandlabs/opencontext`. This is where LLM calls,
    tool execution, sandboxing, and image/audio generation live. It is the
    only layer that talks to model providers.
-5. **Integration mesh** — `@opencontext/integrations` and its 21
+5. **Integration mesh** — `@melandlabs/opencontext` and its 21
    platform sub-packages. Each one owns the credential flow, the rate
    limits, the structured-record shape, and the reconnect logic for one
    external system.
@@ -39,7 +39,7 @@ No layer reaches sideways.
 ## The memory lifecycle
 
 A fact moves through five phases. Each phase is a method on
-`@opencontext/memory-store`:
+`@melandlabs/opencontext`:
 
 ```
   ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
@@ -61,15 +61,15 @@ store:
 3. Persists the raw message to the raw-message store (SQLite-vec by
    default; postgres is supported).
 4. Schedules chunking + embedding in the background (see
-   `chunkAndEmbed` in `@opencontext/rag`).
+   `chunkAndEmbed` in `@melandlabs/opencontext`).
 5. Appends a node to the temporal context graph with `valid_from = now`
    and `valid_until = null`.
 
 ### Index (background)
 
-The chunker (`@opencontext/rag/chunking`) splits the raw message into
+The chunker (`@melandlabs/opencontext/chunking`) splits the raw message into
 overlapping windows. Each window is embedded with the configured
-provider (`@opencontext/rag/universal-embeddings`) and the resulting
+provider (`@melandlabs/opencontext/universal-embeddings`) and the resulting
 vectors are written to the vector index. Edges between the original
 message node and its chunk nodes are recorded in the graph.
 
@@ -87,7 +87,7 @@ and merges the results:
 
 The unified result is a `RecallResult[]` ordered by combined score.
 The merge logic is pluggable via `UnifiedSearchDeps` in
-`@opencontext/memory-store`'s config.
+`@melandlabs/opencontext`'s config.
 
 ### Correct (`improve`)
 
@@ -150,9 +150,9 @@ store.remember(RawMessage)
   │
   └─→ background: chunkAndEmbed()
         │
-        ├─→ chunker.split()              (@opencontext/rag/chunking)
+        ├─→ chunker.split()              (@melandlabs/opencontext/chunking)
         │
-        └─→ embedder.embed()             (@opencontext/rag/universal-embeddings)
+        └─→ embedder.embed()             (@melandlabs/opencontext/universal-embeddings)
               │
               └─→ vector-index.upsert()   (sqlite-vec / pgvector / chroma)
 ```
@@ -180,7 +180,7 @@ store.recall({ query, scope, topK, traversalDepth })
 loop tick → agent.run()
                 │
                 ▼
-            @opencontext/ai/agent
+            @melandlabs/opencontext/agent
                 │
                 ├─→ tool: integrations-gmail.send(...)
                 │         │
@@ -195,14 +195,14 @@ loop tick → agent.run()
 
 | Concern             | Backend     | Where                                                                     |
 | ------------------- | ----------- | ------------------------------------------------------------------------- |
-| Raw messages        | SQLite-vec  | `@opencontext/sqlite` (Tauri default), `@opencontext/indexeddb` (browser) |
-| Raw messages        | Postgres    | `@opencontext/memory-store/postgres-raw-message-factory`                  |
-| Vector index        | SQLite-vec  | `@opencontext/memory-store/sqlite-vector-index`                           |
-| Vector index        | pgvector    | `@opencontext/rag/pgvector-store`                                         |
-| Vector index        | Chroma      | `@opencontext/memory-store/chroma-memory-index`                           |
-| Vector index        | IndexedDB   | `@opencontext/indexeddb/embedding`                                        |
-| Blobs / attachments | Local fs    | `@opencontext/storage/local-fs`                                           |
-| Blobs / attachments | Vercel Blob | `@opencontext/storage/vercel-blob`                                        |
+| Raw messages        | SQLite-vec  | `@melandlabs/opencontext` (Tauri default), `@melandlabs/opencontext` (browser) |
+| Raw messages        | Postgres    | `@melandlabs/opencontext/postgres-raw-message-factory`                  |
+| Vector index        | SQLite-vec  | `@melandlabs/opencontext/sqlite-vector-index`                           |
+| Vector index        | pgvector    | `@melandlabs/opencontext/pgvector-store`                                         |
+| Vector index        | Chroma      | `@melandlabs/opencontext/chroma-memory-index`                           |
+| Vector index        | IndexedDB   | `@melandlabs/opencontext/embedding`                                        |
+| Blobs / attachments | Local fs    | `@melandlabs/opencontext/local-fs`                                           |
+| Blobs / attachments | Vercel Blob | `@melandlabs/opencontext/vercel-blob`                                        |
 
 The storage backend is chosen at boot via `MemoryStoreConfig`. Mixing
 backends is supported: a deployment can keep raw messages in Postgres
@@ -210,17 +210,17 @@ while using Chroma as the vector index, for example.
 
 ## Transport surfaces
 
-`@opencontext/memory-store` exposes the runtime over four surfaces:
+`@melandlabs/opencontext` exposes the runtime over four surfaces:
 
 | Surface      | Module                                                                                   | Purpose                                                                                                         |
 | ------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Programmatic | `@opencontext/memory-store`                                                              | Direct import from a Node/Bun/Deno process.                                                                     |
-| HTTP daemon  | `@opencontext/memory-store/http`                                                         | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
-| MCP server   | `@opencontext/memory-store/mcp`                                                          | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
-| CLI          | `opencontext-memory-http` / `opencontext-memory-mcp` (shipped via `@opencontext/ai/mcp`) | Run the HTTP or MCP server from a terminal.                                                                     |
+| Programmatic | `@melandlabs/opencontext`                                                              | Direct import from a Node/Bun/Deno process.                                                                     |
+| HTTP daemon  | `@melandlabs/opencontext/http`                                                         | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
+| MCP server   | `@melandlabs/opencontext/mcp`                                                          | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
+| CLI          | `opencontext` (shipped via `@melandlabs/opencontext`; subcommands: `mcp`, `http`)          | Run the MCP (`mcp`, default) or HTTP (`http`) daemon from a terminal.                                            |
 
 The HTTP and MCP surfaces are thin wrappers around the programmatic
-API. They share types via `@opencontext/contracts` and never reimplement
+API. They share types via `@melandlabs/opencontext` and never reimplement
 business logic.
 
 ## Cross-process contracts
@@ -228,13 +228,13 @@ business logic.
 Two contracts are load-bearing across process boundaries:
 
 - `RawMessage` — the wire format between a caller and the HTTP daemon.
-  Defined in `@opencontext/memory-store/contracts`. Decoupled from
-  `@opencontext/indexeddb` browser globals so it can be imported in
+  Defined in `@melandlabs/opencontext/contracts`. Decoupled from
+  `@melandlabs/opencontext` browser globals so it can be imported in
   Node, Bun, and the browser alike.
 - `IntegrationId` — the 27-platform enum used everywhere an integration
-  is referenced. Defined in `@opencontext/integration-id`. UI-side code
-  imports it to drive authorisation flows; runtime-side code imports it
-  to load the correct adapter.
+  is referenced. Defined in `@melandlabs/opencontext/contracts/integration-id`.
+  UI-side code imports it to drive authorisation flows; runtime-side code
+  imports it to load the correct adapter.
 
 A change to either contract is a major-version event.
 

@@ -2,7 +2,7 @@
  * Canonical user-tier enum shared between runtime (auth, db, integrations)
  * and UI (Next.js route groups, components).
  *
- * Source of truth: this file. New code MUST import from `@opencontext/contracts`.
+ * Source of truth: this file. New code MUST import from `@melandlabs/contracts`.
  *
  * Note: `packages/integrations/src/core/index.ts` historically had its own
  * local `UserType = "user" | "guest"`. That type describes bot-owner
