@@ -55,9 +55,7 @@ type UpdateIntegrationAccountOptions = {
 	credentials: Record<string, unknown>;
 };
 
-async function updateIntegrationAccount(
-	_options: UpdateIntegrationAccountOptions,
-): Promise<void> {
+async function updateIntegrationAccount(_options: UpdateIntegrationAccountOptions): Promise<void> {
 	// Stub: no-op, actual implementation persists to DB
 }
 
@@ -65,8 +63,8 @@ async function updateIntegrationAccount(
 // Google Docs adapter
 // ---------------------------------------------------------------------------
 
-import { google, type docs_v1 } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
+import { type docs_v1, google } from "googleapis";
 
 export const GOOGLE_DOCS_SCOPES = [
 	"https://www.googleapis.com/auth/documents",
@@ -110,10 +108,7 @@ function resolveCredentialsUpdate(
 	};
 }
 
-function credentialsChanged(
-	a: GoogleDocsStoredCredentials,
-	b: GoogleDocsStoredCredentials,
-): boolean {
+function credentialsChanged(a: GoogleDocsStoredCredentials, b: GoogleDocsStoredCredentials): boolean {
 	return (
 		(a.accessToken ?? null) !== (b.accessToken ?? null) ||
 		(a.refreshToken ?? null) !== (b.refreshToken ?? null) ||
@@ -130,19 +125,14 @@ async function resolveDocsClient(userId: string): Promise<DocsClientContext> {
 	});
 
 	if (!account) {
-		throw new AppError(
-			"forbidden:api",
-			"Google Docs is not connected. Connect your account to continue.",
-		);
+		throw new AppError("forbidden:api", "Google Docs is not connected. Connect your account to continue.");
 	}
 
-	const storedCredentials =
+	const storedCredentials: GoogleDocsStoredCredentials =
 		loadIntegrationCredentials<GoogleDocsStoredCredentials>(account) ?? {};
 
 	const clientId =
-		process.env.GOOGLE_DOCS_CLIENT_ID ??
-		process.env.GOOGLE_DRIVE_CLIENT_ID ??
-		process.env.GOOGLE_CLIENT_ID;
+		process.env.GOOGLE_DOCS_CLIENT_ID ?? process.env.GOOGLE_DRIVE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
 	const clientSecret =
 		process.env.GOOGLE_DOCS_CLIENT_SECRET ??
 		process.env.GOOGLE_DRIVE_CLIENT_SECRET ??
@@ -155,8 +145,7 @@ async function resolveDocsClient(userId: string): Promise<DocsClientContext> {
 		);
 	}
 
-	const refreshToken =
-		storedCredentials.refreshToken ?? process.env.GOOGLE_DOCS_REFRESH_TOKEN;
+	const refreshToken = storedCredentials.refreshToken ?? process.env.GOOGLE_DOCS_REFRESH_TOKEN;
 
 	if (!refreshToken) {
 		throw new AppError(
@@ -165,10 +154,7 @@ async function resolveDocsClient(userId: string): Promise<DocsClientContext> {
 		);
 	}
 
-	const redirectUri =
-		process.env.GOOGLE_DOCS_REDIRECT_URI ??
-		process.env.GOOGLE_DRIVE_REDIRECT_URI ??
-		"";
+	const redirectUri = process.env.GOOGLE_DOCS_REDIRECT_URI ?? process.env.GOOGLE_DRIVE_REDIRECT_URI ?? "";
 
 	const oauth2Client = new google.auth.OAuth2({
 		clientId,
@@ -189,10 +175,7 @@ async function resolveDocsClient(userId: string): Promise<DocsClientContext> {
 
 async function persistDocsCredentials(context: DocsClientContext) {
 	const { oauth2Client, storedCredentials, account } = context;
-	const nextCredentials = resolveCredentialsUpdate(
-		storedCredentials,
-		oauth2Client.credentials,
-	);
+	const nextCredentials = resolveCredentialsUpdate(storedCredentials, oauth2Client.credentials);
 
 	if (credentialsChanged(storedCredentials, nextCredentials)) {
 		await updateIntegrationAccount({
@@ -230,20 +213,16 @@ export async function listRecentDocuments({
 		q,
 		orderBy: "modifiedTime desc",
 		pageSize: limit,
-		fields:
-			"files(id,name,modifiedTime,owners(emailAddress,displayName),webViewLink)",
+		fields: "files(id,name,modifiedTime,owners(emailAddress,displayName),webViewLink)",
 	});
 
 	const files = response.data.files ?? [];
 	const results: GoogleDocSummary[] = files
 		.map((file: any) => {
-			const modified = file.modifiedTime
-				? new Date(file.modifiedTime)
-				: new Date();
+			const modified = file.modifiedTime ? new Date(file.modifiedTime) : new Date();
 			const owners =
-				file.owners
-					?.map((owner: any) => owner.displayName ?? owner.emailAddress ?? null)
-					.filter(Boolean) ?? [];
+				file.owners?.map((owner: any) => owner.displayName ?? owner.emailAddress ?? null).filter(Boolean) ??
+				[];
 			return {
 				id: file.id ?? "",
 				name: file.name ?? "Untitled document",
@@ -316,9 +295,7 @@ export async function fetchDocumentSummary({
 	return { title, body: bodyText };
 }
 
-function extractPlainText(
-	elements: docs_v1.Schema$StructuralElement[],
-): string {
+function extractPlainText(elements: docs_v1.Schema$StructuralElement[]): string {
 	const lines: string[] = [];
 
 	for (const element of elements) {

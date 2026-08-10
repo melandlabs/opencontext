@@ -1,11 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import {
-	createFeishuState,
-	resetFeishuState,
-	isDuplicate,
-	pruneDedupCache,
-	resolveChatType,
-} from "./state";
+import { describe, expect, it } from "vitest";
+import { createFeishuState, isDuplicate, pruneDedupCache, resetFeishuState, resolveChatType } from "./state";
 
 describe("createFeishuState / resetFeishuState", () => {
 	it("creates empty maps", () => {

@@ -1,63 +1,65 @@
 {
-  "name": "opencontext-monorepo",
-  "version": "0.9.0",
-  "private": true,
-  "type": "module",
-  "description": "opencontext — open-source runtime substrate for agentic applications. A temporal context graph, 4-verb memory API, retrieval-augmented generation primitives, and a 27-platform integration mesh.",
-  "scripts": {
-    "dev": "pnpm --filter web dev",
-    "dev:all": "pnpm -r --parallel dev",
-    "test": "pnpm -r test",
-    "tsc": "pnpm -r typecheck",
-    "build": "pnpm -r build",
-    "build:packages": "cross-env NODE_OPTIONS=--max-old-space-size=16384 pnpm -r --filter='./packages/*' build",
-    "build:all": "pnpm -r build",
-    "lint": "pnpm -r lint",
-    "lint:fix": "pnpm -r lint:fix",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx,html,css}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx,html,css}\"",
-    "clean": "pnpm -r clean && rm -rf node_modules",
-    "changeset": "changeset",
-    "version": "changeset version",
-    "release": "pnpm build:packages && changeset publish"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "@changesets/cli": "^2.27.0",
-    "baseline-browser-mapping": "^2.10.0",
-    "prettier": "^3",
-    "tsup": "^8.0.0",
-    "typescript": "^5.6.3",
-    "vitest": "^2.1.0"
-  },
-  "packageManager": "pnpm@10.14.0",
-  "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=9.0.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "postcss": "^8.5.6",
-      "@whiskeysockets/libsignal-node": "git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67"
-    },
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "protobufjs",
-      "sqlite-vec",
-      "sqlite3"
-    ],
-    "ignoredBuiltDependencies": [
-      "@biomejs/biome",
-      "bufferutil",
-      "core-js",
-      "es5-ext",
-      "esbuild",
-      "msw",
-      "sharp",
-      "utf-8-validate"
-    ]
-  },
-  "dependencies": {
-    "better-sqlite3": "^11.10.0"
-  }
+	"name": "opencontext-monorepo",
+	"version": "0.9.0",
+	"private": true,
+	"type": "module",
+	"description": "opencontext — open-source runtime substrate for agentic applications. A temporal context graph, 4-verb memory API, retrieval-augmented generation primitives, and a 27-platform integration mesh.",
+	"scripts": {
+		"dev": "pnpm --filter web dev",
+		"dev:all": "pnpm -r --parallel dev",
+		"test": "pnpm -r test",
+		"tsc": "pnpm -r --if-present typecheck",
+		"build": "pnpm -r build",
+		"build:packages": "cross-env NODE_OPTIONS=--max-old-space-size=16384 pnpm -r --filter='./packages/*' build",
+		"build:all": "pnpm -r build",
+		"lint": "pnpm -r --if-present lint",
+		"lint:fix": "pnpm -r --if-present lint:fix",
+		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,md,mdx,html,css}\"",
+		"format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,md,mdx,html,css}\"",
+		"clean": "pnpm -r clean && rm -rf node_modules",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build:packages && changeset publish"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "1.9.4",
+		"@changesets/cli": "^2.27.0",
+		"@types/fernet": "^0.4.3",
+		"@types/markdown-it": "^14.1.2",
+		"@types/pg": "^8.11.10",
+		"@types/sanitize-html": "^2.16.1",
+		"@types/turndown": "^5.0.6",
+		"baseline-browser-mapping": "^2.10.0",
+		"prettier": "^3",
+		"tsup": "^8.0.0",
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
+	},
+	"packageManager": "pnpm@10.14.0",
+	"engines": {
+		"node": ">=18.0.0",
+		"pnpm": ">=9.0.0"
+	},
+	"pnpm": {
+		"public-hoist-pattern": ["@types/*", "*types*"],
+		"overrides": {
+			"postcss": "^8.5.6",
+			"vite": "^6.0.0",
+			"@whiskeysockets/libsignal-node": "git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67"
+		},
+		"onlyBuiltDependencies": ["better-sqlite3", "protobufjs", "sqlite-vec", "sqlite3"],
+		"ignoredBuiltDependencies": [
+			"@biomejs/biome",
+			"bufferutil",
+			"core-js",
+			"es5-ext",
+			"esbuild",
+			"msw",
+			"sharp",
+			"utf-8-validate"
+		]
+	},
+	"dependencies": {
+		"better-sqlite3": "^11.10.0"
+	}
 }

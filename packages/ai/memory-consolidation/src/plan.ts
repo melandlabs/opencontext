@@ -1,11 +1,10 @@
 import {
-	buildMemoryEvidenceClusters,
 	type BuildMemoryEvidenceClustersInput,
 	type MemoryEvidenceCluster,
+	buildMemoryEvidenceClusters,
 } from "./evidence-cluster";
 
-export type MemoryConsolidationAction =
-	"preserve" | "observe" | "decay" | "deprecate";
+export type MemoryConsolidationAction = "preserve" | "observe" | "decay" | "deprecate";
 
 export type MemoryConsolidationReasonCode =
 	| "strong_repeated_evidence"
@@ -74,22 +73,17 @@ function resolveThresholds(
 	thresholds: Partial<MemoryConsolidationPlanThresholds> | undefined,
 ): MemoryConsolidationPlanThresholds {
 	return {
-		preserveScore:
-			thresholds?.preserveScore ?? DEFAULT_THRESHOLDS.preserveScore,
-		preserveEvidence:
-			thresholds?.preserveEvidence ?? DEFAULT_THRESHOLDS.preserveEvidence,
+		preserveScore: thresholds?.preserveScore ?? DEFAULT_THRESHOLDS.preserveScore,
+		preserveEvidence: thresholds?.preserveEvidence ?? DEFAULT_THRESHOLDS.preserveEvidence,
 		decayScore: thresholds?.decayScore ?? DEFAULT_THRESHOLDS.decayScore,
-		decayEvidence:
-			thresholds?.decayEvidence ?? DEFAULT_THRESHOLDS.decayEvidence,
-		competitionMargin:
-			thresholds?.competitionMargin ?? DEFAULT_THRESHOLDS.competitionMargin,
+		decayEvidence: thresholds?.decayEvidence ?? DEFAULT_THRESHOLDS.decayEvidence,
+		competitionMargin: thresholds?.competitionMargin ?? DEFAULT_THRESHOLDS.competitionMargin,
 	};
 }
 
 function groupByCompetition(
 	clusters: MemoryEvidenceCluster[],
-	getCompetitionKey:
-		((cluster: MemoryEvidenceCluster) => string | undefined) | undefined,
+	getCompetitionKey: ((cluster: MemoryEvidenceCluster) => string | undefined) | undefined,
 ): Map<string, MemoryEvidenceCluster[]> {
 	const grouped = new Map<string, MemoryEvidenceCluster[]>();
 
@@ -110,10 +104,7 @@ function getBestOtherCluster(
 	return ranked.find((candidate) => candidate.key !== cluster.key);
 }
 
-function explain(
-	action: MemoryConsolidationAction,
-	reasonCodes: MemoryConsolidationReasonCode[],
-): string {
+function explain(action: MemoryConsolidationAction, reasonCodes: MemoryConsolidationReasonCode[]): string {
 	if (action === "preserve" && reasonCodes.includes("wins_competition")) {
 		return "Repeated evidence is strong enough and wins its competition group.";
 	}
@@ -138,27 +129,18 @@ function decideCluster(
 	cluster: MemoryEvidenceCluster,
 	ranked: MemoryEvidenceCluster[],
 	thresholds: MemoryConsolidationPlanThresholds,
-): Pick<
-	MemoryConsolidationPlanEntry,
-	"action" | "scoreMargin" | "reasonCodes" | "winningClusterKey"
-> {
+): Pick<MemoryConsolidationPlanEntry, "action" | "scoreMargin" | "reasonCodes" | "winningClusterKey"> {
 	const winner = ranked[0] ?? cluster;
 	const bestOther = getBestOtherCluster(cluster, ranked);
 	const isWinner = winner.key === cluster.key;
-	const scoreMargin = bestOther
-		? cluster.score - bestOther.score
-		: cluster.score;
+	const scoreMargin = bestOther ? cluster.score - bestOther.score : cluster.score;
 	const isRepeated = cluster.evidenceCount >= thresholds.preserveEvidence;
 	const isStrong = cluster.score >= thresholds.preserveScore;
-	const hasClearMargin =
-		!bestOther || scoreMargin >= thresholds.competitionMargin;
+	const hasClearMargin = !bestOther || scoreMargin >= thresholds.competitionMargin;
 	const isWeakIsolated =
-		cluster.evidenceCount <= thresholds.decayEvidence &&
-		cluster.score <= thresholds.decayScore;
+		cluster.evidenceCount <= thresholds.decayEvidence && cluster.score <= thresholds.decayScore;
 	const isClearlyOutscored =
-		bestOther !== undefined &&
-		!isWinner &&
-		scoreMargin <= -thresholds.competitionMargin;
+		bestOther !== undefined && !isWinner && scoreMargin <= -thresholds.competitionMargin;
 
 	if (isWinner && isRepeated && isStrong && hasClearMargin) {
 		return {
@@ -189,10 +171,7 @@ function decideCluster(
 		};
 	}
 
-	if (
-		bestOther !== undefined &&
-		Math.abs(scoreMargin) < thresholds.competitionMargin
-	) {
+	if (bestOther !== undefined && Math.abs(scoreMargin) < thresholds.competitionMargin) {
 		return {
 			action: "observe",
 			scoreMargin,
@@ -283,8 +262,7 @@ export function buildMemoryDeprecationEntry(input: {
 	reason?: string;
 	rankInCompetition?: number;
 }): MemoryConsolidationPlanEntry {
-	const reason =
-		input.reason ?? `superseded_by_summary:${input.supersededBySummaryId}`;
+	const reason = input.reason ?? `superseded_by_summary:${input.supersededBySummaryId}`;
 	return {
 		clusterKey: input.clusterKey,
 		competitionKey: input.competitionKey,

@@ -25,10 +25,7 @@ export interface ListDirectoryOptions {
 export interface PlatformFileSystem {
 	saveFile(data: Uint8Array, options?: SaveFileOptions): Promise<void>;
 	readFile(path: string): Promise<Uint8Array>;
-	listDirectory(
-		path: string,
-		options?: ListDirectoryOptions,
-	): Promise<DirEntry[]>;
+	listDirectory(path: string, options?: ListDirectoryOptions): Promise<DirEntry[]>;
 }
 
 export async function getFileSystem(): Promise<PlatformFileSystem> {

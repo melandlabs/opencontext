@@ -1,51 +1,48 @@
 {
-  "name": "@opencontext/integrations-feishu",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./app-registration": "./dist/app-registration.js",
-    "./registration-cookie": "./dist/registration-cookie.js",
-    "./conversation-store": "./dist/conversation-store.js",
-    "./state": "./dist/state.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/integrations/feishu"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/feishu",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext \u00b7 integrations/feishu module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "@larksuiteoapi/node-sdk": "^1.11.0",
-    "@opencontext/integrations": "workspace:*",
-    "@opencontext/integrations-channels": "workspace:*"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3",
-    "vitest": "^4.0.6"
-  },
-  "scripts": {
-    "build": "tsup",
-    "test": "vitest run",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/integrations-feishu",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./app-registration": "./dist/app-registration.js",
+		"./registration-cookie": "./dist/registration-cookie.js",
+		"./conversation-store": "./dist/conversation-store.js",
+		"./state": "./dist/state.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/integrations/feishu"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/feishu",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · integrations/feishu module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"@larksuiteoapi/node-sdk": "^1.11.0",
+		"@opencontext/integrations": "workspace:*",
+		"@opencontext/integrations-channels": "workspace:*"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3",
+		"vitest": "^4.0.6"
+	},
+	"scripts": {
+		"build": "tsup",
+		"test": "vitest run",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

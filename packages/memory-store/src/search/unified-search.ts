@@ -8,12 +8,13 @@
  */
 
 import type { UnifiedSearchDeps } from "../config";
-import {
-	isRawMessageChromaEnabled,
-	searchRawMessagesWithChroma,
-} from "../storage/chroma-memory-index";
+import { isRawMessageChromaEnabled, searchRawMessagesWithChroma } from "../storage/chroma-memory-index";
 import { isRawMessageStorageAvailable } from "../storage/raw-message-store";
 import {
+	type UnifiedMemorySearchInput,
+	type UnifiedMemorySearchOutput,
+	type UnifiedMemorySearchResult,
+	type UnifiedMemorySearchWarning,
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
 	isRawMemorySemanticResult,
@@ -21,11 +22,6 @@ import {
 	normalizeUnifiedMemorySearchSources,
 	toKnowledgeResult,
 	toMemoryResult,
-	type UnifiedMemorySearchInput,
-	type UnifiedMemorySearchOutput,
-	type UnifiedMemorySearchResult,
-	type UnifiedMemorySearchSource,
-	type UnifiedMemorySearchWarning,
 } from "./utilities";
 
 export type {
@@ -47,22 +43,14 @@ export {
 } from "./utilities";
 
 export interface UnifiedSearch {
-	searchUnifiedMemory(
-		input: UnifiedMemorySearchInput,
-	): Promise<UnifiedMemorySearchOutput>;
-	searchRawMemorySemantically(
-		input: UnifiedMemorySearchInput,
-	): Promise<UnifiedMemorySearchResult[]>;
+	searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput>;
+	searchRawMemorySemantically(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchResult[]>;
 }
 
-export function createUnifiedSearch(
-	deps: UnifiedSearchDeps = {},
-): UnifiedSearch {
+export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch {
 	const logger = (deps as { logger?: Console }).logger ?? console;
 
-	async function searchUnifiedMemory(
-		input: UnifiedMemorySearchInput,
-	): Promise<UnifiedMemorySearchOutput> {
+	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
 		const query = input.query.trim();
 		const sources = normalizeUnifiedMemorySearchSources(input.sources);
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
@@ -102,10 +90,7 @@ export function createUnifiedSearch(
 			}
 		}
 
-		if (
-			sources.includes("insights") &&
-			typeof deps.searchInsights === "function"
-		) {
+		if (sources.includes("insights") && typeof deps.searchInsights === "function") {
 			try {
 				const insightHits = await deps.searchInsights({
 					userId: input.userId,
@@ -141,10 +126,7 @@ export function createUnifiedSearch(
 			});
 		}
 
-		if (
-			sources.includes("knowledge") &&
-			typeof deps.searchKnowledge === "function"
-		) {
+		if (sources.includes("knowledge") && typeof deps.searchKnowledge === "function") {
 			try {
 				const knowledgeHits = await deps.searchKnowledge({
 					userId: input.userId,
@@ -201,10 +183,7 @@ export function createUnifiedSearch(
 			authToken: input.authToken,
 		});
 
-		const filters =
-			input.botIds && input.botIds.length > 0
-				? input.botIds.map((botId) => ({ botId }))
-				: [{}];
+		const filters = input.botIds && input.botIds.length > 0 ? input.botIds.map((botId) => ({ botId })) : [{}];
 
 		if (isRawMessageChromaEnabled()) {
 			try {

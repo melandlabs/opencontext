@@ -1,5 +1,5 @@
-// Phase 8: Platform detection moved to @opencontext/ui-runtime.
-// shared no longer statically depends on the tauri runtime.
+// Platform detection lives in @opencontext/ui-runtime. shared no longer
+// statically depends on the Tauri runtime.
 export {
 	getFileSystem,
 	type PlatformFileSystem,

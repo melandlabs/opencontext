@@ -35,15 +35,12 @@ export {
 	TypingStatus,
 } from "@tencent-weixin/openclaw-weixin/src/api/types";
 
-import type {
-	GetUpdatesResp,
-	GetConfigResp,
-} from "@tencent-weixin/openclaw-weixin/src/api/types";
+import type { GetConfigResp, GetUpdatesResp } from "@tencent-weixin/openclaw-weixin/src/api/types";
 import {
-	MessageType,
 	MessageState,
-	UploadMediaType,
+	MessageType,
 	TypingStatus,
+	UploadMediaType,
 } from "@tencent-weixin/openclaw-weixin/src/api/types";
 
 // ============= Official CDN Utility Functions ==============================================
@@ -155,14 +152,10 @@ async function apiFetch(params: {
 		clearTimeout(t);
 		const rawText = await res.text();
 		if (!res.ok) {
-			throw new Error(
-				`Weixin iLink HTTP ${res.status}: ${rawText.slice(0, 500)}`,
-			);
+			throw new Error(`Weixin iLink HTTP ${res.status}: ${rawText.slice(0, 500)}`);
 		}
 		if (process.env.DEBUG_WEIXIN === "true") {
-			console.log(
-				`[Weixin iLink] ${params.endpoint} response: ${rawText.slice(0, 300)}`,
-			);
+			console.log(`[Weixin iLink] ${params.endpoint} response: ${rawText.slice(0, 300)}`);
 		}
 		return rawText;
 	} catch (err) {
@@ -180,25 +173,18 @@ function assertWriteOk(rawText: string, apiName: string): void {
 	try {
 		parsed = JSON.parse(rawText) as Record<string, unknown>;
 	} catch {
-		throw new Error(
-			`[Weixin iLink] ${apiName} returned non-JSON: ${rawText.slice(0, 300)}`,
-		);
+		throw new Error(`[Weixin iLink] ${apiName} returned non-JSON: ${rawText.slice(0, 300)}`);
 	}
 	const top = parsed as { ret?: number; errcode?: number; errmsg?: string };
-	const nested = parsed.base_response as
-		{ ret?: number; errcode?: number; errmsg?: string } | undefined;
+	const nested = parsed.base_response as { ret?: number; errcode?: number; errmsg?: string } | undefined;
 	const ret = top.ret ?? nested?.ret;
 	const errcode = top.errcode ?? nested?.errcode;
 	const errmsg = (top.errmsg ?? nested?.errmsg) as string | undefined;
 	if (ret !== undefined && ret !== 0) {
-		throw new Error(
-			`[Weixin iLink] ${apiName} failed ret=${ret} errcode=${errcode} errmsg=${errmsg ?? ""}`,
-		);
+		throw new Error(`[Weixin iLink] ${apiName} failed ret=${ret} errcode=${errcode} errmsg=${errmsg ?? ""}`);
 	}
 	if (errcode !== undefined && errcode !== 0) {
-		throw new Error(
-			`[Weixin iLink] ${apiName} failed errcode=${errcode} errmsg=${errmsg ?? ""}`,
-		);
+		throw new Error(`[Weixin iLink] ${apiName} failed errcode=${errcode} errmsg=${errmsg ?? ""}`);
 	}
 }
 
@@ -342,9 +328,7 @@ export async function weixinSendImageMessage(params: {
 		noNeedThumb: true,
 	});
 	if (!uploadResp.upload_param) {
-		throw new Error(
-			"[Weixin sendImage] getUploadUrl did not return upload_param",
-		);
+		throw new Error("[Weixin sendImage] getUploadUrl did not return upload_param");
 	}
 
 	// Use official library's CDN upload function (includes retry logic)
@@ -437,9 +421,7 @@ export async function weixinSendFileMessage(params: {
 		noNeedThumb: true,
 	});
 	if (!uploadResp.upload_param) {
-		throw new Error(
-			"[Weixin sendFile] getUploadUrl did not return upload_param",
-		);
+		throw new Error("[Weixin sendFile] getUploadUrl did not return upload_param");
 	}
 
 	const { downloadParam } = await uploadBufferToCdn({
@@ -552,25 +534,15 @@ export async function weixinSendTyping(params: {
 
 /** Infer image MIME type from file header magic bytes */
 export function detectImageMimeType(buf: Buffer): string {
-	if (
-		buf.length >= 3 &&
-		buf[0] === 0xff &&
-		buf[1] === 0xd8 &&
-		buf[2] === 0xff
-	) {
+	if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) {
 		return "image/jpeg";
 	}
-	if (
-		buf.length >= 8 &&
-		buf[0] === 0x89 &&
-		buf.slice(1, 4).toString("ascii") === "PNG"
-	) {
+	if (buf.length >= 8 && buf[0] === 0x89 && buf.slice(1, 4).toString("ascii") === "PNG") {
 		return "image/png";
 	}
 	if (
 		buf.length >= 6 &&
-		(buf.slice(0, 6).toString("ascii") === "GIF87a" ||
-			buf.slice(0, 6).toString("ascii") === "GIF89a")
+		(buf.slice(0, 6).toString("ascii") === "GIF87a" || buf.slice(0, 6).toString("ascii") === "GIF89a")
 	) {
 		return "image/gif";
 	}
@@ -597,10 +569,5 @@ export async function cdnDownloadAndDecrypt(
 	aesKeyBase64: string,
 	cdnBaseUrl: string = CDN_BASE_URL,
 ): Promise<Buffer> {
-	return downloadAndDecryptBuffer(
-		encryptQueryParam,
-		aesKeyBase64,
-		cdnBaseUrl,
-		"cdnDownloadAndDecrypt",
-	);
+	return downloadAndDecryptBuffer(encryptQueryParam, aesKeyBase64, cdnBaseUrl, "cdnDownloadAndDecrypt");
 }

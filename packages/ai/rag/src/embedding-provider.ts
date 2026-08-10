@@ -53,9 +53,7 @@ export function getConfiguredEmbeddingProvider(
 	});
 }
 
-export function getConfiguredEmbeddingModelName(
-	options: EmbeddingProviderFactoryOptions = {},
-): string {
+export function getConfiguredEmbeddingModelName(options: EmbeddingProviderFactoryOptions = {}): string {
 	const provider = options.providerType ?? getEmbeddingProviderType();
 	if (provider === "local") {
 		return (
@@ -69,9 +67,7 @@ export function getConfiguredEmbeddingModelName(
 }
 
 export function getEmbeddingProviderType(): EmbeddingProviderType {
-	const provider = (process.env.EMBEDDING_PROVIDER || "cloud")
-		.trim()
-		.toLowerCase();
+	const provider = (process.env.EMBEDDING_PROVIDER || "cloud").trim().toLowerCase();
 
 	return provider === "local" ? "local" : "cloud";
 }
@@ -124,15 +120,6 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 	}
 
 	private async callEmbeddingAPI(texts: string[]): Promise<number[][]> {
-		console.log("[RAG] Calling embeddings API:", {
-			provider: "cloud",
-			baseURL: this.baseURL,
-			model: this.modelName,
-			textCount: texts.length,
-			hasApiKey: !!this.apiKey,
-			hasUserAuthToken: !!this.userAuthToken,
-		});
-
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 		};
@@ -141,16 +128,12 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 			headers.Authorization = `Bearer ${this.apiKey}`;
 
 			if (this.baseURL.includes("openrouter.ai")) {
-				headers["HTTP-Referer"] =
-					process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai";
+				headers["HTTP-Referer"] = process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai";
 				headers["X-Title"] = "OpenContext AI";
 			}
 		} else if (this.userAuthToken) {
 			headers.Authorization = `Bearer ${this.userAuthToken}`;
 		} else {
-			console.warn(
-				`[RAG] Cloud embeddings provider has no API key configured (baseURL=${this.baseURL}). Requests will fail with 401. Either set OPENROUTER_API_KEY, configure a user-level embedding setting, or switch to a local provider via EMBEDDING_PROVIDER=local.`,
-			);
 		}
 
 		const response = await fetch(`${this.baseURL}/embeddings`, {
@@ -173,9 +156,7 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 		const data = await response.json();
 
 		if (!data.data || !Array.isArray(data.data)) {
-			throw new Error(
-				"Invalid response format from embeddings API. Expected data.data array.",
-			);
+			throw new Error("Invalid response format from embeddings API. Expected data.data array.");
 		}
 
 		const sortedData = data.data.sort((a: any, b: any) => a.index - b.index);
@@ -197,9 +178,6 @@ function getEmbeddingBatchSize(): number {
 
 	const parsedBatchSize = Number(rawBatchSize);
 	if (!Number.isFinite(parsedBatchSize) || parsedBatchSize < 1) {
-		console.warn(
-			`[RAG] Invalid LLM_EMBEDDING_BATCH_SIZE=${rawBatchSize}; using ${DEFAULT_EMBEDDING_BATCH_SIZE}`,
-		);
 		return DEFAULT_EMBEDDING_BATCH_SIZE;
 	}
 

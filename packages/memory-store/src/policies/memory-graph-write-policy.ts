@@ -2,7 +2,7 @@
  * Memory-graph write policy.
  *
  * Pure functions, no env imports — callers pass the env snapshot
- * explicitly. Used by the apps/web routes via `@opencontext/memory-store/memory-graph-write-policy`.
+ * explicitly.
  */
 
 import { CHAT_MEMORY_EVIDENCE_ID_PREFIX } from "../contracts";
@@ -19,18 +19,14 @@ export interface MemoryGraphWritePolicyDecision {
 	reasonCodes: string[];
 }
 
-export type MemoryGraphWriteEnvironment = Readonly<
-	Record<string, string | undefined>
->;
+export type MemoryGraphWriteEnvironment = Readonly<Record<string, string | undefined>>;
 
 export function isReservedChatMemoryEvidenceId(messageId: string): boolean {
 	return messageId.startsWith(CHAT_MEMORY_EVIDENCE_ID_PREFIX);
 }
 
 export function isReservedMemoryGraphSummaryId(summaryId: string): boolean {
-	return MEMORY_GRAPH_SUMMARY_ID_PREFIXES.some((prefix) =>
-		summaryId.startsWith(prefix),
-	);
+	return MEMORY_GRAPH_SUMMARY_ID_PREFIXES.some((prefix) => summaryId.startsWith(prefix));
 }
 
 function enabled(value: string | undefined): boolean {
@@ -99,14 +95,8 @@ const UNTRUSTED_GRAPH_METADATA_KEYS = [
 	"memoryOwnerScope",
 ] as const;
 
-export function sanitizeUntrustedMemoryMetadata(
-	metadata: unknown,
-): Record<string, unknown> | undefined {
-	if (
-		typeof metadata !== "object" ||
-		metadata === null ||
-		Array.isArray(metadata)
-	) {
+export function sanitizeUntrustedMemoryMetadata(metadata: unknown): Record<string, unknown> | undefined {
+	if (typeof metadata !== "object" || metadata === null || Array.isArray(metadata)) {
 		return undefined;
 	}
 
@@ -120,9 +110,6 @@ export function sanitizeUntrustedMemoryMetadata(
 export function resolveUntrustedRawMemoryGraphWritePolicy(): MemoryGraphWritePolicyDecision {
 	return {
 		enabled: false,
-		reasonCodes: [
-			"memory_graph_write_untrusted_raw_baseline_only",
-			"untrusted_graph_metadata_discarded",
-		],
+		reasonCodes: ["memory_graph_write_untrusted_raw_baseline_only", "untrusted_graph_metadata_discarded"],
 	};
 }

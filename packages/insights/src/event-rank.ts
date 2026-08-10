@@ -102,13 +102,11 @@ export function calculateBaseScore(
 	// ========== 1. Overdue risk score ==========
 	const now = new Date();
 	const insightTime = new Date(insight.time);
-	const daysSince =
-		(now.getTime() - insightTime.getTime()) / (1000 * 60 * 60 * 24);
+	const daysSince = (now.getTime() - insightTime.getTime()) / (1000 * 60 * 60 * 24);
 
 	if (insight.dueDate) {
 		const dueDate = new Date(insight.dueDate);
-		const daysUntilDue =
-			(dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+		const daysUntilDue = (dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
 
 		// Already overdue
 		if (daysUntilDue < 0) {
@@ -199,9 +197,7 @@ export function calculateBaseScore(
  * Based on waitingForMe, waitingForOthers, myTasks and other fields
  * Optimized version: uses hash index to reduce O(n²) to O(n)
  */
-export function buildEventGraph<T extends InsightBase>(
-	insights: T[],
-): EventEdge[] {
+export function buildEventGraph<T extends InsightBase>(insights: T[]): EventEdge[] {
 	const edges: EventEdge[] = [];
 
 	if (insights.length === 0) {
@@ -388,10 +384,7 @@ export function calculateEventRank<T extends InsightBase>(
 	const baseScores = new Map<string, number>();
 	insights.forEach((insight) => {
 		const customMultiplier = options.weightMultipliers?.get(insight.id);
-		baseScores.set(
-			insight.id,
-			calculateBaseScore(insight, { customMultiplier }),
-		);
+		baseScores.set(insight.id, calculateBaseScore(insight, { customMultiplier }));
 	});
 
 	// 2. Build event graph
@@ -416,10 +409,7 @@ export function calculateEventRank<T extends InsightBase>(
 	}
 
 	// 3. Build adjacency list
-	const incomingEdges = new Map<
-		string,
-		Array<{ fromId: string; weight: number }>
-	>();
+	const incomingEdges = new Map<string, Array<{ fromId: string; weight: number }>>();
 	const outgoingCount = new Map<string, number>();
 
 	insights.forEach((insight) => {
@@ -458,8 +448,7 @@ export function calculateEventRank<T extends InsightBase>(
 				incomingSum += (erFrom / outCount) * weight;
 			});
 
-			const newScore =
-				(1 - dampingFactor) * baseScore + dampingFactor * incomingSum;
+			const newScore = (1 - dampingFactor) * baseScore + dampingFactor * incomingSum;
 			newEventRank.set(insight.id, newScore);
 
 			// Calculate max difference (for convergence detection)
@@ -514,10 +503,7 @@ export type ActionCategory = "urgent" | "important" | "monitor" | "archive";
  * @param lastViewedAt - User's last viewed time
  * @returns Most recent active time
  */
-export function getInsightActiveTime(
-	insight: InsightBase,
-	lastViewedAt?: Date,
-): Date {
+export function getInsightActiveTime(insight: InsightBase, lastViewedAt?: Date): Date {
 	const lastUpdate = insight.updatedAt ? new Date(insight.updatedAt) : null;
 	const insightTime = new Date(insight.time);
 
@@ -537,14 +523,9 @@ export function getInsightActiveTime(
  * @param hours - Cooling hours, default 24
  * @returns true if the event is cold
  */
-export function isInsightCold(
-	insight: InsightBase,
-	lastViewedAt?: Date,
-	hours = 24,
-): boolean {
+export function isInsightCold(insight: InsightBase, lastViewedAt?: Date, hours = 24): boolean {
 	const activeTime = getInsightActiveTime(insight, lastViewedAt);
-	const hoursSinceActive =
-		(Date.now() - activeTime.getTime()) / (60 * 60 * 1000);
+	const hoursSinceActive = (Date.now() - activeTime.getTime()) / (60 * 60 * 1000);
 	return hoursSinceActive >= hours;
 }
 
@@ -583,8 +564,7 @@ export function categorizeByActionability(
 ): ActionCategory {
 	const baseScore = calculateBaseScore(insight);
 	const hasMyTasks = insight.myTasks && insight.myTasks.length > 0;
-	const hasWaitingForMe =
-		insight.waitingForMe && insight.waitingForMe.length > 0;
+	const hasWaitingForMe = insight.waitingForMe && insight.waitingForMe.length > 0;
 
 	// Urgent: Urgent todo - Action items requiring immediate execution
 	// 1. Has my tasks + high urgency/high severity
@@ -660,11 +640,7 @@ export function sortInsightsByEventRank<T extends InsightBase>(
 		if (score) {
 			const baseCategory = categorizeByActionability(insight, score.score);
 			const lastViewedAt = options?.lastViewedAtMap?.get(insight.id);
-			const finalCategory = applyCategoryDecay(
-				baseCategory,
-				insight,
-				lastViewedAt,
-			);
+			const finalCategory = applyCategoryDecay(baseCategory, insight, lastViewedAt);
 			categories.set(insight.id, finalCategory);
 		}
 	});
@@ -763,11 +739,7 @@ export async function sortInsightsByEventRankEnhanced<T extends InsightBase>(
 		if (score) {
 			const baseCategory = categorizeByActionability(insight, score.score);
 			const lastViewedAt = options?.lastViewedAtMap?.get(insight.id);
-			const finalCategory = applyCategoryDecay(
-				baseCategory,
-				insight,
-				lastViewedAt,
-			);
+			const finalCategory = applyCategoryDecay(baseCategory, insight, lastViewedAt);
 			categories.set(insight.id, finalCategory);
 		}
 	});

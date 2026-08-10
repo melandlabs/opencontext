@@ -67,18 +67,12 @@ export type WeixinQrSession = {
 };
 
 /** Write session and refresh startedAt (sliding expiration) */
-function persistWeixinQrSession(
-	loginId: string,
-	session: WeixinQrSession,
-): void {
+function persistWeixinQrSession(loginId: string, session: WeixinQrSession): void {
 	session.startedAt = Date.now();
 	getMemorySessionMap().set(loginId, session);
 }
 
-function loadWeixinQrSessionRaw(
-	loginId: string,
-	userId: string,
-): WeixinQrSession | null {
+function loadWeixinQrSessionRaw(loginId: string, userId: string): WeixinQrSession | null {
 	const s = getMemorySessionMap().get(loginId);
 	if (!s || s.userId !== userId) return null;
 	if (Date.now() - s.startedAt > WEIXIN_QR_SESSION_TTL_MS) {
@@ -99,18 +93,12 @@ export function normalizeWeixinQrPayload(raw: unknown): {
 	qrcode: string;
 	qrEncodeValue: string;
 } {
-	const r =
-		raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-	const str = (k: string) =>
-		typeof r[k] === "string" ? (r[k] as string).trim() : "";
+	const r = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+	const str = (k: string) => (typeof r[k] === "string" ? (r[k] as string).trim() : "");
 
 	const qrcode = str("qrcode");
 	const qrEncodeValue =
-		str("qrcode_img_content") ||
-		str("qrcodeImgContent") ||
-		str("qrcode_url") ||
-		str("qrcodeUrl") ||
-		qrcode;
+		str("qrcode_img_content") || str("qrcodeImgContent") || str("qrcode_url") || str("qrcodeUrl") || qrcode;
 
 	if (!qrcode) {
 		throw new Error("WeChat API did not return qrcode");
@@ -134,10 +122,7 @@ export async function fetchWeixinBotQrCode(params: {
 	routeTag?: string;
 }): Promise<QrCodeApiResponse> {
 	const base = ensureTrailingSlash(params.apiBaseUrl);
-	const url = new URL(
-		`ilink/bot/get_bot_qrcode?bot_type=${encodeURIComponent(params.botType)}`,
-		base,
-	);
+	const url = new URL(`ilink/bot/get_bot_qrcode?bot_type=${encodeURIComponent(params.botType)}`, base);
 	const headers: Record<string, string> = {};
 	if (params.routeTag?.trim()) {
 		headers.SKRouteTag = params.routeTag.trim();
@@ -145,9 +130,7 @@ export async function fetchWeixinBotQrCode(params: {
 	const response = await fetch(url.toString(), { headers });
 	const bodyText = await response.text();
 	if (!response.ok) {
-		throw new Error(
-			`Failed to get WeChat QR code HTTP ${response.status}: ${bodyText.slice(0, 300)}`,
-		);
+		throw new Error(`Failed to get WeChat QR code HTTP ${response.status}: ${bodyText.slice(0, 300)}`);
 	}
 	return JSON.parse(bodyText) as QrCodeApiResponse;
 }
@@ -161,10 +144,7 @@ export async function pollWeixinQrStatusOnce(params: {
 	routeTag?: string;
 }): Promise<QrStatusApiResponse> {
 	const base = ensureTrailingSlash(params.apiBaseUrl);
-	const url = new URL(
-		`ilink/bot/get_qrcode_status?qrcode=${encodeURIComponent(params.qrcode)}`,
-		base,
-	);
+	const url = new URL(`ilink/bot/get_qrcode_status?qrcode=${encodeURIComponent(params.qrcode)}`, base);
 	const headers: Record<string, string> = {
 		"iLink-App-ClientVersion": "1",
 	};
@@ -181,9 +161,7 @@ export async function pollWeixinQrStatusOnce(params: {
 		clearTimeout(timer);
 		const rawText = await response.text();
 		if (!response.ok) {
-			throw new Error(
-				`QR status polling failed HTTP ${response.status}: ${rawText.slice(0, 300)}`,
-			);
+			throw new Error(`QR status polling failed HTTP ${response.status}: ${rawText.slice(0, 300)}`);
 		}
 		return JSON.parse(rawText) as QrStatusApiResponse;
 	} catch (err) {
@@ -222,10 +200,7 @@ export function startWeixinQrSession(params: {
 	return { loginId, qrContent: qrEncodeValue };
 }
 
-export function getWeixinQrSession(
-	loginId: string,
-	userId: string,
-): WeixinQrSession | null {
+export function getWeixinQrSession(loginId: string, userId: string): WeixinQrSession | null {
 	return loadWeixinQrSessionRaw(loginId, userId);
 }
 

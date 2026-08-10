@@ -45,18 +45,18 @@ export function pruneDedupCache(
 ): void {
 	if (cache.size <= maxSize) return;
 
-	// Phase 1: remove TTL-expired entries
+	// First sweep: remove TTL-expired entries
 	for (const [key, ts] of cache.entries()) {
 		if (now - ts > ttlMs) cache.delete(key);
 	}
 
-	// Phase 2: if still over maxSize, remove oldest 50% by timestamp
+	// Second sweep: if still over maxSize, remove oldest 50% by timestamp
 	if (cache.size > maxSize) {
 		const entries = [...cache.entries()].sort((a, b) => a[1] - b[1]);
-		const toRemove = entries
-			.slice(0, Math.floor(entries.length / 2))
-			.map((e) => e[0]);
-		toRemove.forEach((k) => cache.delete(k));
+		const toRemove = entries.slice(0, Math.floor(entries.length / 2)).map((e) => e[0]);
+		for (const k of toRemove) {
+			cache.delete(k);
+		}
 	}
 }
 

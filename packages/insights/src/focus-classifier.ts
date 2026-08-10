@@ -1,8 +1,7 @@
 /**
  * Event tag type
  */
-export type InsightTag =
-	"important" | "urgent" | "action-items" | "mentions-me";
+export type InsightTag = "important" | "urgent" | "action-items" | "mentions-me";
 
 /**
  * Focus classification type
@@ -147,9 +146,7 @@ function hasIncompleteTasks(myTasks: Array<any> | null | undefined): boolean {
  * @param insight - Insight object
  * @returns Classification result, null means do not display
  */
-export function classifyFocusInsight(
-	insight: InsightForClassification,
-): FocusCategory {
+export function classifyFocusInsight(insight: InsightForClassification): FocusCategory {
 	// Extract tags first
 	const tags = extractInsightTags(insight);
 
@@ -194,9 +191,7 @@ export function classifyFocusInsight(
  * @param category - Classification type
  * @returns Classification metadata
  */
-export function getFocusCategoryMeta(
-	category: FocusCategory,
-): FocusCategoryMeta | null {
+export function getFocusCategoryMeta(category: FocusCategory): FocusCategoryMeta | null {
 	if (!category) return null;
 
 	const metaMap: Record<Exclude<FocusCategory, null>, FocusCategoryMeta> = {

@@ -1,9 +1,4 @@
-import type {
-	DirEntry,
-	ListDirectoryOptions,
-	PlatformFileSystem,
-	SaveFileOptions,
-} from "../../filesystem";
+import type { DirEntry, ListDirectoryOptions, PlatformFileSystem, SaveFileOptions } from "../../filesystem";
 
 type FilePickerWindow = Window & {
 	showSaveFilePicker?: (options?: {
@@ -33,10 +28,7 @@ function isSupported(): boolean {
 function isFileSystemAccessSupported(): boolean {
 	if (typeof window === "undefined") return false;
 	const w = window as FilePickerWindow;
-	return (
-		typeof w.showSaveFilePicker === "function" &&
-		typeof w.showDirectoryPicker === "function"
-	);
+	return typeof w.showSaveFilePicker === "function" && typeof w.showDirectoryPicker === "function";
 }
 
 async function openIDB(): Promise<IDBDatabase> {
@@ -138,9 +130,7 @@ async function walkDirectory(
 	}
 }
 
-async function readFileFromHandle(
-	handle: FileSystemFileHandle,
-): Promise<Uint8Array> {
+async function readFileFromHandle(handle: FileSystemFileHandle): Promise<Uint8Array> {
 	const file = await handle.getFile();
 	const buffer = await file.arrayBuffer();
 	return new Uint8Array(buffer);
@@ -184,34 +174,25 @@ export class BrowserFileSystem implements PlatformFileSystem {
 
 	async readFile(path: string): Promise<Uint8Array> {
 		if (!isFileSystemAccessSupported()) {
-			throw new Error(
-				"[BrowserFileSystem] readFile requires File System Access API (Chromium-only).",
-			);
+			throw new Error("[BrowserFileSystem] readFile requires File System Access API (Chromium-only).");
 		}
 		const handle = await this.resolveFileHandle(path);
 		if (!handle) {
 			throw new Error(
-				`[BrowserFileSystem] readFile could not resolve a handle for "${path}". ` +
-					`Pick a vault via the settings UI first.`,
+				`[BrowserFileSystem] readFile could not resolve a handle for "${path}". Pick a vault via the settings UI first.`,
 			);
 		}
 		return readFileFromHandle(handle);
 	}
 
-	async listDirectory(
-		path: string,
-		options?: ListDirectoryOptions,
-	): Promise<DirEntry[]> {
+	async listDirectory(path: string, options?: ListDirectoryOptions): Promise<DirEntry[]> {
 		if (!isFileSystemAccessSupported()) {
-			throw new Error(
-				"[BrowserFileSystem] listDirectory requires File System Access API (Chromium-only).",
-			);
+			throw new Error("[BrowserFileSystem] listDirectory requires File System Access API (Chromium-only).");
 		}
 		const handle = await this.resolveDirectoryHandle(path);
 		if (!handle) {
 			throw new Error(
-				`[BrowserFileSystem] listDirectory could not resolve a handle for "${path}". ` +
-					`Pick a vault via the settings UI first.`,
+				`[BrowserFileSystem] listDirectory could not resolve a handle for "${path}". Pick a vault via the settings UI first.`,
 			);
 		}
 		const recursive = options?.recursive ?? false;
@@ -280,9 +261,7 @@ export class BrowserFileSystem implements PlatformFileSystem {
 	 * walking the persisted vault. Returns null when the vault isn't picked or
 	 * the path lives outside of it.
 	 */
-	private async resolveFileHandle(
-		path: string,
-	): Promise<FileSystemFileHandle | null> {
+	private async resolveFileHandle(path: string): Promise<FileSystemFileHandle | null> {
 		const vault = await this.getPersistedVaultHandle();
 		if (!vault) return null;
 		const normalized = path.replace(/\\/g, "/").replace(/^\/+/, "");
@@ -291,9 +270,7 @@ export class BrowserFileSystem implements PlatformFileSystem {
 		return this.walkForFile(vault, segments);
 	}
 
-	private async resolveDirectoryHandle(
-		path: string,
-	): Promise<FileSystemDirectoryHandle | null> {
+	private async resolveDirectoryHandle(path: string): Promise<FileSystemDirectoryHandle | null> {
 		const vault = await this.getPersistedVaultHandle();
 		if (!vault) return null;
 		const normalized = path.replace(/\\/g, "/").replace(/^\/+/, "");

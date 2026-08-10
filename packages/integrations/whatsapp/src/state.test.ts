@@ -5,13 +5,13 @@
  * No Baileys Socket mock, no side effects.
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-	parseQrCodeState,
-	isOwnMessage,
-	routeMessageType,
-	resolveBaileysConnectionState,
 	type ExtractedMessageInfo,
+	isOwnMessage,
+	parseQrCodeState,
+	resolveBaileysConnectionState,
+	routeMessageType,
 } from "./state";
 
 // ---------------------------------------------------------------------------
@@ -82,9 +82,7 @@ describe("parseQrCodeState", () => {
 // ---------------------------------------------------------------------------
 
 describe("isOwnMessage", () => {
-	const createMessage = (
-		overrides: Partial<ExtractedMessageInfo> = {},
-	): ExtractedMessageInfo => ({
+	const createMessage = (overrides: Partial<ExtractedMessageInfo> = {}): ExtractedMessageInfo => ({
 		id: "msg-1",
 		chatType: "private",
 		chatName: "Test",

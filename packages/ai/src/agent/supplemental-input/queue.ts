@@ -26,7 +26,11 @@ export interface AgentSupplementalInputQueueOptions {
 }
 
 export type AgentSupplementalInputQueueErrorCode =
-	"closed" | "epoch_mismatch" | "full" | "invalid_input" | "multiple_consumers";
+	| "closed"
+	| "epoch_mismatch"
+	| "full"
+	| "invalid_input"
+	| "multiple_consumers";
 
 export class AgentSupplementalInputQueueError extends Error {
 	constructor(
@@ -89,8 +93,7 @@ interface PendingInput {
 
 type IteratorWaiter = (result: IteratorResult<AgentSupplementalInput>) => void;
 
-type InterruptOutcome =
-	{ status: "completed" } | { status: "failed"; error: Error };
+type InterruptOutcome = { status: "completed" } | { status: "failed"; error: Error };
 
 interface InFlightInterrupt {
 	runEpoch: number;
@@ -128,8 +131,7 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 	private activeRunEpoch: number;
 	private iteratorCreated = false;
 	private interruptHandler: (() => Promise<void> | void) | null = null;
-	private handoffHandler:
-		((input: NormalizedAgentSupplementalInput) => void) | null = null;
+	private handoffHandler: ((input: NormalizedAgentSupplementalInput) => void) | null = null;
 	private interruptInFlight: InFlightInterrupt | null = null;
 
 	constructor(options: AgentSupplementalInputQueueOptions = {}) {
@@ -158,11 +160,7 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 			throw queueError("closed", "Supplemental input queue is closed");
 		}
 
-		const input = normalizeInput(
-			candidate,
-			this.maxInputBytes,
-			this.activeRunEpoch,
-		);
+		const input = normalizeInput(candidate, this.maxInputBytes, this.activeRunEpoch);
 
 		if (input.runEpoch !== this.activeRunEpoch) {
 			throw queueError(
@@ -179,12 +177,8 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 			};
 		}
 
-		const steerCanReleaseWaitingCapacity =
-			input.intent === "steer" && this.waiters.length > 0;
-		if (
-			this.pending.length >= this.maxPendingInputs &&
-			!steerCanReleaseWaitingCapacity
-		) {
+		const steerCanReleaseWaitingCapacity = input.intent === "steer" && this.waiters.length > 0;
+		if (this.pending.length >= this.maxPendingInputs && !steerCanReleaseWaitingCapacity) {
 			throw queueError(
 				"full",
 				`Supplemental input queue has reached its ${this.maxPendingInputs}-input limit`,
@@ -211,34 +205,20 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 
 	setInterruptHandler(handler: (() => Promise<void> | void) | null): void {
 		if (handler !== null && typeof handler !== "function") {
-			throw queueError(
-				"invalid_input",
-				"Interrupt handler must be a function or null",
-			);
+			throw queueError("invalid_input", "Interrupt handler must be a function or null");
 		}
 		if (this.state !== "open" && handler !== null) {
-			throw queueError(
-				"closed",
-				"Cannot attach an interrupt handler to a closed queue",
-			);
+			throw queueError("closed", "Cannot attach an interrupt handler to a closed queue");
 		}
 		this.interruptHandler = handler;
 	}
 
-	setHandoffHandler(
-		handler: ((input: NormalizedAgentSupplementalInput) => void) | null,
-	): void {
+	setHandoffHandler(handler: ((input: NormalizedAgentSupplementalInput) => void) | null): void {
 		if (handler !== null && typeof handler !== "function") {
-			throw queueError(
-				"invalid_input",
-				"Supplemental input handoff handler must be a function or null",
-			);
+			throw queueError("invalid_input", "Supplemental input handoff handler must be a function or null");
 		}
 		if (this.state !== "open" && handler !== null) {
-			throw queueError(
-				"closed",
-				"Cannot attach a handoff handler to a closed supplemental input queue",
-			);
+			throw queueError("closed", "Cannot attach a handoff handler to a closed supplemental input queue");
 		}
 		this.handoffHandler = handler;
 	}
@@ -285,15 +265,10 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 	 * Prevents both SDK iteration and hook-based reads from releasing buffered
 	 * inform inputs while a turn-ending lifecycle transition is in flight.
 	 */
-	holdPendingInputForRunEpoch(
-		expectedRunEpoch: number,
-	): AgentSupplementalInputHold {
+	holdPendingInputForRunEpoch(expectedRunEpoch: number): AgentSupplementalInputHold {
 		const runEpoch = validateRunEpoch(expectedRunEpoch);
 		if (this.state !== "open") {
-			throw queueError(
-				"closed",
-				"Cannot hold pending input on a closed supplemental input queue",
-			);
+			throw queueError("closed", "Cannot hold pending input on a closed supplemental input queue");
 		}
 		if (runEpoch !== this.activeRunEpoch) {
 			throw queueError(
@@ -337,10 +312,7 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 			);
 		}
 		if (nextRunEpoch !== expectedRunEpoch + 1) {
-			throw queueError(
-				"epoch_mismatch",
-				`nextRunEpoch must advance exactly once from ${expectedRunEpoch}`,
-			);
+			throw queueError("epoch_mismatch", `nextRunEpoch must advance exactly once from ${expectedRunEpoch}`);
 		}
 
 		this.activeRunEpoch = nextRunEpoch;
@@ -357,10 +329,7 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 		}
 
 		const activeInterrupt = this.interruptInFlight;
-		if (
-			activeInterrupt !== null &&
-			activeInterrupt.runEpoch === this.activeRunEpoch
-		) {
+		if (activeInterrupt !== null && activeInterrupt.runEpoch === this.activeRunEpoch) {
 			return withCoalescedFlag(await activeInterrupt.operation, true);
 		}
 
@@ -369,10 +338,12 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 		const operation: Promise<InterruptOutcome> = Promise.resolve()
 			.then(() => handler())
 			.then((): InterruptOutcome => ({ status: "completed" }))
-			.catch((error: unknown): InterruptOutcome => ({
-				status: "failed",
-				error: normalizeError(error),
-			}));
+			.catch(
+				(error: unknown): InterruptOutcome => ({
+					status: "failed",
+					error: normalizeError(error),
+				}),
+			);
 		const inFlight = { runEpoch, operation };
 		this.interruptInFlight = inFlight;
 
@@ -413,10 +384,7 @@ export class AgentSupplementalInputQueue implements AgentSupplementalInputSource
 
 	[Symbol.asyncIterator](): AsyncIterator<AgentSupplementalInput> {
 		if (this.iteratorCreated) {
-			throw queueError(
-				"multiple_consumers",
-				"Supplemental input queue supports exactly one async consumer",
-			);
+			throw queueError("multiple_consumers", "Supplemental input queue supports exactly one async consumer");
 		}
 		this.iteratorCreated = true;
 
@@ -510,21 +478,12 @@ function normalizeInput(
 		);
 	}
 
-	if (
-		typeof candidate.content !== "string" ||
-		candidate.content.trim().length === 0
-	) {
-		throw queueError(
-			"invalid_input",
-			"Supplemental input content must be a non-empty string",
-		);
+	if (typeof candidate.content !== "string" || candidate.content.trim().length === 0) {
+		throw queueError("invalid_input", "Supplemental input content must be a non-empty string");
 	}
 	const contentBytes = new TextEncoder().encode(candidate.content).byteLength;
 	if (contentBytes > maxInputBytes) {
-		throw queueError(
-			"invalid_input",
-			`Supplemental input content exceeds the ${maxInputBytes}-byte limit`,
-		);
+		throw queueError("invalid_input", `Supplemental input content exceeds the ${maxInputBytes}-byte limit`);
 	}
 
 	if (
@@ -541,16 +500,10 @@ function normalizeInput(
 
 	const intent = candidate.intent ?? "steer";
 	if (intent !== "steer" && intent !== "inform") {
-		throw queueError(
-			"invalid_input",
-			"Supplemental input intent must be steer or inform",
-		);
+		throw queueError("invalid_input", "Supplemental input intent must be steer or inform");
 	}
 
-	const runEpoch =
-		candidate.runEpoch === undefined
-			? activeRunEpoch
-			: validateRunEpoch(candidate.runEpoch);
+	const runEpoch = candidate.runEpoch === undefined ? activeRunEpoch : validateRunEpoch(candidate.runEpoch);
 
 	return Object.freeze({
 		id,
@@ -563,24 +516,14 @@ function normalizeInput(
 
 function validateRunEpoch(value: number): number {
 	if (!Number.isInteger(value) || value < 0) {
-		throw queueError(
-			"invalid_input",
-			"runEpoch must be a non-negative integer",
-		);
+		throw queueError("invalid_input", "runEpoch must be a non-negative integer");
 	}
 	return value;
 }
 
-function validatePositiveIntegerOption(
-	name: string,
-	value: number,
-	maximum: number,
-): number {
+function validatePositiveIntegerOption(name: string, value: number, maximum: number): number {
 	if (!Number.isInteger(value) || value <= 0 || value > maximum) {
-		throw queueError(
-			"invalid_input",
-			`${name} must be an integer between 1 and ${maximum}`,
-		);
+		throw queueError("invalid_input", `${name} must be an integer between 1 and ${maximum}`);
 	}
 	return value;
 }

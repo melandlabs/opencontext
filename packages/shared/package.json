@@ -1,46 +1,50 @@
 {
-  "name": "@opencontext/shared",
-  "version": "0.9.0",
-  "type": "module",
-  "files": ["dist", "README.md", "LICENSE"],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./errors": "./dist/errors.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/shared"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/shared",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "Shared utility primitives used across OpenContext packages.",
-  "keywords": ["opencontext", "shared", "utilities"],
-  "dependencies": {
-    "@opencontext/ui-runtime": "workspace:*",
-    "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2",
-    "zod": "^4.3.6",
-    "date-fns": "^4.1.0"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/shared",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./errors": "./dist/errors.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/shared"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/shared",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "Shared utility primitives used across OpenContext packages.",
+	"keywords": ["opencontext", "shared", "utilities"],
+	"dependencies": {
+		"@opencontext/ui-runtime": "workspace:*",
+		"clsx": "^2.1.1",
+		"tailwind-merge": "^2.5.2",
+		"zod": "^4.3.6",
+		"date-fns": "^4.1.0"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"@tauri-apps/plugin-fs": "^2.5.1",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

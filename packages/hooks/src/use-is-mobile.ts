@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 
 const DEFAULT_BREAKPOINT = 768;
 
-export function useIsMobile(breakpoint: number = DEFAULT_BREAKPOINT) {
-	const getMatches = () => {
-		if (typeof window === "undefined") return false;
-		return window.innerWidth < breakpoint;
-	};
+function getMatches(breakpoint: number): boolean {
+	if (typeof window === "undefined") return false;
+	return window.innerWidth < breakpoint;
+}
 
+export function useIsMobile(breakpoint: number = DEFAULT_BREAKPOINT) {
 	// Initialize with false to match server-side rendering
 	// Then update in useEffect to the actual value
 	const [isMobile, setIsMobile] = useState<boolean>(false);
@@ -17,7 +17,7 @@ export function useIsMobile(breakpoint: number = DEFAULT_BREAKPOINT) {
 
 	useEffect(() => {
 		setIsMounted(true);
-		const update = () => setIsMobile(getMatches());
+		const update = () => setIsMobile(getMatches(breakpoint));
 
 		update();
 

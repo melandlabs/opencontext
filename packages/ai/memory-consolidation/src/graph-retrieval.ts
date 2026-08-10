@@ -3,20 +3,17 @@ import type {
 	GraphAwareRetrievalResult,
 	GraphAwareRetriever,
 	MemoryApplicabilityContext,
+	MemoryGraphAddedBeyondBaselineNode,
+	MemoryGraphAddedBeyondBaselineReason,
 	MemoryGraphAuditTrail,
 	MemoryGraphClusterSnapshot,
 	MemoryGraphEdge,
-	MemoryGraphAddedBeyondBaselineNode,
-	MemoryGraphAddedBeyondBaselineReason,
 	MemoryGraphNode,
 	MemoryGraphWithheldBaselineNode,
 	MemoryGraphWithheldBaselineReason,
 	OwnerScope,
 } from "./graph-contracts";
-import {
-	applicabilityEquivalent,
-	buildMemoryGraphCompetitionComponents,
-} from "./graph-evolution";
+import { applicabilityEquivalent, buildMemoryGraphCompetitionComponents } from "./graph-evolution";
 
 export interface BuildGraphAwareRetrievalDryRunInput extends GraphAwareRetrievalInput {
 	maxExpandedRepresentatives?: number;
@@ -34,17 +31,11 @@ function uniqueValues(values: string[]): string[] {
 	return [...new Set(values)];
 }
 
-function applicabilityIsActive(
-	applicability: MemoryApplicabilityContext | undefined,
-	now: number,
-): boolean {
+function applicabilityIsActive(applicability: MemoryApplicabilityContext | undefined, now: number): boolean {
 	if (applicability?.validFrom !== undefined && now < applicability.validFrom) {
 		return false;
 	}
-	if (
-		applicability?.validUntil !== undefined &&
-		now > applicability.validUntil
-	) {
+	if (applicability?.validUntil !== undefined && now > applicability.validUntil) {
 		return false;
 	}
 	return true;
@@ -82,11 +73,7 @@ function scopedNodesById(
 			.filter(
 				(node) =>
 					sameOwnerScope(node.ownerScope, ownerScope) &&
-					applicabilityMatchesTrustedContexts(
-						node.applicability,
-						applicabilityContexts,
-						now,
-					),
+					applicabilityMatchesTrustedContexts(node.applicability, applicabilityContexts, now),
 			)
 			.map((node) => [node.id, node]),
 	);
@@ -102,15 +89,9 @@ function scopedEdges(
 	return edges.filter(
 		(edge) =>
 			sameOwnerScope(edge.ownerScope, ownerScope) &&
-			applicabilityMatchesTrustedContexts(
-				edge.applicability,
-				applicabilityContexts,
-				now,
-			) &&
+			applicabilityMatchesTrustedContexts(edge.applicability, applicabilityContexts, now) &&
 			(includeHistorical ||
-				(edge.weight > 0 &&
-					edge.metadata?.inactive !== true &&
-					edge.metadata?.rolledBack !== true)),
+				(edge.weight > 0 && edge.metadata?.inactive !== true && edge.metadata?.rolledBack !== true)),
 	);
 }
 
@@ -123,11 +104,7 @@ function scopedClusters(
 	return clusters.filter(
 		(cluster) =>
 			sameOwnerScope(cluster.ownerScope, ownerScope) &&
-			applicabilityMatchesTrustedContexts(
-				cluster.applicability,
-				applicabilityContexts,
-				now,
-			),
+			applicabilityMatchesTrustedContexts(cluster.applicability, applicabilityContexts, now),
 	);
 }
 
@@ -136,10 +113,7 @@ function isSummaryLike(node: MemoryGraphNode | undefined): boolean {
 }
 
 function isDeprecatedRaw(node: MemoryGraphNode | undefined): boolean {
-	return (
-		node?.type === "raw" &&
-		(node.visibility === "deprecated" || node.visibility === "audit-only")
-	);
+	return node?.type === "raw" && (node.visibility === "deprecated" || node.visibility === "audit-only");
 }
 
 function isAuditOnly(node: MemoryGraphNode | undefined): boolean {
@@ -164,15 +138,10 @@ function uniqueExistingBaselineNodeIds(
 	input: GraphAwareRetrievalInput,
 	nodesById: Map<string, MemoryGraphNode>,
 ): string[] {
-	return uniqueValues(input.baselineNodeIds).filter((nodeId) =>
-		nodesById.has(nodeId),
-	);
+	return uniqueValues(input.baselineNodeIds).filter((nodeId) => nodesById.has(nodeId));
 }
 
-function clusterTouchesBaseline(
-	cluster: MemoryGraphClusterSnapshot,
-	baselineNodeIds: Set<string>,
-): boolean {
+function clusterTouchesBaseline(cluster: MemoryGraphClusterSnapshot, baselineNodeIds: Set<string>): boolean {
 	return cluster.nodeIds.some((nodeId) => baselineNodeIds.has(nodeId));
 }
 
@@ -225,11 +194,7 @@ function expandedRepresentatives(input: {
 			continue;
 		}
 
-		const representativeNodeId = representativeForCluster(
-			cluster,
-			input.edges,
-			input.nodesById,
-		);
+		const representativeNodeId = representativeForCluster(cluster, input.edges, input.nodesById);
 		if (representativeNodeId === undefined) {
 			continue;
 		}
@@ -239,18 +204,12 @@ function expandedRepresentatives(input: {
 	}
 
 	return {
-		nodeIds: nodeIds.slice(
-			0,
-			Math.max(1, input.maxExpandedRepresentatives ?? nodeIds.length),
-		),
+		nodeIds: nodeIds.slice(0, Math.max(1, input.maxExpandedRepresentatives ?? nodeIds.length)),
 		clusterIds,
 	};
 }
 
-function sameApplicability(
-	left: MemoryGraphClusterSnapshot,
-	right: MemoryGraphClusterSnapshot,
-): boolean {
+function sameApplicability(left: MemoryGraphClusterSnapshot, right: MemoryGraphClusterSnapshot): boolean {
 	return applicabilityEquivalent(left.applicability, right.applicability);
 }
 
@@ -262,19 +221,13 @@ function conflictAlternatives(input: {
 	nodesById: Map<string, MemoryGraphNode>;
 }): { nodeIds: string[]; clusterIds: string[] } {
 	const baseline = new Set(input.baselineNodeIds);
-	const touched = input.clusters.filter((cluster) =>
-		clusterTouchesBaseline(cluster, baseline),
-	);
+	const touched = input.clusters.filter((cluster) => clusterTouchesBaseline(cluster, baseline));
 	const componentByClusterId = new Map(
 		buildMemoryGraphCompetitionComponents({
 			ownerScope: input.ownerScope,
 			clusters: input.clusters,
 			edges: input.edges,
-		}).flatMap((component) =>
-			component.clusters.map(
-				(cluster) => [cluster.clusterId, component] as const,
-			),
-		),
+		}).flatMap((component) => component.clusters.map((cluster) => [cluster.clusterId, component] as const)),
 	);
 	const nodeIds: string[] = [];
 	const clusterIds: string[] = [];
@@ -283,18 +236,11 @@ function conflictAlternatives(input: {
 		if (!component) continue;
 		const candidates = component.clusters.filter(
 			(candidate) =>
-				candidate.clusterId !== sourceCluster.clusterId &&
-				sameApplicability(candidate, sourceCluster),
+				candidate.clusterId !== sourceCluster.clusterId && sameApplicability(candidate, sourceCluster),
 		);
 		for (const candidate of candidates) {
-			const representative = representativeForCluster(
-				candidate,
-				input.edges,
-				input.nodesById,
-			);
-			const alternative =
-				representative ??
-				candidate.nodeIds.find((nodeId) => input.nodesById.has(nodeId));
+			const representative = representativeForCluster(candidate, input.edges, input.nodesById);
+			const alternative = representative ?? candidate.nodeIds.find((nodeId) => input.nodesById.has(nodeId));
 			if (alternative) addUnique(nodeIds, [alternative]);
 			addUnique(clusterIds, [candidate.clusterId]);
 		}
@@ -337,20 +283,12 @@ function rankNodeIds(input: {
 	return ranked;
 }
 
-function metadataStringArray(
-	metadata: Record<string, unknown> | undefined,
-	key: string,
-): string[] {
+function metadataStringArray(metadata: Record<string, unknown> | undefined, key: string): string[] {
 	const value = metadata?.[key];
-	return Array.isArray(value)
-		? value.filter((item): item is string => typeof item === "string")
-		: [];
+	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
-function metadataString(
-	metadata: Record<string, unknown> | undefined,
-	key: string,
-): string | undefined {
+function metadataString(metadata: Record<string, unknown> | undefined, key: string): string | undefined {
 	const value = metadata?.[key];
 	return typeof value === "string" ? value : undefined;
 }
@@ -377,9 +315,7 @@ function auditTrailForNode(input: {
 		(edge) => edge.kind === "supersede" && edge.fromNodeId === input.nodeId,
 	);
 	const competitionEdges = input.edges.filter(
-		(edge) =>
-			edge.kind === "compete" &&
-			(edge.fromNodeId === input.nodeId || edge.toNodeId === input.nodeId),
+		(edge) => edge.kind === "compete" && (edge.fromNodeId === input.nodeId || edge.toNodeId === input.nodeId),
 	);
 	const metadataSources = [...input.nodesById.values()]
 		.filter((candidate) => supersededByNodeId(candidate) === input.nodeId)
@@ -393,9 +329,7 @@ function auditTrailForNode(input: {
 		]),
 		...metadataSources,
 		...selfSource,
-	]).filter(
-		(sourceNodeId) => input.nodesById.get(sourceNodeId)?.type === "raw",
-	);
+	]).filter((sourceNodeId) => input.nodesById.get(sourceNodeId)?.type === "raw");
 	const edgeIds = uniqueValues([
 		...incomingSupersedeEdges.map((edge) => edge.id),
 		...outgoingSupersedeEdges.map((edge) => edge.id),
@@ -407,9 +341,7 @@ function auditTrailForNode(input: {
 		...outgoingSupersedeEdges.flatMap((edge) => edge.reasonCodes),
 		...competitionEdges.flatMap((edge) => edge.reasonCodes),
 		...metadataStringArray(node.metadata, "deprecationReasonCodes"),
-		...(competitionEdges.length > 0
-			? ["competing_alternative_provenance"]
-			: []),
+		...(competitionEdges.length > 0 ? ["competing_alternative_provenance"] : []),
 		...(isDeprecatedRaw(node) ? ["deprecated_raw_included"] : []),
 	]);
 
@@ -461,22 +393,14 @@ function withheldBaselineReason(input: {
 	applicabilityContexts: MemoryApplicabilityContext[] | undefined;
 	now: number;
 }): MemoryGraphWithheldBaselineReason {
-	const node = input.snapshotNodes.find(
-		(candidate) => candidate.id === input.nodeId,
-	);
+	const node = input.snapshotNodes.find((candidate) => candidate.id === input.nodeId);
 	if (node === undefined) {
 		return "absent-from-graph";
 	}
 	if (!sameOwnerScope(node.ownerScope, input.ownerScope)) {
 		return "out-of-owner-scope";
 	}
-	if (
-		!applicabilityMatchesTrustedContexts(
-			node.applicability,
-			input.applicabilityContexts,
-			input.now,
-		)
-	) {
+	if (!applicabilityMatchesTrustedContexts(node.applicability, input.applicabilityContexts, input.now)) {
 		return "out-of-applicability";
 	}
 	if (node.visibility === "audit-only") {
@@ -543,23 +467,13 @@ function reasonCodesForResult(input: {
 }): string[] {
 	return uniqueValues([
 		"graph_retrieval_dry_run",
-		...(input.unexplainedWithheldCount > 0
-			? ["baseline_withheld_without_reason"]
-			: []),
-		...(input.hiddenDeprecatedNodeIds.length > 0
-			? ["default_hides_deprecated_raw"]
-			: []),
+		...(input.unexplainedWithheldCount > 0 ? ["baseline_withheld_without_reason"] : []),
+		...(input.hiddenDeprecatedNodeIds.length > 0 ? ["default_hides_deprecated_raw"] : []),
 		...(input.includeDeprecated ? ["include_deprecated_requested"] : []),
-		...(input.conflictAlternativesExposed
-			? ["competing_alternatives_exposed"]
-			: []),
-		...(input.expandedClusterIds.length > 0
-			? ["cluster_representative_prioritized"]
-			: []),
+		...(input.conflictAlternativesExposed ? ["competing_alternatives_exposed"] : []),
+		...(input.expandedClusterIds.length > 0 ? ["cluster_representative_prioritized"] : []),
 		...(input.auditTrailCount > 0 ? ["audit_trail_available"] : []),
-		...(input.filteredMissingOrCrossScopeCount > 0
-			? ["missing_or_cross_scope_nodes_filtered"]
-			: []),
+		...(input.filteredMissingOrCrossScopeCount > 0 ? ["missing_or_cross_scope_nodes_filtered"] : []),
 	]);
 }
 
@@ -582,18 +496,14 @@ export function buildGraphAwareRetrievalDryRun(
 		false,
 		input.applicabilityContexts,
 		applicabilityNow,
-	).filter(
-		(edge) => nodesById.has(edge.fromNodeId) && nodesById.has(edge.toNodeId),
-	);
+	).filter((edge) => nodesById.has(edge.fromNodeId) && nodesById.has(edge.toNodeId));
 	const historicalEdges = scopedEdges(
 		input.snapshot.edges,
 		input.ownerScope,
 		true,
 		input.applicabilityContexts,
 		applicabilityNow,
-	).filter(
-		(edge) => nodesById.has(edge.fromNodeId) && nodesById.has(edge.toNodeId),
-	);
+	).filter((edge) => nodesById.has(edge.fromNodeId) && nodesById.has(edge.toNodeId));
 	const clusters = scopedClusters(
 		input.snapshot.clusters,
 		input.ownerScope,
@@ -604,8 +514,7 @@ export function buildGraphAwareRetrievalDryRun(
 			...cluster,
 			nodeIds: cluster.nodeIds.filter((nodeId) => nodesById.has(nodeId)),
 			representativeNodeId:
-				cluster.representativeNodeId &&
-				nodesById.has(cluster.representativeNodeId)
+				cluster.representativeNodeId && nodesById.has(cluster.representativeNodeId)
 					? cluster.representativeNodeId
 					: undefined,
 		}))
@@ -615,14 +524,10 @@ export function buildGraphAwareRetrievalDryRun(
 		uniqueValues(input.baselineNodeIds).length - baselineNodeIds.length;
 	const hiddenDeprecatedNodeIds = baselineNodeIds.filter((nodeId) => {
 		const node = nodesById.get(nodeId);
-		return (
-			isDeprecatedRaw(node) &&
-			shouldHideByDefault(node, includeDeprecated, auditMode)
-		);
+		return isDeprecatedRaw(node) && shouldHideByDefault(node, includeDeprecated, auditMode);
 	});
 	const visibleBaselineNodeIds = baselineNodeIds.filter(
-		(nodeId) =>
-			!shouldHideByDefault(nodesById.get(nodeId), includeDeprecated, auditMode),
+		(nodeId) => !shouldHideByDefault(nodesById.get(nodeId), includeDeprecated, auditMode),
 	);
 	const representativeExpansion = expandedRepresentatives({
 		baselineNodeIds,
@@ -631,11 +536,7 @@ export function buildGraphAwareRetrievalDryRun(
 		nodesById,
 		maxExpandedRepresentatives: input.maxExpandedRepresentatives,
 	});
-	const supersedeTargetNodeIds = supersedeTargetsForHiddenNodes(
-		hiddenDeprecatedNodeIds,
-		edges,
-		nodesById,
-	);
+	const supersedeTargetNodeIds = supersedeTargetsForHiddenNodes(hiddenDeprecatedNodeIds, edges, nodesById);
 	const conflictExpansion = conflictMode
 		? conflictAlternatives({
 				ownerScope: input.ownerScope,
@@ -649,10 +550,7 @@ export function buildGraphAwareRetrievalDryRun(
 	const rankedNodeIds = rankNodeIds({
 		visibleBaselineNodeIds,
 		includeDeprecated,
-		representativeNodeIds: uniqueValues([
-			...representativeExpansion.nodeIds,
-			...conflictExpansion.nodeIds,
-		]),
+		representativeNodeIds: uniqueValues([...representativeExpansion.nodeIds, ...conflictExpansion.nodeIds]),
 		supersedeTargetNodeIds,
 		nodesById,
 	}).filter(
@@ -662,11 +560,7 @@ export function buildGraphAwareRetrievalDryRun(
 	);
 	const auditNodeIds =
 		auditMode || conflictMode || includeDeprecated
-			? uniqueValues([
-					...rankedNodeIds,
-					...hiddenDeprecatedNodeIds,
-					...supersedeTargetNodeIds,
-				])
+			? uniqueValues([...rankedNodeIds, ...hiddenDeprecatedNodeIds, ...supersedeTargetNodeIds])
 			: [];
 	const auditTrail =
 		auditNodeIds.length > 0
@@ -717,9 +611,7 @@ export function buildGraphAwareRetrievalDryRun(
 			includeDeprecated,
 			conflictAlternativesExposed: conflictExpansion.nodeIds.length > 0,
 			filteredMissingOrCrossScopeCount,
-			unexplainedWithheldCount: withheld.filter(
-				(entry) => entry.reason === "unexplained",
-			).length,
+			unexplainedWithheldCount: withheld.filter((entry) => entry.reason === "unexplained").length,
 		}),
 		metadata: {
 			...(input.metadata ?? {}),

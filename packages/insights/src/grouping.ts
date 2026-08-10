@@ -1,11 +1,9 @@
-import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
+import type { ExtractedMessageInfo } from "@opencontext/shared";
 
 /**
  * Normalize messages input to array
  */
-export function normalizeMessagesInput(
-	input: unknown[] | string,
-): ExtractedMessageInfo[] {
+export function normalizeMessagesInput(input: unknown[] | string): ExtractedMessageInfo[] {
 	if (Array.isArray(input)) {
 		return input as ExtractedMessageInfo[];
 	}
@@ -17,12 +15,7 @@ export function normalizeMessagesInput(
 		if (parsed && typeof parsed === "object") {
 			return [parsed as ExtractedMessageInfo];
 		}
-	} catch (error) {
-		console.warn(
-			"[Insights] Failed to parse messages payload for attachments:",
-			error,
-		);
-	}
+	} catch (_error) {}
 	return [];
 }
 
@@ -47,14 +40,6 @@ export function groupMessagesByChannel(
 		grouped.get(channel)?.push(msg);
 	}
 
-	console.log(
-		`[Insights] Messages grouped by group: ${grouped.size} groups, ` +
-			`Total messages: ${messages.length}, ` +
-			`Group distribution: ${Array.from(grouped.entries())
-				.map(([ch, msgs]) => `${ch}(${msgs.length})`)
-				.join(", ")}`,
-	);
-
 	return grouped;
 }
 
@@ -75,10 +60,7 @@ interface InsightWithGroups {
  * @param targetGroup - Target group name
  * @returns Insights only related to that group
  */
-export function filterInsightsByGroup<T extends InsightWithGroups>(
-	insights: T[],
-	targetGroup: string,
-): T[] {
+export function filterInsightsByGroup<T extends InsightWithGroups>(insights: T[], targetGroup: string): T[] {
 	return insights.filter((insight) => {
 		// Keep if insight's groups include target group
 		if (insight.groups && insight.groups.length > 0) {
@@ -95,9 +77,7 @@ export function filterInsightsByGroup<T extends InsightWithGroups>(
  * @param messages - iMessage raw message list
  * @returns Merged message list (chatName unified as sender name)
  */
-export function mergeIMessageMessagesBySender(
-	messages: ExtractedMessageInfo[],
-): ExtractedMessageInfo[] {
+export function mergeIMessageMessagesBySender(messages: ExtractedMessageInfo[]): ExtractedMessageInfo[] {
 	const merged = new Map<string, ExtractedMessageInfo>();
 
 	for (const msg of messages) {
@@ -137,9 +117,7 @@ export function mergeIMessageMessagesBySender(
  * Estimate token consumption for messages (for credits pre-check)
  * This is a rough estimate, assuming an average of 100 tokens per message
  */
-export function estimateTokensForMessages(
-	messages: ExtractedMessageInfo[],
-): number {
+export function estimateTokensForMessages(messages: ExtractedMessageInfo[]): number {
 	// Simple estimate: average 100 tokens per message (including history context)
 	const AVG_TOKENS_PER_MESSAGE = 100;
 	const HISTORY_MULTIPLIER = 2; // History context multiplier

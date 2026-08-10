@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 /**
  * IME anti-false trigger for "Enter to send" input: don't trigger send during or shortly after IME composition
@@ -9,9 +9,7 @@ import { useRef, useCallback, useEffect } from "react";
  */
 export function useEnterSendWithIme() {
 	const isComposingOrJustEndedRef = useRef(false);
-	const compositionEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-		null,
-	);
+	const compositionEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	const handleCompositionStart = useCallback(() => {
 		if (compositionEndTimerRef.current) {

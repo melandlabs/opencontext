@@ -1,17 +1,17 @@
 import type { MemoryEvidenceRecord } from "./evidence-cluster";
 import {
-	buildMemoryConsolidationPlan,
-	buildMemoryDeprecationEntry,
 	type BuildMemoryConsolidationPlanInput,
 	type MemoryConsolidationPlan,
 	type MemoryConsolidationPlanEntry,
+	buildMemoryConsolidationPlan,
+	buildMemoryDeprecationEntry,
 } from "./plan";
 import {
-	assignMemoryRelationGraph,
 	type AssignMemoryRelationGraphInput,
 	type MemoryRelationEdge,
 	type MemoryRelationGraphAssignment,
 	type MemoryRelationKind,
+	assignMemoryRelationGraph,
 } from "./relation-graph";
 
 type PrimitiveValue = string | number | boolean;
@@ -35,9 +35,7 @@ export interface MemoryRelationCandidate {
 
 export interface BuildMemoryRelationCandidatesInput {
 	records: MemoryEvidenceRecord[];
-	getCandidateKeys?(
-		record: MemoryEvidenceRecord,
-	): Iterable<string | undefined | false | null>;
+	getCandidateKeys?(record: MemoryEvidenceRecord): Iterable<string | undefined | false | null>;
 	maxRecordsPerKey?: number;
 	maxCandidatesPerRecord?: number;
 	scoreNorm?: number;
@@ -157,10 +155,7 @@ export interface MemoryRelationJudgeProviderInput {
 
 export type MemoryRelationJudgeProviderInvoke = (
 	input: MemoryRelationJudgeProviderInput,
-) =>
-	| Promise<MemoryRelationJudgmentDecision | undefined>
-	| MemoryRelationJudgmentDecision
-	| undefined;
+) => Promise<MemoryRelationJudgmentDecision | undefined> | MemoryRelationJudgmentDecision | undefined;
 
 export interface InvokeMemoryRelationJudgeProviderInput {
 	candidate: MemoryRelationCandidate;
@@ -248,25 +243,17 @@ export interface BuildMemorySummaryCandidatesInput {
 	maxCandidates?: number;
 }
 
-export interface BuildMemoryRelationPipelineInput extends Omit<
-	BuildMemoryRelationCandidatesInput,
-	"records" | "maxRecordsPerKey" | "maxCandidatesPerRecord" | "scoreNorm"
-> {
+export interface BuildMemoryRelationPipelineInput
+	extends Omit<
+		BuildMemoryRelationCandidatesInput,
+		"records" | "maxRecordsPerKey" | "maxCandidatesPerRecord" | "scoreNorm"
+	> {
 	records: MemoryEvidenceRecord[];
 	now: number;
-	candidate?: Omit<
-		BuildMemoryRelationCandidatesInput,
-		"records" | "getCandidateKeys"
-	>;
-	judgment?: Omit<
-		JudgeMemoryRelationCandidatesInput,
-		"candidates" | "records" | "now"
-	>;
+	candidate?: Omit<BuildMemoryRelationCandidatesInput, "records" | "getCandidateKeys">;
+	judgment?: Omit<JudgeMemoryRelationCandidatesInput, "candidates" | "records" | "now">;
 	graph?: Omit<AssignMemoryRelationGraphInput, "records" | "relations" | "now">;
-	plan?: Omit<
-		BuildMemoryConsolidationPlanInput,
-		"records" | "now" | "getClusterKey" | "getCompetitionKey"
-	>;
+	plan?: Omit<BuildMemoryConsolidationPlanInput, "records" | "now" | "getClusterKey" | "getCompetitionKey">;
 	summary?: Omit<BuildMemorySummaryCandidatesInput, "plan">;
 }
 
@@ -295,11 +282,7 @@ function clamp01(value: number): number {
 }
 
 function isPrimitive(value: unknown): value is PrimitiveValue {
-	return (
-		typeof value === "string" ||
-		typeof value === "number" ||
-		typeof value === "boolean"
-	);
+	return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
 }
 
 function stablePairId(left: string, right: string): string {
@@ -323,11 +306,7 @@ function candidateId(fromRecordId: string, toRecordId: string): string {
 	return `candidate:${stablePairId(fromRecordId, toRecordId)}`;
 }
 
-function edgeId(
-	relation: MemoryRelationKind,
-	fromRecordId: string,
-	toRecordId: string,
-): string {
+function edgeId(relation: MemoryRelationKind, fromRecordId: string, toRecordId: string): string {
 	return `${relation}:${stablePairId(fromRecordId, toRecordId)}`;
 }
 
@@ -341,10 +320,7 @@ function primitiveRecordKeys(
 
 	return Object.entries(values)
 		.filter((entry): entry is [string, PrimitiveValue] => isPrimitive(entry[1]))
-		.map(
-			([key, value]) =>
-				`${prefix}:${encodeURIComponent(key)}:${encodeURIComponent(String(value))}`,
-		);
+		.map(([key, value]) => `${prefix}:${encodeURIComponent(key)}:${encodeURIComponent(String(value))}`);
 }
 
 function defaultCandidateKeys(record: MemoryEvidenceRecord): string[] {
@@ -356,8 +332,7 @@ function defaultCandidateKeys(record: MemoryEvidenceRecord): string[] {
 
 function resolveCandidateKeys(
 	record: MemoryEvidenceRecord,
-	getCandidateKeys:
-		BuildMemoryRelationCandidatesInput["getCandidateKeys"] | undefined,
+	getCandidateKeys: BuildMemoryRelationCandidatesInput["getCandidateKeys"] | undefined,
 ): string[] {
 	const keys = getCandidateKeys
 		? [...getCandidateKeys(record)].filter((key): key is string => Boolean(key))
@@ -366,9 +341,7 @@ function resolveCandidateKeys(
 	return [...new Set(keys)].sort();
 }
 
-function candidateReasonCodes(
-	keys: string[],
-): MemoryRelationCandidateReasonCode[] {
+function candidateReasonCodes(keys: string[]): MemoryRelationCandidateReasonCode[] {
 	const reasonCodes = new Set<MemoryRelationCandidateReasonCode>();
 
 	for (const key of keys) {
@@ -384,9 +357,7 @@ function candidateReasonCodes(
 	return [...reasonCodes];
 }
 
-function sortCandidates(
-	candidates: MemoryRelationCandidate[],
-): MemoryRelationCandidate[] {
+function sortCandidates(candidates: MemoryRelationCandidate[]): MemoryRelationCandidate[] {
 	return [...candidates].sort((a, b) => {
 		if (b.score !== a.score) {
 			return b.score - a.score;
@@ -401,10 +372,7 @@ function sortCandidates(
 export function buildMemoryRelationCandidates(
 	input: BuildMemoryRelationCandidatesInput,
 ): MemoryRelationCandidate[] {
-	const maxRecordsPerKey = Math.max(
-		2,
-		input.maxRecordsPerKey ?? DEFAULT_MAX_RECORDS_PER_KEY,
-	);
+	const maxRecordsPerKey = Math.max(2, input.maxRecordsPerKey ?? DEFAULT_MAX_RECORDS_PER_KEY);
 	const maxCandidatesPerRecord = Math.max(
 		1,
 		input.maxCandidatesPerRecord ?? DEFAULT_MAX_CANDIDATES_PER_RECORD,
@@ -429,11 +397,7 @@ export function buildMemoryRelationCandidates(
 			.slice(0, maxRecordsPerKey);
 
 		for (let leftIndex = 0; leftIndex < bucket.length; leftIndex += 1) {
-			for (
-				let rightIndex = leftIndex + 1;
-				rightIndex < bucket.length;
-				rightIndex += 1
-			) {
+			for (let rightIndex = leftIndex + 1; rightIndex < bucket.length; rightIndex += 1) {
 				const left = bucket[leftIndex]!;
 				const right = bucket[rightIndex]!;
 				const pairId = stablePairId(left.id, right.id);
@@ -444,23 +408,21 @@ export function buildMemoryRelationCandidates(
 		}
 	}
 
-	const candidates = [...candidateKeysByPair.entries()].map(
-		([pairId, keySet]) => {
-			const [encodedFrom, encodedTo] = pairId.split("|");
-			const fromRecordId = decodeURIComponent(encodedFrom ?? "");
-			const toRecordId = decodeURIComponent(encodedTo ?? "");
-			const candidateKeys = [...keySet].sort();
+	const candidates = [...candidateKeysByPair.entries()].map(([pairId, keySet]) => {
+		const [encodedFrom, encodedTo] = pairId.split("|");
+		const fromRecordId = decodeURIComponent(encodedFrom ?? "");
+		const toRecordId = decodeURIComponent(encodedTo ?? "");
+		const candidateKeys = [...keySet].sort();
 
-			return {
-				id: candidateId(fromRecordId, toRecordId),
-				fromRecordId,
-				toRecordId,
-				candidateKeys,
-				score: clamp01(candidateKeys.length / scoreNorm),
-				reasonCodes: candidateReasonCodes(candidateKeys),
-			};
-		},
-	);
+		return {
+			id: candidateId(fromRecordId, toRecordId),
+			fromRecordId,
+			toRecordId,
+			candidateKeys,
+			score: clamp01(candidateKeys.length / scoreNorm),
+			reasonCodes: candidateReasonCodes(candidateKeys),
+		};
+	});
 	const selected: MemoryRelationCandidate[] = [];
 	const selectedCountByRecordId = new Map<string, number>();
 
@@ -468,10 +430,7 @@ export function buildMemoryRelationCandidates(
 		const fromCount = selectedCountByRecordId.get(candidate.fromRecordId) ?? 0;
 		const toCount = selectedCountByRecordId.get(candidate.toRecordId) ?? 0;
 
-		if (
-			fromCount >= maxCandidatesPerRecord ||
-			toCount >= maxCandidatesPerRecord
-		) {
+		if (fromCount >= maxCandidatesPerRecord || toCount >= maxCandidatesPerRecord) {
 			continue;
 		}
 
@@ -495,10 +454,7 @@ export function buildCallerProvidedMemoryRelationCandidateDiscoveryReport(
 	for (const candidate of input.candidates) {
 		const pairReasonCodes = new Set<MemoryRelationDiscoveryReasonCode>();
 
-		if (
-			!recordsById.has(candidate.fromRecordId) ||
-			!recordsById.has(candidate.toRecordId)
-		) {
+		if (!recordsById.has(candidate.fromRecordId) || !recordsById.has(candidate.toRecordId)) {
 			pairReasonCodes.add("missing_record");
 		}
 
@@ -560,30 +516,20 @@ function resolveJudgmentThresholds(
 	thresholds: Partial<MemoryRelationJudgmentThresholds> | undefined,
 ): MemoryRelationJudgmentThresholds {
 	return {
-		supportWeight:
-			thresholds?.supportWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.supportWeight,
-		competeWeight:
-			thresholds?.competeWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.competeWeight,
-		relatedWeight:
-			thresholds?.relatedWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.relatedWeight,
-		relatedScore:
-			thresholds?.relatedScore ?? DEFAULT_JUDGMENT_THRESHOLDS.relatedScore,
+		supportWeight: thresholds?.supportWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.supportWeight,
+		competeWeight: thresholds?.competeWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.competeWeight,
+		relatedWeight: thresholds?.relatedWeight ?? DEFAULT_JUDGMENT_THRESHOLDS.relatedWeight,
+		relatedScore: thresholds?.relatedScore ?? DEFAULT_JUDGMENT_THRESHOLDS.relatedScore,
 	};
 }
 
-function defaultRelationGroup(
-	record: MemoryEvidenceRecord,
-): string | undefined {
-	const value =
-		record.metadata?.relationGroup ?? record.dimensions?.relationGroup;
+function defaultRelationGroup(record: MemoryEvidenceRecord): string | undefined {
+	const value = record.metadata?.relationGroup ?? record.dimensions?.relationGroup;
 	return isPrimitive(value) ? String(value) : undefined;
 }
 
-function defaultRelationValue(
-	record: MemoryEvidenceRecord,
-): string | undefined {
-	const value =
-		record.metadata?.relationValue ?? record.dimensions?.relationValue;
+function defaultRelationValue(record: MemoryEvidenceRecord): string | undefined {
+	const value = record.metadata?.relationValue ?? record.dimensions?.relationValue;
 	return isPrimitive(value) ? String(value) : undefined;
 }
 
@@ -595,14 +541,10 @@ function defaultJudgmentDecision(
 	getRelationGroup: JudgeMemoryRelationCandidatesInput["getRelationGroup"],
 	getRelationValue: JudgeMemoryRelationCandidatesInput["getRelationValue"],
 ): MemoryRelationJudgmentDecision {
-	const fromGroup =
-		getRelationGroup?.(fromRecord) ?? defaultRelationGroup(fromRecord);
-	const toGroup =
-		getRelationGroup?.(toRecord) ?? defaultRelationGroup(toRecord);
-	const fromValue =
-		getRelationValue?.(fromRecord) ?? defaultRelationValue(fromRecord);
-	const toValue =
-		getRelationValue?.(toRecord) ?? defaultRelationValue(toRecord);
+	const fromGroup = getRelationGroup?.(fromRecord) ?? defaultRelationGroup(fromRecord);
+	const toGroup = getRelationGroup?.(toRecord) ?? defaultRelationGroup(toRecord);
+	const fromValue = getRelationValue?.(fromRecord) ?? defaultRelationValue(fromRecord);
+	const toValue = getRelationValue?.(toRecord) ?? defaultRelationValue(toRecord);
 
 	if (fromGroup && fromGroup === toGroup && fromValue && toValue) {
 		if (fromValue === toValue) {
@@ -635,10 +577,7 @@ function defaultJudgmentDecision(
 	};
 }
 
-function latestActivationAt(
-	left: MemoryEvidenceRecord,
-	right: MemoryEvidenceRecord,
-): number | undefined {
+function latestActivationAt(left: MemoryEvidenceRecord, right: MemoryEvidenceRecord): number | undefined {
 	const timestamps = [left.lastAccessAt, right.lastAccessAt].filter(
 		(value): value is number => value !== undefined,
 	);
@@ -670,9 +609,7 @@ export function judgeMemoryRelationCandidates(
 	input: JudgeMemoryRelationCandidatesInput,
 ): MemoryRelationJudgmentResult {
 	const thresholds = resolveJudgmentThresholds(input.thresholds);
-	const recordsById = new Map(
-		input.records.map((record) => [record.id, record]),
-	);
+	const recordsById = new Map(input.records.map((record) => [record.id, record]));
 	const judgments: MemoryRelationJudgment[] = [];
 
 	for (const candidate of input.candidates) {
@@ -700,29 +637,21 @@ export function judgeMemoryRelationCandidates(
 			}) ?? defaultDecision;
 		const weight = clamp01(
 			decision.weight ??
-				(decision.relation === defaultDecision.relation
-					? defaultDecision.weight
-					: undefined) ??
+				(decision.relation === defaultDecision.relation ? defaultDecision.weight : undefined) ??
 				defaultWeightForRelation(decision.relation, thresholds),
 		);
-		const reasonCodes =
-			decision.reasonCodes ?? defaultDecision.reasonCodes ?? [];
+		const reasonCodes = decision.reasonCodes ?? defaultDecision.reasonCodes ?? [];
 		const edge =
 			decision.relation === "uncertain"
 				? undefined
 				: {
-						id: edgeId(
-							decision.relation,
-							candidate.fromRecordId,
-							candidate.toRecordId,
-						),
+						id: edgeId(decision.relation, candidate.fromRecordId, candidate.toRecordId),
 						fromRecordId: candidate.fromRecordId,
 						toRecordId: candidate.toRecordId,
 						relation: decision.relation,
 						weight,
 						evidenceCount: candidate.candidateKeys.length,
-						activationCount:
-							(fromRecord.accessCount ?? 0) + (toRecord.accessCount ?? 0),
+						activationCount: (fromRecord.accessCount ?? 0) + (toRecord.accessCount ?? 0),
 						lastActivatedAt: latestActivationAt(fromRecord, toRecord),
 					};
 
@@ -737,9 +666,7 @@ export function judgeMemoryRelationCandidates(
 
 	return {
 		judgments,
-		relations: judgments.flatMap((judgment) =>
-			judgment.edge ? [judgment.edge] : [],
-		),
+		relations: judgments.flatMap((judgment) => (judgment.edge ? [judgment.edge] : [])),
 	};
 }
 
@@ -760,9 +687,7 @@ function errorInfo(error: unknown): { name: string; message: string } {
 export async function invokeMemoryRelationJudgeProvider(
 	input: InvokeMemoryRelationJudgeProviderInput,
 ): Promise<MemoryRelationJudgeProviderResult> {
-	const recordsById = new Map(
-		input.records.map((record) => [record.id, record]),
-	);
+	const recordsById = new Map(input.records.map((record) => [record.id, record]));
 	const fromRecord = recordsById.get(input.candidate.fromRecordId);
 	const toRecord = recordsById.get(input.candidate.toRecordId);
 
@@ -847,9 +772,7 @@ export async function invokeMemoryRelationJudgeProvider(
 function weakRelationReasonCode(
 	relation: Extract<MemoryRelationJudgmentKind, "related" | "uncertain">,
 ): MemoryWeakRelationObservationReasonCode {
-	return relation === "related"
-		? "weak_related_relation"
-		: "uncertain_relation_candidate";
+	return relation === "related" ? "weak_related_relation" : "uncertain_relation_candidate";
 }
 
 export function buildMemoryWeakRelationObservationReport(
@@ -905,12 +828,8 @@ export function buildMemoryWeakRelationObservationReport(
 		summary: {
 			judgmentCount: input.judgments.length,
 			observationCount: observations.length,
-			relatedCount: observations.filter(
-				(observation) => observation.relation === "related",
-			).length,
-			uncertainCount: observations.filter(
-				(observation) => observation.relation === "uncertain",
-			).length,
+			relatedCount: observations.filter((observation) => observation.relation === "related").length,
+			uncertainCount: observations.filter((observation) => observation.relation === "uncertain").length,
 			excludedStrongRelationCount,
 			promotesToCluster: false,
 			mutatesGraph: false,
@@ -941,9 +860,7 @@ export function buildMemorySummaryCandidates(
 		.slice(0, maxCandidates);
 }
 
-export function buildMemoryRelationPipeline(
-	input: BuildMemoryRelationPipelineInput,
-): MemoryRelationPipeline {
+export function buildMemoryRelationPipeline(input: BuildMemoryRelationPipelineInput): MemoryRelationPipeline {
 	const candidates = buildMemoryRelationCandidates({
 		...input.candidate,
 		records: input.records,
@@ -1025,10 +942,7 @@ export function buildMemoryDeprecationEntries(
 	const entries: MemoryConsolidationPlanEntry[] = [];
 	const bySummary: Record<string, string[]> = {};
 
-	const length = Math.min(
-		input.persistedSummaryIds.length,
-		input.summaryCandidates.length,
-	);
+	const length = Math.min(input.persistedSummaryIds.length, input.summaryCandidates.length);
 
 	for (let i = 0; i < length; i += 1) {
 		const summaryId = input.persistedSummaryIds[i];
@@ -1036,8 +950,7 @@ export function buildMemoryDeprecationEntries(
 		if (!summaryId || !candidate) continue;
 		if (candidate.recordIds.length === 0) continue;
 
-		const reason =
-			input.reasonFor?.(summaryId) ?? `summarized_into:${summaryId}`;
+		const reason = input.reasonFor?.(summaryId) ?? `summarized_into:${summaryId}`;
 
 		const entry = buildMemoryDeprecationEntry({
 			clusterKey: candidate.clusterKey,

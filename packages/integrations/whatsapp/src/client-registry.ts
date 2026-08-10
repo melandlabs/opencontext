@@ -7,8 +7,8 @@
  * Implements the ClientRegistry interface from @opencontext/integrations/core
  */
 
-import type { WASocket } from "@whiskeysockets/baileys";
 import type { ClientRegistry } from "@opencontext/integrations/core";
+import type { WASocket } from "@whiskeysockets/baileys";
 import { DEBUG_WHATSAPP } from "./debug";
 
 // Module instance ID to detect if the module is being re-imported

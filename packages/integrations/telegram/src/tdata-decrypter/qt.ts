@@ -13,15 +13,9 @@ import { Buffer } from "node:buffer";
 /**
  * Read N bytes from buffer
  */
-export function readBytes(
-	buffer: Buffer,
-	offset: number,
-	size: number,
-): Buffer {
+export function readBytes(buffer: Buffer, offset: number, size: number): Buffer {
 	if (offset + size > buffer.length) {
-		throw new Error(
-			`Cannot read ${size} bytes at offset ${offset}, buffer length is ${buffer.length}`,
-		);
+		throw new Error(`Cannot read ${size} bytes at offset ${offset}, buffer length is ${buffer.length}`);
 	}
 	return buffer.subarray(offset, offset + size);
 }
@@ -29,12 +23,7 @@ export function readBytes(
 /**
  * Read integer in big-endian format
  */
-export function readQtInteger(
-	buffer: Buffer,
-	offset: number,
-	size: number,
-	signed: boolean,
-): number {
+export function readQtInteger(buffer: Buffer, offset: number, size: number, signed: boolean): number {
 	const value = readBytes(buffer, offset, size);
 	const hex = value.toString("hex");
 
@@ -86,10 +75,7 @@ export interface ReadResult<T> {
 	newOffset: number;
 }
 
-export function readQtByteArray(
-	buffer: Buffer,
-	offset: number,
-): ReadResult<Buffer> {
+export function readQtByteArray(buffer: Buffer, offset: number): ReadResult<Buffer> {
 	const length = readQtInt32(buffer, offset);
 	let newOffset = offset + 4;
 

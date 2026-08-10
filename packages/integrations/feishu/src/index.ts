@@ -1,25 +1,14 @@
+import * as Lark from "@larksuiteoapi/node-sdk";
 /**
  * Feishu (Lark) platform adapter
  * Send messages via Feishu Open Platform API using app_id / app_secret
  * Needs to work with Feishu WebSocket long-poll listener to receive messages
  */
 import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type {
-	Messages,
-	Message,
-	Image,
-} from "@opencontext/integrations/channels";
-import type {
-	MessageEvent,
-	MessageTarget,
-} from "@opencontext/integrations/channels";
-import type {
-	Friend,
-	Group,
-	GroupMember,
-} from "@opencontext/integrations/channels";
+import type { Image, Message, Messages } from "@opencontext/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
+import type { Friend, Group, GroupMember } from "@opencontext/integrations/channels";
 import { Permission } from "@opencontext/integrations/channels";
-import * as Lark from "@larksuiteoapi/node-sdk";
 import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
 
 const DEBUG = process.env.DEBUG_FEISHU === "true";
@@ -73,9 +62,7 @@ type FeishuMessagePayload = {
 };
 
 function looksLikeMarkdown(text: string): boolean {
-	return /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>|\|)|(\*\*|__|~~|`|\[[^\]]+\]\([^)]+\))/.test(
-		text,
-	);
+	return /(^|\n)\s{0,3}(#{1,6}\s|[-*+]\s|\d+\.\s|>|\|)|(\*\*|__|~~|`|\[[^\]]+\]\([^)]+\))/.test(text);
 }
 
 function buildFeishuPayloads(text: string): FeishuMessagePayload[] {
@@ -104,11 +91,7 @@ function buildFeishuPayloads(text: string): FeishuMessagePayload[] {
 	return payloads;
 }
 
-function assertFeishuMessageCreateSucceeded(
-	response: unknown,
-	operation: string,
-	msgType: string,
-): void {
+function assertFeishuMessageCreateSucceeded(response: unknown, operation: string, msgType: string): void {
 	if (!response || typeof response !== "object") return;
 	const result = response as {
 		code?: number;
@@ -119,9 +102,7 @@ function assertFeishuMessageCreateSucceeded(
 
 	const detail = result.msg ?? result.message ?? "unknown error";
 	throw Object.assign(
-		new Error(
-			`[FeishuAdapter] ${operation} failed msg_type=${msgType} code=${result.code}: ${detail}`,
-		),
+		new Error(`[FeishuAdapter] ${operation} failed msg_type=${msgType} code=${result.code}: ${detail}`),
 		{ code: String(result.code) },
 	);
 }
@@ -129,19 +110,11 @@ function assertFeishuMessageCreateSucceeded(
 /**
  * Extract plain text from Feishu content field (content is JSON string)
  */
-function collectReadableStrings(
-	value: unknown,
-	out: string[],
-	keyHint?: string,
-): void {
+function collectReadableStrings(value: unknown, out: string[], keyHint?: string): void {
 	if (value == null) return;
 	if (typeof value === "string") {
 		const k = (keyHint ?? "").toLowerCase();
-		if (
-			/(^|_)(id|open_id|user_id|union_id|chat_id|message_id|image_key|file_key)$/.test(
-				k,
-			)
-		) {
+		if (/(^|_)(id|open_id|user_id|union_id|chat_id|message_id|image_key|file_key)$/.test(k)) {
 			return;
 		}
 		const s = value.trim();
@@ -161,19 +134,11 @@ function collectReadableStrings(
 	}
 }
 
-function collectQuoteIds(
-	value: unknown,
-	out: Set<string>,
-	keyHint?: string,
-): void {
+function collectQuoteIds(value: unknown, out: Set<string>, keyHint?: string): void {
 	if (value == null) return;
 	if (typeof value === "string") {
 		const k = (keyHint ?? "").toLowerCase();
-		if (
-			/(quote|reply|root|parent)/.test(k) &&
-			/(id|message_id)$/.test(k) &&
-			value.trim()
-		) {
+		if (/(quote|reply|root|parent)/.test(k) && /(id|message_id)$/.test(k) && value.trim()) {
 			out.add(value.trim());
 		}
 		return;
@@ -191,12 +156,7 @@ function collectQuoteIds(
 	}
 }
 
-function collectImageKeys(
-	value: unknown,
-	out: Set<string>,
-	keyHint?: string,
-	inQuotedContext = false,
-): void {
+function collectImageKeys(value: unknown, out: Set<string>, keyHint?: string, inQuotedContext = false): void {
 	if (value == null) return;
 	if (typeof value === "string") {
 		const k = (keyHint ?? "").toLowerCase();
@@ -213,9 +173,7 @@ function collectImageKeys(
 	}
 	if (typeof value === "object") {
 		for (const [k, v] of Object.entries(value)) {
-			const isQuotedField = /(quote|quoted|reply|root|parent|reference)/i.test(
-				k,
-			);
+			const isQuotedField = /(quote|quoted|reply|root|parent|reference)/i.test(k);
 			collectImageKeys(v, out, k, inQuotedContext || isQuotedField);
 		}
 	}
@@ -239,8 +197,7 @@ function extractContentInfo(content: string | undefined | null): {
 		const normalized = Array.from(new Set(chunks)).join("\n").trim();
 		const quoteIds = [...quoteIdSet];
 		const imageKeys = [...imageKeySet];
-		const quotePrefix =
-			quoteIds.length > 0 ? `[Quote ID]: ${quoteIds.join(", ")}\n` : "";
+		const quotePrefix = quoteIds.length > 0 ? `[Quote ID]: ${quoteIds.join(", ")}\n` : "";
 		return {
 			text: `${quotePrefix}${normalized}`.trim().slice(0, 10_000),
 			quoteIds,
@@ -257,11 +214,11 @@ function extractImageKeysFromRawContent(raw: string): string[] {
 	const imageKeyRegex = /"image_key"\s*:\s*"([^"]+)"/g;
 	const fileKeyRegex = /"file_key"\s*:\s*"([^"]+)"/g;
 	for (const regex of [imageKeyRegex, fileKeyRegex]) {
-		let m: RegExpExecArray | null;
-		// eslint-disable-next-line no-cond-assign
-		while ((m = regex.exec(raw)) != null) {
+		let m: RegExpExecArray | null = regex.exec(raw);
+		while (m != null) {
 			const k = m[1]?.trim();
 			if (k) out.add(k);
+			m = regex.exec(raw);
 		}
 	}
 	return [...out];
@@ -274,8 +231,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	private botId: string;
 	/** Open API base path (including /open-apis), used for token refresh and direct GET */
 	private readonly openApisBase: string;
-	private tenantTokenCache: { token: string; expiresAtMs: number } | null =
-		null;
+	private tenantTokenCache: { token: string; expiresAtMs: number } | null = null;
 	private botOpenIdMemo: string | null | undefined;
 
 	constructor(opts: {
@@ -292,9 +248,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			...(opts.domain ? { domain: opts.domain } : {}),
 		};
 		this.openApisBase =
-			opts.domain === "lark"
-				? "https://open.larksuite.com/open-apis"
-				: "https://open.feishu.cn/open-apis";
+			opts.domain === "lark" ? "https://open.larksuite.com/open-apis" : "https://open.feishu.cn/open-apis";
 		this.client = new Lark.Client({
 			appId: this.credentials.appId,
 			appSecret: this.credentials.appSecret,
@@ -313,24 +267,18 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 	private async getTenantAccessToken(): Promise<string> {
 		const now = Date.now();
-		if (
-			this.tenantTokenCache &&
-			this.tenantTokenCache.expiresAtMs - now > 60_000
-		) {
+		if (this.tenantTokenCache && this.tenantTokenCache.expiresAtMs - now > 60_000) {
 			return this.tenantTokenCache.token;
 		}
 
-		const resp = await fetch(
-			`${this.openApisBase}/auth/v3/tenant_access_token/internal`,
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json; charset=utf-8" },
-				body: JSON.stringify({
-					app_id: this.credentials.appId,
-					app_secret: this.credentials.appSecret,
-				}),
-			},
-		);
+		const resp = await fetch(`${this.openApisBase}/auth/v3/tenant_access_token/internal`, {
+			method: "POST",
+			headers: { "Content-Type": "application/json; charset=utf-8" },
+			body: JSON.stringify({
+				app_id: this.credentials.appId,
+				app_secret: this.credentials.appSecret,
+			}),
+		});
 
 		const json = (await resp.json().catch(() => null)) as {
 			tenant_access_token?: string;
@@ -341,10 +289,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok || !json?.tenant_access_token) {
 			const msg = json?.msg ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[FeishuAdapter] Failed to get tenant_access_token: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[FeishuAdapter] Failed to get tenant_access_token: ${msg}`, resp.status);
 		}
 
 		const expireSec = typeof json.expire === "number" ? json.expire : 3600;
@@ -355,10 +300,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		return json.tenant_access_token;
 	}
 
-	private async feishuGet<T>(
-		path: string,
-		query?: Record<string, string | number | undefined>,
-	): Promise<T> {
+	private async feishuGet<T>(path: string, query?: Record<string, string | number | undefined>): Promise<T> {
 		const token = await this.getTenantAccessToken();
 		const url = new URL(`${this.openApisBase}${path}`);
 		if (query) {
@@ -378,10 +320,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok || (typeof json?.code === "number" && json.code !== 0)) {
 			const msg = json?.msg ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[FeishuAdapter] GET ${path} failed: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[FeishuAdapter] GET ${path} failed: ${msg}`, resp.status);
 		}
 		return json as T;
 	}
@@ -404,9 +343,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		// Check file size (Feishu limit: 20MB)
 		const MAX_SIZE = 20 * 1024 * 1024;
 		if (fileBuffer.length > MAX_SIZE) {
-			throw new Error(
-				`[FeishuAdapter] Image too large (${fileBuffer.length} bytes), max 20MB`,
-			);
+			throw new Error(`[FeishuAdapter] Image too large (${fileBuffer.length} bytes), max 20MB`);
 		}
 
 		// Determine content type from extension
@@ -424,11 +361,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		// Use FormData API for multipart upload (compatible with Tauri/browser environments)
 		const formData = new FormData();
 		formData.append("image_type", "message");
-		formData.append(
-			"image",
-			new Blob([fileBuffer], { type: contentType }),
-			filename,
-		);
+		formData.append("image", new Blob([fileBuffer], { type: contentType }), filename);
 
 		const resp = await fetch(`${this.openApisBase}/im/v1/images`, {
 			method: "POST",
@@ -446,16 +379,11 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok || json?.code !== 0 || !json?.data?.image_key) {
 			const msg = json?.msg ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[FeishuAdapter] uploadImage failed: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[FeishuAdapter] uploadImage failed: ${msg}`, resp.status);
 		}
 
 		if (DEBUG) {
-			console.log(
-				`[FeishuAdapter] Uploaded image ${imagePath} -> ${json.data.image_key}`,
-			);
+			console.log(`[FeishuAdapter] Uploaded image ${imagePath} -> ${json.data.image_key}`);
 		}
 		return json.data.image_key;
 	}
@@ -463,11 +391,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	/**
 	 * Send an image message using the image_key from uploadImage
 	 */
-	private async sendImageMessage(
-		receiveId: string,
-		imageKey: string,
-		rootId?: string,
-	): Promise<void> {
+	private async sendImageMessage(receiveId: string, imageKey: string, rootId?: string): Promise<void> {
 		const client = this.getClient();
 		const response = await (client.im.v1.message.create as any)({
 			params: { receive_id_type: detectReceiveIdType(receiveId) },
@@ -511,11 +435,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	/**
 	 * Send text messages as a single Feishu text/post payload
 	 */
-	private async sendTextPayload(
-		receiveId: string,
-		text: string,
-		rootId?: string,
-	): Promise<void> {
+	private async sendTextPayload(receiveId: string, text: string, rootId?: string): Promise<void> {
 		const client = this.getClient();
 		const payloads = buildFeishuPayloads(text);
 		let lastError: unknown;
@@ -531,23 +451,15 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 						...(rootId ? { root_id: rootId } : {}),
 					},
 				});
-				assertFeishuMessageCreateSucceeded(
-					response,
-					"sendTextPayload",
-					payload.msg_type,
-				);
+				assertFeishuMessageCreateSucceeded(response, "sendTextPayload", payload.msg_type);
 				if (DEBUG) {
-					console.log(
-						`[FeishuAdapter] Sent text to ${receiveId} as ${payload.msg_type}`,
-					);
+					console.log(`[FeishuAdapter] Sent text to ${receiveId} as ${payload.msg_type}`);
 				}
 				return;
 			} catch (err) {
 				lastError = err;
 				if (DEBUG) {
-					console.warn(
-						`[FeishuAdapter] Text payload failed, trying next: ${err}`,
-					);
+					console.warn(`[FeishuAdapter] Text payload failed, trying next: ${err}`);
 				}
 			}
 		}
@@ -574,10 +486,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			},
 		});
 		if (!resp.ok) {
-			throw httpStatusError(
-				`[FeishuAdapter] GET(binary) ${path} failed: HTTP ${resp.status}`,
-				resp.status,
-			);
+			throw httpStatusError(`[FeishuAdapter] GET(binary) ${path} failed: HTTP ${resp.status}`, resp.status);
 		}
 		const mimeType = resp.headers.get("content-type") || "image/jpeg";
 		const ab = await resp.arrayBuffer();
@@ -589,11 +498,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	 * Feishu uses chat_id as conversation identifier (both private and group chats have chat_id)
 	 * detectReceiveIdType dynamically selects receive_id_type based on ID prefix (ou_ -> open_id, oc_ -> chat_id).
 	 */
-	async sendMessages(
-		target: MessageTarget,
-		id: string,
-		messages: Messages,
-	): Promise<void> {
+	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			const { texts, images } = this.separateMessages(messages);
 
@@ -609,10 +514,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			for (const image of images) {
 				const imagePath = image.path;
 				if (!imagePath) {
-					console.warn(
-						"[FeishuAdapter] Image has no local path, skipping:",
-						image.url,
-					);
+					console.warn("[FeishuAdapter] Image has no local path, skipping:", image.url);
 					continue;
 				}
 
@@ -627,24 +529,15 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		});
 	}
 
-	async replyMessages(
-		event: MessageEvent,
-		messages: Messages,
-		_quoteOrigin = false,
-	): Promise<void> {
+	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			const chatId =
-				event.sourcePlatformObject?.event?.message?.chat_id ??
-				event.sourcePlatformObject?.message?.chat_id;
+				event.sourcePlatformObject?.event?.message?.chat_id ?? event.sourcePlatformObject?.message?.chat_id;
 			const messageId =
 				event.sourcePlatformObject?.event?.message?.message_id ??
 				event.sourcePlatformObject?.message?.message_id;
 			if (!chatId) {
-				await this.sendMessages(
-					event.targetType,
-					(event.sender as Friend).id as string,
-					messages,
-				);
+				await this.sendMessages(event.targetType, (event.sender as Friend).id as string, messages);
 				return;
 			}
 
@@ -667,10 +560,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			for (const image of images) {
 				const imagePath = image.path;
 				if (!imagePath) {
-					console.warn(
-						"[FeishuAdapter] Reply image has no local path, skipping:",
-						image.url,
-					);
+					console.warn("[FeishuAdapter] Reply image has no local path, skipping:", image.url);
 					continue;
 				}
 
@@ -719,9 +609,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					page_token: pageToken,
 				});
 
-				const items: any[] = Array.isArray(resp?.data?.items)
-					? (resp.data?.items as any[])
-					: [];
+				const items: any[] = Array.isArray(resp?.data?.items) ? (resp.data?.items as any[]) : [];
 
 				if (items.length === 0) {
 					break;
@@ -730,8 +618,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				for (const c of items) {
 					const chatId: string | undefined = c.chat_id ?? c.id;
 					if (!chatId) continue;
-					const name: string | undefined =
-						c.name ?? c.chat_name ?? c.display_name ?? chatId;
+					const name: string | undefined = c.name ?? c.chat_name ?? c.display_name ?? chatId;
 					const mode = (c.chat_mode ?? c.chat_type ?? "unknown") as string;
 					const chatType: "p2p" | "group" | "unknown" =
 						mode === "p2p" ? "p2p" : mode === "group" ? "group" : "unknown";
@@ -760,10 +647,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			}
 		}
 
-		if (DEBUG)
-			console.log(
-				`[FeishuAdapter] Retrieved ${chats.length} conversations via /im/v1/chats`,
-			);
+		if (DEBUG) console.log(`[FeishuAdapter] Retrieved ${chats.length} conversations via /im/v1/chats`);
 
 		return chats;
 	}
@@ -827,27 +711,22 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			const imageKeyRegex = /"image_key"\s*:\s*"([^"]+)"/g;
 			const fileKeyRegex = /"file_key"\s*:\s*"([^"]+)"/g;
 			for (const regex of [imageKeyRegex, fileKeyRegex]) {
-				let m: RegExpExecArray | null;
-				// eslint-disable-next-line no-cond-assign
-				while ((m = regex.exec(raw)) != null) {
+				let m: RegExpExecArray | null = regex.exec(raw);
+				while (m != null) {
 					const key = m[1]?.trim();
 					if (key) out.add(key);
+					m = regex.exec(raw);
 				}
 			}
 			return [...out];
 		};
 
 		try {
-			const resp = await this.feishuGet<any>(
-				`/im/v1/messages/${encodeURIComponent(mid)}`,
-			);
+			const resp = await this.feishuGet<any>(`/im/v1/messages/${encodeURIComponent(mid)}`);
 			const content =
-				(typeof resp?.data?.items?.[0]?.body?.content === "string" &&
-					resp.data.items[0].body.content) ||
-				(typeof resp?.data?.items?.[0]?.content === "string" &&
-					resp.data.items[0].content) ||
-				(typeof resp?.data?.body?.content === "string" &&
-					resp.data.body.content) ||
+				(typeof resp?.data?.items?.[0]?.body?.content === "string" && resp.data.items[0].body.content) ||
+				(typeof resp?.data?.items?.[0]?.content === "string" && resp.data.items[0].content) ||
+				(typeof resp?.data?.body?.content === "string" && resp.data.body.content) ||
 				(typeof resp?.data?.content === "string" && resp.data.content) ||
 				"";
 			return extract(content);
@@ -896,9 +775,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			if (page >= maxPages) {
-				console.warn(
-					`[FeishuAdapter] fetchChatMessagesSince hit maxPages=${maxPages} chatId=${chatId}`,
-				);
+				console.warn(`[FeishuAdapter] fetchChatMessagesSince hit maxPages=${maxPages} chatId=${chatId}`);
 				break;
 			}
 			page++;
@@ -971,16 +848,8 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					}
 
 					const senderInfo: any =
-						item.sender ??
-						item.sender_id ??
-						item.sender_id?.open_id ??
-						item.sender_id?.user_id ??
-						{};
-					const senderId: string =
-						senderInfo.open_id ??
-						senderInfo.user_id ??
-						senderInfo.id ??
-						"unknown";
+						item.sender ?? item.sender_id ?? item.sender_id?.open_id ?? item.sender_id?.user_id ?? {};
+					const senderId: string = senderInfo.open_id ?? senderInfo.user_id ?? senderInfo.id ?? "unknown";
 					const senderName: string | undefined =
 						typeof senderInfo.sender_name === "string"
 							? senderInfo.sender_name
@@ -1016,10 +885,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				}
 				pageToken = nextToken;
 			} catch (err) {
-				console.error(
-					`[FeishuAdapter] fetchChatMessagesSince failed chatId=${chatId}:`,
-					err,
-				);
+				console.error(`[FeishuAdapter] fetchChatMessagesSince failed chatId=${chatId}:`, err);
 				break;
 			}
 		}
@@ -1041,15 +907,11 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			const resp = await this.feishuGet<{
 				data?: { name?: string; chat_name?: string; display_name?: string };
 			}>(`/im/v1/chats/${encodeURIComponent(chatId)}`);
-			const name =
-				resp?.data?.name ?? resp?.data?.chat_name ?? resp?.data?.display_name;
+			const name = resp?.data?.name ?? resp?.data?.chat_name ?? resp?.data?.display_name;
 			return typeof name === "string" && name.trim().length > 0 ? name : null;
 		} catch (err) {
 			if (DEBUG) {
-				console.warn(
-					`[FeishuAdapter] Failed to get conversation details chatId=${chatId}`,
-					err,
-				);
+				console.warn(`[FeishuAdapter] Failed to get conversation details chatId=${chatId}`, err);
 			}
 			return null;
 		}
@@ -1151,16 +1013,8 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 						}
 
 						const senderInfo: any =
-							item.sender ??
-							item.sender_id ??
-							item.sender_id?.open_id ??
-							item.sender_id?.user_id ??
-							{};
-						const senderId: string =
-							senderInfo.open_id ??
-							senderInfo.user_id ??
-							senderInfo.id ??
-							"unknown";
+							item.sender ?? item.sender_id ?? item.sender_id?.open_id ?? item.sender_id?.user_id ?? {};
+						const senderId: string = senderInfo.open_id ?? senderInfo.user_id ?? senderInfo.id ?? "unknown";
 
 						const chatType: "private" | "group" | "channel" | "unknown" =
 							chat.chatType === "group"

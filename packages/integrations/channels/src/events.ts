@@ -1,5 +1,5 @@
-import type { Friend, GroupMember, Group } from "./entities";
 import type { Attachment } from "@opencontext/shared";
+import type { Friend, Group, GroupMember } from "./entities";
 import type { Messages } from "./message";
 
 export type MessageTarget = "private" | "group";
@@ -46,12 +46,7 @@ export class PrivateMessageEvent extends BaseMessageEvent {
 	public sender: Friend;
 	targetType = "private" as const;
 
-	constructor(
-		sender: Friend,
-		messages: Messages,
-		time?: number,
-		sourcePlatformObject?: any,
-	) {
+	constructor(sender: Friend, messages: Messages, time?: number, sourcePlatformObject?: any) {
 		super(messages, time, sourcePlatformObject);
 		this.sender = sender;
 	}
@@ -65,12 +60,7 @@ export class GroupMessageEvent extends BaseMessageEvent {
 	public sender: GroupMember;
 	targetType = "group" as const;
 
-	constructor(
-		sender: GroupMember,
-		messages: Messages,
-		time?: number,
-		sourcePlatformObject?: any,
-	) {
+	constructor(sender: GroupMember, messages: Messages, time?: number, sourcePlatformObject?: any) {
 		super(messages, time, sourcePlatformObject);
 		this.sender = sender;
 	}

@@ -121,9 +121,7 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 		return OPENROUTER_CAPABILITIES;
 	}
 
-	async generate(
-		request: VideoGenerationRequest,
-	): Promise<VideoGenerationResponse> {
+	async generate(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
 		if (!this.isAvailable()) {
 			return {
 				success: false,
@@ -133,8 +131,7 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 				aspect_ratio: request.aspect_ratio || "16:9",
 				duration: request.duration || 10,
 				provider: this.name,
-				error:
-					"OpenRouter API not configured. Save an OpenRouter API key in your AI provider preferences.",
+				error: "OpenRouter API not configured. Save an OpenRouter API key in your AI provider preferences.",
 				error_type: "configuration_error",
 			};
 		}
@@ -167,10 +164,6 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 				payload.resolution = request.resolution;
 			}
 
-			console.log(
-				`[OpenRouter Video Gen] Calling ${this.baseUrl}/videos with model=${model}`,
-			);
-
 			// Step 1: Submit video generation request
 			const response = await fetch(`${this.baseUrl}/videos`, {
 				method: "POST",
@@ -183,13 +176,6 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 
 			if (!response.ok) {
 				const errorText = await response.text();
-				console.error(
-					`[OpenRouter Video Gen] API Error ${response.status}: ${errorText}`,
-				);
-				console.error(
-					"[OpenRouter Video Gen] Request payload:",
-					JSON.stringify(payload, null, 2),
-				);
 				return {
 					success: false,
 					model: model,
@@ -214,10 +200,6 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 			const pollingUrl = submitResult.polling_url;
 
 			if (!jobId || !pollingUrl) {
-				console.error(
-					"[OpenRouter Video Gen] Missing job id or polling_url in response:",
-					JSON.stringify(submitResult),
-				);
 				return {
 					success: false,
 					model: model,
@@ -226,16 +208,10 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 					aspect_ratio: aspectRatio,
 					duration: duration,
 					provider: this.name,
-					error:
-						submitResult.error ||
-						"Invalid response from OpenRouter: missing job id or polling_url",
+					error: submitResult.error || "Invalid response from OpenRouter: missing job id or polling_url",
 					error_type: "api_error",
 				};
 			}
-
-			console.log(
-				`[OpenRouter Video Gen] Job submitted: ${jobId}, polling URL: ${pollingUrl}`,
-			);
 
 			// Step 2: Poll for completion
 			const maxPollAttempts = 120; // 2 minutes max (120 * 1s)
@@ -272,10 +248,6 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 					unsigned_urls?: string[];
 				};
 
-				console.log(
-					`[OpenRouter Video Gen] Poll ${pollAttempts}: status=${statusData.status}`,
-				);
-
 				if (statusData.status === "completed") {
 					const videoUrls = statusData.unsigned_urls || [];
 					const videoUrl = videoUrls[0];
@@ -293,10 +265,6 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 							error_type: "api_error",
 						};
 					}
-
-					console.log(
-						`[OpenRouter Video Gen] Video ready: ${videoUrl.substring(0, 100)}...`,
-					);
 
 					return {
 						success: true,
@@ -349,8 +317,7 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 				aspect_ratio: request.aspect_ratio || "16:9",
 				duration: request.duration || 10,
 				provider: this.name,
-				error:
-					error instanceof Error ? error.message : "Unknown error occurred",
+				error: error instanceof Error ? error.message : "Unknown error occurred",
 				error_type: "unknown_error",
 			};
 		}

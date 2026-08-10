@@ -18,11 +18,5 @@ export default defineConfig({
 	clean: true,
 	splitting: false,
 	treeshake: true,
-	external: [
-		"react",
-		"react-dom",
-		"@tauri-apps/api",
-		"better-sqlite3",
-		"sqlite-vec",
-	],
+	external: ["react", "react-dom", "@tauri-apps/api", "better-sqlite3", "sqlite-vec"],
 });

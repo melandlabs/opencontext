@@ -2,10 +2,10 @@
  * Cron Job Types and Interfaces
  *
  * The `ScheduledJob` import is a *type-only* structural pull. We point it at
- * a tiny local interface so this package never needs to import the giant
- * `apps/web/lib/db/schema.ts` Drizzle table bundle. Apps that want a fully-
- * typed bridge to the Drizzle row can pass their own `ScheduledJob`-shaped
- * record into helpers in this package.
+ * a tiny local interface so this package never needs to import a Drizzle
+ * table bundle. Apps that want a fully-typed bridge to their own Drizzle
+ * row can pass their own `ScheduledJob`-shaped record into helpers in this
+ * package.
  */
 
 export interface ScheduledJobLike {

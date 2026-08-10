@@ -34,13 +34,9 @@ class SandboxRegistry {
 		const { type, name } = plugin.metadata;
 
 		if (this.plugins.has(type)) {
-			console.warn(
-				`[SandboxRegistry] Provider "${type}" (${name}) is already registered. Overwriting...`,
-			);
 		}
 
 		this.plugins.set(type, plugin);
-		console.log(`[SandboxRegistry] Registered provider: ${type} (${name})`);
 	}
 
 	unregister(type: string): void {
@@ -48,17 +44,11 @@ class SandboxRegistry {
 		if (plugin) {
 			const instance = this.instances.get(type);
 			if (instance) {
-				instance.provider.stop().catch((err) => {
-					console.error(
-						`[SandboxRegistry] Error stopping provider ${type}:`,
-						err,
-					);
-				});
+				instance.provider.stop().catch((_err) => {});
 				this.instances.delete(type);
 			}
 
 			this.plugins.delete(type);
-			console.log(`[SandboxRegistry] Unregistered provider: ${type}`);
 		}
 	}
 
@@ -73,14 +63,10 @@ class SandboxRegistry {
 		}
 
 		const provider = plugin.factory(config.config);
-		console.log(`[SandboxRegistry] Created provider instance: ${config.type}`);
 		return provider;
 	}
 
-	async getInstance(
-		type: string,
-		config?: Record<string, unknown>,
-	): Promise<ISandboxProvider> {
+	async getInstance(type: string, config?: Record<string, unknown>): Promise<ISandboxProvider> {
 		const existing = this.instances.get(type);
 		if (existing && existing.state === "ready") {
 			existing.lastUsedAt = new Date();
@@ -107,15 +93,9 @@ class SandboxRegistry {
 			instance.state = "initializing";
 			await provider.init(config);
 			instance.state = "ready";
-			console.log(`[SandboxRegistry] Initialized provider: ${type}`);
 		} catch (error) {
 			instance.state = "error";
-			instance.error =
-				error instanceof Error ? error : new Error(String(error));
-			console.error(
-				`[SandboxRegistry] Failed to initialize provider ${type}:`,
-				error,
-			);
+			instance.error = error instanceof Error ? error : new Error(String(error));
 			throw error;
 		}
 
@@ -141,12 +121,7 @@ class SandboxRegistry {
 					available.push(type);
 				}
 				await provider.stop().catch(() => {});
-			} catch (error) {
-				console.warn(
-					`[SandboxRegistry] Error checking availability for ${type}:`,
-					error,
-				);
-			}
+			} catch (_error) {}
 		}
 
 		return available;
@@ -160,10 +135,8 @@ class SandboxRegistry {
 		}
 
 		const sorted = available.sort((a, b) => {
-			const priorityA =
-				PROVIDER_PRIORITY[a as keyof typeof PROVIDER_PRIORITY] || 0;
-			const priorityB =
-				PROVIDER_PRIORITY[b as keyof typeof PROVIDER_PRIORITY] || 0;
+			const priorityA = PROVIDER_PRIORITY[a as keyof typeof PROVIDER_PRIORITY] || 0;
+			const priorityB = PROVIDER_PRIORITY[b as keyof typeof PROVIDER_PRIORITY] || 0;
 			return priorityB - priorityA;
 		});
 
@@ -177,13 +150,8 @@ class SandboxRegistry {
 	async stopAll(): Promise<void> {
 		const stopPromises: Promise<void>[] = [];
 
-		for (const [type, instance] of this.instances.entries()) {
-			console.log(`[SandboxRegistry] Stopping provider: ${type}`);
-			stopPromises.push(
-				instance.provider.stop().catch((err) => {
-					console.error(`[SandboxRegistry] Error stopping ${type}:`, err);
-				}),
-			);
+		for (const [_type, instance] of this.instances.entries()) {
+			stopPromises.push(instance.provider.stop().catch((_err) => {}));
 		}
 
 		await Promise.all(stopPromises);
@@ -194,9 +162,7 @@ class SandboxRegistry {
 		const bestType = await this.getBestAvailable();
 
 		if (!bestType) {
-			throw new Error(
-				"No sandbox providers available. Please ensure at least one provider is installed.",
-			);
+			throw new Error("No sandbox providers available. Please ensure at least one provider is installed.");
 		}
 
 		const provider = await this.getInstance(bestType);
@@ -225,9 +191,7 @@ export function registerSandboxProvider(plugin: SandboxPlugin): void {
 	registry.register(plugin);
 }
 
-export function createSandboxProvider(
-	config: SandboxProviderConfig,
-): ISandboxProvider {
+export function createSandboxProvider(config: SandboxProviderConfig): ISandboxProvider {
 	const registry = getSandboxRegistry();
 	return registry.create(config);
 }

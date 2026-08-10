@@ -9,8 +9,7 @@ export default defineConfig({
 		"unified-vector-search-service": "src/unified-vector-search-service.ts",
 		parsers: "src/parsers.ts",
 		"embedding-provider": "src/embedding-provider.ts",
-		"local-transformers-embedding-provider":
-			"src/local-transformers-embedding-provider.ts",
+		"local-transformers-embedding-provider": "src/local-transformers-embedding-provider.ts",
 		"universal-embeddings": "src/universal-embeddings.ts",
 		"chroma-store": "src/chroma-store.ts",
 		"sqlite-vec-store": "src/sqlite-vec-store.ts",
@@ -22,11 +21,5 @@ export default defineConfig({
 	clean: true,
 	splitting: false,
 	treeshake: true,
-	external: [
-		"react",
-		"react-dom",
-		"@tauri-apps/api",
-		"better-sqlite3",
-		"sqlite-vec",
-	],
+	external: ["react", "react-dom", "@tauri-apps/api", "better-sqlite3", "sqlite-vec"],
 });

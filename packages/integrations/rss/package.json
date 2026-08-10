@@ -1,47 +1,44 @@
 {
-  "name": "@opencontext/rss",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/integrations/rss"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/rss",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · rss module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "fast-xml-parser": "^4.3.4",
-    "zod": "^4.3.6"
-  },
-  "peerDependencies": {
-    "react": ">=18.0.0"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/rss",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/integrations/rss"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/rss",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · rss module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"fast-xml-parser": "^4.3.4",
+		"zod": "^4.3.6"
+	},
+	"peerDependencies": {
+		"react": ">=18.0.0"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

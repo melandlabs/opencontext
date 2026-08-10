@@ -366,5 +366,6 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 ## See also
 
-- [`apps/marketing/content/memory.mdx`](https://github.com/melandlabs/opencontext/blob/main/apps/marketing/content/memory.mdx)
-  — end-to-end memory architecture and the standalone-service section.
+- [`docs/architecture.md`](../../docs/architecture.md) — the overall data
+  model, lifecycle, and transport surfaces that the memory primitives
+  plug into.

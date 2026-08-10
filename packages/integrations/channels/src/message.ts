@@ -79,7 +79,7 @@ export type At = {
 /**
  * Represents an @all mention to notify all group members.
  */
-export type AtAll = {};
+export type AtAll = Record<string, never>;
 
 /**
  * Represents an image message.

@@ -12,10 +12,7 @@ type Listener<T> = (value: T) => void;
  * @param key - The localStorage key
  * @param initialValue - The initial value if no value is stored
  */
-export function useLocalSync<T>(
-	key: string,
-	initialValue: T,
-): [T, (value: T | ((prev: T) => T)) => void] {
+export function useLocalSync<T>(key: string, initialValue: T): [T, (value: T | ((prev: T) => T)) => void] {
 	const listeners = useRef<Set<Listener<T>>>(new Set());
 	const isUpdating = useRef(false);
 	const valueRef = useRef<T>(initialValue);
@@ -52,7 +49,7 @@ export function useLocalSync<T>(
 			}
 
 			// Notify all listeners (in-process subscribers)
-			listeners.current.forEach((listener) => listener(value));
+			for (const listener of listeners.current) listener(value);
 		},
 		[key],
 	);
@@ -60,8 +57,7 @@ export function useLocalSync<T>(
 	// Set value function
 	const setValue = useCallback(
 		(value: T | ((prev: T) => T)) => {
-			const valueToStore =
-				value instanceof Function ? value(valueRef.current) : value;
+			const valueToStore = value instanceof Function ? value(valueRef.current) : value;
 			sync(valueToStore);
 		},
 		[sync],

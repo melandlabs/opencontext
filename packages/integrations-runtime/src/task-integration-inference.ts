@@ -71,8 +71,7 @@ const SOURCE_PLATFORM_RULES: PlatformRule[] = [
 /** Email platforms can serve as both data sources and notification channels. */
 const EMAIL_PLATFORMS = new Set<IntegrationId>(["gmail", "outlook"]);
 
-const NOTIFICATION_INTENT_PATTERN =
-	/(?:发送|发到|推送|通知|同步|send|notify|push|post|发给).{0,20}/i;
+const NOTIFICATION_INTENT_PATTERN = /(?:发送|发到|推送|通知|同步|send|notify|push|post|发给).{0,20}/i;
 
 /** Patterns that strongly indicate a source (read/pull) intent for email platforms. */
 const EMAIL_SOURCE_STRONG_PATTERNS: RegExp[] = [
@@ -95,8 +94,7 @@ function isNotificationIntent(text: string, platform: IntegrationId) {
 	if (EMAIL_PLATFORMS.has(platform)) {
 		// For email platforms, check both brand name and generic email terms
 		const platformPattern = new RegExp(platform.replace("_", "[_\\s-]?"), "i");
-		const hasPlatformMention =
-			platformPattern.test(text) || /(?:邮箱|邮件|email)/i.test(text);
+		const hasPlatformMention = platformPattern.test(text) || /(?:邮箱|邮件|email)/i.test(text);
 		if (!hasPlatformMention) return false;
 
 		return EMAIL_NOTIFICATION_STRONG_PATTERNS.some((p) => p.test(text));
@@ -130,15 +128,8 @@ function isSourceIntent(text: string, rule: PlatformRule) {
 		return true;
 	}
 
-	const escapedLabels = new Set([
-		rule.label,
-		...rule.label.split("/"),
-		rule.platform,
-	]);
-	const labelAlt = [
-		...Array.from(escapedLabels).map(escapeRegex),
-		...(rule.labelPatterns ?? []),
-	].join("|");
+	const escapedLabels = new Set([rule.label, ...rule.label.split("/"), rule.platform]);
+	const labelAlt = [...Array.from(escapedLabels).map(escapeRegex), ...(rule.labelPatterns ?? [])].join("|");
 
 	return new RegExp(
 		`(?:从|读取|拉取|整理|分析|监控|检查|查看)\\s*(?:我的)?\\s*(?:${labelAlt})|(?:${labelAlt}).{0,16}(?:读取|拉取|整理|分析|监控|检查|查看|消息|频道|channel|messages)`,
@@ -146,17 +137,13 @@ function isSourceIntent(text: string, rule: PlatformRule) {
 	).test(text);
 }
 
-export function inferTaskIntegrationRequirementsFromText(
-	text: string,
-): InferredTaskIntegrationRequirements {
+export function inferTaskIntegrationRequirementsFromText(text: string): InferredTaskIntegrationRequirements {
 	const trimmed = text.trim();
 	if (!trimmed) {
 		return { sources: [], notificationChannels: [] };
 	}
 
-	const sourcePlatforms = SOURCE_PLATFORM_RULES.filter((rule) =>
-		isSourceIntent(trimmed, rule),
-	);
+	const sourcePlatforms = SOURCE_PLATFORM_RULES.filter((rule) => isSourceIntent(trimmed, rule));
 	const notificationPlatforms = SOURCE_PLATFORM_RULES.filter((rule) =>
 		isNotificationIntent(trimmed, rule.platform),
 	);
@@ -166,8 +153,6 @@ export function inferTaskIntegrationRequirementsFromText(
 			type: "channel",
 			name: `${rule.platform}:__required__::${rule.label}`,
 		})),
-		notificationChannels: notificationPlatforms.map(
-			(rule) => `${rule.platform}:__required__`,
-		),
+		notificationChannels: notificationPlatforms.map((rule) => `${rule.platform}:__required__`),
 	};
 }

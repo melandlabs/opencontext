@@ -3,11 +3,7 @@
  * Converts <link href="style.css"> and <script src="app.js"> to inline content
  * Also fetches and inlines remote CDN resources (CSS, JS) for CSP compatibility
  */
-export async function inlineResources(
-	html: string,
-	fileDir: string,
-	taskId?: string,
-): Promise<string> {
+export async function inlineResources(html: string, fileDir: string, taskId?: string): Promise<string> {
 	let processedHtml = html;
 
 	// Extract and inline CSS (match any link with href, not just .css files)
@@ -24,8 +20,7 @@ export async function inlineResources(
 		if (matchIndex === undefined) continue;
 
 		// Determine if it's a remote URL
-		const isRemote =
-			cssPath.startsWith("http://") || cssPath.startsWith("https://");
+		const isRemote = cssPath.startsWith("http://") || cssPath.startsWith("https://");
 
 		if (isRemote) {
 			// Fetch and inline remote CSS/CDN resources for CSP compatibility
@@ -38,34 +33,25 @@ export async function inlineResources(
 					const inlineCss = `<style>\n${cssContent}\n</style>`;
 					// Replace based on position, not string match (to avoid matching strings inside other content)
 					processedHtml =
-						processedHtml.slice(0, matchIndex) +
-						inlineCss +
-						processedHtml.slice(matchIndex + fullTag.length);
+						processedHtml.slice(0, matchIndex) + inlineCss + processedHtml.slice(matchIndex + fullTag.length);
 				}
 			} catch (err) {
-				console.error(
-					`[WebsitePreview] Failed to fetch remote CSS ${cssPath}:`,
-					err,
-				);
+				console.error(`[WebsitePreview] Failed to fetch remote CSS ${cssPath}:`, err);
 				// Remove the tag when fetch fails - keeping external CSS links
 				// causes CSP violations. For Google Fonts, this also serves as
 				// a fallback to system fonts.
-				processedHtml =
-					processedHtml.slice(0, matchIndex) +
-					processedHtml.slice(matchIndex + fullTag.length);
+				processedHtml = processedHtml.slice(0, matchIndex) + processedHtml.slice(matchIndex + fullTag.length);
 			}
 		} else {
-			const relativeCssPath = cssPath.startsWith("/")
-				? cssPath
-				: `${fileDir}/${cssPath}`;
+			const relativeCssPath = cssPath.startsWith("/") ? cssPath : `${fileDir}/${cssPath}`;
 
 			try {
 				let cssContent = "";
 				const isTauri = !!(globalThis as any).__TAURI__;
 
 				if (isTauri) {
-					const { readFile } = await import("@/lib/tauri");
-					const data = await readFile(relativeCssPath);
+					const { readTextFile } = await import("@tauri-apps/plugin-fs");
+					const data = await readTextFile(relativeCssPath);
 					cssContent = data || "";
 				} else if (taskId) {
 					// Read from API - handle relative paths
@@ -84,15 +70,10 @@ export async function inlineResources(
 				if (cssContent) {
 					const inlineCss = `<style>\n${cssContent}\n</style>`;
 					processedHtml =
-						processedHtml.slice(0, matchIndex) +
-						inlineCss +
-						processedHtml.slice(matchIndex + fullTag.length);
+						processedHtml.slice(0, matchIndex) + inlineCss + processedHtml.slice(matchIndex + fullTag.length);
 				}
 			} catch (err) {
-				console.error(
-					`[WebsitePreview] Failed to inline CSS ${relativeCssPath}:`,
-					err,
-				);
+				console.error(`[WebsitePreview] Failed to inline CSS ${relativeCssPath}:`, err);
 			}
 		}
 	}
@@ -109,8 +90,7 @@ export async function inlineResources(
 		if (matchIndex === undefined) continue;
 
 		// Determine if it's a remote URL
-		const isRemote =
-			jsPath.startsWith("http://") || jsPath.startsWith("https://");
+		const isRemote = jsPath.startsWith("http://") || jsPath.startsWith("https://");
 
 		if (isRemote) {
 			// Known CDN domains that reliably serve JavaScript - skip content-type check and inline directly
@@ -123,9 +103,7 @@ export async function inlineResources(
 				"stackpath.bootstrapcdn.com",
 				"code.jquery.com",
 			];
-			const isKnownCdn = knownCdnDomains.some((domain) =>
-				jsPath.includes(domain),
-			);
+			const isKnownCdn = knownCdnDomains.some((domain) => jsPath.includes(domain));
 
 			try {
 				const proxyUrl = `/api/proxy/js?url=${encodeURIComponent(jsPath)}`;
@@ -148,37 +126,27 @@ export async function inlineResources(
 					// Escape </script> in JS content to prevent HTML parser from prematurely closing the script tag.
 					// Replace </script> with </scr\x69pt> where \x69 is the hex code for 'i'.
 					// The HTML parser won't see this as </script> but JS will interpret \x69 as 'i'.
-					const escapedJsContent = jsContent.replace(
-						/<\/script>/g,
-						"</scr\\x69pt>",
-					);
+					const escapedJsContent = jsContent.replace(/<\/script>/g, "</scr\\x69pt>");
 					const inlineJs = `<script>\n${escapedJsContent}\n</script>`;
 					// Replace based on position, not string match (to avoid matching strings inside other content)
 					processedHtml =
-						processedHtml.slice(0, matchIndex) +
-						inlineJs +
-						processedHtml.slice(matchIndex + fullTag.length);
+						processedHtml.slice(0, matchIndex) + inlineJs + processedHtml.slice(matchIndex + fullTag.length);
 				}
 				// If content-type isn't JavaScript and not a known CDN, keep original tag so iframe can try to load it
 			} catch (err) {
-				console.error(
-					`[WebsitePreview] Failed to fetch remote JS ${jsPath}:`,
-					err,
-				);
+				console.error(`[WebsitePreview] Failed to fetch remote JS ${jsPath}:`, err);
 				// Network/CORS error - keep original tag so iframe can try to load it
 			}
 		} else {
-			const relativeJsPath = jsPath.startsWith("/")
-				? jsPath
-				: `${fileDir}/${jsPath}`;
+			const relativeJsPath = jsPath.startsWith("/") ? jsPath : `${fileDir}/${jsPath}`;
 
 			try {
 				let jsContent = "";
 				const isTauri = !!(globalThis as any).__TAURI__;
 
 				if (isTauri) {
-					const { readFile } = await import("@/lib/tauri");
-					const data = await readFile(relativeJsPath);
+					const { readTextFile } = await import("@tauri-apps/plugin-fs");
+					const data = await readTextFile(relativeJsPath);
 					jsContent = data || "";
 				} else if (taskId) {
 					// Read from API - handle relative paths
@@ -197,21 +165,13 @@ export async function inlineResources(
 				if (jsContent) {
 					// Escape </script> in JS content to prevent HTML parser from prematurely closing the script tag.
 					// Replace </script> with </scr\x69pt> where \x69 is the hex code for 'i'.
-					const escapedJsContent = jsContent.replace(
-						/<\/script>/g,
-						"</scr\\x69pt>",
-					);
+					const escapedJsContent = jsContent.replace(/<\/script>/g, "</scr\\x69pt>");
 					const inlineJs = `<script>\n${escapedJsContent}\n</script>`;
 					processedHtml =
-						processedHtml.slice(0, matchIndex) +
-						inlineJs +
-						processedHtml.slice(matchIndex + fullTag.length);
+						processedHtml.slice(0, matchIndex) + inlineJs + processedHtml.slice(matchIndex + fullTag.length);
 				}
 			} catch (err) {
-				console.error(
-					`[WebsitePreview] Failed to inline JS ${relativeJsPath}:`,
-					err,
-				);
+				console.error(`[WebsitePreview] Failed to inline JS ${relativeJsPath}:`, err);
 			}
 		}
 	}

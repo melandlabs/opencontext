@@ -292,7 +292,7 @@ The Phase 0-3 stack is ready only when:
 2. All feature policies remain default-off and fail closed.
 3. Focused write, retrieval, correction, rollback, route, and backend suites
    pass.
-4. `apps/web` and memory-consolidation TypeScript checks pass.
+4. memory-consolidation and any host application TypeScript checks pass.
 5. Formatting, targeted lint, `git diff --check`, and final diff review pass.
 6. The PR description references requirements, architecture, and applicable
    ADRs without copying them.

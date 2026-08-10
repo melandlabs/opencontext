@@ -1,7 +1,4 @@
-type MemorySummaryDimensions = Record<
-	string,
-	string | number | boolean | undefined
->;
+type MemorySummaryDimensions = Record<string, string | number | boolean | undefined>;
 
 interface MemorySummaryPublicationCarrier {
 	summaryId?: string;
@@ -16,10 +13,8 @@ interface MemorySummaryPublicationCarrier {
 	dimensions?: MemorySummaryDimensions;
 }
 
-export const MEMORY_SUMMARY_PUBLICATION_DIMENSION =
-	"__opencontextMemoryPublication";
-export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION =
-	"__opencontextMemoryPublicationRevision";
+export const MEMORY_SUMMARY_PUBLICATION_DIMENSION = "__opencontextMemoryPublication";
+export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION = "__opencontextMemoryPublicationRevision";
 export const MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION =
 	"__opencontextMemoryPublicationExpectedRevision";
 const PENDING_PUBLICATION = "pending";
@@ -32,23 +27,17 @@ function hashString(input: string): string {
 		first = Math.imul(first ^ code, 16777619);
 		second = Math.imul(second, 33) ^ code;
 	}
-	return `${(first >>> 0).toString(16).padStart(8, "0")}${(second >>> 0)
-		.toString(16)
-		.padStart(8, "0")}`;
+	return `${(first >>> 0).toString(16).padStart(8, "0")}${(second >>> 0).toString(16).padStart(8, "0")}`;
 }
 
-export function memorySummaryPublicationRevision(
-	summary: MemorySummaryPublicationCarrier,
-): string {
-	const existing =
-		summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION];
+export function memorySummaryPublicationRevision(summary: MemorySummaryPublicationCarrier): string {
+	const existing = summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION];
 	if (typeof existing === "string" && existing.length > 0) return existing;
 
 	const dimensions = Object.entries(summary.dimensions ?? {})
 		.filter(
 			([key]) =>
-				key !== MEMORY_SUMMARY_PUBLICATION_DIMENSION &&
-				key !== MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION,
+				key !== MEMORY_SUMMARY_PUBLICATION_DIMENSION && key !== MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION,
 		)
 		.sort(([left], [right]) => left.localeCompare(right));
 	return `v1:${hashString(
@@ -67,26 +56,18 @@ export function memorySummaryPublicationRevision(
 	)}`;
 }
 
-export function isMemorySummaryPublicationPending(
-	summary: MemorySummaryPublicationCarrier,
-): boolean {
-	return (
-		summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_DIMENSION] ===
-		PENDING_PUBLICATION
-	);
+export function isMemorySummaryPublicationPending(summary: MemorySummaryPublicationCarrier): boolean {
+	return summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_DIMENSION] === PENDING_PUBLICATION;
 }
 
 // Keep publication state and revision in existing JSON dimensions to avoid a migration.
-export function stageMemorySummaryPublication<
-	T extends MemorySummaryPublicationCarrier,
->(summary: T): T {
+export function stageMemorySummaryPublication<T extends MemorySummaryPublicationCarrier>(summary: T): T {
 	return {
 		...summary,
 		dimensions: {
 			...(summary.dimensions ?? {}),
 			[MEMORY_SUMMARY_PUBLICATION_DIMENSION]: PENDING_PUBLICATION,
-			[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION]:
-				memorySummaryPublicationRevision(summary),
+			[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION]: memorySummaryPublicationRevision(summary),
 		},
 	};
 }
@@ -98,8 +79,7 @@ export function publishMemorySummary<T extends MemorySummaryPublicationCarrier>(
 	const dimensions = { ...(summary.dimensions ?? {}) };
 	delete dimensions[MEMORY_SUMMARY_PUBLICATION_DIMENSION];
 	if (options.expectedRevision) {
-		dimensions[MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION] =
-			options.expectedRevision;
+		dimensions[MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION] = options.expectedRevision;
 	}
 	return {
 		...summary,

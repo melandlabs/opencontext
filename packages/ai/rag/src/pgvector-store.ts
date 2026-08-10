@@ -46,10 +46,7 @@ function getConfig(): PGVectorConfig {
 /**
  * Initialize PGVectorStore for a user.
  */
-export async function getPGVectorStore(
-	userId: string,
-	embeddings?: UniversalEmbeddings,
-) {
+export async function getPGVectorStore(userId: string, embeddings?: UniversalEmbeddings) {
 	const cfg = getConfig();
 	const emb = embeddings ?? cfg.embeddings ?? new UniversalEmbeddings();
 
@@ -82,7 +79,7 @@ export async function getPGVectorStore(
  */
 export async function processDocumentWithPGVector(
 	userId: string,
-	userType: string,
+	_userType: string,
 	fileName: string,
 	contentType: string,
 	buffer: Buffer,
@@ -158,11 +155,7 @@ export async function searchWithPGVector(
 	const { vectorStore, pool } = await getPGVectorStore(userId);
 
 	// Perform similarity search
-	const results = await vectorStore.similaritySearchWithScore(
-		query,
-		options.limit || 5,
-		options.filter,
-	);
+	const results = await vectorStore.similaritySearchWithScore(query, options.limit || 5, options.filter);
 
 	// Clean up
 	await pool.end();
@@ -196,9 +189,7 @@ export async function deleteDocumentsFromPGVector(
 export async function getDocumentCount(userId: string): Promise<number> {
 	const { vectorStore, pool } = await getPGVectorStore(userId);
 
-	const result = await pool.query(
-		`SELECT COUNT(*) as count FROM "${vectorStore.tableName}"`,
-	);
+	const result = await pool.query(`SELECT COUNT(*) as count FROM "${vectorStore.tableName}"`);
 
 	await pool.end();
 
@@ -217,9 +208,7 @@ export async function listUserDocuments(userId: string): Promise<
 > {
 	const { vectorStore, pool } = await getPGVectorStore(userId);
 
-	const result = await pool.query(
-		`SELECT "id", "content", "metadata" FROM "${vectorStore.tableName}"`,
-	);
+	const result = await pool.query(`SELECT "id", "content", "metadata" FROM "${vectorStore.tableName}"`);
 
 	await pool.end();
 

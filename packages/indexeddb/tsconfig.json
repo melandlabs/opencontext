@@ -1,10 +1,10 @@
 {
-  "extends": "../config/src/tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "incremental": false,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "noEmit": false
-  },
-  "include": ["src"]
+	"extends": "../config/src/tsconfig.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"incremental": false,
+		"tsBuildInfoFile": "./dist/.tsbuildinfo",
+		"noEmit": false
+	},
+	"include": ["src"]
 }

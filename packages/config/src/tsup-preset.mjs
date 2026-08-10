@@ -10,13 +10,7 @@
 //   - excludes TypeScript source from the published tarball
 //   - marks `react` / native deps as external by default
 
-const DEFAULT_EXTERNALS = [
-	"react",
-	"react-dom",
-	"@tauri-apps/api",
-	"better-sqlite3",
-	"sqlite-vec",
-];
+const DEFAULT_EXTERNALS = ["react", "react-dom", "@tauri-apps/api", "better-sqlite3", "sqlite-vec"];
 
 /**
  * @param {{

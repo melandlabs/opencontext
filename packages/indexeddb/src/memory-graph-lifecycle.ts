@@ -26,10 +26,7 @@ import {
 	stageMemorySummaryPublication,
 } from "../../ai/src/memory/summary-publication";
 import type { RawMessage } from "./manager";
-import {
-	createRawMessageMemoryGraphStore,
-	ownerScopeFromMessage,
-} from "./memory-graph-evolution";
+import { createRawMessageMemoryGraphStore, ownerScopeFromMessage } from "./memory-graph-evolution";
 import type { RawMessageStorage } from "./storage";
 
 export interface RawMessageGraphLifecycleOptions extends MemoryGraphLifecyclePolicyOptions {
@@ -92,9 +89,7 @@ function optionalString(value: unknown): string | undefined {
 }
 
 function optionalFiniteNumber(value: unknown): number | undefined {
-	return typeof value === "number" && Number.isFinite(value)
-		? value
-		: undefined;
+	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 export function parseRawMessageGraphLifecycleOptions(
@@ -107,12 +102,8 @@ export function parseRawMessageGraphLifecycleOptions(
 		stableMinEvidence: optionalFiniteNumber(value.stableMinEvidence),
 		stableMinSupportScore: optionalFiniteNumber(value.stableMinSupportScore),
 		decayAfterMs: optionalFiniteNumber(value.decayAfterMs),
-		supersessionMinEvidence: optionalFiniteNumber(
-			value.supersessionMinEvidence,
-		),
-		supersessionStrengthMargin: optionalFiniteNumber(
-			value.supersessionStrengthMargin,
-		),
+		supersessionMinEvidence: optionalFiniteNumber(value.supersessionMinEvidence),
+		supersessionStrengthMargin: optionalFiniteNumber(value.supersessionStrengthMargin),
 	};
 	if (typeof value.enabled === "boolean") options.enabled = value.enabled;
 	if (typeof value.dryRun === "boolean") options.dryRun = value.dryRun;
@@ -121,9 +112,7 @@ export function parseRawMessageGraphLifecycleOptions(
 
 function normalizeTimestampToMs(value: number | undefined): number {
 	if (!Number.isFinite(value)) return 0;
-	return (value as number) < 1e11
-		? Math.floor((value as number) * 1000)
-		: Math.floor(value as number);
+	return (value as number) < 1e11 ? Math.floor((value as number) * 1000) : Math.floor(value as number);
 }
 
 function toMemoryRecord(message: RawMessage): MemoryRecord {
@@ -165,9 +154,7 @@ function stableSummaryId(ownerScope: OwnerScope, clusterId: string): string {
 	return `memory-graph-summary:${ownerScopeKey(ownerScope)}:${encodeURIComponent(clusterId)}`;
 }
 
-function graphPolicy(
-	options: RawMessageGraphLifecycleOptions,
-): MemoryGraphLifecyclePolicyOptions {
+function graphPolicy(options: RawMessageGraphLifecycleOptions): MemoryGraphLifecyclePolicyOptions {
 	return {
 		stableMinEvidence: options.stableMinEvidence,
 		stableMinSupportScore: options.stableMinSupportScore,
@@ -182,29 +169,19 @@ async function loadScopedMessages(input: {
 	ownerScope: OwnerScope;
 	ids: string[];
 }): Promise<RawMessage[]> {
-	const messages = await Promise.all(
-		input.ids.map((id) => input.manager.getMessageById(id)),
-	);
+	const messages = await Promise.all(input.ids.map((id) => input.manager.getMessageById(id)));
 	return messages.filter(
 		(message): message is RawMessage =>
-			message !== null &&
-			sameOwnerScope(ownerScopeFromMessage(message), input.ownerScope),
+			message !== null && sameOwnerScope(ownerScopeFromMessage(message), input.ownerScope),
 	);
 }
 
-function sourceIdsForClusters(
-	snapshot: MemoryGraphSnapshot,
-	clusterIds: string[],
-): string[][] {
+function sourceIdsForClusters(snapshot: MemoryGraphSnapshot, clusterIds: string[]): string[][] {
 	const nodesById = new Map(snapshot.nodes.map((node) => [node.id, node]));
 	return clusterIds.map((clusterId) => {
-		const cluster = snapshot.clusters.find(
-			(candidate) => candidate.clusterId === clusterId,
-		);
+		const cluster = snapshot.clusters.find((candidate) => candidate.clusterId === clusterId);
 		if (!cluster) return [];
-		return cluster.nodeIds.filter(
-			(nodeId) => nodesById.get(nodeId)?.type === "raw",
-		);
+		return cluster.nodeIds.filter((nodeId) => nodesById.get(nodeId)?.type === "raw");
 	});
 }
 
@@ -220,8 +197,7 @@ async function buildSummary(input: {
 		.sort((left, right) => left.timestamp - right.timestamp);
 	const first = records[0];
 	const last = records.at(-1);
-	if (!first || !last)
-		throw new Error("Graph lifecycle summary has no source records");
+	if (!first || !last) throw new Error("Graph lifecycle summary has no source records");
 	const dimensions: MemoryDimensions = {
 		...first.dimensions,
 		workspaceId: input.ownerScope.workspaceId,
@@ -355,20 +331,15 @@ export async function runMemoryGraphLifecycleCycle(
 				decayingClusters,
 				createdSummaries: 0,
 				deprecatedRecords: 0,
-				candidateResults: lifecycle.consolidationCandidates.map(
-					(candidate) => ({
-						clusterId: candidate.clusterId,
-						summaryId: stableSummaryId(ownerScope, candidate.clusterId),
-						status: "planned",
-						sourceRecordIds: [...candidate.sourceNodeIds],
-						supersededClusterIds: [...candidate.supersededClusterIds],
-						deprecatedRecords: 0,
-						reasonCodes: [
-							...candidate.reasonCodes,
-							"memory_graph_lifecycle_dry_run",
-						],
-					}),
-				),
+				candidateResults: lifecycle.consolidationCandidates.map((candidate) => ({
+					clusterId: candidate.clusterId,
+					summaryId: stableSummaryId(ownerScope, candidate.clusterId),
+					status: "planned",
+					sourceRecordIds: [...candidate.sourceNodeIds],
+					supersededClusterIds: [...candidate.supersededClusterIds],
+					deprecatedRecords: 0,
+					reasonCodes: [...candidate.reasonCodes, "memory_graph_lifecycle_dry_run"],
+				})),
 				reasonCodes: unique([...reasonCodes, "memory_graph_lifecycle_dry_run"]),
 			};
 		}
@@ -413,13 +384,9 @@ export async function runMemoryGraphLifecycleCycle(
 					sourceRecordIds: [...candidate.sourceNodeIds],
 					supersededClusterIds: [...candidate.supersededClusterIds],
 					deprecatedRecords: 0,
-					reasonCodes: [
-						"memory_graph_source_records_missing_or_scope_mismatch",
-					],
+					reasonCodes: ["memory_graph_source_records_missing_or_scope_mismatch"],
 				});
-				reasonCodes.add(
-					"memory_graph_source_records_missing_or_scope_mismatch",
-				);
+				reasonCodes.add("memory_graph_source_records_missing_or_scope_mismatch");
 				continue;
 			}
 
@@ -436,18 +403,16 @@ export async function runMemoryGraphLifecycleCycle(
 				const previousSummaryNode = snapshot.nodes.find(
 					(node) => node.id === summaryId && node.type === "summary",
 				);
-				const previousPublicationRevision =
-					previousSummaryNode?.metadata?.publicationRevision;
-				const stagedPreviousPublicationRevision =
-					previousSummaryNode?.metadata?.previousPublicationRevision;
+				const previousPublicationRevision = previousSummaryNode?.metadata?.publicationRevision;
+				const stagedPreviousPublicationRevision = previousSummaryNode?.metadata?.previousPublicationRevision;
 				const replacementRevision =
 					typeof previousPublicationRevision === "string" &&
 					previousPublicationRevision.length > 0 &&
 					previousPublicationRevision !== publicationRevision
 						? previousPublicationRevision
 						: previousPublicationRevision === publicationRevision &&
-							  typeof stagedPreviousPublicationRevision === "string" &&
-							  stagedPreviousPublicationRevision.length > 0
+								typeof stagedPreviousPublicationRevision === "string" &&
+								stagedPreviousPublicationRevision.length > 0
 							? stagedPreviousPublicationRevision
 							: undefined;
 				if (!replacementRevision) {
@@ -479,8 +444,7 @@ export async function runMemoryGraphLifecycleCycle(
 					reasonCodes.add("memory_graph_representative_plan_empty");
 					continue;
 				}
-				const representativePersistence =
-					await graphStore.persistPlan(representativePlan);
+				const representativePersistence = await graphStore.persistPlan(representativePlan);
 				for (const reasonCode of representativePersistence.diagnostics) {
 					reasonCodes.add(reasonCode);
 				}
@@ -513,21 +477,16 @@ export async function runMemoryGraphLifecycleCycle(
 				const persistedSummaryNode = snapshot.nodes.find(
 					(node) => node.id === summaryId && node.type === "summary",
 				);
-				const persistedSourceNodeIds = Array.isArray(
-					persistedSummaryNode?.metadata?.sourceNodeIds,
-				)
+				const persistedSourceNodeIds = Array.isArray(persistedSummaryNode?.metadata?.sourceNodeIds)
 					? persistedSummaryNode.metadata.sourceNodeIds.filter(
 							(nodeId): nodeId is string => typeof nodeId === "string",
 						)
 					: [];
 				const representativeSourcesMatch =
 					persistedSourceNodeIds.length === candidate.sourceNodeIds.length &&
-					candidate.sourceNodeIds.every((nodeId) =>
-						persistedSourceNodeIds.includes(nodeId),
-					);
+					candidate.sourceNodeIds.every((nodeId) => persistedSourceNodeIds.includes(nodeId));
 				const representativeRevisionMatches =
-					persistedSummaryNode?.metadata?.publicationRevision ===
-					publicationRevision;
+					persistedSummaryNode?.metadata?.publicationRevision === publicationRevision;
 				const representativeReady =
 					persistedRepresentative?.representativeNodeId === summaryId &&
 					Boolean(persistedSummaryNode) &&
@@ -558,10 +517,7 @@ export async function runMemoryGraphLifecycleCycle(
 						expectedRevision: replacementRevision,
 					}),
 				]);
-				const supersededSourceGroups = sourceIdsForClusters(
-					snapshot,
-					candidate.supersededClusterIds,
-				);
+				const supersededSourceGroups = sourceIdsForClusters(snapshot, candidate.supersededClusterIds);
 				const deprecationCandidates: MemorySummaryCandidate[] = [
 					{
 						clusterKey: candidate.clusterId,
@@ -571,9 +527,7 @@ export async function runMemoryGraphLifecycleCycle(
 						score: candidate.score,
 						priority: candidate.score,
 						reasonCodes:
-							candidate.supersededClusterIds.length > 0
-								? ["wins_competition"]
-								: ["strong_repeated_evidence"],
+							candidate.supersededClusterIds.length > 0 ? ["wins_competition"] : ["strong_repeated_evidence"],
 						sourceAction: "preserve",
 					},
 					...candidate.supersededClusterIds.map(
@@ -589,13 +543,10 @@ export async function runMemoryGraphLifecycleCycle(
 						}),
 					),
 				];
-				const [winnerDeprecationCandidate, ...loserDeprecationCandidates] =
-					deprecationCandidates;
+				const [winnerDeprecationCandidate, ...loserDeprecationCandidates] = deprecationCandidates;
 				const winnerDeprecationPlan = buildMemoryDeprecationEntries({
 					persistedSummaryIds: winnerDeprecationCandidate ? [summaryId] : [],
-					summaryCandidates: winnerDeprecationCandidate
-						? [winnerDeprecationCandidate]
-						: [],
+					summaryCandidates: winnerDeprecationCandidate ? [winnerDeprecationCandidate] : [],
 				});
 				const loserDeprecationEntries = loserDeprecationCandidates.flatMap(
 					(loserCandidate) =>
@@ -605,10 +556,7 @@ export async function runMemoryGraphLifecycleCycle(
 							reasonFor: () => `superseded_by_summary:${summaryId}`,
 						}).entries,
 				);
-				const deprecationEntries = [
-					...winnerDeprecationPlan.entries,
-					...loserDeprecationEntries,
-				];
+				const deprecationEntries = [...winnerDeprecationPlan.entries, ...loserDeprecationEntries];
 				const deprecation = await deprecateMemoryRecords({
 					userId: ownerScope.userId,
 					entries: deprecationEntries,
@@ -619,9 +567,7 @@ export async function runMemoryGraphLifecycleCycle(
 					reasonCodes.add(reasonCode);
 				}
 				deprecatedRecords += deprecation.persistedCount;
-				const coveredSourceIds = unique(
-					deprecationCandidates.flatMap((item) => item.recordIds),
-				);
+				const coveredSourceIds = unique(deprecationCandidates.flatMap((item) => item.recordIds));
 				if (deprecation.status === "persisted") {
 					const visibilityPlan = buildMemoryGraphVisibilityPlan({
 						ownerScope,
@@ -631,8 +577,7 @@ export async function runMemoryGraphLifecycleCycle(
 						now,
 						persistence: { mode: "write", enabled: true },
 					});
-					const visibilityPersistence =
-						await graphStore.persistPlan(visibilityPlan);
+					const visibilityPersistence = await graphStore.persistPlan(visibilityPlan);
 					for (const reasonCode of visibilityPersistence.diagnostics) {
 						reasonCodes.add(reasonCode);
 					}
@@ -641,10 +586,7 @@ export async function runMemoryGraphLifecycleCycle(
 						reasonCodes.add("memory_graph_visibility_version_conflict");
 					}
 				}
-				const candidateStatus =
-					deprecation.status === "persisted"
-						? "persisted"
-						: "deprecation-no-op";
+				const candidateStatus = deprecation.status === "persisted" ? "persisted" : "deprecation-no-op";
 				if (candidateStatus === "deprecation-no-op") partialFailure = true;
 				candidateResults.push({
 					clusterId: candidate.clusterId,
@@ -653,10 +595,7 @@ export async function runMemoryGraphLifecycleCycle(
 					sourceRecordIds: [...candidate.sourceNodeIds],
 					supersededClusterIds: [...candidate.supersededClusterIds],
 					deprecatedRecords: deprecation.persistedCount,
-					reasonCodes: unique([
-						...candidate.reasonCodes,
-						...deprecation.reasonCodes,
-					]),
+					reasonCodes: unique([...candidate.reasonCodes, ...deprecation.reasonCodes]),
 				});
 				snapshot = await graphStore.readSnapshot({
 					ownerScope,
@@ -686,8 +625,7 @@ export async function runMemoryGraphLifecycleCycle(
 		const mutatesLifecycle = lifecyclePersistence.mutatesGraph;
 		const status: MemoryGraphLifecycleRuntimeStatus = partialFailure
 			? "partial-failure"
-			: mutatesLifecycle ||
-				  candidateResults.some((result) => result.status === "persisted")
+			: mutatesLifecycle || candidateResults.some((result) => result.status === "persisted")
 				? "applied"
 				: "no-op";
 		return {

@@ -1,61 +1,59 @@
 {
-  "name": "@opencontext/rag",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./chunking": "./dist/chunking.js",
-    "./embeddings": "./dist/embeddings.js",
-    "./vector-service": "./dist/vector-service.js",
-    "./parsers": "./dist/parsers.js",
-    "./universal-embeddings": "./dist/universal-embeddings.js",
-    "./sqlite-vec-store": "./dist/sqlite-vec-store.js",
-    "./pgvector-store": "./dist/pgvector-store.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/rag"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/rag",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · rag module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "langchain": "^1.2.3",
-    "@langchain/community": "^1.1.1",
-    "@langchain/core": "^1.1.8",
-    "@langchain/textsplitters": "^1.0.1",
-    "zod": "^4.3.6",
-    "@opencontext/shared": "workspace:*",
-    "pdfjs-dist": "^4.9.155",
-    "jszip": "^3.10.1",
-    "better-sqlite3": "^11.7.0",
-    "sqlite-vec": "^0.1.6-alpha.5",
-    "pg": "^8.13.1",
-    "openai": "^4.85.2"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/rag",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./chunking": "./dist/chunking.js",
+		"./embeddings": "./dist/embeddings.js",
+		"./vector-service": "./dist/vector-service.js",
+		"./parsers": "./dist/parsers.js",
+		"./universal-embeddings": "./dist/universal-embeddings.js",
+		"./sqlite-vec-store": "./dist/sqlite-vec-store.js",
+		"./pgvector-store": "./dist/pgvector-store.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/rag"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/rag",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · rag module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"langchain": "^1.2.3",
+		"@langchain/community": "^1.1.1",
+		"@langchain/core": "^1.1.8",
+		"@langchain/textsplitters": "^1.0.1",
+		"zod": "^4.3.6",
+		"@opencontext/shared": "workspace:*",
+		"pdfjs-dist": "^4.9.155",
+		"jszip": "^3.10.1",
+		"better-sqlite3": "^11.7.0",
+		"sqlite-vec": "^0.1.6-alpha.5",
+		"pg": "^8.13.1",
+		"openai": "^4.85.2",
+		"drizzle-orm": "^0.44.0"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

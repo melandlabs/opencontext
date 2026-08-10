@@ -18,10 +18,7 @@
  * matching rows where `deprecated_at IS NULL`.
  */
 
-import type {
-	MemoryDeprecateRecordsInput,
-	MemoryStorageAdapter,
-} from "./contracts";
+import type { MemoryDeprecateRecordsInput, MemoryStorageAdapter } from "./contracts";
 
 /**
  * Lightweight shape of a consolidation plan entry that carries the data we
@@ -121,13 +118,9 @@ export async function deprecateMemoryRecords(
 	const dryRun = input.dryRun === true;
 
 	const targetEntries =
-		input.onlyDeprecate === false
-			? input.entries
-			: input.entries.filter(isDeprecateEntry);
+		input.onlyDeprecate === false ? input.entries : input.entries.filter(isDeprecateEntry);
 
-	const plannedRecordIds = uniqueIds(
-		targetEntries.flatMap((entry) => entry.recordIds),
-	);
+	const plannedRecordIds = uniqueIds(targetEntries.flatMap((entry) => entry.recordIds));
 
 	const reasonCodes = new Set<DeprecateMemoryRecordsReasonCode>();
 

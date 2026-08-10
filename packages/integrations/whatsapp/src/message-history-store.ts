@@ -38,15 +38,7 @@
  * extraction and backfill anchoring work on persisted history.
  */
 
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	renameSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { proto } from "@whiskeysockets/baileys";
@@ -92,15 +84,9 @@ function filenameToJid(filename: string): string | null {
 	}
 }
 
-function isLongLike(
-	value: object,
-): value is { low: number; high: number; unsigned: boolean } {
+function isLongLike(value: object): value is { low: number; high: number; unsigned: boolean } {
 	const v = value as { low?: unknown; high?: unknown; unsigned?: unknown };
-	return (
-		typeof v.low === "number" &&
-		typeof v.high === "number" &&
-		typeof v.unsigned === "boolean"
-	);
+	return typeof v.low === "number" && typeof v.high === "number" && typeof v.unsigned === "boolean";
 }
 
 function longToNumber(value: {
@@ -125,9 +111,7 @@ export function sanitizeMessageForPersistence(value: unknown): unknown {
 	if (Array.isArray(value)) {
 		// Filter dropped (binary) elements out instead of leaving undefined,
 		// which JSON.stringify would turn into null holes inside arrays.
-		return value
-			.map(sanitizeMessageForPersistence)
-			.filter((entry) => entry !== undefined);
+		return value.map(sanitizeMessageForPersistence).filter((entry) => entry !== undefined);
 	}
 	const out: Record<string, unknown> = {};
 	for (const [key, entry] of Object.entries(value)) {
@@ -172,20 +156,14 @@ class WhatsAppMessageHistoryStore {
 	 * still arriving on an undisposed socket) would resurrect the files.
 	 */
 	static purgeAccountData(accountId: string, baseDir?: string): void {
-		const dir = join(
-			baseDir ?? defaultBaseDir(),
-			sanitizeForFilename(accountId),
-		);
+		const dir = join(baseDir ?? defaultBaseDir(), sanitizeForFilename(accountId));
 		for (const store of liveStores.get(dir) ?? []) {
 			store.destroy();
 		}
 		try {
 			rmSync(dir, { recursive: true, force: true });
 		} catch (error) {
-			console.warn(
-				`[WhatsAppMessageHistoryStore] Failed to purge ${dir}:`,
-				error,
-			);
+			console.warn(`[WhatsAppMessageHistoryStore] Failed to purge ${dir}:`, error);
 		}
 	}
 
@@ -256,12 +234,9 @@ class WhatsAppMessageHistoryStore {
 				if (data.messages?.length) this.addMessages(data.messages);
 			},
 		);
-		sock.ev.on(
-			"chats.upsert",
-			(chats: Array<{ id?: string | null; name?: string | null }>) => {
-				this.addChats(chats);
-			},
-		);
+		sock.ev.on("chats.upsert", (chats: Array<{ id?: string | null; name?: string | null }>) => {
+			this.addChats(chats);
+		});
 	}
 
 	addMessages(msgs: WAMessage[]): void {
@@ -284,10 +259,7 @@ class WhatsAppMessageHistoryStore {
 		for (const jid of touched) {
 			const list = this.messages.get(jid);
 			if (!list) continue;
-			list.sort(
-				(a, b) =>
-					Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0),
-			);
+			list.sort((a, b) => Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0));
 			if (list.length > MAX_MESSAGES_PER_JID) {
 				const trimmed = list.splice(0, list.length - MAX_MESSAGES_PER_JID);
 				const ids = this.messageIds.get(jid);
@@ -307,9 +279,7 @@ class WhatsAppMessageHistoryStore {
 		for (const chat of chats) {
 			if (!chat.id || chat.id === "status@broadcast") continue;
 			const name =
-				chat.name ??
-				(chat as { subject?: string | null }).subject ??
-				this.chats.get(chat.id)?.name;
+				chat.name ?? (chat as { subject?: string | null }).subject ?? this.chats.get(chat.id)?.name;
 			const existing = this.chats.get(chat.id);
 			if (existing && existing.name === (name ?? existing.name)) continue;
 			this.chats.set(chat.id, { id: chat.id, name: name ?? undefined });
@@ -322,11 +292,7 @@ class WhatsAppMessageHistoryStore {
 	}
 
 	/** Same interface as the old in-memory store (used by Baileys consumers). */
-	async loadMessages(
-		jid: string,
-		count: number,
-		_opts: object,
-	): Promise<WAMessage[]> {
+	async loadMessages(jid: string, count: number, _opts: object): Promise<WAMessage[]> {
 		this.hydrate(jid);
 		const msgs = this.messages.get(jid) ?? [];
 		return msgs.slice(-count);
@@ -397,13 +363,8 @@ class WhatsAppMessageHistoryStore {
 			let written = 0;
 			for (const jid of this.dirtyJids) {
 				if (written >= maxFiles) break;
-				const sanitized = (this.messages.get(jid) ?? []).map((m) =>
-					sanitizeMessageForPersistence(m),
-				);
-				this.writeFileAtomic(
-					join(this.messagesDir, jidToFilename(jid)),
-					JSON.stringify(sanitized),
-				);
+				const sanitized = (this.messages.get(jid) ?? []).map((m) => sanitizeMessageForPersistence(m));
+				this.writeFileAtomic(join(this.messagesDir, jidToFilename(jid)), JSON.stringify(sanitized));
 				this.dirtyJids.delete(jid);
 				written++;
 			}
@@ -474,15 +435,9 @@ class WhatsAppMessageHistoryStore {
 				existing.push(msg);
 				ids.add(msg.key.id);
 			}
-			existing.sort(
-				(a, b) =>
-					Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0),
-			);
+			existing.sort((a, b) => Number(a.messageTimestamp ?? 0) - Number(b.messageTimestamp ?? 0));
 			if (existing.length > MAX_MESSAGES_PER_JID) {
-				const trimmed = existing.splice(
-					0,
-					existing.length - MAX_MESSAGES_PER_JID,
-				);
+				const trimmed = existing.splice(0, existing.length - MAX_MESSAGES_PER_JID);
 				for (const msg of trimmed) {
 					if (msg.key.id) ids.delete(msg.key.id);
 				}
@@ -490,10 +445,7 @@ class WhatsAppMessageHistoryStore {
 			this.messages.set(jid, existing);
 			this.messageIds.set(jid, ids);
 		} catch (error) {
-			console.warn(
-				`[WhatsAppMessageHistoryStore] Failed to hydrate ${jid}:`,
-				error,
-			);
+			console.warn(`[WhatsAppMessageHistoryStore] Failed to hydrate ${jid}:`, error);
 		}
 	}
 
@@ -504,9 +456,7 @@ class WhatsAppMessageHistoryStore {
 		try {
 			const file = join(this.accountDir, "chats.json");
 			if (existsSync(file)) {
-				const persisted = JSON.parse(
-					readFileSync(file, "utf8"),
-				) as PersistedChatInfo[];
+				const persisted = JSON.parse(readFileSync(file, "utf8")) as PersistedChatInfo[];
 				if (Array.isArray(persisted)) {
 					for (const chat of persisted) {
 						if (chat?.id && !this.chats.has(chat.id)) {
@@ -527,10 +477,7 @@ class WhatsAppMessageHistoryStore {
 				}
 			}
 		} catch (error) {
-			console.warn(
-				"[WhatsAppMessageHistoryStore] Failed to hydrate chats:",
-				error,
-			);
+			console.warn("[WhatsAppMessageHistoryStore] Failed to hydrate chats:", error);
 		}
 	}
 }

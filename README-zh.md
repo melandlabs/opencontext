@@ -6,7 +6,6 @@
 
 一个时序上下文图谱、一套记忆 API、检索原语,
 和一个多平台集成网格，设计上可被嵌入到任何宿主进程。
-已在 [openloomi](https://github.com/melandlabs/openloomi) 中经过实战检验。
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -211,7 +210,7 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 ```
                        ┌────────────────────────────┐
                        │     宿主应用                │   ← 你的 UI、CLI 或 daemon
-                       │   (openloomi               │
+                       │   (参考应用                 │
                        │    或你自己的 embedder)      │
                        └─────────────┬──────────────┘
                                      │
@@ -238,7 +237,6 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 
 - [`docs/architecture.md`](./docs/architecture.md) — 数据模型、生命周期、传输面
 - [`docs/philosophy.md`](./docs/philosophy.md) — 为什么是这种形态,为什么这样拆分
-- [`docs/split-from-opencontext.md`](./docs/split-from-opencontext.md) — 从 opencontext 拆出本项目的前世今生
 - 每个包的 `README.md` — API 面、示例、迁移说明
 
 ## 贡献

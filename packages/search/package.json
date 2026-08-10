@@ -1,48 +1,43 @@
 {
-  "name": "@opencontext/search",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./brave": "./dist/brave/index.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/search"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/search",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · search module",
-  "keywords": [
-    "opencontext"
-  ],
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  },
-  "typesVersions": {
-    "*": {
-      "brave": [
-        "./src/brave/index.ts"
-      ]
-    }
-  }
+	"name": "@opencontext/search",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./brave": "./dist/brave/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/search"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/search",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · search module",
+	"keywords": ["opencontext"],
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	},
+	"typesVersions": {
+		"*": {
+			"brave": ["./src/brave/index.ts"]
+		}
+	}
 }

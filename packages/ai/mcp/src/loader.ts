@@ -5,8 +5,8 @@
  * Uses mtime-based caching to avoid re-reading unchanged files
  */
 
-import fs from "node:fs/promises";
 import fsSync from "node:fs";
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -21,10 +21,7 @@ interface McpFileCacheEntry {
 // Module-level file cache for MCP configs (5 minute TTL for safety).
 const mcpFileCache = new Map<string, McpFileCacheEntry>();
 
-function getCachedMcpConfig(
-	configPath: string,
-	mtimeMs: number,
-): Record<string, McpServerConfig> | null {
+function getCachedMcpConfig(configPath: string, mtimeMs: number): Record<string, McpServerConfig> | null {
 	const cached = mcpFileCache.get(configPath);
 	if (!cached || cached.mtimeMs !== mtimeMs || cached.expiresAt < Date.now()) {
 		return null;
@@ -63,8 +60,7 @@ export interface McpSSEServerConfig {
 	headers?: Record<string, string>;
 }
 
-export type McpServerConfig =
-	McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
+export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
 
 /**
  * Get the MCP config path (default: ~/.opencontext/mcp.json)
@@ -82,7 +78,7 @@ export function getMcpConfigPath(): string {
  */
 async function loadMcpServersFromFile(
 	configPath: string,
-	sourceName: string,
+	_sourceName: string,
 ): Promise<Record<string, McpServerConfig>> {
 	try {
 		await fs.access(configPath);
@@ -107,14 +103,12 @@ async function loadMcpServersFromFile(
 						url: cfg.url as string,
 						headers: cfg.headers as Record<string, string>,
 					};
-					console.log(`[MCP] Loaded SSE server from ${sourceName}: ${name}`);
 				} else {
 					servers[name] = {
 						type: "http",
 						url: cfg.url as string,
 						headers: cfg.headers as Record<string, string>,
 					};
-					console.log(`[MCP] Loaded HTTP server from ${sourceName}: ${name}`);
 				}
 			} else if (cfg.command) {
 				servers[name] = {
@@ -123,7 +117,6 @@ async function loadMcpServersFromFile(
 					args: cfg.args as string[],
 					env: cfg.env as Record<string, string>,
 				};
-				console.log(`[MCP] Loaded stdio server from ${sourceName}: ${name}`);
 			}
 		}
 
@@ -147,9 +140,7 @@ export interface McpConfig {
  * @param mcpConfig Optional config to control loading
  * @returns Record of server name to config
  */
-export async function loadMcpServers(
-	mcpConfig?: McpConfig,
-): Promise<Record<string, McpServerConfig>> {
+export async function loadMcpServers(mcpConfig?: McpConfig): Promise<Record<string, McpServerConfig>> {
 	if (mcpConfig && !mcpConfig.enabled) {
 		return {};
 	}
@@ -161,9 +152,6 @@ export async function loadMcpServers(
 		const stats = fsSync.statSync(configPath);
 		const cached = getCachedMcpConfig(configPath, stats.mtimeMs);
 		if (cached) {
-			console.log(
-				`[MCP] Using cached config for ${configPath} (mtime: ${stats.mtimeMs})`,
-			);
 			return cached;
 		}
 

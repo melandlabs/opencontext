@@ -14,9 +14,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { AuthKey } from "telegram/crypto/AuthKey";
 import { StringSession } from "telegram/sessions";
-import { fileURLToPath } from "node:url";
 import { TdataReader } from "./tdata-decrypter/index";
 
 // Get the directory name of the current module (ESM equivalent of __dirname)
@@ -43,18 +43,14 @@ function extractAuthKey(tdataPath: string): {
 	dcId: number;
 	authKey: Buffer;
 } {
-	console.log(
-		"[TdataConverter] Using pure JS implementation to extract auth key...",
-	);
+	console.log("[TdataConverter] Using pure JS implementation to extract auth key...");
 
 	try {
 		const reader = new TdataReader(tdataPath);
 		const result = reader.read();
 
 		if (!result.accounts || result.accounts.size === 0) {
-			throw new Error(
-				"No accounts found in tdata. Please make sure you're logged into Telegram Desktop.",
-			);
+			throw new Error("No accounts found in tdata. Please make sure you're logged into Telegram Desktop.");
 		}
 
 		// Get first account
@@ -108,9 +104,7 @@ function normalizeTdataPath(inputPath: string): string {
 /**
  * Main conversion function: Convert tdata to StringSession
  */
-export async function convertTdataToStringSession(
-	tdataPath: string,
-): Promise<string> {
+export async function convertTdataToStringSession(tdataPath: string): Promise<string> {
 	const normalizedPath = normalizeTdataPath(tdataPath);
 	console.log("[TdataConverter] Starting conversion from:", tdataPath);
 	console.log("[TdataConverter] Normalized path:", normalizedPath);

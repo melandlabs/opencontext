@@ -1,49 +1,46 @@
 {
-  "name": "@opencontext/storage",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/local.js",
-  "types": "./dist/local.d.ts",
-  "exports": {
-    ".": "./dist/local.js",
-    "./provider": "./dist/provider.js",
-    "./local": "./dist/local.js",
-    "./memory": "./dist/memory.js",
-    "./adapters": "./dist/adapters/index.js",
-    "./adapters/local-fs": "./dist/adapters/local-fs.js",
-    "./adapters/vercel-blob": "./dist/adapters/vercel-blob.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/storage"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/storage",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · storage module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "@vercel/blob": "^0.27.1"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/storage",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/local.js",
+	"types": "./dist/local.d.ts",
+	"exports": {
+		".": "./dist/local.js",
+		"./provider": "./dist/provider.js",
+		"./local": "./dist/local.js",
+		"./memory": "./dist/memory.js",
+		"./adapters": "./dist/adapters/index.js",
+		"./adapters/local-fs": "./dist/adapters/local-fs.js",
+		"./adapters/vercel-blob": "./dist/adapters/vercel-blob.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/storage"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/storage",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · storage module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"@vercel/blob": "^0.27.1"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

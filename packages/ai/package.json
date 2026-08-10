@@ -1,71 +1,68 @@
 {
-  "name": "@opencontext/ai",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./types": "./dist/types.js",
-    "./memory": "./dist/memory/index.js",
-    "./store": "./dist/store/index.js",
-    "./audio": "./dist/audio/index.js",
-    "./agent": "./dist/agent/index.js",
-    "./agent/native-cli": "./dist/agent/native-cli/index.js",
-    "./agent/native-runner": "./dist/agent/native-runner/index.js",
-    "./agent/runtime": "./dist/agent/runtime/index.js",
-    "./agent/supplemental-input": "./dist/agent/supplemental-input/index.js",
-    "./agent/runtime-instructions": "./dist/agent/runtime-instructions/index.js",
-    "./agent/image-gen": "./dist/agent/image-gen/index.js",
-    "./agent/sandbox": "./dist/agent/sandbox/index.js",
-    "./agent/sandbox/types": "./dist/agent/sandbox/types.js",
-    "./agent/sandbox/plugin": "./dist/agent/sandbox/plugin.js",
-    "./agent/sandbox/registry": "./dist/agent/sandbox/registry.js",
-    "./agent/sandbox/providers/native": "./dist/agent/sandbox/providers/native.js",
-    "./agent/sandbox/providers/claude": "./dist/agent/sandbox/providers/claude.js",
-    "./agent/sandbox/providers/vercel": "./dist/agent/sandbox/providers/vercel.js",
-    "./agent/ai": "./dist/agent/index.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/ai"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ai",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · ai module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "openai": "^4.0.0",
-    "nanoid": "^5.1.3",
-    "zod": "^4.3.6",
-    "@vercel/sandbox": "^1.7.1",
-    "ai": "5.0.0-beta.6",
-    "@ai-sdk/openai-compatible": "^1.0.0",
-    "@ai-sdk/anthropic": "4.0.0-beta.67",
-    "@opencontext/memory-consolidation": "workspace:*",
-    "@opencontext/shared": "workspace:*"
-  },
-  "peerDependencies": {},
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/ai",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./types": "./dist/types.js",
+		"./memory": "./dist/memory/index.js",
+		"./store": "./dist/store/index.js",
+		"./audio": "./dist/audio/index.js",
+		"./agent": "./dist/agent/index.js",
+		"./agent/native-cli": "./dist/agent/native-cli/index.js",
+		"./agent/native-runner": "./dist/agent/native-runner/index.js",
+		"./agent/runtime": "./dist/agent/runtime/index.js",
+		"./agent/supplemental-input": "./dist/agent/supplemental-input/index.js",
+		"./agent/runtime-instructions": "./dist/agent/runtime-instructions/index.js",
+		"./agent/image-gen": "./dist/agent/image-gen/index.js",
+		"./agent/sandbox": "./dist/agent/sandbox/index.js",
+		"./agent/sandbox/types": "./dist/agent/sandbox/types.js",
+		"./agent/sandbox/plugin": "./dist/agent/sandbox/plugin.js",
+		"./agent/sandbox/registry": "./dist/agent/sandbox/registry.js",
+		"./agent/sandbox/providers/native": "./dist/agent/sandbox/providers/native.js",
+		"./agent/sandbox/providers/claude": "./dist/agent/sandbox/providers/claude.js",
+		"./agent/sandbox/providers/vercel": "./dist/agent/sandbox/providers/vercel.js",
+		"./agent/ai": "./dist/agent/index.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/ai"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ai",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · ai module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"openai": "^4.0.0",
+		"nanoid": "^5.1.3",
+		"zod": "^4.3.6",
+		"@vercel/sandbox": "^1.7.1",
+		"ai": "5.0.0-beta.6",
+		"@ai-sdk/openai-compatible": "^1.0.0",
+		"@ai-sdk/anthropic": "4.0.0-beta.67",
+		"@opencontext/memory-consolidation": "workspace:*",
+		"@opencontext/shared": "workspace:*"
+	},
+	"peerDependencies": {},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

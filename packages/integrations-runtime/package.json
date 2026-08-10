@@ -1,48 +1,46 @@
 {
-  "name": "@opencontext/integrations-runtime",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./authorization-errors": "./dist/authorization-errors.js",
-    "./platform-visuals": "./dist/platform-visuals.js",
-    "./platform-connectability": "./dist/platform-connectability.js",
-    "./task-integration-inference": "./dist/task-integration-inference.js",
-    "./oauth-callback-script": "./dist/oauth-callback-script.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/integrations-runtime"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations-runtime",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · integrations runtime glue",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "@opencontext/contracts": "workspace:*"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3"
-  },
-  "scripts": {
-    "build": "tsup",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/integrations-runtime",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./authorization-errors": "./dist/authorization-errors.js",
+		"./platform-visuals": "./dist/platform-visuals.js",
+		"./platform-connectability": "./dist/platform-connectability.js",
+		"./task-integration-inference": "./dist/task-integration-inference.js",
+		"./oauth-callback-script": "./dist/oauth-callback-script.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/integrations-runtime"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations-runtime",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · integrations runtime glue",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"@opencontext/contracts": "workspace:*",
+		"i18next": "^26.3.6"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3"
+	},
+	"scripts": {
+		"build": "tsup",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

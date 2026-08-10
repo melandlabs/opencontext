@@ -11,9 +11,9 @@ import { sanitizeCompactionMessages } from "../compaction-preprocess";
 
 import {
 	COMPACTION_MODEL,
-	buildCompactionPrompt,
 	type CompactionLevel,
 	type CompactionPlatform,
+	buildCompactionPrompt,
 } from "./compaction";
 
 /**
@@ -42,9 +42,7 @@ export interface CompactionOptions {
 	authToken: string;
 }
 
-function normalizeCompactionRole(
-	role: string,
-): "user" | "assistant" | "system" {
+function normalizeCompactionRole(role: string): "user" | "assistant" | "system" {
 	// Older call sites may still pass tool/system-ish roles as plain strings.
 	if (role === "user" || role === "system") {
 		return role;
@@ -59,9 +57,7 @@ function normalizeCompactionRole(
  * @param options - Compaction options
  * @returns CompactionResponse | null - Summary result or null on failure
  */
-export async function triggerCompaction(
-	options: CompactionOptions,
-): Promise<CompactionResponse | null> {
+export async function triggerCompaction(options: CompactionOptions): Promise<CompactionResponse | null> {
 	const { messages, level, platform, authToken } = options;
 
 	if (!messages || messages.length === 0) {
@@ -91,10 +87,6 @@ export async function triggerCompaction(
 
 	const systemPrompt = buildCompactionPrompt(level);
 
-	console.log(
-		`[${platform}] [CompactionClient] Starting compaction: ${compactionMessages.length} messages, level=${level}`,
-	);
-
 	try {
 		const response = await fetch("/api/ai/v1/chat/completions", {
 			method: "POST",
@@ -111,29 +103,13 @@ export async function triggerCompaction(
 		});
 
 		if (!response.ok) {
-			const errorBody = await response.json().catch(() => ({}));
-			console.error(
-				`[${platform}] [CompactionClient] Compaction failed (${response.status}):`,
-				errorBody.error || response.statusText,
-			);
+			const _errorBody = await response.json().catch(() => ({}));
 			if (response.status === 402) {
-				console.warn(
-					`[${platform}] [CompactionClient] Insufficient credits for compaction. Skipping.`,
-				);
 			}
 			return null;
 		}
 
 		const data = await response.json();
-
-		console.log(
-			`[${platform}] [CompactionClient] Compaction complete: ` +
-				`${compactionMessages.length} messages -> ${data.usage?.outputTokens || "?"} tokens, ` +
-				`${data.usage?.totalCredits || 0} credits used`,
-		);
-		console.log(
-			`[${platform}] [CompactionClient] Summary preview: ${(data.text || "").substring(0, 200)}`,
-		);
 
 		return {
 			summary: data.text || "",
@@ -143,11 +119,7 @@ export async function triggerCompaction(
 			summaryTokens: data.usage?.outputTokens || 0,
 			creditsUsed: data.usage?.totalCredits || 0,
 		};
-	} catch (error) {
-		console.error(
-			`[${platform}] [CompactionClient] Failed to call compaction route:`,
-			error,
-		);
+	} catch (_error) {
 		return null;
 	}
 }
@@ -177,20 +149,9 @@ export async function triggerCompactionAsync(
 	// to surface persistence failures in the compaction log path.
 	const result = await triggerCompaction(compactionOptions);
 	if (!result) {
-		console.log(
-			`[${compactionOptions.platform}] [CompactionClient] Compaction skipped (null result)`,
-		);
 		return;
 	}
 	try {
 		await persistSummary(result, options.messages);
-		console.log(
-			`[${compactionOptions.platform}] [CompactionClient] Summary persisted to per-day files for range [${result.originalTokens} -> ${result.summaryTokens} tokens]`,
-		);
-	} catch (err) {
-		console.error(
-			`[${compactionOptions.platform}] [CompactionClient] Failed to persist compaction summary:`,
-			err,
-		);
-	}
+	} catch (_err) {}
 }

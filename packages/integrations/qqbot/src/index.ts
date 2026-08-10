@@ -5,15 +5,8 @@
  * Reference: https://bot.q.qq.com/wiki/
  */
 import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type {
-	Messages,
-	Message,
-	Image,
-} from "@opencontext/integrations/channels";
-import type {
-	MessageEvent,
-	MessageTarget,
-} from "@opencontext/integrations/channels";
+import type { Image, Message, Messages } from "@opencontext/integrations/channels";
+import type { MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
 import type { Friend } from "@opencontext/integrations/channels";
 
 const DEBUG = process.env.DEBUG_QQBOT === "true";
@@ -69,10 +62,7 @@ function isFailedBusinessCode(code: unknown): code is string | number {
 	return normalized.length > 0 && normalized !== "0";
 }
 
-function businessCodeError(
-	message: string,
-	code: string | number,
-): Error & { code: string } {
+function businessCodeError(message: string, code: string | number): Error & { code: string } {
 	return Object.assign(new Error(message), { code: String(code) });
 }
 
@@ -94,10 +84,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 	/** Get QQ Open Platform access_token (with memory cache) */
 	private async getAccessToken(): Promise<string> {
 		const now = Date.now();
-		if (
-			this.tokenCache &&
-			this.tokenCache.expiresAtMs - now > TOKEN_EXPIRE_BUFFER_MS
-		) {
+		if (this.tokenCache && this.tokenCache.expiresAtMs - now > TOKEN_EXPIRE_BUFFER_MS) {
 			return this.tokenCache.token;
 		}
 
@@ -118,14 +105,10 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok || !json?.access_token) {
 			const msg = json?.message ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[QQBotAdapter] Failed to get access_token: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[QQBotAdapter] Failed to get access_token: ${msg}`, resp.status);
 		}
 
-		const expireSec =
-			typeof json.expires_in === "number" ? json.expires_in : 7200;
+		const expireSec = typeof json.expires_in === "number" ? json.expires_in : 7200;
 		this.tokenCache = {
 			token: json.access_token,
 			expiresAtMs: now + expireSec * 1000,
@@ -133,11 +116,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 		return json.access_token;
 	}
 
-	private async qqApiRequest<T>(
-		method: string,
-		path: string,
-		body?: Record<string, unknown>,
-	): Promise<T> {
+	private async qqApiRequest<T>(method: string, path: string, body?: Record<string, unknown>): Promise<T> {
 		const token = await this.getAccessToken();
 		const url = `${QQ_API_BASE}${path}`;
 		const options: RequestInit = {
@@ -157,17 +136,11 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok) {
 			const msg = data?.message ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[QQBotAdapter] ${method} ${path} failed: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[QQBotAdapter] ${method} ${path} failed: ${msg}`, resp.status);
 		}
 		if (isFailedBusinessCode(data?.code)) {
 			const msg = data?.message ?? `code=${data.code}`;
-			throw businessCodeError(
-				`[QQBotAdapter] ${method} ${path} failed code=${data.code}: ${msg}`,
-				data.code,
-			);
+			throw businessCodeError(`[QQBotAdapter] ${method} ${path} failed code=${data.code}: ${msg}`, data.code);
 		}
 		return data as T;
 	}
@@ -177,11 +150,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 	 * When target === "private", id is openid (private chat)
 	 * When target === "group", id is group_openid (group chat)
 	 */
-	async sendMessages(
-		target: MessageTarget,
-		id: string,
-		messages: Messages,
-	): Promise<void> {
+	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			this.assertTextOnlyMessages("sendMessages", messages);
 			const text = messagesToQQText(messages);
@@ -201,30 +170,21 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 					content: text,
 					msg_type: 0,
 				});
-				if (DEBUG)
-					console.log(`[QQBotAdapter] Sent group chat group_openid=${id}`);
+				if (DEBUG) console.log(`[QQBotAdapter] Sent group chat group_openid=${id}`);
 			}
 		});
 	}
 
-	async replyMessages(
-		event: MessageEvent,
-		messages: Messages,
-		_quoteOrigin = false,
-	): Promise<void> {
+	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			this.assertTextOnlyMessages("replyMessages", messages);
 			const raw = event.sourcePlatformObject;
-			const targetId = (raw?.group_openid ??
-				raw?.openid ??
-				(event.sender as Friend)?.id) as string | undefined;
+			const targetId = (raw?.group_openid ?? raw?.openid ?? (event.sender as Friend)?.id) as
+				| string
+				| undefined;
 			const messageId = raw?.id ?? raw?.message_id;
 			if (!targetId) {
-				await this.sendMessages(
-					event.targetType,
-					(event.sender as Friend).id as string,
-					messages,
-				);
+				await this.sendMessages(event.targetType, (event.sender as Friend).id as string, messages);
 				return;
 			}
 
@@ -241,14 +201,9 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 			if (target === "private") {
 				await this.qqApiRequest("POST", `/v2/users/${targetId}/messages`, body);
 			} else {
-				await this.qqApiRequest(
-					"POST",
-					`/v2/groups/${targetId}/messages`,
-					body,
-				);
+				await this.qqApiRequest("POST", `/v2/groups/${targetId}/messages`, body);
 			}
-			if (DEBUG)
-				console.log(`[QQBotAdapter] Replied target=${target} id=${targetId}`);
+			if (DEBUG) console.log(`[QQBotAdapter] Replied target=${target} id=${targetId}`);
 		});
 	}
 

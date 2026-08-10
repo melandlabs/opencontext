@@ -7,14 +7,14 @@
  * Token trimming is handled by handleAgentRuntime (40K budget) — not here.
  */
 
-import {
-	saveChannelMessage,
-	loadChannelDay,
-	clearChannelConversationFromAllDays,
-	clearAllChannelForUser,
-} from "@opencontext/ai/store";
-import { join } from "node:path";
 import { homedir } from "node:os";
+import { join } from "node:path";
+import {
+	clearAllChannelForUser,
+	clearChannelConversationFromAllDays,
+	loadChannelDay,
+	saveChannelMessage,
+} from "@opencontext/ai/store";
 
 function getAppMemoryDir(userId?: string): string {
 	const base = join(homedir(), ".opencontext", "data", "memory");
@@ -73,12 +73,7 @@ class GmailConversationStore {
 		}));
 	}
 
-	addMessage(
-		userId: string,
-		accountId: string,
-		role: "user" | "assistant",
-		content: string,
-	): void {
+	addMessage(userId: string, accountId: string, role: "user" | "assistant", content: string): void {
 		const userKey = this.getUserKey(userId);
 		this.ensureLoaded(userKey, accountId);
 
@@ -89,17 +84,9 @@ class GmailConversationStore {
 		};
 
 		this.cache.get(userKey)?.get(accountId)?.push(message);
-		saveChannelMessage(
-			this.memoryDir,
-			this.PREFIX,
-			userKey,
-			accountId,
-			message,
-		);
+		saveChannelMessage(this.memoryDir, this.PREFIX, userKey, accountId, message);
 
-		console.log(
-			`[GmailConversationStore] Added ${role} message for user ${userId}, account ${accountId}`,
-		);
+		console.log(`[GmailConversationStore] Added ${role} message for user ${userId}, account ${accountId}`);
 	}
 
 	clearConversation(userId: string, accountId: string): void {
@@ -108,16 +95,9 @@ class GmailConversationStore {
 
 		this.cache.get(userKey)?.get(accountId)?.splice(0);
 		this.loadedPairs.delete(pk);
-		clearChannelConversationFromAllDays(
-			this.memoryDir,
-			this.PREFIX,
-			userKey,
-			accountId,
-		);
+		clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, userKey, accountId);
 
-		console.log(
-			`[GmailConversationStore] Cleared conversation for user ${userId}, account ${accountId}`,
-		);
+		console.log(`[GmailConversationStore] Cleared conversation for user ${userId}, account ${accountId}`);
 	}
 
 	clearAllConversations(userId: string): void {
@@ -131,9 +111,7 @@ class GmailConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, this.PREFIX, userKey);
 
-		console.log(
-			`[GmailConversationStore] Cleared all conversations for user ${userId}`,
-		);
+		console.log(`[GmailConversationStore] Cleared all conversations for user ${userId}`);
 	}
 
 	private getUserKey(userId: string): string {

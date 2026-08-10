@@ -75,13 +75,11 @@ export interface MemoryStoreVectorConfig {
 	};
 }
 
-export type EmbedQueryFn = {
-	(input: {
-		userId: string;
-		query: string;
-		authToken?: string;
-	}): Promise<number[]>;
-};
+export type EmbedQueryFn = (input: {
+	userId: string;
+	query: string;
+	authToken?: string;
+}) => Promise<number[]>;
 
 export interface UnifiedSearchKnowledgeResult {
 	chunkId: string;

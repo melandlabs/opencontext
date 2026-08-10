@@ -10,9 +10,7 @@ export function useMobileBottomSpacing(): number {
 	useEffect(() => {
 		const calculateSpacing = () => {
 			// Try to find mobile bottom navigation bar
-			const nav = document.querySelector(
-				'nav[aria-label*="navigation"], nav[aria-label*="Navigation"]',
-			);
+			const nav = document.querySelector('nav[aria-label*="navigation"], nav[aria-label*="Navigation"]');
 			if (!nav) {
 				// Navigation bar not found, use conservative estimate
 				const safeAreaBottom = getSafeAreaInsetBottom();

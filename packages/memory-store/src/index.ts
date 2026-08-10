@@ -8,16 +8,13 @@
  */
 
 import type { MemoryStoreConfig } from "./config";
+import { type UnifiedSearch, createUnifiedSearch } from "./search/unified-search";
 import {
+	type RawMessageStore,
 	configureRawMessageStore,
 	createRawMessageStore,
 	getRawMessageManager,
-	type RawMessageStore,
 } from "./storage/raw-message-store";
-import {
-	createUnifiedSearch,
-	type UnifiedSearch,
-} from "./search/unified-search";
 
 export interface MemoryStore {
 	/** Underlying raw-message store (sqlite vs postgres). */
@@ -32,9 +29,7 @@ export interface MemoryStore {
 	searchRawMemorySemantically: UnifiedSearch["searchRawMemorySemantically"];
 }
 
-export async function createMemoryStore(
-	config: MemoryStoreConfig = {},
-): Promise<MemoryStore> {
+export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise<MemoryStore> {
 	const raw = createRawMessageStore({ env: config.env });
 	const search = createUnifiedSearch(config.unified);
 

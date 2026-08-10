@@ -127,9 +127,7 @@ export class AsanaClient {
 	private credentials: AsanaCredentials;
 	private readonly userId: string;
 	private readonly platformAccountId: string | null;
-	private readonly onCredentialsUpdate?: (
-		credentials: AsanaCredentials,
-	) => Promise<void>;
+	private readonly onCredentialsUpdate?: (credentials: AsanaCredentials) => Promise<void>;
 
 	constructor(options: ClientOptions) {
 		this.credentials = { ...options.credentials };
@@ -139,18 +137,14 @@ export class AsanaClient {
 	}
 
 	async getMe(): Promise<AsanaUser> {
-		const response = await this.fetchJson<AsanaUserResponse>(
-			`${ASANA_BASE_URL}/users/me`,
-			{ method: "GET" },
-		);
+		const response = await this.fetchJson<AsanaUserResponse>(`${ASANA_BASE_URL}/users/me`, { method: "GET" });
 		return response.data;
 	}
 
 	async getWorkspaces(): Promise<AsanaWorkspace[]> {
-		const response = await this.fetchJson<AsanaWorkspacesResponse>(
-			`${ASANA_BASE_URL}/workspaces`,
-			{ method: "GET" },
-		);
+		const response = await this.fetchJson<AsanaWorkspacesResponse>(`${ASANA_BASE_URL}/workspaces`, {
+			method: "GET",
+		});
 		return response.data;
 	}
 
@@ -221,10 +215,7 @@ export class AsanaClient {
 
 		if (workspace) params.set("workspace", workspace);
 		if (offset) params.set("offset", offset);
-		params.set(
-			"opt_fields",
-			"gid,name,due_on,created_at,modified_at,public,workspace,gid,name",
-		);
+		params.set("opt_fields", "gid,name,due_on,created_at,modified_at,public,workspace,gid,name");
 
 		const response = await this.fetchJson<AsanaProjectsResponse>(
 			`${ASANA_BASE_URL}/projects?${params.toString()}`,
@@ -270,13 +261,10 @@ export class AsanaClient {
 
 		const body = { data };
 
-		const response = await this.fetchJson<AsanaTaskResponse>(
-			`${ASANA_BASE_URL}/tasks?${params.toString()}`,
-			{
-				method: "POST",
-				body: JSON.stringify(body),
-			},
-		);
+		const response = await this.fetchJson<AsanaTaskResponse>(`${ASANA_BASE_URL}/tasks?${params.toString()}`, {
+			method: "POST",
+			body: JSON.stringify(body),
+		});
 		return response.data;
 	}
 
@@ -339,19 +327,13 @@ export class AsanaClient {
 	private async refreshAccessToken() {
 		const refreshToken = this.credentials.refreshToken;
 		if (!refreshToken) {
-			throw new AppError(
-				"unauthorized:api",
-				"Asana refresh token missing. Please reconnect Asana.",
-			);
+			throw new AppError("unauthorized:api", "Asana refresh token missing. Please reconnect Asana.");
 		}
 
 		const clientId = process.env.ASANA_CLIENT_ID;
 		const clientSecret = process.env.ASANA_CLIENT_SECRET;
 		if (!clientId || !clientSecret) {
-			throw new AppError(
-				"bad_request:api",
-				"Asana OAuth is not configured on the server.",
-			);
+			throw new AppError("bad_request:api", "Asana OAuth is not configured on the server.");
 		}
 
 		const params = new URLSearchParams({
@@ -369,23 +351,15 @@ export class AsanaClient {
 			body: params.toString(),
 		});
 
-		const body = (await response
-			.json()
-			.catch(() => ({}))) as AsanaRefreshResponse;
+		const body = (await response.json().catch(() => ({}))) as AsanaRefreshResponse;
 
 		if (!response.ok || !body.access_token) {
-			throw new AppError(
-				"unauthorized:api",
-				body?.error ?? "Failed to refresh Asana token",
-			);
+			throw new AppError("unauthorized:api", body?.error ?? "Failed to refresh Asana token");
 		}
 
 		this.credentials.accessToken = body.access_token;
-		this.credentials.refreshToken =
-			body.refresh_token ?? this.credentials.refreshToken ?? null;
-		this.credentials.expiresAt = body.expires_in
-			? Date.now() + body.expires_in * 1000
-			: null;
+		this.credentials.refreshToken = body.refresh_token ?? this.credentials.refreshToken ?? null;
+		this.credentials.expiresAt = body.expires_in ? Date.now() + body.expires_in * 1000 : null;
 		this.credentials.tokenType = body.token_type ?? this.credentials.tokenType;
 		this.credentials.data = body.data ?? this.credentials.data ?? null;
 

@@ -44,10 +44,7 @@ export interface CloudAIRequest {
 /**
  * Determine if cloud AI should be used
  */
-function shouldUseCloudAI(
-	isNativeMode: boolean,
-	options: ModelCallOptions,
-): boolean {
+function shouldUseCloudAI(isNativeMode: boolean, options: ModelCallOptions): boolean {
 	if (options.useCloud === true) {
 		return true;
 	}
@@ -65,12 +62,8 @@ function shouldUseCloudAI(
 /**
  * Call local model (streaming response)
  */
-async function callLocalModel(
-	isNativeModel: boolean,
-	options: ModelCallOptions,
-): Promise<ReadableStream> {
-	const { streamText, createUIMessageStream, JsonToSseTransformStream } =
-		await import("ai");
+async function callLocalModel(isNativeModel: boolean, options: ModelCallOptions): Promise<ReadableStream> {
+	const { streamText, createUIMessageStream, JsonToSseTransformStream } = await import("ai");
 
 	const { generateUUID } = await import("@opencontext/shared");
 
@@ -123,10 +116,7 @@ export async function routeModelCall(
 				stream,
 			};
 		} catch (error) {
-			console.error("[Router] Cloud AI call failed:", error);
-
 			if (options.fallbackToLocal !== false) {
-				console.warn("[Router] Falling back to local model");
 				const stream = await callLocalModel(isNativeModel, options);
 				return {
 					source: "local",
@@ -149,12 +139,8 @@ export async function routeModelCall(
  * Override this function in the web app to enable cloud AI routing.
  * Default implementation throws - web app should override with cloud-client logic.
  */
-export async function routeModelCallCloud(
-	_request: CloudAIRequest,
-): Promise<ReadableStream> {
-	throw new Error(
-		"Cloud routing not available. Override routeModelCallCloud() in the web app.",
-	);
+export async function routeModelCallCloud(_request: CloudAIRequest): Promise<ReadableStream> {
+	throw new Error("Cloud routing not available. Override routeModelCallCloud() in the web app.");
 }
 
 /**

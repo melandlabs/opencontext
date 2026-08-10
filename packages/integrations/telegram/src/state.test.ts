@@ -1,10 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
 	calculateBackoffDelay,
 	isConnectionStale,
+	pruneOwnSentIds,
 	resolveConnectionState,
 	shouldProcessMessage,
-	pruneOwnSentIds,
 } from "./state";
 
 describe("calculateBackoffDelay", () => {

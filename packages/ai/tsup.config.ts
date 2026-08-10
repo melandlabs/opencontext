@@ -12,8 +12,7 @@ export default defineConfig({
 		"agent/native-runner/index": "src/agent/native-runner/index.ts",
 		"agent/runtime/index": "src/agent/runtime/index.ts",
 		"agent/supplemental-input/index": "src/agent/supplemental-input/index.ts",
-		"agent/runtime-instructions/index":
-			"src/agent/runtime-instructions/index.ts",
+		"agent/runtime-instructions/index": "src/agent/runtime-instructions/index.ts",
 		"agent/image-gen/index": "src/agent/image-gen/index.ts",
 		"agent/sandbox/index": "src/agent/sandbox/index.ts",
 		"agent/sandbox/types": "src/agent/sandbox/types.ts",
@@ -29,11 +28,5 @@ export default defineConfig({
 	clean: true,
 	splitting: false,
 	treeshake: true,
-	external: [
-		"react",
-		"react-dom",
-		"@tauri-apps/api",
-		"better-sqlite3",
-		"sqlite-vec",
-	],
+	external: ["react", "react-dom", "@tauri-apps/api", "better-sqlite3", "sqlite-vec"],
 });

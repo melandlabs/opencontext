@@ -9,10 +9,10 @@
 
 import { estimateTokens } from "@opencontext/shared";
 import {
-	chunkAtomicFacts,
 	type AtomicFactChunk,
 	type AtomicFactChunkerConfig,
 	type AtomicFactProvider,
+	chunkAtomicFacts,
 } from "./atomic-fact-chunker";
 
 export interface ChunkOptions {
@@ -57,12 +57,9 @@ const DEFAULT_OPTIONS: Required<ChunkOptions> = {
 /**
  * Split text into chunks with overlap
  */
-export function chunkText(
-	text: string,
-	options: ChunkOptions = {},
-): TextChunk[] {
+export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[] {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
-	const chunks: TextChunk[] = [];
+	const _chunks: TextChunk[] = [];
 
 	const cleanText = text.trim();
 
@@ -85,17 +82,12 @@ export function chunkText(
 		const trimmedParagraph = paragraph.trim();
 
 		if (
-			currentChunk.length + trimmedParagraph.length + opts.separator.length >
-				opts.maxChunkSize &&
+			currentChunk.length + trimmedParagraph.length + opts.separator.length > opts.maxChunkSize &&
 			currentChunk.length > 0
 		) {
 			processedChunks.push(currentChunk.trim());
 
-			const overlapText = getOverlapText(
-				currentChunk,
-				opts.chunkOverlap,
-				opts.separator,
-			);
+			const overlapText = getOverlapText(currentChunk, opts.chunkOverlap, opts.separator);
 			currentChunk = overlapText + opts.separator + trimmedParagraph;
 		} else {
 			if (currentChunk.length > 0) {
@@ -121,11 +113,7 @@ export function chunkText(
 					if (sentenceChunk.length > 0) {
 						finalChunks.push(sentenceChunk.trim());
 					}
-					const overlapText = getOverlapText(
-						sentenceChunk,
-						opts.chunkOverlap,
-						" ",
-					);
+					const overlapText = getOverlapText(sentenceChunk, opts.chunkOverlap, " ");
 					sentenceChunk = `${overlapText} ${sentence}`;
 				} else {
 					sentenceChunk += sentence;
@@ -153,11 +141,7 @@ export function chunkText(
 	});
 }
 
-function getOverlapText(
-	text: string,
-	overlapSize: number,
-	separator: string,
-): string {
+function getOverlapText(text: string, overlapSize: number, separator: string): string {
 	if (overlapSize >= text.length) {
 		return text;
 	}
@@ -199,10 +183,7 @@ export function getOptimalChunkSize(textLength: number): number {
 /**
  * Estimate number of chunks for a text
  */
-export function estimateChunkCount(
-	textLength: number,
-	options?: ChunkOptions,
-): number {
+export function estimateChunkCount(textLength: number, options?: ChunkOptions): number {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const effectiveChunkSize = opts.maxChunkSize - opts.chunkOverlap;
 	return Math.ceil(textLength / effectiveChunkSize);
@@ -217,10 +198,7 @@ export function estimateChunkCount(
  * - "atomic": async; requires an `AtomicFactProvider`. Falls back to fixed
  *   chunking on provider errors unless `fallbackStrategy === "throw"`.
  */
-export async function chunkDocument(
-	text: string,
-	config: ChunkingConfig,
-): Promise<ChunkDocumentChunk[]> {
+export async function chunkDocument(text: string, config: ChunkingConfig): Promise<ChunkDocumentChunk[]> {
 	const strategy = config.strategy;
 
 	if (strategy === "fixed" || strategy === "semantic") {
@@ -228,8 +206,7 @@ export async function chunkDocument(
 			maxChunkSize: config.chunkSize,
 			chunkOverlap: config.chunkOverlap,
 		});
-		const metadata =
-			strategy === "semantic" ? { strategy: "semantic" as const } : undefined;
+		const metadata = strategy === "semantic" ? { strategy: "semantic" as const } : undefined;
 		return chunks.map((chunk) => ({
 			text: chunk.content,
 			metadata,
@@ -238,9 +215,7 @@ export async function chunkDocument(
 
 	if (strategy === "atomic") {
 		if (!config.atomicFactProvider) {
-			throw new Error(
-				"chunkDocument: strategy='atomic' requires `atomicFactProvider` in config",
-			);
+			throw new Error("chunkDocument: strategy='atomic' requires `atomicFactProvider` in config");
 		}
 		const atomicConfig: AtomicFactChunkerConfig = {
 			provider: config.atomicFactProvider,

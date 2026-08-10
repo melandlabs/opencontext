@@ -1,16 +1,14 @@
 {
-  "extends": "../config/src/tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "baseUrl": ".",
-    "incremental": false,
-    "noEmit": false,
-    "paths": {
-      "@opencontext/memory-consolidation": [
-        "./memory-consolidation/src/index.ts"
-      ],
-      "@opencontext/memory-consolidation/*": ["./memory-consolidation/src/*"]
-    }
-  },
-  "include": ["src/**/*"]
+	"extends": "../config/src/tsconfig.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"baseUrl": ".",
+		"incremental": false,
+		"noEmit": false,
+		"paths": {
+			"@opencontext/memory-consolidation": ["./memory-consolidation/src/index.ts"],
+			"@opencontext/memory-consolidation/*": ["./memory-consolidation/src/*"]
+		}
+	},
+	"include": ["src/**/*"]
 }

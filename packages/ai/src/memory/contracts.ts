@@ -202,12 +202,8 @@ export interface MemoryStorageAdapter {
 	archiveRecordDetails?(input: MemoryArchiveRecordDetailsInput): Promise<void>;
 
 	queryRaw(query: MemorySearchQuery): Promise<MemoryPageResult<MemoryRecord>>;
-	querySummaries(
-		query: MemorySummarySearchQuery,
-	): Promise<MemoryPageResult<MemorySummary>>;
-	semanticRecallRaw?(
-		query: MemorySemanticRecallQuery,
-	): Promise<MemorySemanticRecallHit[]>;
+	querySummaries(query: MemorySummarySearchQuery): Promise<MemoryPageResult<MemorySummary>>;
+	semanticRecallRaw?(query: MemorySemanticRecallQuery): Promise<MemorySemanticRecallHit[]>;
 	markRecordsAccessed?(input: MemoryMarkAccessedInput): Promise<void>;
 	/**
 	 * Soft-deprecate records: write `deprecatedAt` (+ optional reason /
@@ -324,11 +320,7 @@ export interface MemorySearchGraphRetrievalWithheldNode {
 
 export interface MemorySearchGraphRetrievalAddedNode {
 	nodeId: string;
-	reason:
-		| "cluster-representative"
-		| "competing-alternative"
-		| "supersedes-withheld"
-		| "unexplained";
+	reason: "cluster-representative" | "competing-alternative" | "supersedes-withheld" | "unexplained";
 }
 
 export interface MemorySearchGraphRetrievalResult {

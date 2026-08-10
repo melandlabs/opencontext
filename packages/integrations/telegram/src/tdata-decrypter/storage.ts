@@ -9,9 +9,9 @@
  */
 
 import { Buffer } from "node:buffer";
-import type { RawTdfFile } from "./tdf";
-import { createLocalKey, createLegacyLocalKey, decryptLocal } from "./crypto";
+import { createLegacyLocalKey, createLocalKey, decryptLocal } from "./crypto";
 import { readQtByteArray } from "./qt";
+import type { RawTdfFile } from "./tdf";
 
 /**
  * Decrypt settings TDF file
@@ -20,15 +20,9 @@ export function decryptSettingsTdf(settingsTdf: RawTdfFile): Buffer {
 	const encryptedData = settingsTdf.encryptedData;
 
 	let offset = 0;
-	const { value: salt, newOffset: offset1 } = readQtByteArray(
-		encryptedData,
-		offset,
-	);
+	const { value: salt, newOffset: offset1 } = readQtByteArray(encryptedData, offset);
 	offset = offset1;
-	const { value: encryptedSettings, newOffset: _ } = readQtByteArray(
-		encryptedData,
-		offset,
-	);
+	const { value: encryptedSettings, newOffset: _ } = readQtByteArray(encryptedData, offset);
 
 	// Settings key is created with empty passcode
 	const settingsKey = createLegacyLocalKey(Buffer.alloc(0), salt);
@@ -40,24 +34,15 @@ export function decryptSettingsTdf(settingsTdf: RawTdfFile): Buffer {
  * Decrypt key data TDF file
  * Returns [localKey, infoDecrypted]
  */
-export function decryptKeyDataTdf(
-	passcode: Buffer,
-	keyDataTdf: RawTdfFile,
-): [Buffer, Buffer] {
+export function decryptKeyDataTdf(passcode: Buffer, keyDataTdf: RawTdfFile): [Buffer, Buffer] {
 	const stream = keyDataTdf.encryptedData;
 
 	let offset = 0;
 	const { value: salt, newOffset: offset1 } = readQtByteArray(stream, offset);
 	offset = offset1;
-	const { value: keyEncrypted, newOffset: offset2 } = readQtByteArray(
-		stream,
-		offset,
-	);
+	const { value: keyEncrypted, newOffset: offset2 } = readQtByteArray(stream, offset);
 	offset = offset2;
-	const { value: infoEncrypted, newOffset: _ } = readQtByteArray(
-		stream,
-		offset,
-	);
+	const { value: infoEncrypted, newOffset: _ } = readQtByteArray(stream, offset);
 
 	// Create passcode key
 	const passcodeKey = createLocalKey(passcode, salt);

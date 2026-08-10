@@ -1,5 +1,5 @@
-import { z } from "zod";
 import type { UIMessage } from "ai";
+import { z } from "zod";
 
 export type DataPart = { type: "append-message"; message: string };
 
@@ -12,9 +12,7 @@ export const messageMetadataSchema = z.object({
 	executionSource: z.string().optional(),
 	executionSequence: z.number().int().positive().optional(),
 	messagePhase: z.enum(["process", "final"]).optional(),
-	executionStatus: z
-		.enum(["pending", "running", "done", "error", "blocked", "interrupted"])
-		.optional(),
+	executionStatus: z.enum(["pending", "running", "done", "error", "blocked", "interrupted"]).optional(),
 	isProcessingIndicator: z.boolean().optional(),
 	linkedAssistantMessageId: z.string().optional(),
 	linkedUserMessageId: z.string().optional(),
@@ -53,9 +51,7 @@ export const messageMetadataSchema = z.object({
 	// Referenced action items (insight task id, format like insightId|bucket|index|...)
 	referencedTaskIds: z.array(z.string()).optional(),
 	// Referenced people (corresponds to /api/people, can be id or name)
-	referencedPeople: z
-		.array(z.object({ id: z.string().optional(), name: z.string() }))
-		.optional(),
+	referencedPeople: z.array(z.object({ id: z.string().optional(), name: z.string() })).optional(),
 	// Referenced channels (corresponds to integrated channel data)
 	referencedChannels: z
 		.array(
@@ -414,14 +410,7 @@ export type CustomUIDataTypes = {
 	taskExecutionStep: {
 		stepId: string;
 		title: string;
-		status:
-			| "started"
-			| "running"
-			| "completed"
-			| "reused"
-			| "skipped"
-			| "blocked"
-			| "error";
+		status: "started" | "running" | "completed" | "reused" | "skipped" | "blocked" | "error";
 		detail?: string;
 		characterId?: string;
 		characterName?: string;

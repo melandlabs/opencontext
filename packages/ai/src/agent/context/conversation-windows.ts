@@ -1,10 +1,10 @@
+import { estimateTokens } from "../billing";
 import {
 	COMPACTION_EMERGENCY_RATIO,
 	COMPACTION_HARD_RATIO,
 	COMPACTION_SOFT_RATIO,
 	type CompactionLevel,
 } from "../compaction";
-import { estimateTokens } from "../billing";
 
 export type ConversationWindowRole = "user" | "assistant" | "system";
 
@@ -29,8 +29,7 @@ export interface TokenizedConversationWindowMessage extends ConversationWindowMe
 	ageMs: number;
 }
 
-export type ConversationWindowBucket =
-	"recent" | "warm" | "cold" | "archive" | "unknown";
+export type ConversationWindowBucket = "recent" | "warm" | "cold" | "archive" | "unknown";
 
 export interface ConversationWindowBucketStats {
 	messages: number;
@@ -54,53 +53,39 @@ const DAY_MS = 24 * HOUR_MS;
 
 // Default windows favor preserving very recent context in full text while
 // gradually pushing older history toward async compaction.
-export const DEFAULT_CONVERSATION_WINDOW_CONFIG: Required<ConversationWindowConfig> =
-	{
-		maxTokens: 40_000,
-		recentWindowMs: HOUR_MS,
-		warmWindowMs: DAY_MS,
-		coldWindowMs: 7 * DAY_MS,
-		keepRecentTokensRatio: 0.5,
-		keepWarmTokensRatio: 0.3,
-	};
+export const DEFAULT_CONVERSATION_WINDOW_CONFIG: Required<ConversationWindowConfig> = {
+	maxTokens: 40_000,
+	recentWindowMs: HOUR_MS,
+	warmWindowMs: DAY_MS,
+	coldWindowMs: 7 * DAY_MS,
+	keepRecentTokensRatio: 0.5,
+	keepWarmTokensRatio: 0.3,
+};
 
 function clampRatio(value: number, fallback: number): number {
 	if (!Number.isFinite(value)) return fallback;
 	return Math.min(1, Math.max(0, value));
 }
 
-function normalizeConfig(
-	config: ConversationWindowConfig,
-): Required<ConversationWindowConfig> {
+function normalizeConfig(config: ConversationWindowConfig): Required<ConversationWindowConfig> {
 	return {
 		maxTokens: Math.max(1, config.maxTokens),
-		recentWindowMs:
-			config.recentWindowMs ??
-			DEFAULT_CONVERSATION_WINDOW_CONFIG.recentWindowMs,
-		warmWindowMs:
-			config.warmWindowMs ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.warmWindowMs,
-		coldWindowMs:
-			config.coldWindowMs ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.coldWindowMs,
+		recentWindowMs: config.recentWindowMs ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.recentWindowMs,
+		warmWindowMs: config.warmWindowMs ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.warmWindowMs,
+		coldWindowMs: config.coldWindowMs ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.coldWindowMs,
 		keepRecentTokensRatio: clampRatio(
-			config.keepRecentTokensRatio ??
-				DEFAULT_CONVERSATION_WINDOW_CONFIG.keepRecentTokensRatio,
+			config.keepRecentTokensRatio ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.keepRecentTokensRatio,
 			DEFAULT_CONVERSATION_WINDOW_CONFIG.keepRecentTokensRatio,
 		),
 		keepWarmTokensRatio: clampRatio(
-			config.keepWarmTokensRatio ??
-				DEFAULT_CONVERSATION_WINDOW_CONFIG.keepWarmTokensRatio,
+			config.keepWarmTokensRatio ?? DEFAULT_CONVERSATION_WINDOW_CONFIG.keepWarmTokensRatio,
 			DEFAULT_CONVERSATION_WINDOW_CONFIG.keepWarmTokensRatio,
 		),
 	};
 }
 
-export function estimateConversationTokens(
-	conversation: Array<{ content: string }>,
-): number {
-	return conversation.reduce(
-		(sum, msg) => sum + estimateTokens(msg.content),
-		0,
-	);
+export function estimateConversationTokens(conversation: Array<{ content: string }>): number {
+	return conversation.reduce((sum, msg) => sum + estimateTokens(msg.content), 0);
 }
 
 export function getConversationBucket(
@@ -117,10 +102,7 @@ export function getConversationBucket(
 	return "archive";
 }
 
-function getCompactionLevel(
-	usageRatio: number,
-	hasOldHistory: boolean,
-): CompactionLevel | null {
+function getCompactionLevel(usageRatio: number, hasOldHistory: boolean): CompactionLevel | null {
 	if (usageRatio >= COMPACTION_EMERGENCY_RATIO) return "emergency";
 	if (usageRatio >= COMPACTION_HARD_RATIO) return "hard";
 	if (usageRatio >= COMPACTION_SOFT_RATIO || hasOldHistory) return "soft";
@@ -135,10 +117,7 @@ function pushStats(
 	stats[message.bucket].tokens += message.tokens;
 }
 
-function createBucketStats(): Record<
-	ConversationWindowBucket,
-	ConversationWindowBucketStats
-> {
+function createBucketStats(): Record<ConversationWindowBucket, ConversationWindowBucketStats> {
 	return {
 		recent: { messages: 0, tokens: 0 },
 		warm: { messages: 0, tokens: 0 },
@@ -210,21 +189,13 @@ export function prepareConversationWindows(
 	const totalTokens = tokenized.reduce((sum, msg) => sum + msg.tokens, 0);
 	const usageRatio = totalTokens / normalized.maxTokens;
 
-	const recent = tokenized.filter(
-		(msg) => msg.bucket === "recent" || msg.bucket === "unknown",
-	);
+	const recent = tokenized.filter((msg) => msg.bucket === "recent" || msg.bucket === "unknown");
 	const warm = tokenized.filter((msg) => msg.bucket === "warm");
 	const cold = tokenized.filter((msg) => msg.bucket === "cold");
 	const archive = tokenized.filter((msg) => msg.bucket === "archive");
 
-	const recentBudget = Math.max(
-		1,
-		Math.floor(normalized.maxTokens * normalized.keepRecentTokensRatio),
-	);
-	const warmBudget = Math.max(
-		0,
-		Math.floor(normalized.maxTokens * normalized.keepWarmTokensRatio),
-	);
+	const recentBudget = Math.max(1, Math.floor(normalized.maxTokens * normalized.keepRecentTokensRatio));
+	const warmBudget = Math.max(0, Math.floor(normalized.maxTokens * normalized.keepWarmTokensRatio));
 
 	const recentSelection = keepNewestWithinBudget(recent, recentBudget);
 	const warmSelection = keepNewestWithinBudget(warm, warmBudget);
@@ -233,18 +204,10 @@ export function prepareConversationWindows(
 		(a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0),
 	);
 
-	const immediatePoolTokens = immediatePool.reduce(
-		(sum, msg) => sum + msg.tokens,
-		0,
-	);
-	const remainingBudget = Math.max(
-		0,
-		normalized.maxTokens - immediatePoolTokens,
-	);
+	const immediatePoolTokens = immediatePool.reduce((sum, msg) => sum + msg.tokens, 0);
+	const remainingBudget = Math.max(0, normalized.maxTokens - immediatePoolTokens);
 
-	const coldAndArchive = [...cold, ...archive].sort(
-		(a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0),
-	);
+	const coldAndArchive = [...cold, ...archive].sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
 	const coldSelection = keepNewestWithinBudget(coldAndArchive, remainingBudget);
 
 	const immediate = [...immediatePool, ...coldSelection.kept].sort(
@@ -259,9 +222,7 @@ export function prepareConversationWindows(
 
 	const candidateSet = new Set(candidatesForCompaction);
 	const immediateSet = new Set(immediate);
-	const deferred = tokenized.filter(
-		(msg) => !candidateSet.has(msg) && !immediateSet.has(msg),
-	);
+	const deferred = tokenized.filter((msg) => !candidateSet.has(msg) && !immediateSet.has(msg));
 
 	const hasOldHistory = archive.length > 0 || cold.length > 0;
 	const level = getCompactionLevel(usageRatio, hasOldHistory);
@@ -272,10 +233,7 @@ export function prepareConversationWindows(
 		deferred,
 		totalTokens,
 		immediateTokens: immediate.reduce((sum, msg) => sum + msg.tokens, 0),
-		compactionCandidateTokens: candidatesForCompaction.reduce(
-			(sum, msg) => sum + msg.tokens,
-			0,
-		),
+		compactionCandidateTokens: candidatesForCompaction.reduce((sum, msg) => sum + msg.tokens, 0),
 		usageRatio,
 		level,
 		bucketStats,

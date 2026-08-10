@@ -1,28 +1,22 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import {
+	type OpenContextReadiness,
 	checkOpenContextReadiness,
 	formatOpenContextReadiness,
-	type OpenContextReadiness,
 } from "../opencontext/readiness";
 import type { OpenContextToolContext } from "./index";
 
-function toStructuredContent(
-	readiness: OpenContextReadiness,
-): Record<string, unknown> {
+function toStructuredContent(readiness: OpenContextReadiness): Record<string, unknown> {
 	return { ...readiness };
 }
 
-export function registerStatusTools(
-	server: McpServer,
-	context: OpenContextToolContext,
-): void {
+export function registerStatusTools(server: McpServer, context: OpenContextToolContext): void {
 	server.registerTool(
 		"opencontext_status",
 		{
 			title: "OpenContext Status",
-			description:
-				"Check whether the local OpenContext Desktop API and MCP token authentication are ready.",
+			description: "Check whether the local OpenContext Desktop API and MCP token authentication are ready.",
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,

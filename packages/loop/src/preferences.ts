@@ -1,21 +1,10 @@
 /**
  * Loop preferences — read/write the user's local config.json. Defaults
  * are applied on missing fields so partially-written files self-heal.
- *
- * Phase 5 of `docs/split-runtime-ui.md` lifted this into the leaf
- * `@opencontext/loop` package along with the `LoopPreferences` shape
- * itself, so the runtime + UI can both read the same on-disk config
- * without dragging the rest of `apps/web/lib/loop/*` along.
- *
- * The huge `apps/web/lib/loop/types.ts` (843 lines, dozens of
- * unrelated types) re-exports these from here via
- * `apps/web/lib/loop/types.ts`'s `export { ... } from "@opencontext/loop/preferences"`
- * bridge, preserving the existing public surface for the rest of the
- * Loop runtime.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { ensureDirs, ensureParent, LOOP_PATHS } from "./paths";
+import { LOOP_PATHS, ensureDirs, ensureParent } from "./paths";
 
 /**
  * Quiet-day filler module identifier. The Loop picks one when
@@ -23,8 +12,7 @@ import { ensureDirs, ensureParent, LOOP_PATHS } from "./paths";
  * empty. See issue #316 for the rationale behind giving "nothing to
  * dismiss" an actual module instead of a hard skip.
  */
-export type QuietDayFillerId =
-	"none" | "ai-news-digest" | "weather-calendar" | "memory-resurface";
+export type QuietDayFillerId = "none" | "ai-news-digest" | "weather-calendar" | "memory-resurface";
 
 /**
  * The shape persisted to `~/.opencontext/loop/config.json`. New
@@ -202,18 +190,14 @@ export function readPreferences(): LoopPreferences {
 		return { ...DEFAULT_LOOP_PREFERENCES };
 	}
 	try {
-		const raw = JSON.parse(
-			readFileSync(LOOP_PATHS.config, "utf8"),
-		) as Partial<LoopPreferences>;
+		const raw = JSON.parse(readFileSync(LOOP_PATHS.config, "utf8")) as Partial<LoopPreferences>;
 		return { ...DEFAULT_LOOP_PREFERENCES, ...(raw ?? {}) };
 	} catch {
 		return { ...DEFAULT_LOOP_PREFERENCES };
 	}
 }
 
-export function writePreferences(
-	patch: Partial<LoopPreferences>,
-): LoopPreferences {
+export function writePreferences(patch: Partial<LoopPreferences>): LoopPreferences {
 	ensureDirs();
 	const next: LoopPreferences = { ...readPreferences(), ...(patch ?? {}) };
 	ensureParent(LOOP_PATHS.config);

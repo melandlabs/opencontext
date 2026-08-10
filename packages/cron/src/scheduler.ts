@@ -9,14 +9,10 @@ import type { ScheduleConfig } from "./types";
 /**
  * Compute the next run time based on schedule configuration
  */
-export function computeNextRun(
-	config: ScheduleConfig,
-	now: Date = new Date(),
-): Date | null {
+export function computeNextRun(config: ScheduleConfig, now: Date = new Date()): Date | null {
 	if (config.type === "once") {
 		// Handle both Date and string types
-		const atDate =
-			config.at instanceof Date ? config.at : new Date(config.at as string);
+		const atDate = config.at instanceof Date ? config.at : new Date(config.at as string);
 		// Check if the date is valid
 		if (!atDate || Number.isNaN(atDate.getTime())) {
 			return null;
@@ -50,11 +46,7 @@ export function computeNextRun(
 			const next = cron.nextRun(now);
 			return next || null;
 		} catch (error) {
-			console.error(
-				"[Cron] Invalid cron expression:",
-				config.expression,
-				error,
-			);
+			console.error("[Cron] Invalid cron expression:", config.expression, error);
 			return null;
 		}
 	}
@@ -77,10 +69,7 @@ export function validateCronExpression(expression: string): boolean {
 /**
  * Check if a job is due to run
  */
-export function isJobDue(
-	nextRunAt: Date | null,
-	now: Date = new Date(),
-): boolean {
+export function isJobDue(nextRunAt: Date | null, now: Date = new Date()): boolean {
 	if (!nextRunAt) return false;
 	return nextRunAt <= now;
 }

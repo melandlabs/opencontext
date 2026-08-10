@@ -1,8 +1,8 @@
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { DEV_PORT, PROD_PORT } from "@opencontext/shared";
 import { customProvider } from "ai";
 import type { LanguageModel } from "ai";
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { DEV_PORT, PROD_PORT } from "@opencontext/shared";
 
 /**
  * Provider type for LLM API
@@ -67,10 +67,7 @@ let _keepaliveFetch: typeof fetch | null = null;
 function createKeepAliveFetch(): typeof fetch {
 	if (_keepaliveFetch) return _keepaliveFetch;
 
-	_keepaliveFetch = async (
-		url: RequestInfo | URL,
-		init?: RequestInit,
-	): Promise<Response> => {
+	_keepaliveFetch = async (url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
 		const keepaliveInit: RequestInit = {
 			...init,
 			keepalive: true, // Keep connection alive for subsequent requests
@@ -119,9 +116,6 @@ export function setAIUserContext(context: AIUserContext | null) {
 				context.llmApiSettings?.anthropicCompatible?.model;
 
 		if (_initialized && contextChanged) {
-			console.log(
-				"[AI Provider] User context changed, reinitializing models...",
-			);
 			_initialized = false;
 		}
 	}
@@ -163,7 +157,6 @@ function createFetchWithContext(
 					"[AI Provider] Cloud auth token is required but not provided. " +
 						"Please ensure you are logged in with cloud authentication.",
 				);
-				console.error(error.message);
 				throw error;
 			}
 
@@ -187,9 +180,7 @@ function getOpenAICompatibleBaseUrl(isNativeMode: boolean): string {
 	if (isNativeMode) {
 		const isDev = process.env.NODE_ENV !== "production";
 		const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-		const fallbackAppUrl = isDev
-			? `http://localhost:${DEV_PORT}`
-			: `http://localhost:${PROD_PORT}`;
+		const fallbackAppUrl = isDev ? `http://localhost:${DEV_PORT}` : `http://localhost:${PROD_PORT}`;
 		let localUrl = fallbackAppUrl;
 
 		if (configuredAppUrl) {
@@ -198,15 +189,8 @@ function getOpenAICompatibleBaseUrl(isNativeMode: boolean): string {
 				if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
 					localUrl = configuredAppUrl;
 				} else {
-					console.warn(
-						`[LLM Provider] Ignoring NEXT_PUBLIC_APP_URL with unsupported protocol: ${configuredAppUrl}`,
-					);
 				}
-			} catch {
-				console.warn(
-					`[LLM Provider] Ignoring invalid NEXT_PUBLIC_APP_URL: ${configuredAppUrl}`,
-				);
-			}
+			} catch {}
 		}
 
 		const proxyPath = "/api/ai/v1";
@@ -215,9 +199,7 @@ function getOpenAICompatibleBaseUrl(isNativeMode: boolean): string {
 	}
 
 	// Web mode: user LLM settings are required
-	throw new Error(
-		"user LLM settings required for anthropic/openai-compatible provider",
-	);
+	throw new Error("user LLM settings required for anthropic/openai-compatible provider");
 }
 
 /**
@@ -227,9 +209,7 @@ function getAnthropicCompatibleBaseUrl(isNativeMode: boolean): string {
 	if (isNativeMode) {
 		const isDev = process.env.NODE_ENV !== "production";
 		const configuredAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-		const fallbackAppUrl = isDev
-			? `http://localhost:${DEV_PORT}`
-			: `http://localhost:${PROD_PORT}`;
+		const fallbackAppUrl = isDev ? `http://localhost:${DEV_PORT}` : `http://localhost:${PROD_PORT}`;
 		let localUrl = fallbackAppUrl;
 
 		if (configuredAppUrl) {
@@ -238,15 +218,8 @@ function getAnthropicCompatibleBaseUrl(isNativeMode: boolean): string {
 				if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
 					localUrl = configuredAppUrl;
 				} else {
-					console.warn(
-						`[Anthropic Provider] Ignoring NEXT_PUBLIC_APP_URL with unsupported protocol: ${configuredAppUrl}`,
-					);
 				}
-			} catch {
-				console.warn(
-					`[Anthropic Provider] Ignoring invalid NEXT_PUBLIC_APP_URL: ${configuredAppUrl}`,
-				);
-			}
+			} catch {}
 		}
 
 		// Use /api/ai/v1 Anthropic-compatible endpoint
@@ -257,14 +230,8 @@ function getAnthropicCompatibleBaseUrl(isNativeMode: boolean): string {
 
 	const externalUrl = process.env.ANTHROPIC_BASE_URL;
 	if (!externalUrl) {
-		throw new Error(
-			"ANTHROPIC_BASE_URL environment variable is not set (web mode)",
-		);
+		throw new Error("ANTHROPIC_BASE_URL environment variable is not set (web mode)");
 	}
-	console.log(
-		"[Anthropic Provider] Using external AI provider (web mode):",
-		externalUrl,
-	);
 	return externalUrl;
 }
 
@@ -278,11 +245,8 @@ function getValidatedEnv(isNativeMode: boolean) {
 
 	// Handle Anthropic-compatible provider
 	if (providerType === "anthropic_compatible") {
-		const userAnthropicSettings =
-			globalUserContext?.llmApiSettings?.anthropicCompatible;
-		let baseUrl =
-			userAnthropicSettings?.baseUrl ??
-			getAnthropicCompatibleBaseUrl(isNativeMode);
+		const userAnthropicSettings = globalUserContext?.llmApiSettings?.anthropicCompatible;
+		let baseUrl = userAnthropicSettings?.baseUrl ?? getAnthropicCompatibleBaseUrl(isNativeMode);
 
 		// Ensure baseUrl has /v1 for Anthropic API (MiniMax and similar require this)
 		const normalizedBase = baseUrl.replace(/\/+$/, "");
@@ -292,18 +256,13 @@ function getValidatedEnv(isNativeMode: boolean) {
 
 		const apiKey =
 			userAnthropicSettings?.apiKey ??
-			(isNativeMode
-				? "local-auth-via-jwt-token"
-				: process.env.ANTHROPIC_API_KEY);
+			(isNativeMode ? "local-auth-via-jwt-token" : process.env.ANTHROPIC_API_KEY);
 
 		if (!isNativeMode && !apiKey) {
-			throw new Error(
-				"ANTHROPIC_API_KEY environment variable is not set (web mode)",
-			);
+			throw new Error("ANTHROPIC_API_KEY environment variable is not set (web mode)");
 		}
 
-		const modelName =
-			userAnthropicSettings?.model ?? process.env.ANTHROPIC_MODEL;
+		const modelName = userAnthropicSettings?.model ?? process.env.ANTHROPIC_MODEL;
 
 		if (!modelName) {
 			throw new Error("ANTHROPIC_MODEL environment variable is not set");
@@ -320,27 +279,19 @@ function getValidatedEnv(isNativeMode: boolean) {
 	}
 
 	// Handle OpenAI-compatible provider (default)
-	const userOpenAISettings =
-		globalUserContext?.llmApiSettings?.openaiCompatible;
-	const baseUrl =
-		userOpenAISettings?.baseUrl ?? getOpenAICompatibleBaseUrl(isNativeMode);
+	const userOpenAISettings = globalUserContext?.llmApiSettings?.openaiCompatible;
+	const baseUrl = userOpenAISettings?.baseUrl ?? getOpenAICompatibleBaseUrl(isNativeMode);
 
-	const apiKey =
-		userOpenAISettings?.apiKey ??
-		(isNativeMode ? "local-auth-via-jwt-token" : undefined);
+	const apiKey = userOpenAISettings?.apiKey ?? (isNativeMode ? "local-auth-via-jwt-token" : undefined);
 
 	if (!isNativeMode && !apiKey) {
-		throw new Error(
-			"user LLM settings required for anthropic/openai-compatible provider",
-		);
+		throw new Error("user LLM settings required for anthropic/openai-compatible provider");
 	}
 
 	const modelName = userOpenAISettings?.model;
 
 	if (!modelName) {
-		throw new Error(
-			"user LLM settings required for anthropic/openai-compatible provider",
-		);
+		throw new Error("user LLM settings required for anthropic/openai-compatible provider");
 	}
 
 	return {
@@ -366,19 +317,11 @@ function initializeModels(isNativeMode: boolean) {
 	if (_initialized) return;
 
 	const env = getValidatedEnv(isNativeMode);
-	const {
-		providerType,
-		baseUrl,
-		apiKey,
-		modelName,
-		imageModelName,
-		vlmModelName,
-	} = env;
+	const { providerType, baseUrl, apiKey, modelName, imageModelName, vlmModelName } = env;
 
 	const userContext = globalUserContext;
 
-	const shouldUseCustomFetch =
-		userContext && (!isNativeMode || userContext.token);
+	const shouldUseCustomFetch = userContext && (!isNativeMode || userContext.token);
 
 	// Use keepalive fetch to reduce TTFT through connection reuse
 	const customFetch = shouldUseCustomFetch
@@ -386,17 +329,9 @@ function initializeModels(isNativeMode: boolean) {
 		: createKeepAliveFetch();
 
 	if (userContext && isNativeMode && !userContext.token) {
-		console.warn(
-			"[AI Provider] Bot operation in native environment without cloud token - may fail",
-		);
 	}
 
 	if (providerType === "anthropic_compatible") {
-		// Use createAnthropic for Anthropic-compatible providers
-		console.log(
-			`[AI Provider] Using Anthropic-compatible provider: ${baseUrl}, model: ${modelName}`,
-		);
-
 		const anthropicProvider = createAnthropic({
 			baseURL: baseUrl,
 			apiKey: apiKey,
@@ -404,9 +339,7 @@ function initializeModels(isNativeMode: boolean) {
 		});
 
 		const anthropicModel = anthropicProvider.languageModel(modelName) as any;
-		const anthropicVlmModel = anthropicProvider.languageModel(
-			vlmModelName,
-		) as any;
+		const anthropicVlmModel = anthropicProvider.languageModel(vlmModelName) as any;
 
 		_modelProvider = customProvider({
 			languageModels: {
@@ -419,11 +352,6 @@ function initializeModels(isNativeMode: boolean) {
 		_model = anthropicModel;
 		_vlmModel = anthropicVlmModel;
 	} else {
-		// Use createOpenAICompatible for OpenAI-compatible providers
-		console.log(
-			`[AI Provider] Using OpenAI-compatible provider: ${baseUrl}, model: ${modelName}`,
-		);
-
 		_model = createOpenAICompatible({
 			baseURL: baseUrl,
 			name: "chat-model",
@@ -495,10 +423,7 @@ export function getVLMModel(isNativeMode: boolean): LanguageModel {
  * Create a dynamic model with the specified model name
  * This allows using any model (e.g., from OpenRouter) at request time
  */
-export function createDynamicModel(
-	isNativeMode: boolean,
-	modelName?: string,
-): LanguageModel {
+export function createDynamicModel(isNativeMode: boolean, modelName?: string): LanguageModel {
 	if (!_initialized) {
 		initializeModels(isNativeMode);
 	}
@@ -508,8 +433,7 @@ export function createDynamicModel(
 
 	const userContext = globalUserContext;
 
-	const shouldUseCustomFetch =
-		userContext && (!isNativeMode || userContext.token);
+	const shouldUseCustomFetch = userContext && (!isNativeMode || userContext.token);
 
 	// Use keepalive fetch to reduce TTFT through connection reuse
 	const customFetch = shouldUseCustomFetch
@@ -518,55 +442,30 @@ export function createDynamicModel(
 
 	const debugFetch = customFetch
 		? async (url: RequestInfo | URL, init?: RequestInit) => {
-				const urlStr =
-					typeof url === "string"
-						? url
-						: url instanceof URL
-							? url.toString()
-							: url.url;
+				const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
 				if (urlStr.includes("openrouter.ai/api/v1/chat/completions")) {
-					console.log(`[OpenRouter Request Debug] URL: ${urlStr}`);
 					if (init?.body) {
-						const bodyStr =
-							typeof init.body === "string"
-								? init.body
-								: JSON.stringify(init.body);
+						const bodyStr = typeof init.body === "string" ? init.body : JSON.stringify(init.body);
 						try {
 							const bodyObj = JSON.parse(bodyStr) as {
 								model?: unknown;
 								tools?: unknown;
 							};
-							console.log(`[OpenRouter Request Debug] Model: ${bodyObj.model}`);
 							if (Array.isArray(bodyObj.tools)) {
-								console.log(
-									`[OpenRouter Request Debug] Tools count: ${bodyObj.tools.length}`,
-								);
-								bodyObj.tools.forEach((tool: unknown, idx: number) => {
+								bodyObj.tools.forEach((tool: unknown, _idx: number) => {
 									const maybeTool = tool as {
 										function?: { name?: string };
 										name?: string;
 									};
-									const toolName = maybeTool.function?.name || maybeTool.name;
-									console.log(
-										`[OpenRouter Request Debug] Tool[${idx}] name: "${toolName}"`,
-									);
+									const _toolName = maybeTool.function?.name || maybeTool.name;
 								});
 							}
-						} catch (e) {
-							console.log(
-								"[OpenRouter Request Debug] Body (parse failed):",
-								bodyStr,
-							);
-						}
+						} catch (_e) {}
 					}
 				}
 				return customFetch(url, init);
 			}
 		: undefined;
-
-	console.log(
-		`[Dynamic Model] Creating model with name: ${actualModelName}, baseUrl: ${env.baseUrl}, provider: ${env.providerType}`,
-	);
 
 	if (env.providerType === "anthropic_compatible") {
 		return createAnthropic({
@@ -588,9 +487,7 @@ export function createDynamicModel(
  * Get the model provider
  * Lazily initializes models on first access
  */
-export function getModelProvider(
-	isNativeMode: boolean,
-): ReturnType<typeof customProvider> {
+export function getModelProvider(isNativeMode: boolean): ReturnType<typeof customProvider> {
 	if (!_initialized) {
 		initializeModels(isNativeMode);
 	}

@@ -1,22 +1,22 @@
 {
-  "extends": "../config/src/tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "incremental": false,
-    "tsBuildInfoFile": "./dist/.tsbuildinfo",
-    "noEmit": false,
-    "paths": {
-      "@opencontext/indexeddb": ["../../packages/indexeddb/src/index.ts"],
-      "@opencontext/indexeddb/*": ["../../packages/indexeddb/src/*"],
-      "@opencontext/sqlite": ["../../packages/sqlite/src/index.ts"],
-      "@opencontext/sqlite/*": ["../../packages/sqlite/src/*"],
-      "@opencontext/ai": ["../../packages/ai/src/index.ts"],
-      "@opencontext/ai/*": ["../../packages/ai/src/*"],
-      "@opencontext/rag": ["../../packages/ai/rag/src/index.ts"],
-      "@opencontext/rag/*": ["../../packages/ai/rag/src/*"],
-      "@opencontext/shared": ["../../packages/shared/src/index.ts"],
-      "@opencontext/shared/*": ["../../packages/shared/src/*"]
-    }
-  },
-  "include": ["src"]
+	"extends": "../config/src/tsconfig.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"incremental": false,
+		"tsBuildInfoFile": "./dist/.tsbuildinfo",
+		"noEmit": false,
+		"paths": {
+			"@opencontext/indexeddb": ["../../packages/indexeddb/src/index.ts"],
+			"@opencontext/indexeddb/*": ["../../packages/indexeddb/src/*"],
+			"@opencontext/sqlite": ["../../packages/sqlite/src/index.ts"],
+			"@opencontext/sqlite/*": ["../../packages/sqlite/src/*"],
+			"@opencontext/ai": ["../../packages/ai/src/index.ts"],
+			"@opencontext/ai/*": ["../../packages/ai/src/*"],
+			"@opencontext/rag": ["../../packages/ai/rag/src/index.ts"],
+			"@opencontext/rag/*": ["../../packages/ai/rag/src/*"],
+			"@opencontext/shared": ["../../packages/shared/src/index.ts"],
+			"@opencontext/shared/*": ["../../packages/shared/src/*"]
+		}
+	},
+	"include": ["src"]
 }

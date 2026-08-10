@@ -47,11 +47,7 @@ export interface SearchResult {
 export interface IVectorStore {
 	addChunk(chunk: DocumentChunk): Promise<void>;
 	addChunks(chunks: DocumentChunk[]): Promise<void>;
-	similaritySearch(
-		queryEmbedding: number[],
-		limit?: number,
-		userId?: string,
-	): Promise<VectorSearchResult[]>;
+	similaritySearch(queryEmbedding: number[], limit?: number, userId?: string): Promise<VectorSearchResult[]>;
 	deleteDocument(documentId: string): Promise<void>;
 	getDocumentCount(): Promise<number>;
 	getChunkCount(): Promise<number>;
@@ -141,9 +137,7 @@ export async function getVectorStore(): Promise<IVectorStore> {
 	const config = getConfig();
 
 	if (!config) {
-		throw new Error(
-			"Vector service not configured. Call configureVectorService() first.",
-		);
+		throw new Error("Vector service not configured. Call configureVectorService() first.");
 	}
 
 	return await config.getStore();
@@ -175,7 +169,6 @@ export async function addDocumentToVectorStore(
 	}));
 
 	await vectorStore.addChunks(documentChunks);
-	console.log(`✅ Added ${chunks.length} chunks to vector store`);
 }
 
 /**
@@ -202,9 +195,7 @@ export async function addTextToVectorStore(
 ): Promise<void> {
 	const config = getConfig();
 	if (!config) {
-		throw new Error(
-			"Vector service not configured. Call configureVectorService() first.",
-		);
+		throw new Error("Vector service not configured. Call configureVectorService() first.");
 	}
 
 	if (input.chunks && input.chunks.length > 0) {
@@ -217,25 +208,12 @@ export async function addTextToVectorStore(
 	}
 
 	if (!config.chunking) {
-		throw new Error(
-			"addTextToVectorStore: provide pre-built chunks or configure `chunking`.",
-		);
+		throw new Error("addTextToVectorStore: provide pre-built chunks or configure `chunking`.");
 	}
 
 	const { chunkDocument } = await import("./chunking");
 	const chunked = await chunkDocument(input.text, config.chunking);
 	if (chunked.length === 0) return;
-
-	// The caller is responsible for embedding chunks. We expose the chunked
-	// list as a warning log + return so they can be embedded downstream.
-	// To keep this method side-effect-free in absence of an embedder, we
-	// surface the chunks via a console log and re-use the legacy
-	// addDocumentToVectorStore if the chunker happened to also produce
-	// embeddings (it does not, by design — chunking is separate from
-	// embedding). Callers should prefer the explicit chunks path.
-	console.warn(
-		`⚠️ addTextToVectorStore: chunking produced ${chunked.length} chunks but no embedding layer is wired here. Pass pre-embedded chunks or use addDocumentToVectorStore directly.`,
-	);
 }
 
 export async function searchVectorStore(
@@ -245,11 +223,7 @@ export async function searchVectorStore(
 ): Promise<SearchResult[]> {
 	const vectorStore = await getVectorStore();
 
-	const results = await vectorStore.similaritySearch(
-		queryEmbedding,
-		limit,
-		userId,
-	);
+	const results = await vectorStore.similaritySearch(queryEmbedding, limit, userId);
 
 	return results.map((r) => ({
 		content: r.content,
@@ -258,12 +232,9 @@ export async function searchVectorStore(
 	}));
 }
 
-export async function deleteDocumentFromVectorStore(
-	documentId: string,
-): Promise<void> {
+export async function deleteDocumentFromVectorStore(documentId: string): Promise<void> {
 	const vectorStore = await getVectorStore();
 	await vectorStore.deleteDocument(documentId);
-	console.log(`✅ Deleted document ${documentId} from vector store`);
 }
 
 export async function getVectorStoreStats(): Promise<{

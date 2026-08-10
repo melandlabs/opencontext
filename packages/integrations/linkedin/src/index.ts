@@ -1,6 +1,6 @@
-import { AppError } from "@opencontext/shared/errors";
-import type { ExtractedMessageInfo } from "@opencontext/shared";
 import type { Platform } from "@opencontext/integrations/channels/sources/types";
+import type { ExtractedMessageInfo } from "@opencontext/shared";
+import { AppError } from "@opencontext/shared/errors";
 
 export type LinkedInCredentials = {
 	accessToken?: string | null;
@@ -48,10 +48,7 @@ export class LinkedInAdapter {
 		this.clientSecret = options.clientSecret;
 
 		if (!this.accessToken) {
-			throw new AppError(
-				"bad_request:bot",
-				"LinkedIn access token is missing. Reconnect your account.",
-			);
+			throw new AppError("bad_request:bot", "LinkedIn access token is missing. Reconnect your account.");
 		}
 	}
 
@@ -71,20 +68,14 @@ export class LinkedInAdapter {
 			client_secret: this.clientSecret,
 		});
 
-		const response = await fetch(
-			"https://www.linkedin.com/oauth/v2/accessToken",
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/x-www-form-urlencoded" },
-				body,
-			},
-		);
+		const response = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			body,
+		});
 
 		if (!response.ok) {
-			console.error(
-				`[Bot ${this.botId}] LinkedIn refresh failed ${response.status}`,
-				await response.text(),
-			);
+			console.error(`[Bot ${this.botId}] LinkedIn refresh failed ${response.status}`, await response.text());
 			return this.accessToken ?? "";
 		}
 
@@ -94,9 +85,7 @@ export class LinkedInAdapter {
 		};
 		if (data.access_token) {
 			this.accessToken = data.access_token;
-			this.expiresAt = data.expires_in
-				? Date.now() + data.expires_in * 1000
-				: null;
+			this.expiresAt = data.expires_in ? Date.now() + data.expires_in * 1000 : null;
 		}
 		return this.accessToken ?? "";
 	}
@@ -135,10 +124,7 @@ export class LinkedInAdapter {
 		return "LinkedIn User";
 	}
 
-	async getMessagesByTime(
-		since: number,
-		platform: Platform = "linkedin",
-	): Promise<ExtractedMessageInfo[]> {
+	async getMessagesByTime(since: number, platform: Platform = "linkedin"): Promise<ExtractedMessageInfo[]> {
 		const conversationsResponse = await this.fetchLinkedIn<{
 			elements?: LinkedInConversation[];
 		}>("https://api.linkedin.com/rest/conversations?q=recent&count=20");
@@ -152,9 +138,7 @@ export class LinkedInAdapter {
 
 			const eventsResponse = await this.fetchLinkedIn<{
 				elements?: LinkedInEvent[];
-			}>(
-				`https://api.linkedin.com/rest/conversations/${conversationId}/events?count=50&sort=CREATED_DESC`,
-			);
+			}>(`https://api.linkedin.com/rest/conversations/${conversationId}/events?count=50&sort=CREATED_DESC`);
 			const events = eventsResponse?.elements ?? [];
 			const participants = conversation.participants ?? [];
 

@@ -128,9 +128,6 @@ The split solves all three. After the split:
 - An open-source embedder can `pnpm add @opencontext/memory-store`
   without pulling in any UI code.
 
-See [`docs/split-from-opencontext.md`](./split-from-opencontext.md) for the
-timeline.
-
 ## Why a monorepo, not a polyrepo
 
 We considered publishing each of the 49 packages to its own git repo.

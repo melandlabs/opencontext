@@ -3,8 +3,6 @@
  * queries, integrations) and UI (forms, route groups).
  *
  * Source of truth: this file.
- * Historically lived at `apps/web/lib/auth/error-codes.ts`; that file becomes
- * a re-export shim in Phase 2.
  */
 export enum AuthErrorCode {
 	// Auth-related errors

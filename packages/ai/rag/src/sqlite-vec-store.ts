@@ -48,11 +48,7 @@ export class SQLiteVecStore implements IVectorStore {
 	private readonly recordsTableName: string;
 	private readonly vectorTablePrefix: string;
 
-	constructor(
-		dbPath: string,
-		_schemaModule?: SchemaModule,
-		options: SQLiteVecStoreOptions = {},
-	) {
+	constructor(dbPath: string, _schemaModule?: SchemaModule, options: SQLiteVecStoreOptions = {}) {
 		this.collectionName = options.collectionName || DEFAULT_COLLECTION_NAME;
 		const safeCollectionName = sanitizeIdentifier(this.collectionName);
 		this.recordsTableName = `opencontext_vec_${safeCollectionName}_records`;
@@ -200,9 +196,7 @@ export class SQLiteVecStore implements IVectorStore {
 				score: distanceToScore(item.distance),
 				documentId: record.document_id,
 				metadata,
-				embedding: options.includeEmbeddings
-					? bufferToFloatArray(record.embedding)
-					: undefined,
+				embedding: options.includeEmbeddings ? bufferToFloatArray(record.embedding) : undefined,
 			});
 			if (results.length >= limit) {
 				break;
@@ -222,23 +216,16 @@ export class SQLiteVecStore implements IVectorStore {
 			)
 			.all(documentId) as Array<{ id: string; dimensions: number }>;
 
-		const deleteRecords = this.db.transaction(
-			(items: Array<{ id: string; dimensions: number }>) => {
-				for (const record of items) {
-					this.deleteVector(record.dimensions, record.id);
-				}
-				this.db
-					.prepare(`DELETE FROM ${this.recordsTableName} WHERE document_id = ?`)
-					.run(documentId);
-			},
-		);
+		const deleteRecords = this.db.transaction((items: Array<{ id: string; dimensions: number }>) => {
+			for (const record of items) {
+				this.deleteVector(record.dimensions, record.id);
+			}
+			this.db.prepare(`DELETE FROM ${this.recordsTableName} WHERE document_id = ?`).run(documentId);
+		});
 		deleteRecords(records);
 	}
 
-	async deleteOlderThan(
-		timestamp: number,
-		timestampField = "timestamp",
-	): Promise<number> {
+	async deleteOlderThan(timestamp: number, timestampField = "timestamp"): Promise<number> {
 		const records = this.db
 			.prepare(`SELECT id, metadata, dimensions FROM ${this.recordsTableName}`)
 			.all() as Array<{
@@ -247,16 +234,12 @@ export class SQLiteVecStore implements IVectorStore {
 			dimensions: number;
 		}>;
 		const expired = records.filter((record) => {
-			const value = normalizeTimestamp(
-				parseMetadata(record.metadata)[timestampField],
-			);
+			const value = normalizeTimestamp(parseMetadata(record.metadata)[timestampField]);
 			return Number.isFinite(value) && value < timestamp;
 		});
 
 		const deleteExpired = this.db.transaction((items: typeof expired) => {
-			const deleteRecord = this.db.prepare(
-				`DELETE FROM ${this.recordsTableName} WHERE id = ?`,
-			);
+			const deleteRecord = this.db.prepare(`DELETE FROM ${this.recordsTableName} WHERE id = ?`);
 			for (const record of items) {
 				this.deleteVector(record.dimensions, record.id);
 				deleteRecord.run(record.id);
@@ -268,17 +251,15 @@ export class SQLiteVecStore implements IVectorStore {
 
 	async getDocumentCount(): Promise<number> {
 		const result = this.db
-			.prepare(
-				`SELECT COUNT(DISTINCT document_id) AS count FROM ${this.recordsTableName}`,
-			)
+			.prepare(`SELECT COUNT(DISTINCT document_id) AS count FROM ${this.recordsTableName}`)
 			.get() as { count: number };
 		return result.count;
 	}
 
 	async getChunkCount(): Promise<number> {
-		const result = this.db
-			.prepare(`SELECT COUNT(*) AS count FROM ${this.recordsTableName}`)
-			.get() as { count: number };
+		const result = this.db.prepare(`SELECT COUNT(*) AS count FROM ${this.recordsTableName}`).get() as {
+			count: number;
+		};
 		return result.count;
 	}
 
@@ -345,9 +326,7 @@ export class SQLiteVecStore implements IVectorStore {
 	private vectorTableExists(dimensions: number): boolean {
 		return Boolean(
 			this.db
-				.prepare(
-					"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
-				)
+				.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
 				.get(this.getVectorTableName(dimensions)),
 		);
 	}
@@ -362,17 +341,15 @@ export class SQLiteVecStore implements IVectorStore {
 	private listVectorTables(): string[] {
 		return (
 			this.db
-				.prepare(
-					"SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE ?",
-				)
+				.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE ?")
 				.all(`${this.vectorTablePrefix}%`) as Array<{ name: string }>
 		).map((row) => row.name);
 	}
 
 	private getRecord(id: string): StoredVectorRecord | undefined {
-		return this.db
-			.prepare(`SELECT * FROM ${this.recordsTableName} WHERE id = ?`)
-			.get(id) as StoredVectorRecord | undefined;
+		return this.db.prepare(`SELECT * FROM ${this.recordsTableName} WHERE id = ?`).get(id) as
+			| StoredVectorRecord
+			| undefined;
 	}
 
 	private getRecords(ids: string[]): StoredVectorRecord[] {
@@ -381,9 +358,7 @@ export class SQLiteVecStore implements IVectorStore {
 		}
 		const placeholders = ids.map(() => "?").join(", ");
 		return this.db
-			.prepare(
-				`SELECT * FROM ${this.recordsTableName} WHERE id IN (${placeholders})`,
-			)
+			.prepare(`SELECT * FROM ${this.recordsTableName} WHERE id IN (${placeholders})`)
 			.all(...ids) as StoredVectorRecord[];
 	}
 
@@ -391,11 +366,7 @@ export class SQLiteVecStore implements IVectorStore {
 		if (!this.vectorTableExists(dimensions)) {
 			return;
 		}
-		this.db
-			.prepare(
-				`DELETE FROM ${this.getVectorTableName(dimensions)} WHERE record_id = ?`,
-			)
-			.run(id);
+		this.db.prepare(`DELETE FROM ${this.getVectorTableName(dimensions)} WHERE record_id = ?`).run(id);
 	}
 }
 
@@ -432,10 +403,7 @@ function sanitizeIdentifier(value: string): string {
 }
 
 function validateEmbedding(id: string, embedding: number[]): void {
-	if (
-		embedding.length === 0 ||
-		!embedding.every((value) => Number.isFinite(value))
-	) {
+	if (embedding.length === 0 || !embedding.every((value) => Number.isFinite(value))) {
 		throw new Error(`Vector record ${id} has an invalid embedding`);
 	}
 }
@@ -456,9 +424,7 @@ function bufferToFloatArray(buffer: Buffer): number[] {
 	return values;
 }
 
-function stringifyMetadata(
-	metadata: Record<string, unknown> | undefined,
-): string | null {
+function stringifyMetadata(metadata: Record<string, unknown> | undefined): string | null {
 	return metadata ? JSON.stringify(metadata) : null;
 }
 
@@ -476,10 +442,7 @@ function parseMetadata(value: string | null): Record<string, unknown> {
 	}
 }
 
-function matchesFilter(
-	metadata: Record<string, unknown>,
-	filter?: VectorSearchFilter,
-): boolean {
+function matchesFilter(metadata: Record<string, unknown>, filter?: VectorSearchFilter): boolean {
 	if (!filter) {
 		return true;
 	}

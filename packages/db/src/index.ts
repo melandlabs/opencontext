@@ -1,5 +1,4 @@
-// @opencontext/db — building blocks shared by runtime + UI
-// See `docs/split-runtime-ui.md` for boundary contract.
+// @opencontext/db — building blocks shared by runtime + UI.
 
 export * from "./batch";
 export * from "./utils";

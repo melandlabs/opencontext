@@ -4,12 +4,12 @@
  * Also supports Apple office suite formats (.pages, .numbers, .keynote).
  */
 
-import { Document } from "@langchain/core/documents";
-import { readFile, writeFile, unlink } from "node:fs/promises";
-import { join, basename } from "node:path";
-import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { readFile, unlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
+import { Document } from "@langchain/core/documents";
 import JSZip from "jszip";
 
 // ---------------------------------------------------------------------------
@@ -31,9 +31,7 @@ export function configureParsers(config: ParsersConfig): void {
 
 function getConfig(): ParsersConfig {
 	if (!_config) {
-		throw new Error(
-			"RAG parsers not configured. Call configureParsers() with { estimateTokens } first.",
-		);
+		throw new Error("RAG parsers not configured. Call configureParsers() with { estimateTokens } first.");
 	}
 	return _config;
 }
@@ -67,77 +65,68 @@ export class AppleDocumentLoader {
 	constructor(private filePath: string) {}
 
 	async load(): Promise<Document[]> {
-		try {
-			const fileBuffer = await readFile(this.filePath);
-			const zip = await JSZip.loadAsync(fileBuffer);
+		const fileBuffer = await readFile(this.filePath);
+		const zip = await JSZip.loadAsync(fileBuffer);
 
-			// Try to extract text from preview PDF
-			const previewPath = "QuickLook/Preview.pdf";
-			const previewFile = zip.file(previewPath);
+		// Try to extract text from preview PDF
+		const previewPath = "QuickLook/Preview.pdf";
+		const previewFile = zip.file(previewPath);
 
-			if (previewFile) {
-				// Save preview PDF to temp file, then use PDFLoader (lazy loaded)
-				const tempPdfPath = join(tmpdir(), `apple_preview_${Date.now()}.pdf`);
+		if (previewFile) {
+			// Save preview PDF to temp file, then use PDFLoader (lazy loaded)
+			const tempPdfPath = join(tmpdir(), `apple_preview_${Date.now()}.pdf`);
+			try {
+				const pdfData = await previewFile.async("uint8array");
+				await writeFile(tempPdfPath, Buffer.from(pdfData));
+				const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
+				const loader = new PDFLoader(tempPdfPath, { splitPages: false });
+				return await loader.load();
+			} finally {
 				try {
-					const pdfData = await previewFile.async("uint8array");
-					await writeFile(tempPdfPath, Buffer.from(pdfData));
-					const { PDFLoader } =
-						await import("@langchain/community/document_loaders/fs/pdf");
-					const loader = new PDFLoader(tempPdfPath, { splitPages: false });
-					return await loader.load();
-				} finally {
-					try {
-						await unlink(tempPdfPath);
-					} catch {
-						// Ignore cleanup errors
-					}
+					await unlink(tempPdfPath);
+				} catch {
+					// Ignore cleanup errors
 				}
 			}
-
-			// If no preview PDF, try to extract internal XML content
-			const indexXmlPath = "index.xml";
-			const indexFile = zip.file(indexXmlPath);
-
-			if (indexFile) {
-				const content = await indexFile.async("text");
-				return [
-					new Document({
-						pageContent: content,
-						metadata: { source: this.filePath, type: "apple-document" },
-					}),
-				];
-			}
-
-			// Try to find other possible document files
-			const documentDir = zip.folder("Document");
-			if (documentDir) {
-				const files = Object.keys(documentDir.files);
-				for (const fileName of files) {
-					if (fileName.endsWith(".xml")) {
-						const file = zip.file(fileName);
-						if (file) {
-							const content = await file.async("text");
-							return [
-								new Document({
-									pageContent: content,
-									metadata: { source: this.filePath, type: "apple-document" },
-								}),
-							];
-						}
-					}
-				}
-			}
-
-			throw new Error(
-				"Cannot parse Apple document. The file may not have an iCloud preview PDF. Please open the file on Mac, go to File > Export As > PDF, and upload the exported PDF instead.",
-			);
-		} catch (error) {
-			console.error(
-				"[AppleDocumentLoader] Failed to load Apple document:",
-				error,
-			);
-			throw error;
 		}
+
+		// If no preview PDF, try to extract internal XML content
+		const indexXmlPath = "index.xml";
+		const indexFile = zip.file(indexXmlPath);
+
+		if (indexFile) {
+			const content = await indexFile.async("text");
+			return [
+				new Document({
+					pageContent: content,
+					metadata: { source: this.filePath, type: "apple-document" },
+				}),
+			];
+		}
+
+		// Try to find other possible document files
+		const documentDir = zip.folder("Document");
+		if (documentDir) {
+			const files = Object.keys(documentDir.files);
+			for (const fileName of files) {
+				if (fileName.endsWith(".xml")) {
+					const file = zip.file(fileName);
+					if (file) {
+						const content = await file.async("text");
+						return [
+							new Document({
+								pageContent: content,
+								metadata: { source: this.filePath, type: "apple-document" },
+							}),
+						];
+					}
+				}
+			}
+		}
+
+		throw new Error(
+			"Cannot parse Apple document. The file may not have an iCloud preview PDF. Please open the file on Mac, go to File > Export As > PDF, and upload the exported PDF instead.",
+		);
 	}
 }
 
@@ -157,12 +146,9 @@ export interface FileContent {
 function getExtension(contentType: string): string {
 	const typeMap: Record<string, string> = {
 		"application/pdf": ".pdf",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-			".docx",
-		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
-			".pptx",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-			".xlsx",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
 		"text/plain": ".txt",
 		"text/markdown": ".md",
 		"text/csv": ".csv",
@@ -184,18 +170,13 @@ export async function getPdfPageCount(buffer: Buffer): Promise<number> {
 		const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
 		const pdf = await pdfjs.getDocument({ data: buffer }).promise;
 		return pdf.numPages;
-	} catch (error) {
-		console.error("[getPdfPageCount] Error:", error);
+	} catch (_error) {
 		// Fallback: try using PDFLoader which also provides page count
 		const extension = ".pdf";
-		const tempFilePath = join(
-			tmpdir(),
-			`temp_pdf_pages_${Date.now()}${extension}`,
-		);
+		const tempFilePath = join(tmpdir(), `temp_pdf_pages_${Date.now()}${extension}`);
 		try {
 			await writeFile(tempFilePath, buffer);
-			const { PDFLoader } =
-				await import("@langchain/community/document_loaders/fs/pdf");
+			const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
 			const loader = new PDFLoader(tempFilePath, { splitPages: false });
 			const docs = await loader.load();
 			return docs.length;
@@ -261,15 +242,7 @@ function convertDocToDocx(docPath: string): string {
 	try {
 		execFileSync(
 			"python",
-			[
-				join(scriptDir, "soffice.py"),
-				"--headless",
-				"--convert-to",
-				"docx",
-				"--outdir",
-				outDir,
-				docPath,
-			],
+			[join(scriptDir, "soffice.py"), "--headless", "--convert-to", "docx", "--outdir", outDir, docPath],
 			{ stdio: "pipe" },
 		);
 	} catch (e) {
@@ -286,23 +259,17 @@ function convertDocToDocx(docPath: string): string {
  * Get the appropriate LangChain document loader for the content type.
  * Uses dynamic imports to lazy-load LangChain modules only when needed.
  */
-async function getLoader(
-	contentType: string,
-	filePath: string,
-	tempDocxPaths: Set<string>,
-) {
+async function getLoader(contentType: string, filePath: string, tempDocxPaths: Set<string>) {
 	switch (contentType) {
 		case "application/pdf": {
-			const { PDFLoader } =
-				await import("@langchain/community/document_loaders/fs/pdf");
+			const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
 			return new PDFLoader(filePath, {
 				splitPages: false, // Return entire document as one page
 			});
 		}
 
 		case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-			const { DocxLoader } =
-				await import("@langchain/community/document_loaders/fs/docx");
+			const { DocxLoader } = await import("@langchain/community/document_loaders/fs/docx");
 			return new DocxLoader(filePath);
 		}
 
@@ -310,14 +277,12 @@ async function getLoader(
 			// Auto-convert .doc → .docx, then use DocxLoader
 			const docxPath = convertDocToDocx(filePath);
 			tempDocxPaths.add(docxPath);
-			const { DocxLoader } =
-				await import("@langchain/community/document_loaders/fs/docx");
+			const { DocxLoader } = await import("@langchain/community/document_loaders/fs/docx");
 			return new DocxLoader(docxPath);
 		}
 
 		case "text/csv": {
-			const { CSVLoader } =
-				await import("@langchain/community/document_loaders/fs/csv");
+			const { CSVLoader } = await import("@langchain/community/document_loaders/fs/csv");
 			return new CSVLoader(filePath, "text");
 		}
 
@@ -347,10 +312,7 @@ async function getLoader(
 /**
  * Parse file buffer and extract text content.
  */
-export async function parseFile(
-	buffer: Buffer,
-	contentType: string,
-): Promise<FileContent> {
+export async function parseFile(buffer: Buffer, contentType: string): Promise<FileContent> {
 	// Create a temporary file
 	const extension = getExtension(contentType);
 	const tempFilePath = join(tmpdir(), `temp_${Date.now()}${extension}`);
@@ -390,16 +352,12 @@ export async function parseFile(
 		// Clean up temp file
 		try {
 			await unlink(tempFilePath);
-		} catch (error) {
-			console.error("[parseFile] Failed to delete temp file:", error);
-		}
+		} catch (_error) {}
 		// Clean up any converted .docx temp files
 		for (const docxPath of tempDocxPaths) {
 			try {
 				await unlink(docxPath);
-			} catch (error) {
-				console.error("[parseFile] Failed to delete temp docx:", error);
-			}
+			} catch (_error) {}
 		}
 	}
 }

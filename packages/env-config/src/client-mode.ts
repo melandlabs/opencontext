@@ -11,8 +11,7 @@ function hasTauriRuntime(): boolean {
 function hasTauriEnv(): boolean {
 	return (
 		typeof process !== "undefined" &&
-		(typeof process.env.TAURI_MODE === "string" ||
-			process.env.IS_TAURI === "true")
+		(typeof process.env.TAURI_MODE === "string" || process.env.IS_TAURI === "true")
 	);
 }
 

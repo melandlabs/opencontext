@@ -9,8 +9,8 @@
 // Re-export from sandbox package
 // ============================================================================
 
-import type { SandboxConfig, SandboxProviderType } from "./sandbox/types";
 import type { PromptCacheStats } from "./billing/model-pricing";
+import type { SandboxConfig, SandboxProviderType } from "./sandbox/types";
 
 // Re-export as types (for external consumers)
 export type { SandboxConfig, SandboxProviderType };
@@ -439,8 +439,7 @@ export interface AgentOptions {
 	/** Abort controller for cancellation */
 	abortController?: AbortController;
 	/** Permission mode */
-	permissionMode?:
-		"default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+	permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
 	/** Sandbox configuration for isolated execution */
 	sandbox?: SandboxConfig;
 	/** Image attachments for vision capabilities */

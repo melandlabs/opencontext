@@ -1,19 +1,11 @@
-import {
-	buildMemoryRecordEmbeddingDocument,
-	type MemoryRecord,
-} from "../../ai/src/memory";
-import type {
-	IndexedDBManager,
-	RawMessage,
-	RawMessageEmbeddingUpdate,
-} from "./manager";
+import { type MemoryRecord, buildMemoryRecordEmbeddingDocument } from "../../ai/src/memory";
+import type { IndexedDBManager, RawMessage, RawMessageEmbeddingUpdate } from "./manager";
 
 const DEFAULT_MEMORY_EMBEDDING_DREAM_LIMIT = 100;
 const DEFAULT_MEMORY_SEMANTIC_SEARCH_LIMIT = 10;
 const DEFAULT_MEMORY_SEMANTIC_SEARCH_THRESHOLD = 0.7;
 
-export type RawMessageEmbeddingDreamReason =
-	"missing" | "model_changed" | "content_changed";
+export type RawMessageEmbeddingDreamReason = "missing" | "model_changed" | "content_changed";
 
 export interface RunRawMessageEmbeddingDreamInput {
 	userId: string;
@@ -74,10 +66,7 @@ export type RawMessageEmbeddingDreamManager = Pick<
 	"queryMessages" | "updateMessageEmbeddings"
 >;
 
-export type RawMessageSemanticSearchManager = Pick<
-	IndexedDBManager,
-	"queryMessages"
->;
+export type RawMessageSemanticSearchManager = Pick<IndexedDBManager, "queryMessages">;
 
 function clampLimit(value: number | undefined, fallback: number): number {
 	if (!Number.isFinite(value)) {
@@ -100,10 +89,7 @@ function clampThreshold(value: number | undefined): number {
 	if (!Number.isFinite(value)) {
 		return DEFAULT_MEMORY_SEMANTIC_SEARCH_THRESHOLD;
 	}
-	return Math.min(
-		1,
-		Math.max(-1, value ?? DEFAULT_MEMORY_SEMANTIC_SEARCH_THRESHOLD),
-	);
+	return Math.min(1, Math.max(-1, value ?? DEFAULT_MEMORY_SEMANTIC_SEARCH_THRESHOLD));
 }
 
 export function cosineSimilarity(vecA: number[], vecB: number[]): number {
@@ -239,13 +225,9 @@ export async function runRawMessageEmbeddingDream(
 		};
 	}
 
-	const vectors = await input.embedDocuments(
-		selected.map((item) => item.content),
-	);
+	const vectors = await input.embedDocuments(selected.map((item) => item.content));
 	if (vectors.length !== selected.length) {
-		throw new Error(
-			`Embedding result count mismatch: expected ${selected.length}, got ${vectors.length}`,
-		);
+		throw new Error(`Embedding result count mismatch: expected ${selected.length}, got ${vectors.length}`);
 	}
 
 	const updates: RawMessageEmbeddingUpdate[] = selected.map((item, index) => {
@@ -306,11 +288,7 @@ export async function searchRawMessagesSemantically(
 			if (!message.embedding || message.embedding.length === 0) {
 				return null;
 			}
-			if (
-				input.embeddingModel &&
-				message.embeddingModel &&
-				message.embeddingModel !== input.embeddingModel
-			) {
+			if (input.embeddingModel && message.embeddingModel && message.embeddingModel !== input.embeddingModel) {
 				return null;
 			}
 
@@ -337,9 +315,7 @@ export async function searchRawMessagesSemantically(
 				message,
 			};
 		})
-		.filter(
-			(result): result is RawMessageSemanticSearchResult => result !== null,
-		)
+		.filter((result): result is RawMessageSemanticSearchResult => result !== null)
 		.sort((a, b) => b.similarity - a.similarity)
 		.slice(0, limit);
 }

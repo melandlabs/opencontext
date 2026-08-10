@@ -1,56 +1,53 @@
 {
-  "name": "@opencontext/integrations-telegram",
-  "version": "0.9.0",
-  "type": "module",
-  "files": [
-    "dist",
-    "README.md",
-    "LICENSE"
-  ],
-  "publishConfig": {
-    "access": "public"
-  },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": "./dist/index.js",
-    "./adapter": "./dist/adapter.js",
-    "./markdown": "./dist/markdown.js",
-    "./conversation-store": "./dist/conversation-store.js",
-    "./state": "./dist/state.js",
-    "./tdata-decrypter": "./dist/tdata-decrypter/index.js",
-    "./tdata-converter": "./dist/tdata-converter.js"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/melandlabs/opencontext.git",
-    "directory": "packages/integrations/telegram"
-  },
-  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/telegram",
-  "bugs": {
-    "url": "https://github.com/melandlabs/opencontext/issues"
-  },
-  "license": "Apache-2.0",
-  "description": "OpenContext · integrations/telegram module",
-  "keywords": [
-    "opencontext"
-  ],
-  "dependencies": {
-    "@opencontext/ai": "workspace:*",
-    "@opencontext/integrations": "workspace:*",
-    "@opencontext/shared": "workspace:*",
-    "big-integer": "^1.6.52",
-    "markdown-it": "^14.1.1",
-    "telegram": "^2.26.22"
-  },
-  "devDependencies": {
-    "@opencontext/config": "workspace:*",
-    "typescript": "^5.6.3",
-    "vitest": "^4.0.6"
-  },
-  "scripts": {
-    "build": "tsup",
-    "test": "vitest run",
-    "prepublishOnly": "pnpm build"
-  }
+	"name": "@opencontext/integrations-telegram",
+	"version": "0.9.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./adapter": "./dist/adapter.js",
+		"./markdown": "./dist/markdown.js",
+		"./conversation-store": "./dist/conversation-store.js",
+		"./state": "./dist/state.js",
+		"./tdata-decrypter": "./dist/tdata-decrypter/index.js",
+		"./tdata-converter": "./dist/tdata-converter.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/integrations/telegram"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/telegram",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · integrations/telegram module",
+	"keywords": ["opencontext"],
+	"dependencies": {
+		"@opencontext/ai": "workspace:*",
+		"@opencontext/integrations": "workspace:*",
+		"@opencontext/shared": "workspace:*",
+		"big-integer": "^1.6.52",
+		"markdown-it": "^14.1.1",
+		"telegram": "^2.26.22"
+	},
+	"devDependencies": {
+		"@opencontext/config": "workspace:*",
+		"typescript": "^5.6.3",
+		"vitest": "^4.0.6"
+	},
+	"scripts": {
+		"build": "tsup",
+		"test": "vitest run",
+		"prepublishOnly": "pnpm build",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write ."
+	}
 }

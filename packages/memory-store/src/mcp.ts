@@ -20,9 +20,9 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { MemoryStoreConfig } from "./index";
-import { createRawMessageStore } from "./storage/raw-message-store";
 import { createUnifiedSearch } from "./search/unified-search";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
+import { createRawMessageStore } from "./storage/raw-message-store";
 
 export interface StartMcpServerOptions extends MemoryStoreConfig {
 	/** Server name surfaced to the MCP client. */
@@ -34,9 +34,7 @@ export interface StartMcpServerOptions extends MemoryStoreConfig {
 const DEFAULT_NAME = "@opencontext/memory-store";
 const DEFAULT_VERSION = "0.9.0";
 
-export async function startMcpServer(
-	options: StartMcpServerOptions = {},
-): Promise<McpServer> {
+export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
 	const server = new McpServer({
 		name: options.name ?? DEFAULT_NAME,
 		version: options.version ?? DEFAULT_VERSION,
@@ -47,13 +45,9 @@ export async function startMcpServer(
 	});
 	const search = createUnifiedSearch(options.unified);
 
-	server.tool(
-		"memory.health",
-		"Returns the health status of the memory store.",
-		async () => ({
-			content: [{ type: "text" as const, text: JSON.stringify({ ok: true }) }],
-		}),
-	);
+	server.tool("memory.health", "Returns the health status of the memory store.", async () => ({
+		content: [{ type: "text" as const, text: JSON.stringify({ ok: true }) }],
+	}));
 
 	const searchSchema: ZodRawShape = {
 		userId: z.string(),
@@ -153,9 +147,7 @@ export async function startMcpServer(
 				console.warn("[memory-store/mcp] chroma upsert failed:", error);
 			}
 			return {
-				content: [
-					{ type: "text" as const, text: JSON.stringify({ ok: true, result }) },
-				],
+				content: [{ type: "text" as const, text: JSON.stringify({ ok: true, result }) }],
 			};
 		},
 	);
@@ -192,4 +184,4 @@ export async function startMcpServer(
 	return server;
 }
 
-export { type MemoryStoreConfig };
+export type { MemoryStoreConfig };

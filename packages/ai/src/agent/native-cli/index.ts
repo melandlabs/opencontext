@@ -4,17 +4,17 @@ import process from "node:process";
 import util from "node:util";
 
 import {
-	runNativeAgentRequest,
 	type NativeAgentHost,
 	type NativeAgentRequest,
 	type NativeAgentSession,
+	runNativeAgentRequest,
 } from "../native-runner";
 import type {
 	AgentRuntimePermissionDecision,
 	AgentRuntimePermissionHandler,
 	AgentRuntimePermissionRequest,
 } from "../runtime";
-import { DEFAULT_ALLOWED_TOOLS, type AgentMessage } from "../types";
+import { type AgentMessage, DEFAULT_ALLOWED_TOOLS } from "../types";
 
 interface NativeAgentCliInput extends NativeAgentRequest {
 	authToken: string;
@@ -68,13 +68,8 @@ export async function runNativeAgentCli(host: NativeAgentHost) {
 	process.env.DEPLOYMENT_MODE ??= "tauri";
 
 	const protocol = createJsonLineProtocol();
-	const input = applyCliPermissionToolPolicy(
-		parseInput(await protocol.readInitialInput()),
-	);
-	const { session, userId } = createSessionFromToken(
-		input.authToken,
-		input.platform,
-	);
+	const input = applyCliPermissionToolPolicy(parseInput(await protocol.readInitialInput()));
+	const { session, userId } = createSessionFromToken(input.authToken, input.platform);
 	const abortController = new AbortController();
 	const output = initialOutput();
 
@@ -108,7 +103,6 @@ export async function runNativeAgentCli(host: NativeAgentHost) {
 
 export function runNativeAgentCliMain(host: NativeAgentHost) {
 	void runNativeAgentCli(host).catch((error) => {
-		console.error("[native-agent-cli] Fatal error:", error);
 		const output = initialOutput();
 		output.error =
 			error instanceof NativeAgentCliError
@@ -125,11 +119,7 @@ function redirectConsoleToStderr() {
 	// the Rust CLI. Any app/runtime logs must go to stderr instead.
 	const write = (level: string, args: unknown[]) => {
 		const line = args
-			.map((arg) =>
-				typeof arg === "string"
-					? arg
-					: util.inspect(arg, { depth: 5, colors: false }),
-			)
+			.map((arg) => (typeof arg === "string" ? arg : util.inspect(arg, { depth: 5, colors: false })))
 			.join(" ");
 		process.stderr.write(`[${level}] ${line}\n`);
 	};
@@ -185,28 +175,16 @@ function createJsonLineProtocol() {
 		let message: PermissionResponseMessage;
 		try {
 			message = JSON.parse(line) as PermissionResponseMessage;
-		} catch (error) {
-			console.error(
-				"[native-agent-cli] Ignoring invalid protocol line:",
-				error,
-			);
+		} catch (_error) {
 			return;
 		}
 
 		if (message.kind !== "permission_response") {
-			console.error(
-				"[native-agent-cli] Ignoring unknown protocol message:",
-				message,
-			);
 			return;
 		}
 
 		const pending = pendingPermissions.get(message.toolUseID);
 		if (!pending) {
-			console.error(
-				"[native-agent-cli] Permission response had no pending request:",
-				message.toolUseID,
-			);
 			return;
 		}
 
@@ -235,9 +213,7 @@ function createJsonLineProtocol() {
 			buffer = "";
 		}
 		if (!initialInputResolved) {
-			rejectInitialInput(
-				new NativeAgentCliError("usage", "stdin JSON input is required."),
-			);
+			rejectInitialInput(new NativeAgentCliError("usage", "stdin JSON input is required."));
 		}
 		denyPendingPermissions();
 	});
@@ -248,9 +224,7 @@ function createJsonLineProtocol() {
 		denyPendingPermissions();
 	});
 
-	const requestPermission = (
-		request: NativePermissionRequest,
-	): Promise<NativePermissionDecision> => {
+	const requestPermission = (request: NativePermissionRequest): Promise<NativePermissionDecision> => {
 		writeProtocolMessage({
 			kind: "permission_request",
 			toolName: request.toolName,
@@ -299,10 +273,7 @@ function parseEnvLine(line: string): [string, string] | null {
 		return null;
 	}
 
-	if (
-		(value.startsWith('"') && value.endsWith('"')) ||
-		(value.startsWith("'") && value.endsWith("'"))
-	) {
+	if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
 		value = value.slice(1, -1);
 	}
 
@@ -368,10 +339,7 @@ function createSessionFromToken(
 	// minimal authenticated session shape expected by runNativeAgentRequest.
 	const payload = parseToken(token);
 	if (!payload?.id) {
-		throw new NativeAgentCliError(
-			"not_authenticated",
-			"auth token could not be parsed.",
-		);
+		throw new NativeAgentCliError("not_authenticated", "auth token could not be parsed.");
 	}
 
 	if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
@@ -408,25 +376,17 @@ function parseInput(rawInput: string): NativeAgentCliInput {
 	}
 
 	if (!input.prompt || typeof input.prompt !== "string") {
-		throw new NativeAgentCliError(
-			"usage",
-			"prompt must be a non-empty string.",
-		);
+		throw new NativeAgentCliError("usage", "prompt must be a non-empty string.");
 	}
 
 	if (!input.authToken || typeof input.authToken !== "string") {
-		throw new NativeAgentCliError(
-			"not_authenticated",
-			"authToken is required.",
-		);
+		throw new NativeAgentCliError("not_authenticated", "authToken is required.");
 	}
 
 	return input;
 }
 
-function applyCliPermissionToolPolicy(
-	input: NativeAgentCliInput,
-): NativeAgentCliInput {
+function applyCliPermissionToolPolicy(input: NativeAgentCliInput): NativeAgentCliInput {
 	// In Claude SDK, allowedTools means "auto-allowed without prompting". CLI ask
 	// and deny modes therefore must remove protected tools from allowedTools so
 	// real permission decisions happen at the tool-call boundary.
@@ -440,9 +400,7 @@ function applyCliPermissionToolPolicy(
 	}
 
 	const gatedTools = new Set(CLI_PERMISSION_GATED_TOOLS);
-	const allowedTools = (input.allowedTools ?? DEFAULT_ALLOWED_TOOLS).filter(
-		(tool) => !gatedTools.has(tool),
-	);
+	const allowedTools = (input.allowedTools ?? DEFAULT_ALLOWED_TOOLS).filter((tool) => !gatedTools.has(tool));
 
 	if (cliPermissionMode === "deny") {
 		return {
@@ -450,12 +408,7 @@ function applyCliPermissionToolPolicy(
 			cliPermissionMode,
 			permissionMode: input.permissionMode ?? "dontAsk",
 			allowedTools,
-			disallowedTools: [
-				...new Set([
-					...(input.disallowedTools ?? []),
-					...CLI_PERMISSION_GATED_TOOLS,
-				]),
-			],
+			disallowedTools: [...new Set([...(input.disallowedTools ?? []), ...CLI_PERMISSION_GATED_TOOLS])],
 		};
 	}
 
@@ -512,18 +465,12 @@ function initialOutput(): NativeAgentCliOutput {
 }
 
 function writeOutputAndExit(output: NativeAgentCliOutput, exitCode: number) {
-	process.stdout.write(
-		`${JSON.stringify({ kind: "result", output })}\n`,
-		() => {
-			process.exit(exitCode);
-		},
-	);
+	process.stdout.write(`${JSON.stringify({ kind: "result", output })}\n`, () => {
+		process.exit(exitCode);
+	});
 }
 
-function applyAgentMessage(
-	output: NativeAgentCliOutput,
-	message: AgentMessage,
-) {
+function applyAgentMessage(output: NativeAgentCliOutput, message: AgentMessage) {
 	output.event_count += 1;
 
 	switch (message.type) {
@@ -570,9 +517,7 @@ function createPermissionHandler({
 }: {
 	mode: NativeAgentCliInput["cliPermissionMode"];
 	output: NativeAgentCliOutput;
-	requestPermission: (
-		request: NativePermissionRequest,
-	) => Promise<NativePermissionDecision>;
+	requestPermission: (request: NativePermissionRequest) => Promise<NativePermissionDecision>;
 }): AgentRuntimePermissionHandler {
 	const decisionsByTool = new Map<string, NativePermissionDecision>();
 

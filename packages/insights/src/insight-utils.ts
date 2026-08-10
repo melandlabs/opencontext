@@ -3,7 +3,7 @@
  * These utilities work with InsightBase type and don't depend on app-specific types.
  */
 
-import type { InsightBase, InsightTaskItem } from "./types";
+import type { InsightBase } from "./types";
 
 /**
  * Check if an Insight has substantial content.
@@ -14,21 +14,13 @@ import type { InsightBase, InsightTaskItem } from "./types";
  */
 export const insightHasContent = (insight: InsightBase): boolean => {
 	// Check if description has actual content (at least 10 characters)
-	const hasDescription = !!(
-		insight.description && insight.description.trim().length >= 10
-	);
+	const hasDescription = !!(insight.description && insight.description.trim().length >= 10);
 
 	// Check if there are active tasks
-	const hasActiveTasks = [
-		insight.myTasks,
-		insight.waitingForMe,
-		insight.waitingForOthers,
-	].some((tasks) => {
+	const hasActiveTasks = [insight.myTasks, insight.waitingForMe, insight.waitingForOthers].some((tasks) => {
 		if (!tasks || tasks.length === 0) return false;
 		// Check if there are incomplete tasks
-		return tasks.some(
-			(task) => task.status === "pending" || task.status === "blocked",
-		);
+		return tasks.some((task) => task.status === "pending" || task.status === "blocked");
 	});
 
 	// Check if there is detailed conversation content
@@ -44,13 +36,7 @@ export const insightHasContent = (insight: InsightBase): boolean => {
 	);
 
 	// At least one condition must be met to be considered having substantive content
-	return (
-		hasDescription ||
-		hasActiveTasks ||
-		hasDetails ||
-		hasTimeline ||
-		hasNextActions
-	);
+	return hasDescription || hasActiveTasks || hasDetails || hasTimeline || hasNextActions;
 };
 
 /**
@@ -60,9 +46,7 @@ export const insightHasContent = (insight: InsightBase): boolean => {
  * @param insights - Insight array
  * @returns Filtered Insight array
  */
-export const filterEmptyInsights = <T extends InsightBase>(
-	insights: T[],
-): T[] => {
+export const filterEmptyInsights = <T extends InsightBase>(insights: T[]): T[] => {
 	if (!insights || insights.length === 0) {
 		return [];
 	}
@@ -83,8 +67,7 @@ export const hasTaskDueToday = (insight: InsightBase, today: Date): boolean => {
 
 	// Check tasks in myTasks and waitingForMe
 	const taskLists = [insight.myTasks, insight.waitingForMe].filter(
-		(tasks): tasks is NonNullable<typeof tasks> =>
-			tasks != null && tasks.length > 0,
+		(tasks): tasks is NonNullable<typeof tasks> => tasks != null && tasks.length > 0,
 	);
 
 	for (const tasks of taskLists) {
@@ -125,8 +108,7 @@ export const hasTaskDueToday = (insight: InsightBase, today: Date): boolean => {
 export const hasOverdueTasks = (insight: InsightBase, today: Date): boolean => {
 	// Check tasks in myTasks and waitingForMe
 	const taskLists = [insight.myTasks, insight.waitingForMe].filter(
-		(tasks): tasks is NonNullable<typeof tasks> =>
-			tasks != null && tasks.length > 0,
+		(tasks): tasks is NonNullable<typeof tasks> => tasks != null && tasks.length > 0,
 	);
 
 	for (const tasks of taskLists) {
@@ -163,8 +145,7 @@ export const deduplicateInsights = <T extends InsightBase>(
 	if (list && Array.isArray(list)) {
 		const uniqueMap = new Map<string, T>();
 		list.forEach((insight) => {
-			const key =
-				(insight[keyField] as string) || `__empty_${String(keyField)}_`;
+			const key = (insight[keyField] as string) || `__empty_${String(keyField)}_`;
 			uniqueMap.set(key, insight);
 		});
 

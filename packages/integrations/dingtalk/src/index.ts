@@ -3,23 +3,9 @@
  * Credentials are Open Platform Client ID (AppKey) and Client Secret, consistent with nanobot dingtalk channel
  */
 import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
-import type {
-	Messages,
-	Message,
-	Image,
-	Voice,
-	File as FileMsg,
-} from "@opencontext/integrations/channels";
-import type {
-	GroupMessageEvent,
-	MessageEvent,
-	MessageTarget,
-} from "@opencontext/integrations/channels";
-import type {
-	Friend,
-	Group,
-	GroupMember,
-} from "@opencontext/integrations/channels";
+import type { File as FileMsg, Image, Message, Messages, Voice } from "@opencontext/integrations/channels";
+import type { GroupMessageEvent, MessageEvent, MessageTarget } from "@opencontext/integrations/channels";
+import type { Friend, Group, GroupMember } from "@opencontext/integrations/channels";
 import type { Permission } from "@opencontext/integrations/channels";
 import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
 
@@ -46,10 +32,7 @@ function isFailedBusinessCode(code: unknown): code is string | number {
 	return normalized.length > 0 && normalized !== "0";
 }
 
-function businessCodeError(
-	message: string,
-	code?: string | number,
-): Error & { code?: string } {
+function businessCodeError(message: string, code?: string | number): Error & { code?: string } {
 	const error = new Error(message) as Error & { code?: string };
 	if (code !== undefined) error.code = String(code);
 	return error;
@@ -94,12 +77,7 @@ function isVoiceMessage(message: Message): message is Voice {
 }
 
 function isImageMessage(message: Message): message is Image {
-	return (
-		typeof message === "object" &&
-		message !== null &&
-		"url" in message &&
-		!("name" in message)
-	);
+	return typeof message === "object" && message !== null && "url" in message && !("name" in message);
 }
 
 function messagesToMarkdown(messages: Messages): string {
@@ -123,10 +101,7 @@ function messagesToMarkdown(messages: Messages): string {
 	return parts.join("\n").trim() || "";
 }
 
-async function fetchRemoteBuffer(
-	url: string,
-	timeoutMs: number,
-): Promise<Buffer> {
+async function fetchRemoteBuffer(url: string, timeoutMs: number): Promise<Buffer> {
 	const resp = await fetch(url, { signal: AbortSignal.timeout(timeoutMs) });
 	if (!resp.ok) {
 		throw httpStatusError(`HTTP ${resp.status}`, resp.status);
@@ -140,9 +115,7 @@ async function mediaToBuffer(media: {
 	base64?: string;
 }): Promise<Buffer> {
 	if (media.base64) {
-		const b64 = media.base64.includes(",")
-			? media.base64.split(",")[1]
-			: media.base64;
+		const b64 = media.base64.includes(",") ? media.base64.split(",")[1] : media.base64;
 		return Buffer.from(b64, "base64");
 	}
 	if (media.path?.trim()) {
@@ -151,9 +124,7 @@ async function mediaToBuffer(media: {
 	}
 	if (media.url.startsWith("file://") || media.url.startsWith("/")) {
 		const { readFile } = await import("node:fs/promises");
-		const filePath = media.url.startsWith("file://")
-			? new URL(media.url).pathname
-			: media.url;
+		const filePath = media.url.startsWith("file://") ? new URL(media.url).pathname : media.url;
 		return readFile(filePath);
 	}
 	return fetchRemoteBuffer(media.url, 60_000);
@@ -163,8 +134,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 	name = "DingTalk";
 	private credentials: DingTalkCredentials;
 	private botId: string;
-	private accessTokenCache: { token: string; expiresAtMs: number } | null =
-		null;
+	private accessTokenCache: { token: string; expiresAtMs: number } | null = null;
 
 	constructor(opts: { botId: string; clientId: string; clientSecret: string }) {
 		super();
@@ -178,24 +148,18 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 	/** Get new OpenAPI accessToken (consistent with nanobot _get_access_token) */
 	private async getAccessToken(): Promise<string> {
 		const now = Date.now();
-		if (
-			this.accessTokenCache &&
-			this.accessTokenCache.expiresAtMs - now > 60_000
-		) {
+		if (this.accessTokenCache && this.accessTokenCache.expiresAtMs - now > 60_000) {
 			return this.accessTokenCache.token;
 		}
 
-		const resp = await fetch(
-			"https://api.dingtalk.com/v1.0/oauth2/accessToken",
-			{
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({
-					appKey: this.credentials.clientId,
-					appSecret: this.credentials.clientSecret,
-				}),
-			},
-		);
+		const resp = await fetch("https://api.dingtalk.com/v1.0/oauth2/accessToken", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({
+				appKey: this.credentials.clientId,
+				appSecret: this.credentials.clientSecret,
+			}),
+		});
 
 		const json = (await resp.json().catch(() => null)) as {
 			accessToken?: string;
@@ -206,10 +170,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 
 		if (!resp.ok || !json?.accessToken) {
 			const msg = json?.message ?? json?.code ?? `HTTP ${resp.status}`;
-			throw httpStatusError(
-				`[DingTalkAdapter] Failed to get accessToken: ${msg}`,
-				resp.status,
-			);
+			throw httpStatusError(`[DingTalkAdapter] Failed to get accessToken: ${msg}`, resp.status);
 		}
 
 		const expireSec = typeof json.expireIn === "number" ? json.expireIn : 7200;
@@ -257,9 +218,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			body: JSON.stringify(body),
 		});
 		const raw = await resp.text();
-		console.log(
-			`[DingTalkAdapter] postRobotMessage msgKey=${msgKey} target=${id} status=${resp.status}`,
-		);
+		console.log(`[DingTalkAdapter] postRobotMessage msgKey=${msgKey} target=${id} status=${resp.status}`);
 		let parsed: DingTalkRobotResponse | null = null;
 		try {
 			parsed = JSON.parse(raw) as DingTalkRobotResponse;
@@ -304,18 +263,12 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 	): Promise<string> {
 		const token = await this.getAccessToken();
 		const formData = new FormData();
-		formData.append(
-			"media",
-			new Blob([new Uint8Array(content)], { type: mimeType }),
-			fileName,
-		);
+		formData.append("media", new Blob([new Uint8Array(content)], { type: mimeType }), fileName);
 		// Note: Must use oapi.dingtalk.com not api.dingtalk.com
 		const uploadUrl = `https://oapi.dingtalk.com/media/upload?access_token=${encodeURIComponent(token)}&type=${encodeURIComponent(fileType)}`;
 		const resp = await fetch(uploadUrl, { method: "POST", body: formData });
 		const raw = await resp.text();
-		console.log(
-			`[DingTalkAdapter] uploadMedia type=${fileType} file=${fileName} status=${resp.status}`,
-		);
+		console.log(`[DingTalkAdapter] uploadMedia type=${fileType} file=${fileName} status=${resp.status}`);
 		let parsed: { errcode?: number; media_id?: string; errmsg?: string } = {};
 		try {
 			parsed = JSON.parse(raw) as {
@@ -338,25 +291,16 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			);
 		}
 		if (!parsed.media_id) {
-			throw new Error(
-				`[DingTalkAdapter] Upload media failed: missing media_id ${raw.slice(0, 300)}`,
-			);
+			throw new Error(`[DingTalkAdapter] Upload media failed: missing media_id ${raw.slice(0, 300)}`);
 		}
-		if (DEBUG)
-			console.log(
-				`[DingTalkAdapter] Upload ${fileType} successful media_id=${parsed.media_id}`,
-			);
+		if (DEBUG) console.log(`[DingTalkAdapter] Upload ${fileType} successful media_id=${parsed.media_id}`);
 		return parsed.media_id;
 	}
 
 	/**
 	 * chatId: Private chat is the other party's userId (staffId/openId, etc. string); Group chat is group:{openConversationId}
 	 */
-	async sendMessages(
-		target: MessageTarget,
-		id: string,
-		messages: Messages,
-	): Promise<void> {
+	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			const textParts: string[] = [];
 			const imageParts: Image[] = [];
@@ -417,20 +361,14 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 					}
 					// Local file / base64 -> upload as image type, then send using media_id
 					const imageName =
-						image.id?.trim() ||
-						`image-${Date.now()}.${image.contentType?.split("/")[1] ?? "png"}`;
+						image.id?.trim() || `image-${Date.now()}.${image.contentType?.split("/")[1] ?? "png"}`;
 					const imageBuffer = await mediaToBuffer({
 						url: image.url,
 						path: image.path,
 						base64: image.base64,
 					});
 					const mimeType = image.contentType || "image/png";
-					const mediaId = await this.uploadMedia(
-						"image",
-						imageName,
-						imageBuffer,
-						mimeType,
-					);
+					const mediaId = await this.uploadMedia("image", imageName, imageBuffer, mimeType);
 					// photoURL field of sampleImageMsg can accept media_id (verified by nanobot in production)
 					try {
 						await this.postRobotMessage(id, "sampleImageMsg", {
@@ -438,10 +376,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						});
 					} catch {
 						// Fallback to file attachment
-						if (DEBUG)
-							console.log(
-								"[DingTalkAdapter] sampleImageMsg failed, degrade to sampleFile",
-							);
+						if (DEBUG) console.log("[DingTalkAdapter] sampleImageMsg failed, degrade to sampleFile");
 						await this.postRobotMessage(id, "sampleFile", {
 							mediaId,
 							fileName: imageName,
@@ -465,16 +400,9 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						path: voice.path,
 						base64: voice.base64,
 					});
-					const mediaId = await this.uploadMedia(
-						"voice",
-						voiceName,
-						voiceBuffer,
-						"audio/amr",
-					);
+					const mediaId = await this.uploadMedia("voice", voiceName, voiceBuffer, "audio/amr");
 					// duration unit is seconds (integer)
-					const durationSec = voice.length
-						? Math.max(1, Math.round(Number(voice.length)))
-						: 1;
+					const durationSec = voice.length ? Math.max(1, Math.round(Number(voice.length))) : 1;
 					await this.postRobotMessage(id, "sampleAudio", {
 						mediaId,
 						duration: durationSec,
@@ -506,19 +434,13 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			}
 
 			if (mediaErrors.length > 0) {
-				throw new Error(
-					`[DingTalkAdapter] Media send failed: ${mediaErrors.join(" | ")}`,
-				);
+				throw new Error(`[DingTalkAdapter] Media send failed: ${mediaErrors.join(" | ")}`);
 			}
 			if (DEBUG) console.log(`[DingTalkAdapter] Sent to chatId=${id}`);
 		});
 	}
 
-	async replyMessages(
-		event: MessageEvent,
-		messages: Messages,
-		_quoteOrigin = false,
-	): Promise<void> {
+	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			if (event.targetType === "private") {
 				await this.sendMessages("private", String(event.sender.id), messages);

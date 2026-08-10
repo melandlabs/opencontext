@@ -1,6 +1,6 @@
-import type { StorageProvider } from "./provider";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { StorageProvider } from "./provider";
 
 // Define local storage directory path
 const LOCAL_STORAGE_PATH = path.resolve("data", "storage");

@@ -1,8 +1,8 @@
 /**
  * Lazy registration slot for the host's Postgres-backed raw message
- * manager. The actual `PostgresRawMessageManager` class lives in
- * `apps/web/lib/memory/postgres-raw-message-store.ts` because it owns
- * the schema-bound Drizzle table references.
+ * manager. The actual `PostgresRawMessageManager` implementation lives
+ * in the host application because it owns the schema-bound Drizzle
+ * table references.
  *
  * The package ships this factory so consumers can wire up their own
  * postgres implementation without forcing the package to take a
@@ -40,9 +40,7 @@ export interface PostgresRawMessageManagerLike {
 	}): Promise<unknown[]>;
 }
 
-export type PostgresFactoryFn = (
-	env?: MemoryStoreEnv,
-) => Promise<PostgresRawMessageManagerLike>;
+export type PostgresFactoryFn = (env?: MemoryStoreEnv) => Promise<PostgresRawMessageManagerLike>;
 
 let factory: PostgresFactoryFn | null = null;
 

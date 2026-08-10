@@ -7,7 +7,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
-	const message = error instanceof Error ? error.message : String(error);
-	console.error(`[opencontext-mcp] ${message}`);
+	const _message = error instanceof Error ? error.message : String(error);
 	process.exit(1);
 });

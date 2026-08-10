@@ -1,5 +1,4 @@
-// @opencontext/cron — scheduling primitives shared by runtime + UI
-// See `docs/split-runtime-ui.md` for boundary contract.
+// @opencontext/cron — scheduling primitives shared by runtime + UI.
 
 export * from "./types";
 export * from "./scheduler";

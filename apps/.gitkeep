@@ -1,7 +1,7 @@
 # `apps/` is reserved for example host applications that demonstrate
-# the `@opencontext/*` packages. The primary application that consumes
-# this runtime — `opencontext/desktop` — lives in the sibling repo
-# `melandlabs/opencontext` and is **not** duplicated here.
+# the `@opencontext/*` packages. The primary consumer of this runtime
+# is a separate host application that lives in another repository and
+# is intentionally **not** duplicated here.
 #
 # Add a new example under this directory when you want to show how
 # to embed opencontext into a host process (e.g. a CLI, a desktop
