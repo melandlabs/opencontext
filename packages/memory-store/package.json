@@ -40,6 +40,9 @@
 	"license": "Apache-2.0",
 	"description": "OpenContext memory storage + search SDK with HTTP and MCP server entry points.",
 	"keywords": ["opencontext", "memory", "storage", "search", "sdk", "mcp", "http"],
+	"publishConfig": {
+		"access": "public"
+	},
 	"dependencies": {
 		"@hono/node-server": "^1.13.7",
 		"@modelcontextprotocol/sdk": "^1.25.3",

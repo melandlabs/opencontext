@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-telegram",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -28,10 +32,13 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/telegram module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*",
 		"@melandlabs/integrations": "workspace:*",
+		"@melandlabs/integrations-channels": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"big-integer": "^1.6.52",
 		"markdown-it": "^14.1.1",

@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-calendar",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -22,11 +26,14 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/calendar module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/integrations": "workspace:*",
-		"googleapis": "^140.0.0",
-		"google-auth-library": "^9.0.0"
+		"@melandlabs/integrations-composio": "workspace:*",
+		"google-auth-library": "^9.0.0",
+		"googleapis": "^140.0.0"
 	},
 	"peerDependencies": {
 		"react": ">=18.0.0"

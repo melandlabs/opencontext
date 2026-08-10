@@ -10,7 +10,7 @@ export { TelegramConversationStore } from "./conversation-store";
 export type {
 	DialogInfo,
 	ExtractedMessageInfo,
-} from "@melandlabs/integrations/channels/sources/types";
+} from "@melandlabs/integrations-channels/sources/types";
 export type {
 	TelegramContactMeta,
 	ContactMeta,

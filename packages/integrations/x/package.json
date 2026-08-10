@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-x",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -22,9 +26,12 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/x module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/integrations": "workspace:*",
+		"@melandlabs/integrations-channels": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"@xdevplatform/xdk": "^0.5.0"
 	},

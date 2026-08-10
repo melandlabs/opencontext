@@ -11,15 +11,15 @@
 import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
 import type {
 	Messages,
 	File as opencontextFile,
 	Image as opencontextImage,
 	Message as opencontextMessage,
-} from "@melandlabs/integrations/channels";
-import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+} from "@melandlabs/integrations-channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
 import type {
 	BaileysAuthStateProvider,
 	ClientRegistry,

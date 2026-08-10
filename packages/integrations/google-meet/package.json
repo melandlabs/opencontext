@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-google-meet",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -22,7 +26,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/google-meet module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"
@@ -35,6 +41,7 @@
 		"lint:fix": "biome check --write ."
 	},
 	"dependencies": {
-		"@melandlabs/integrations": "workspace:*"
+		"@melandlabs/integrations": "workspace:*",
+		"@melandlabs/integrations-composio": "workspace:*"
 	}
 }

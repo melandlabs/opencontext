@@ -2,12 +2,12 @@
  * DingTalk bot adapter (Stream receive messages + OpenAPI send messages)
  * Credentials are Open Platform Client ID (AppKey) and Client Secret, consistent with nanobot dingtalk channel
  */
-import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
-import type { File as FileMsg, Image, Message, Messages, Voice } from "@melandlabs/integrations/channels";
-import type { GroupMessageEvent, MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
-import type { Friend, Group, GroupMember } from "@melandlabs/integrations/channels";
-import type { Permission } from "@melandlabs/integrations/channels";
-import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
+import type { File as FileMsg, Image, Message, Messages, Voice } from "@melandlabs/integrations-channels";
+import type { GroupMessageEvent, MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
+import type { Friend, Group, GroupMember } from "@melandlabs/integrations-channels";
+import type { Permission } from "@melandlabs/integrations-channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
 
 const DEBUG = process.env.DEBUG_DINGTALK === "true";
 

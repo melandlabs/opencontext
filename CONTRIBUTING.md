@@ -31,7 +31,7 @@ opencontext/
 ## Local development
 
 ```bash
-# Prereqs: Node 20, pnpm 10
+# Prereqs: Node 22, pnpm 10
 nvm use
 pnpm install
 pnpm -r build              # Build all packages

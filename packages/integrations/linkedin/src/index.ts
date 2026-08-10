@@ -1,4 +1,4 @@
-import type { Platform } from "@melandlabs/integrations/channels/sources/types";
+import type { Platform } from "@melandlabs/integrations-channels/sources/types";
 import type { ExtractedMessageInfo } from "@melandlabs/shared";
 import { AppError } from "@melandlabs/shared/errors";
 

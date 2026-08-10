@@ -1,4 +1,4 @@
-import { ComposioClient } from "@melandlabs/integrations/composio";
+import { ComposioClient } from "@melandlabs/integrations-composio";
 
 export class ComposioGoogleCalendarProxy {
 	private readonly connectedAccountId: string;

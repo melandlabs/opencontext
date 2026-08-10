@@ -10,7 +10,7 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js",
-		"./sources/types": "./dist/sources/types.js"
+		"./sources/types": "./dist/sources-types.js"
 	},
 	"repository": {
 		"type": "git",

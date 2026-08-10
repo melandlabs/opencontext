@@ -2,7 +2,11 @@
 	"name": "@melandlabs/integrations-whatsapp",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -25,10 +29,13 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/whatsapp module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*",
 		"@melandlabs/integrations": "workspace:*",
+		"@melandlabs/integrations-channels": "workspace:*",
 		"@whiskeysockets/baileys": "^7.0.0-rc.9"
 	},
 	"devDependencies": {

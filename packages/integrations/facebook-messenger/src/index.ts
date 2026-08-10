@@ -1,7 +1,7 @@
-import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
-import type { At, Image, Message, Messages, Unknown } from "@melandlabs/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
-import type { DialogInfo, ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
+import type { At, Image, Message, Messages, Unknown } from "@melandlabs/integrations-channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
+import type { DialogInfo, ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
 
 type MessengerParticipant = { id: string; name?: string };
 

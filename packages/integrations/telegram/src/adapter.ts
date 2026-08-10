@@ -5,16 +5,16 @@
  * using the gramjs library.
  */
 
-import { MessagePlatformAdapter } from "@melandlabs/integrations/channels";
-import type { At, Image, Message, Messages } from "@melandlabs/integrations/channels";
-import type { MessageEvent, MessageTarget } from "@melandlabs/integrations/channels";
+import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
+import type { At, Image, Message, Messages } from "@melandlabs/integrations-channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
 import {
 	type DialogInfo,
 	type ExtractedMessageInfo,
 	delay,
 	isEmptyMessage,
 	timeBeforeHours,
-} from "@melandlabs/integrations/channels/sources/types";
+} from "@melandlabs/integrations-channels/sources/types";
 import type { ContactMeta, TelegramContactMeta } from "@melandlabs/integrations/contacts";
 import { isTelegramContactMeta } from "@melandlabs/integrations/contacts";
 import type { ClientRegistry, FileIngester } from "@melandlabs/integrations/core";
@@ -1367,12 +1367,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	}
 }
 
-export { getTgUserNameString } from "@melandlabs/integrations/channels/sources/types";
+export { getTgUserNameString } from "@melandlabs/integrations-channels/sources/types";
 export type {
 	DialogInfo,
 	TgUserInfo,
 	ExtractedMessageInfo,
-} from "@melandlabs/integrations/channels/sources/types";
+} from "@melandlabs/integrations-channels/sources/types";
 
 export function opencontextMessageToTgText(message: Message): string {
 	if (typeof message === "string") {

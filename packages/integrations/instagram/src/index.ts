@@ -1,5 +1,5 @@
-import type { Messages } from "@melandlabs/integrations/channels";
-import type { ExtractedMessageInfo } from "@melandlabs/integrations/channels/sources/types";
+import type { Messages } from "@melandlabs/integrations-channels";
+import type { ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
 import { AppError } from "@melandlabs/shared/errors";
 
 type InstagramAdapterOptions = {

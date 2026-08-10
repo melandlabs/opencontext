@@ -18,8 +18,8 @@ import {
 	detectImageMimeType,
 	downloadAndDecryptBuffer,
 	weixinGetUpdates,
-} from "@melandlabs/integrations/weixin/ilink-client";
-import type { WeixinIlinkCredentials, WeixinMessage } from "@melandlabs/integrations/weixin/ilink-client";
+} from "./ilink-client";
+import type { WeixinIlinkCredentials, WeixinMessage } from "./ilink-client";
 
 const DEBUG = process.env.DEBUG_WEIXIN === "true";
 const DEDUP_TTL_MS = 5 * 60 * 1000;

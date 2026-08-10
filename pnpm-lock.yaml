@@ -363,6 +363,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-composio':
+        specifier: workspace:*
+        version: link:../composio
       google-auth-library:
         specifier: ^9.0.0
         version: 9.15.1
@@ -499,6 +502,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-composio':
+        specifier: workspace:*
+        version: link:../composio
     devDependencies:
       '@melandlabs/config':
         specifier: workspace:*
@@ -550,6 +556,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -579,6 +588,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -636,6 +648,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -667,6 +682,12 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
+      '@melandlabs/integrations-weixin':
+        specifier: workspace:*
+        version: 'link:'
       '@tencent-weixin/openclaw-weixin':
         specifier: ^2.1.9
         version: 2.4.6(openclaw@2026.7.1(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -686,6 +707,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
       '@whiskeysockets/baileys':
         specifier: ^7.0.0-rc.9
         version: 7.0.0-rc14(bufferutil@4.1.0)(sharp@0.34.5)(utf-8-validate@5.0.10)
@@ -705,6 +729,9 @@ importers:
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
+      '@melandlabs/integrations-channels':
+        specifier: workspace:*
+        version: link:../channels
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../../shared
