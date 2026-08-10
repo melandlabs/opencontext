@@ -1,7 +1,19 @@
 import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
-import type { At, Image, Message, Messages, Unknown } from "@melandlabs/integrations-channels";
-import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
-import type { DialogInfo, ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
+import type {
+	At,
+	Image,
+	Message,
+	Messages,
+	Unknown,
+} from "@melandlabs/integrations-channels";
+import type {
+	MessageEvent,
+	MessageTarget,
+} from "@melandlabs/integrations-channels";
+import type {
+	DialogInfo,
+	ExtractedMessageInfo,
+} from "@melandlabs/integrations-channels/sources/types";
 
 type MessengerParticipant = { id: string; name?: string };
 
@@ -57,21 +69,31 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		botId?: string;
 	}) {
 		super();
-		this.pageAccessToken = opts?.pageAccessToken ?? process.env.FB_PAGE_ACCESS_TOKEN ?? "";
+		this.pageAccessToken =
+			opts?.pageAccessToken ?? process.env.FB_PAGE_ACCESS_TOKEN ?? "";
 		this.pageId = opts?.pageId ?? process.env.FB_PAGE_ID ?? "";
 		this.pageName = opts?.pageName ?? process.env.FB_PAGE_NAME;
-		this.graphVersion = opts?.graphVersion ?? process.env.FB_GRAPH_VERSION ?? DEFAULT_GRAPH_VERSION;
+		this.graphVersion =
+			opts?.graphVersion ??
+			process.env.FB_GRAPH_VERSION ??
+			DEFAULT_GRAPH_VERSION;
 
 		if (!this.pageAccessToken) {
-			throw new Error("[facebook_messenger] Missing page access token for adapter initialization");
+			throw new Error(
+				"[facebook_messenger] Missing page access token for adapter initialization",
+			);
 		}
 		if (!this.pageId) {
-			throw new Error("[facebook_messenger] Missing page ID for adapter initialization");
+			throw new Error(
+				"[facebook_messenger] Missing page ID for adapter initialization",
+			);
 		}
 	}
 
 	private async graphGet<T>(path: string, query?: Record<string, string>) {
-		const url = new URL(`${GRAPH_BASE}/${this.graphVersion}/${path.replace(/^\//, "")}`);
+		const url = new URL(
+			`${GRAPH_BASE}/${this.graphVersion}/${path.replace(/^\//, "")}`,
+		);
 		url.searchParams.set("access_token", this.pageAccessToken);
 		for (const [key, value] of Object.entries(query ?? {})) {
 			url.searchParams.set(key, value);
@@ -79,7 +101,9 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		const response = await fetch(url.toString());
 		if (!response.ok) {
 			const body = await response.text();
-			throw new Error(`[facebook_messenger] Graph request failed ${response.status}: ${body}`);
+			throw new Error(
+				`[facebook_messenger] Graph request failed ${response.status}: ${body}`,
+			);
 		}
 		return (await response.json()) as T;
 	}
@@ -104,7 +128,9 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 
 		if (!response.ok) {
 			const text = await response.text();
-			throw new Error(`[facebook_messenger] Graph POST failed ${response.status}: ${text}`);
+			throw new Error(
+				`[facebook_messenger] Graph POST failed ${response.status}: ${text}`,
+			);
 		}
 
 		return (await response.json()) as T;
@@ -122,7 +148,11 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 			} else if (this.isImage(item)) {
 				parts.push(item.url ?? item.path ?? "");
 			} else if (item && typeof item === "object") {
-				parts.push((item as { text?: string }).text ?? (item as { message?: string }).message ?? "");
+				parts.push(
+					(item as { text?: string }).text ??
+						(item as { message?: string }).message ??
+						"",
+				);
 			}
 		}
 		return parts
@@ -143,14 +173,19 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		return typeof item === "object" && item !== null && "url" in item;
 	}
 
-	private async resolveRecipient(conversationId: string): Promise<MessengerParticipant | null> {
+	private async resolveRecipient(
+		conversationId: string,
+	): Promise<MessengerParticipant | null> {
 		if (this.participantCache.has(conversationId)) {
 			return this.participantCache.get(conversationId) ?? null;
 		}
 		try {
-			const detail = await this.graphGet<MessengerConversation>(`${conversationId}`, {
-				fields: "participants",
-			});
+			const detail = await this.graphGet<MessengerConversation>(
+				`${conversationId}`,
+				{
+					fields: "participants",
+				},
+			);
 			const participant =
 				detail.participants?.data?.find(
 					(p) => p.id && p.id !== this.pageId && !p.id.startsWith(this.pageId),
@@ -167,10 +202,16 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		}
 	}
 
-	async sendMessages(_target: MessageTarget, id: string, messages: Messages): Promise<void> {
+	async sendMessages(
+		_target: MessageTarget,
+		id: string,
+		messages: Messages,
+	): Promise<void> {
 		const recipient = await this.resolveRecipient(id);
 		if (!recipient?.id) {
-			throw new Error(`[facebook_messenger] Cannot resolve recipient for conversation ${id}`);
+			throw new Error(
+				`[facebook_messenger] Cannot resolve recipient for conversation ${id}`,
+			);
 		}
 
 		const text = this.messagesToText(messages);
@@ -185,7 +226,11 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		});
 	}
 
-	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
+	async replyMessages(
+		event: MessageEvent,
+		messages: Messages,
+		_quoteOrigin = false,
+	): Promise<void> {
 		const targetId = (event as any)?.target?.id ?? undefined;
 		const conversationId =
 			typeof targetId === "string" && targetId.length > 0
@@ -193,7 +238,9 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 				: event?.sourcePlatformObject?.conversation_id;
 		const resolvedConversationId = conversationId ?? event?.attachments?.[0];
 		if (!resolvedConversationId) {
-			throw new Error("[facebook_messenger] Cannot determine conversation to reply to");
+			throw new Error(
+				"[facebook_messenger] Cannot determine conversation to reply to",
+			);
 		}
 		await this.sendMessages("private", resolvedConversationId, messages);
 	}
@@ -201,8 +248,13 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 	async getDialogs(): Promise<DialogInfo[]> {
 		const conversations = await this.fetchConversations();
 		return conversations.map((conv) => {
-			const participant = conv.participants?.data?.find((p) => p.id !== this.pageId) ?? null;
-			const name = participant?.name ?? this.pageName ?? conv.snippet ?? `Conversation ${conv.id.slice(-6)}`;
+			const participant =
+				conv.participants?.data?.find((p) => p.id !== this.pageId) ?? null;
+			const name =
+				participant?.name ??
+				this.pageName ??
+				conv.snippet ??
+				`Conversation ${conv.id.slice(-6)}`;
 			const isGroup = (conv.participants?.data?.length ?? 0) > 2;
 			const metadata = participant
 				? {
@@ -224,15 +276,23 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		});
 	}
 
-	private async fetchConversations(limit = 50): Promise<MessengerConversation[]> {
+	private async fetchConversations(
+		limit = 50,
+	): Promise<MessengerConversation[]> {
 		try {
-			const data = await this.graphGet<ConversationListResponse>(`${this.pageId}/conversations`, {
-				fields: "participants,updated_time,snippet,message_count",
-				limit: `${limit}`,
-			});
+			const data = await this.graphGet<ConversationListResponse>(
+				`${this.pageId}/conversations`,
+				{
+					fields: "participants,updated_time,snippet,message_count",
+					limit: `${limit}`,
+				},
+			);
 			return data.data ?? [];
 		} catch (error) {
-			console.error(`[facebook_messenger] Failed to fetch conversations for page ${this.pageId}`, error);
+			console.error(
+				`[facebook_messenger] Failed to fetch conversations for page ${this.pageId}`,
+				error,
+			);
 			return [];
 		}
 	}
@@ -244,14 +304,19 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		if (!message.created_time) {
 			return null;
 		}
-		const participant = conversation.participants?.data?.find((p) => p.id !== this.pageId) ?? null;
+		const participant =
+			conversation.participants?.data?.find((p) => p.id !== this.pageId) ??
+			null;
 		const chatName =
 			participant?.name ??
 			this.pageName ??
 			conversation.snippet ??
 			`Conversation ${conversation.id.slice(-6)}`;
 		return {
-			chatType: (conversation.participants?.data?.length ?? 0) > 2 ? "group" : "private",
+			chatType:
+				(conversation.participants?.data?.length ?? 0) > 2
+					? "group"
+					: "private",
 			chatName,
 			sender: message.from?.name ?? message.from?.id ?? "Unknown",
 			text: message.message ?? "",
@@ -280,11 +345,19 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 			this.asyncIteratorState.isInitialized = true;
 		}
 
-		const { conversations, currentConversationIndex, offsetDate } = this.asyncIteratorState;
+		const { conversations, currentConversationIndex, offsetDate } =
+			this.asyncIteratorState;
 
-		for (let convIdx = currentConversationIndex; convIdx < conversations.length; convIdx++) {
+		for (
+			let convIdx = currentConversationIndex;
+			convIdx < conversations.length;
+			convIdx++
+		) {
 			const conversation = conversations[convIdx];
-			const messages = await this.fetchMessagesForConversation(conversation.id, offsetDate);
+			const messages = await this.fetchMessagesForConversation(
+				conversation.id,
+				offsetDate,
+			);
 
 			for (const msg of messages) {
 				if (msg.timestamp < offsetDate) {
@@ -312,10 +385,13 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		since: number,
 	): Promise<ExtractedMessageInfo[]> {
 		try {
-			const response = await this.graphGet<MessagesResponse>(`${conversationId}/messages`, {
-				fields: "id,message,from,created_time",
-				limit: "50",
-			});
+			const response = await this.graphGet<MessagesResponse>(
+				`${conversationId}/messages`,
+				{
+					fields: "id,message,from,created_time",
+					limit: "50",
+				},
+			);
 
 			const messages = response.data ?? [];
 			const conversation = this.asyncIteratorState.conversations.find(
@@ -324,7 +400,9 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 
 			const mapped = messages
 				.filter((msg) => {
-					const ts = msg.created_time ? Math.floor(new Date(msg.created_time).getTime() / 1000) : 0;
+					const ts = msg.created_time
+						? Math.floor(new Date(msg.created_time).getTime() / 1000)
+						: 0;
 					return ts >= since;
 				})
 				.map((msg) => this.mapMessage(conversation, msg))

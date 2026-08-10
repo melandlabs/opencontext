@@ -34,7 +34,9 @@ export interface StartMcpServerOptions extends MemoryStoreConfig {
 const DEFAULT_NAME = "@melandlabs/memory-store";
 const DEFAULT_VERSION = "0.1.0";
 
-export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
+export async function startMcpServer(
+	options: StartMcpServerOptions = {},
+): Promise<McpServer> {
 	const server = new McpServer({
 		name: options.name ?? DEFAULT_NAME,
 		version: options.version ?? DEFAULT_VERSION,
@@ -45,9 +47,13 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 	});
 	const search = createUnifiedSearch(options.unified);
 
-	server.tool("memory.health", "Returns the health status of the memory store.", async () => ({
-		content: [{ type: "text" as const, text: JSON.stringify({ ok: true }) }],
-	}));
+	server.tool(
+		"memory.health",
+		"Returns the health status of the memory store.",
+		async () => ({
+			content: [{ type: "text" as const, text: JSON.stringify({ ok: true }) }],
+		}),
+	);
 
 	const searchSchema: ZodRawShape = {
 		userId: z.string(),
@@ -147,7 +153,9 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				console.warn("[memory-store/mcp] chroma upsert failed:", error);
 			}
 			return {
-				content: [{ type: "text" as const, text: JSON.stringify({ ok: true, result }) }],
+				content: [
+					{ type: "text" as const, text: JSON.stringify({ ok: true, result }) },
+				],
 			};
 		},
 	);

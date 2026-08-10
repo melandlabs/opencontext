@@ -48,13 +48,18 @@ function getMemoryVectorStoreBackend(): "chroma" | "sqlite-vec" {
 }
 
 export function isInsightSQLiteVecEnabled(env?: MemoryStoreEnv): boolean {
-	return resolveEnv(env).isTauriMode() && getMemoryVectorStoreBackend() === "sqlite-vec";
+	return (
+		resolveEnv(env).isTauriMode() &&
+		getMemoryVectorStoreBackend() === "sqlite-vec"
+	);
 }
 
 function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
 	if (env) return env;
 	return {
-		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
+		isTauriMode: () =>
+			process.env.IS_TAURI === "true" ||
+			typeof process.env.TAURI_MODE === "string",
 		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
 		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
 	};
@@ -63,9 +68,11 @@ function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
 async function getInsightSQLiteVecStore(env: MemoryStoreEnv) {
 	const e = resolveEnv(env);
 	const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
-	const { getSQLiteVecStore } = await import("@melandlabs/rag/sqlite-vec-store");
+	const { getSQLiteVecStore } =
+		await import("@melandlabs/rag/sqlite-vec-store");
 	return await getSQLiteVecStore(dbPath, undefined, {
-		collectionName: process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "opencontext_insights",
+		collectionName:
+			process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "opencontext_insights",
 	});
 }
 
@@ -111,16 +118,22 @@ export async function searchInsightsWithSQLiteVec(
 ): Promise<VectorSearchResult[]> {
 	const store = await getInsightSQLiteVecStore(resolveEnv(env));
 	const overfetchLimit = Math.max(input.limit * 8, input.limit);
-	const results = await store.similaritySearchWithOptions(input.queryEmbedding, {
-		limit: overfetchLimit,
-		filter: { userId: input.userId },
-	});
+	const results = await store.similaritySearchWithOptions(
+		input.queryEmbedding,
+		{
+			limit: overfetchLimit,
+			filter: { userId: input.userId },
+		},
+	);
 
 	return results
 		.filter((result) => result.score >= input.threshold)
 		.filter((result) => {
 			const metadata = result.metadata ?? {};
-			if (input.botIds?.length && !input.botIds.includes(String(metadata.botId ?? ""))) {
+			if (
+				input.botIds?.length &&
+				!input.botIds.includes(String(metadata.botId ?? ""))
+			) {
 				return false;
 			}
 			return input.includeArchived || metadata.archived !== true;

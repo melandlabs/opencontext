@@ -67,7 +67,8 @@ const zhHans = {
 		pin: "置顶",
 		showInFolder: "在文件夹中显示",
 		myIntegrations: "集成管理",
-		connectPlatformDesc: "授权后，我们将获得读取和发送消息的必要权限，帮助您集中管理来自所有通信集成的消息",
+		connectPlatformDesc:
+			"授权后，我们将获得读取和发送消息的必要权限，帮助您集中管理来自所有通信集成的消息",
 		all: "全部",
 		chatSubTitle: "今天我可以帮助你什么？",
 		generatingSuggestions: "{{assistantName}}正在帮你生成行动建议",
@@ -141,7 +142,8 @@ const zhHans = {
 		},
 		quickAuthPrimaryCta: "开始授权",
 		quickAuthTitle: "先把 opencontext 连接到你的工具",
-		quickAuthSubtitle: "选择一个集成完成授权后，opencontext 才能同步消息并帮助你快速回复。",
+		quickAuthSubtitle:
+			"选择一个集成完成授权后，opencontext 才能同步消息并帮助你快速回复。",
 		quickAuthStatusConnect: "连接 {{platform}}",
 		quickAuthStatusConnected: "已连接：{{name}}",
 		quickAuthStatusConnectedFallback: "已连接",
@@ -152,10 +154,12 @@ const zhHans = {
 		allPlatformsConnected: "所有可用的集成都已连接。",
 		readyToChat: "已完成授权，随时可以开始使用 opencontext。",
 		enterChat: "进入聊天",
-		opencontextIntro1: "我是你的智能沟通助手，可以帮你从分散在各个集成的消息中，",
+		opencontextIntro1:
+			"我是你的智能沟通助手，可以帮你从分散在各个集成的消息中，",
 		opencontextIntro2: "快速找到最重要的内容，提升沟通效率。",
 		contactUs: "联系我们",
-		suggestion: "如果您对 opencontext 有任何使用建议和想法，我们非常期待您与我们交流。",
+		suggestion:
+			"如果您对 opencontext 有任何使用建议和想法，我们非常期待您与我们交流。",
 		joinTelegram: "加入我们的 Telegram 群组",
 		joinDiscord: "加入我们的 Discord 社区",
 		mailToUs: "给我们发邮件",
@@ -196,7 +200,8 @@ const zhHans = {
 		confirmSend: "发送消息",
 		sendFailedUnknownReason: "消息发送失败：未知错误",
 		sendErrorGeneric: "发送请求失败，请稍后重试",
-		sendErrorCannotFindInputEntity: "您需要在 Telegram 中将该接收者添加为您的联系人",
+		sendErrorCannotFindInputEntity:
+			"您需要在 Telegram 中将该接收者添加为您的联系人",
 		sending: "发送中...",
 		thinking: "opencontext 正在思考...",
 		generating: "正在为你整理最佳回复",
@@ -209,10 +214,12 @@ const zhHans = {
 		reviewAndSend: "评审 & 发送",
 		scrollToLatest: "回到底部",
 		newReply: "新回复",
-		replyReady: "opencontext 已为您准备了消息草稿。点击详情在右侧的工具面板中查看。",
+		replyReady:
+			"opencontext 已为您准备了消息草稿。点击详情在右侧的工具面板中查看。",
 		clickToViewDetails: "点击查看详情",
 		replyRefresh: "帮我重新生成回复草稿。",
-		replyFinish: "opencontext 已经帮您将消息发送到 {{platform}} 的 {{recipient}}",
+		replyFinish:
+			"opencontext 已经帮您将消息发送到 {{platform}} 的 {{recipient}}",
 		replyError: "抱歉，opencontext 发送消息时遇到了错误: {{error}}",
 		replyToneHeading: "语气预设",
 		replyToneHint: "用于 opencontext 自动生成回复时的语气。",
@@ -223,10 +230,12 @@ const zhHans = {
 		replyGenerateWithTone: "请以{{toneLabel}}的语气撰写回复。",
 		replyRefreshWithTone: "请重新生成这份回复草稿，保持{{toneLabel}}的语气。",
 		aiSoulHeading: "opencontext Soul",
-		aiSoulIntroDescription: "设置 opencontext 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
+		aiSoulIntroDescription:
+			"设置 opencontext 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
 		aiSoulHint: "用一段话定义 opencontext 的性格和风格，留空则使用默认设置",
 		aiSoulPromptLabel: "自定义提示词",
-		aiSoulPromptPlaceholder: "例如：你是一个思维清晰、直接高效的助手，回答简洁，优先给出行动建议而不是分析。",
+		aiSoulPromptPlaceholder:
+			"例如：你是一个思维清晰、直接高效的助手，回答简洁，优先给出行动建议而不是分析。",
 		aiSoulPromptHelper: "此提示词将被加入到系统提示词中，影响 AI 的行为模式。",
 		soulPreset: {
 			default: "默认",
@@ -295,7 +304,8 @@ const zhHans = {
 		customerPrivacyPolicy: "客户隐私政策",
 		credits: "积分",
 		creditsPerMonth: "积分/每月",
-		telegramReauth: "Telegram 账号 {{userName}} 登录会话已过期，请退出账号连接并重新登录",
+		telegramReauth:
+			"Telegram 账号 {{userName}} 登录会话已过期，请退出账号连接并重新登录",
 		tonePresets: {
 			balanced: {
 				label: "平衡",
@@ -367,7 +377,8 @@ const zhHans = {
 			pendingApproval: "等待确认",
 			approveExecution: "确认执行",
 			replan: "重新规划",
-			approvalHint: "请确认计划后点击「确认执行」开始执行，或点击「重新规划」生成新计划",
+			approvalHint:
+				"请确认计划后点击「确认执行」开始执行，或点击「重新规划」生成新计划",
 		},
 		filePreview: {
 			title: "文件预览",
@@ -414,7 +425,8 @@ const zhHans = {
 			openInWord: "用 Word 打开",
 			noContent: "未找到文档内容",
 			loading: "加载文档中...",
-			fileTooLargeDesc: "此文件（{{size}}MB）过大无法预览，请使用 Microsoft Word 打开。",
+			fileTooLargeDesc:
+				"此文件（{{size}}MB）过大无法预览，请使用 Microsoft Word 打开。",
 			paragraphs: "段落",
 			noPathAvailable: "无可用文件路径",
 			loadTimeout: "加载超时",
@@ -425,7 +437,8 @@ const zhHans = {
 		csvPreview: {
 			parsingFailed: "CSV 解析失败",
 			emptyFile: "空文件或无可解析的行",
-			parseWarning: "部分行存在解析警告（{{count}}），仍以表格形式显示已解析内容",
+			parseWarning:
+				"部分行存在解析警告（{{count}}），仍以表格形式显示已解析内容",
 			rowsColumns: "{{rows}} 行 × {{columns}} 列",
 		},
 		spreadsheetPreview: {
@@ -536,7 +549,8 @@ const zhHans = {
 			previewHint: "预览为简化渲染，完整效果请在 WPS 或 PowerPoint 中查看",
 			renderingNotice: "本地预览",
 			highFidelityLoading: "高保真渲染引擎正在后台下载，当前先展示简化预览",
-			highFidelityLoadingToast: "PPT 高保真渲染引擎正在加载中，暂时使用简化预览",
+			highFidelityLoadingToast:
+				"PPT 高保真渲染引擎正在加载中，暂时使用简化预览",
 			highFidelityReady: "高保真渲染已就绪",
 			highFidelityUnavailable: "当前仅支持简化预览，高保真渲染引擎尚未就绪",
 			renderEngineCheckFailed: "无法检查高保真渲染引擎状态",
@@ -670,18 +684,26 @@ const zhHans = {
 			},
 			codexCompatibilityError: {
 				title: "Codex 配置需要处理",
-				suggestions: ["升级 Codex，然后重启 OpenContext", "或选择当前 Codex CLI 支持的模型"],
+				suggestions: [
+					"升级 Codex，然后重启 OpenContext",
+					"或选择当前 Codex CLI 支持的模型",
+				],
 				docsAction: "打开 Codex 安装指南",
 			},
 			fileNotFoundError: {
 				title: "文件未找到",
 				description: "找不到指定的文件。",
-				suggestions: ["检查文件路径是否正确", "确认文件是否存在", "使用完整的文件路径"],
+				suggestions: [
+					"检查文件路径是否正确",
+					"确认文件是否存在",
+					"使用完整的文件路径",
+				],
 			},
 		},
 		confirmDeleteTitle: "确认删除",
 		confirmDeleteMessage: "确定要删除此项目吗？",
-		confirmBatchDeleteMessage: "确定要删除选中的 {{count}} 条吗？此操作无法撤销。",
+		confirmBatchDeleteMessage:
+			"确定要删除选中的 {{count}} 条吗？此操作无法撤销。",
 	},
 	personalization: {
 		skillsSettings: {
@@ -782,10 +804,14 @@ const zhHans = {
 		capabilityDecisionCapable: "可产出决策",
 		capabilityNeedsSetup: "需要配置",
 		capabilityUnsupported: "暂未支持映射",
-		capabilityReasonNoMapping: "OpenContext 识别此集成，但其信号类型尚未映射到具体决策。",
-		capabilityReasonNotLoopMonitored: "已授权用于聊天与记忆；Loop 暂未从此来源拉取信号。",
-		capabilitySummary: "{{connected}} 已连接 · {{monitored}} 被 Loop 监听 · {{decision}} 可产出决策",
-		unsupportedSignalsNote: "{{count}} 条信号被丢弃 —— 来源缺少 Loop 标准映射。",
+		capabilityReasonNoMapping:
+			"OpenContext 识别此集成，但其信号类型尚未映射到具体决策。",
+		capabilityReasonNotLoopMonitored:
+			"已授权用于聊天与记忆；Loop 暂未从此来源拉取信号。",
+		capabilitySummary:
+			"{{connected}} 已连接 · {{monitored}} 被 Loop 监听 · {{decision}} 可产出决策",
+		unsupportedSignalsNote:
+			"{{count}} 条信号被丢弃 —— 来源缺少 Loop 标准映射。",
 		needsSetupAction: "让智能体接入 Loop",
 		// #391 — `/connectors` 页面同步 Composio 后端账户。同步按钮触发
 		// Loop 后台重新探测,展示给用户的账户可能落后于实际授权状态。
@@ -813,12 +839,14 @@ const zhHans = {
 			cli_not_found: "请先用 `npm i -g @composio/cli` 安装,再点击重试。",
 			cli_unauthorized:
 				"请通过 Composio 登录、为智能体运行 `claude auth login`,或在 API 设置中配置一个 Anthropic 兼容的 provider。",
-			timeout: "请到 `~/.opencontext/loop/preferences.json` 缩短探测间隔,或检查网络。",
+			timeout:
+				"请到 `~/.opencontext/loop/preferences.json` 缩短探测间隔,或检查网络。",
 			transport_error: "智能体服务未响应,请检查网络后重试。",
 			agent_http_error: "智能体返回了非正常状态码,请稍后重试。",
 			empty_response: "探测完成但未返回内容,可重试。",
 			malformed_response: "智能体未返回可识别的 `connectors` 结构,可重试。",
-			cli_malformed: "CLI 已返回但 JSON 无法解析。请运行 `composio dev init` 后重试。",
+			cli_malformed:
+				"CLI 已返回但 JSON 无法解析。请运行 `composio dev init` 后重试。",
 		},
 		probeKindInstall: "复制安装命令",
 		probeKindCopied: "已复制",
@@ -836,15 +864,18 @@ const zhHans = {
 		feedsSectionTitle: "RSS 资讯订阅",
 		feedsSectionDescription:
 			"将精选或自定义的 RSS 订阅源接入 opencontext，把 Web3、金融、科技、AI、设计、硬件等讯息集中管理。",
-		imSectionDescription: "连接您常用的即时通讯工具，统一管理对话、接收实时通知，在一处处理所有聊天消息。",
+		imSectionDescription:
+			"连接您常用的即时通讯工具，统一管理对话、接收实时通知，在一处处理所有聊天消息。",
 		calendarFeedToggle: "显示在信息流",
 		calendarFeedToggleSuccess: "已更新日历信息流偏好。",
 		telegramReconnectSuccess: "请在 Telegram 中发送 /login 命令以重新连接",
-		calendarFeedToggleDesc: "把连接的日历（Google/Outlook）中新建/临近的日程推送到 opencontext。",
+		calendarFeedToggleDesc:
+			"把连接的日历（Google/Outlook）中新建/临近的日程推送到 opencontext。",
 		addPlatform: "添加平台",
 		addConnector: "添加连接器",
 		connectMoreViaComposio: "通过 Composio 连接更多",
-		connectMoreViaComposioDesc: "让 Agent 帮你接入 GitHub、Linear、Notion、HubSpot 等上百款应用。",
+		connectMoreViaComposioDesc:
+			"让 Agent 帮你接入 GitHub、Linear、Notion、HubSpot 等上百款应用。",
 		composioMoreAppsLabel: "更多应用",
 		/**
 		 * 提示词原样发送给聊天 Agent,作为用户点击「通过 Composio 连接更多」时的
@@ -871,7 +902,8 @@ const zhHans = {
 		importOpmlTitle: "上传 OPML 文件批量添加订阅",
 		importOpmlDescription:
 			"把 Feedly、Inoreader 或任意 RSS 阅读器导出的 OPML 上传到这里，一次性导入全部订阅。",
-		importOpmlHint: "仅支持大小不超过 2MB 的 .opml 文件，每次最多导入前 200 条订阅。",
+		importOpmlHint:
+			"仅支持大小不超过 2MB 的 .opml 文件，每次最多导入前 200 条订阅。",
 		importOpmlSelectCta: "选择 .opml 文件",
 		importOpmlChangeCta: "重新选择文件",
 		importOpmlFilePlaceholder: "尚未选择文件。",
@@ -910,7 +942,8 @@ const zhHans = {
 		subscriptionUpdateError: "暂时无法更新该订阅。",
 		subscriptionDeleteError: "暂时无法移除该订阅。",
 		curatedTitle: "精选订阅",
-		curatedDescription: "为 Web3、金融、科技、AI、设计、硬件等场景准备的优质资讯源，点击即可订阅。",
+		curatedDescription:
+			"为 Web3、金融、科技、AI、设计、硬件等场景准备的优质资讯源，点击即可订阅。",
 		feedsLoading: "正在加载订阅…",
 		catalogEmpty: "暂时没有可选的精选订阅。",
 		subscribe: "订阅",
@@ -931,7 +964,8 @@ const zhHans = {
 		rssResource: {
 			feedly: "在 Feedly 公开目录里搜索热门的商业、科技、财经资讯。",
 			rsshub: "RSSHub Radar（以及社区维护的路由）几乎能为任何网站生成 RSS。",
-			chainfeeds: "ChainFeeds 汇总了 Web3 资讯、研究与 Spaces，很多条目都提供 RSS。",
+			chainfeeds:
+				"ChainFeeds 汇总了 Web3 资讯、研究与 Spaces，很多条目都提供 RSS。",
 			inoreader: "Inoreader Magazine 分类涵盖设计、社区、远程办公等话题。",
 			producthunt: "Product Hunt 的每个话题页底部都可以找到 RSS 按钮。",
 		},
@@ -1157,7 +1191,8 @@ const zhHans = {
 		loadMore: "加载更多",
 		showSummaryInStream: "显示引用",
 		messageDetails: "消息详情",
-		remoteImagesBlockedNotice: "已拦截外链图片以保护隐私，加载后才能查看完整内容。",
+		remoteImagesBlockedNotice:
+			"已拦截外链图片以保护隐私，加载后才能查看完整内容。",
 		remoteImagesLoadAction: "加载图片",
 		relationship: "关系",
 		opportunitiesAndRisks: "机会 & 风险",
@@ -1293,7 +1328,8 @@ const zhHans = {
 		unassociated: "已取消关联",
 		unassociateFailed: "取消关联失败",
 		unassociateTitle: "取消关联",
-		unassociateConfirm: "确定要取消此文件的关联吗？文件不会被删除，只是不再显示在此事件中。",
+		unassociateConfirm:
+			"确定要取消此文件的关联吗？文件不会被删除，只是不再显示在此事件中。",
 		fetchFailed: "加载文档失败",
 		uploadNew: "上传新文件",
 		selectFromLibrary: "从知识库选择",
@@ -1302,7 +1338,8 @@ const zhHans = {
 		noFilesInLibrary: "知识库中暂无文件",
 		uploadedAndAssociated: "文件已上传并关联",
 		uploadFailed: "上传失败",
-		unsupportedFileType: "不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
+		unsupportedFileType:
+			"不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
 		fileTooLarge: "文件太大。最大支持 10MB。",
 		dropFilesHere: "拖放文件到这里上传",
 		supportedFormats: "PDF, Word, Excel, PowerPoint, 文本, 图片, 音频",
@@ -1541,16 +1578,19 @@ const zhHans = {
 		reconnectTelegram: "请在设置中重新连接 Telegram",
 		openAuthDialog: "打开授权",
 		muteConfirmTitle: "事件中有未完成的行动项，是否一并完结？",
-		muteConfirmDescription: "暂不关注后，这 {{count}} 个行动项将被标记为已完成。你可以随时取消暂不关注。",
+		muteConfirmDescription:
+			"暂不关注后，这 {{count}} 个行动项将被标记为已完成。你可以随时取消暂不关注。",
 		muteConfirmComplete: "完结并暂不关注",
 		muteConfirmCancel: "取消",
 		muteSuccess: "已暂不关注",
-		muteWithTasksSuccess: "已暂不关注，{{count}} 个关联的行动项已同步标记为完成",
+		muteWithTasksSuccess:
+			"已暂不关注，{{count}} 个关联的行动项已同步标记为完成",
 		unmuteSuccess: "已取消暂不关注",
 		muteError: "暂不关注失败，请重试",
 		confirmDeleteTitle: "确认删除",
 		confirmDeleteMessage: "确定要删除此项目吗？",
-		confirmBatchDeleteMessage: "确定要删除选中的 {{count}} 条吗？此操作无法撤销。",
+		confirmBatchDeleteMessage:
+			"确定要删除选中的 {{count}} 条吗？此操作无法撤销。",
 		delete: "删除",
 		// Batch operations
 		batchArchiveSuccess: "{{count}} 条已归档",
@@ -1589,7 +1629,8 @@ const zhHans = {
 			deleteError: "删除失败，请重试",
 			editGroup: "编辑分组",
 			deleteConfirmTitle: "确认删除分组",
-			deleteConfirmDescription: "确定要删除分组「{{name}}」吗？删除后不可恢复。",
+			deleteConfirmDescription:
+				"确定要删除分组「{{name}}」吗？删除后不可恢复。",
 			preset: {
 				templateTag: "模板",
 				canModify: "预设分组（可修改部分规则）",
@@ -1609,15 +1650,18 @@ const zhHans = {
 			tips: {
 				platformIntegration: {
 					title: "你知道吗？",
-					content: "大多数人每天会在多个平台间频繁切换\n于是opencontext把它们汇聚在一个可控的视图中",
+					content:
+						"大多数人每天会在多个平台间频繁切换\n于是opencontext把它们汇聚在一个可控的视图中",
 				},
 				privacy: {
 					title: "关于隐私",
-					content: "opencontext只保留结构化洞察\n原始消息在处理后不会被长期存储",
+					content:
+						"opencontext只保留结构化洞察\n原始消息在处理后不会被长期存储",
 				},
 				focus: {
 					title: "关于Focus",
-					content: "Focus中展示的是你当下最需要关注的事\n不是信息更多，而是干扰更少",
+					content:
+						"Focus中展示的是你当下最需要关注的事\n不是信息更多，而是干扰更少",
 				},
 				grouping: {
 					title: "关于分组",
@@ -1633,15 +1677,18 @@ const zhHans = {
 				},
 				people: {
 					title: "人物",
-					content: "opencontext会把相关的沟通、承诺整理到一个人物下\n重要关系，不必靠记忆维系",
+					content:
+						"opencontext会把相关的沟通、承诺整理到一个人物下\n重要关系，不必靠记忆维系",
 				},
 				crossLanguage: {
 					title: "跨语言沟通",
-					content: "opencontext可以在回复前帮你完成理解与翻译\n减少不必要的来回确认",
+					content:
+						"opencontext可以在回复前帮你完成理解与翻译\n减少不必要的来回确认",
 				},
 				actionSuggestions: {
 					title: "行动建议",
-					content: "opencontext会给Insight事件生成下一步建议\n是否执行，始终由你决定",
+					content:
+						"opencontext会给Insight事件生成下一步建议\n是否执行，始终由你决定",
 				},
 				random: "随机切换提示",
 			},
@@ -1650,7 +1697,8 @@ const zhHans = {
 		send: "发送",
 		unpin: "取消固定",
 		unpinConfirmTitle: "确定要从今日聚焦中移除此事件？",
-		unpinConfirmDescription: "移出后该事件将不再出现在今日聚焦列表中，你可随时再次固定。",
+		unpinConfirmDescription:
+			"移出后该事件将不再出现在今日聚焦列表中，你可随时再次固定。",
 		unfavorite: "取消收藏",
 		pinned: "已固定到今日聚焦",
 		pinFailed: "固定失败，请重试",
@@ -1671,7 +1719,8 @@ const zhHans = {
 		open: "打开欢迎引导",
 		summariesTitle: "让 opencontext 帮你理解重点",
 		summariesBody: "最新理解已经准备好。点击“查看理解”可随时重新打开此面板。",
-		summariesEmpty: "当 opencontext 同步完你的收件箱后，理解就会出现在这里。你可以继续处理自己的事务。",
+		summariesEmpty:
+			"当 opencontext 同步完你的收件箱后，理解就会出现在这里。你可以继续处理自己的事务。",
 		summariesCta: "查看理解",
 		detailTitle: "在行动前先看完整上下文",
 		detailBody: "打开卡片可查看事件原因、相关成员与待处理事项。",
@@ -1717,11 +1766,13 @@ const zhHans = {
 		signInSubtitle: "使用邮箱密码或 Google 登录，继续管理你的消息。",
 		signInWithGoogle: "使用 Google 登录",
 		signInWithGithub: "使用 GitHub 登录",
-		googleOAuthBrowserPrompt: "请在浏览器中完成 Google 登录，完成后将自动返回。",
+		googleOAuthBrowserPrompt:
+			"请在浏览器中完成 Google 登录，完成后将自动返回。",
 		googleOAuthStartFailed: "启动 Google 登录失败",
 		googleOAuthConnecting: "连接中...",
 		googleOAuthTimeout: "Google 登录超时",
-		githubOAuthBrowserPrompt: "请在浏览器中完成 GitHub 登录，完成后将自动返回。",
+		githubOAuthBrowserPrompt:
+			"请在浏览器中完成 GitHub 登录，完成后将自动返回。",
 		githubOAuthStartFailed: "启动 GitHub 登录失败",
 		githubOAuthConnecting: "连接中...",
 		githubOAuthTimeout: "GitHub 登录超时",
@@ -1733,7 +1784,8 @@ const zhHans = {
 		passwordPlaceholder: "请输入密码",
 		forgotPassword: "忘记密码？",
 		forgotPasswordTitle: "重置密码",
-		forgotPasswordSubtitle: "请输入你注册 opencontext 时使用的邮箱，我们会发送重置链接。",
+		forgotPasswordSubtitle:
+			"请输入你注册 opencontext 时使用的邮箱，我们会发送重置链接。",
 		resetMissingEmail: "请输入有效的邮箱地址。",
 		resetRequestCta: "发送重置链接",
 		resetRequestSending: "发送中...",
@@ -1770,7 +1822,8 @@ const zhHans = {
 		toastSignInSuccess: "登录成功！",
 		toastSessionError: "会话创建异常，请稍后再试。",
 		toastInvalidCredentials: "邮箱或密码不正确。",
-		toastInvalidData: "邮箱或密码无效。密码必须为 8-20 个字符，且至少包含 1 个字母和 1 个数字。",
+		toastInvalidData:
+			"邮箱或密码无效。密码必须为 8-20 个字符，且至少包含 1 个字母和 1 个数字。",
 		toastRegisterSuccess: "账号创建成功！",
 		toastRegisterExists: "该邮箱已注册账号。",
 		toastRegisterFailed: "暂时无法创建账号，请稍后重试。",
@@ -1799,11 +1852,13 @@ const zhHans = {
 		heroTitle: "opencontext 是你的对话化身",
 		heroSubtitle: "通过隐私保护、理解、记忆与智能，重新定义沟通。",
 		illustrationPlaceholder: "此处预留品牌配图",
-		slackDes: "授权我们访问你的 Slack 工作区，接收和发送信息，查看频道和成员信息",
+		slackDes:
+			"授权我们访问你的 Slack 工作区，接收和发送信息，查看频道和成员信息",
 		slackAccountInfo: "已授权一个账号",
 		slackAccount: "账号名",
 		slackAddAccount: "再添加一个账号",
-		discordDes: "授权我们访问你的 Discord 服务器，接收和发送信息，查看频道和成员信息",
+		discordDes:
+			"授权我们访问你的 Discord 服务器，接收和发送信息，查看频道和成员信息",
 		discordConnectTitle: "连接 Discord",
 		discordConnectDescription:
 			"选择你希望 opencontext 工作的 Discord 服务器。继续之前请确保已经邀请 opencontext 机器人加入该服务器。",
@@ -1812,26 +1867,38 @@ const zhHans = {
 		discordGuildLoading: "正在加载你的 Discord 服务器…",
 		discordGuildFetchError: "暂时无法获取你的 Discord 服务器列表，请稍后重试。",
 		discordSelectGuildError: "请选择要连接的 Discord 服务器。",
-		discordNoManageableGuilds: "没有找到你可管理的 Discord 服务器。请先邀请 opencontext 机器人后再试。",
-		discordInviteReminder: "请先邀请 opencontext 机器人加入服务器，这样才能读取消息并生成理解。",
+		discordNoManageableGuilds:
+			"没有找到你可管理的 Discord 服务器。请先邀请 opencontext 机器人后再试。",
+		discordInviteReminder:
+			"请先邀请 opencontext 机器人加入服务器，这样才能读取消息并生成理解。",
 		discordInviteCta: "邀请 opencontext Bot",
 		discordCreateBotCta: "连接 Discord 服务器",
 		discordGuildOwnerSuffix: "拥有者",
 		qrErrorRetry: "二维码生成失败，请点击刷新按钮重试",
-		telegramDes: "授权我们访问你的 Telegram 账户，接收和发送信息，查看频道和成员信息",
+		telegramDes:
+			"授权我们访问你的 Telegram 账户，接收和发送信息，查看频道和成员信息",
 		teamsDes: "授权我们访问你的 Teams 账户，接收和发送信息，查看频道和成员信息",
 		gmailDes: "授权我们访问你的 Gmail 账户，接收和发送信息，查看频道和成员信息",
-		outlookDes: "授权我们通过 IMAP/SMTP 访问你的 Outlook 邮箱，读取和发送邮件。",
-		outlookCalendarDes: "连接 Outlook 日历，opencontext 能感知日程变更并帮你创建/更新事件。",
+		outlookDes:
+			"授权我们通过 IMAP/SMTP 访问你的 Outlook 邮箱，读取和发送邮件。",
+		outlookCalendarDes:
+			"连接 Outlook 日历，opencontext 能感知日程变更并帮你创建/更新事件。",
 		linkedinDes: "授权我们访问你的 LinkedIn 私信，帮助你汇总和加速回复。",
-		twitterDes: "授权我们访问你的 X 账号，opencontext 可以读取/发布推文并在同一地方回复私信。",
+		twitterDes:
+			"授权我们访问你的 X 账号，opencontext 可以读取/发布推文并在同一地方回复私信。",
 		instagramDes: "授权我们访问你的 Instagram 私信，帮助你汇总并快速回复。",
-		googleCalendarDes: "授权我们访问你的 Google 日历，让 opencontext 帮你同步新建/即将开始的日程并快速处理。",
-		googleDriveDes: "连接 Google Drive 后，opencontext 可直接把文件保存到你的个人云盘。",
-		googleDocsDes: "连接 Google Docs 后，opencontext 能感知文档变更并帮助你直接更新内容。",
-		notionDes: "连接 Notion 后，可以把文件保存到指定页面/数据库，并让 opencontext 学习你的内容。",
-		messengerDes: "连接你的 Facebook Page，通过 Messenger 读取和回复消息（需要 Page Access Token）。",
-		whatsappDes: "授权我们访问你的 WhatsApp 账户，接收与发送消息，帮助你总结对话并及时回复。",
+		googleCalendarDes:
+			"授权我们访问你的 Google 日历，让 opencontext 帮你同步新建/即将开始的日程并快速处理。",
+		googleDriveDes:
+			"连接 Google Drive 后，opencontext 可直接把文件保存到你的个人云盘。",
+		googleDocsDes:
+			"连接 Google Docs 后，opencontext 能感知文档变更并帮助你直接更新内容。",
+		notionDes:
+			"连接 Notion 后，可以把文件保存到指定页面/数据库，并让 opencontext 学习你的内容。",
+		messengerDes:
+			"连接你的 Facebook Page，通过 Messenger 读取和回复消息（需要 Page Access Token）。",
+		whatsappDes:
+			"授权我们访问你的 WhatsApp 账户，接收与发送消息，帮助你总结对话并及时回复。",
 		githubDes: "连接 GitHub 后，可以读取仓库、创建 Issue 并分配给协作者。",
 		githubCreateIssue: "创建 Issue",
 		githubCreateIssueTitle: "Issue 标题",
@@ -1845,16 +1912,19 @@ const zhHans = {
 		githubAddAssignees: "添加分配人",
 		githubAddAssigneesSuccess: "分配成功！",
 		githubAddAssigneesFailed: "添加分配人失败。",
-		hubspotDes: "连接 HubSpot，感知交易/线索的变化，并在 opencontext 内更新阶段。",
+		hubspotDes:
+			"连接 HubSpot，感知交易/线索的变化，并在 opencontext 内更新阶段。",
 		asanaDes: "连接 Asana，管理任务、跟踪项目并更新工作项。",
 		jiraDes: "连接 Jira，跟踪问题、管理项目并与团队协作。",
 		linearDes: "连接 Linear，管理问题、跟踪项目并优化工作流程。",
 		messengerConnectTitle: "连接 Facebook Messenger",
-		messengerConnectDescription: "使用具备消息权限的 Page Access Token，可选填写 App 信息用于 Webhook 校验。",
+		messengerConnectDescription:
+			"使用具备消息权限的 Page Access Token，可选填写 App 信息用于 Webhook 校验。",
 		messengerPageId: "Page ID",
 		messengerPageIdPlaceholder: "请输入你的 Facebook Page ID",
 		messengerPageAccessToken: "Page Access Token",
-		messengerPageAccessTokenPlaceholder: "具备 pages_messaging 权限的 EAAG... Token",
+		messengerPageAccessTokenPlaceholder:
+			"具备 pages_messaging 权限的 EAAG... Token",
 		messengerPageName: "显示名称（可选）",
 		messengerAppId: "App ID（可选）",
 		messengerAppSecret: "App Secret（可选）",
@@ -1862,8 +1932,10 @@ const zhHans = {
 		messengerSubmit: "保存并连接",
 		messengerMissingToken: "请填写 Page ID 和 Page Access Token。",
 		messengerSuccess: "Facebook Messenger 账号连接成功！",
-		imessageDes: "连接 iMessage 以在 opencontext 中读取和发送消息（仅支持 macOS）。",
-		feishuDes: "使用 App ID 和 App Secret 通过 WebSocket 长连接 Lark/飞书，与 opencontext 对话。",
+		imessageDes:
+			"连接 iMessage 以在 opencontext 中读取和发送消息（仅支持 macOS）。",
+		feishuDes:
+			"使用 App ID 和 App Secret 通过 WebSocket 长连接 Lark/飞书，与 opencontext 对话。",
 		feishuTitle: "连接 Lark/飞书",
 		feishuDescription:
 			"在 Lark/飞书开放平台创建企业自建应用并开启机器人能力，选择「使用长连接接收事件」并订阅 im.message.receive_v1，将凭证填入下方即可与 opencontext 对话。",
@@ -1878,7 +1950,8 @@ const zhHans = {
 		feishuConnectRestartTitle: "Lark/飞书连接成功",
 		feishuConnectRestartDescTauri:
 			"为使 Lark/飞书消息监听稳定生效，请完全退出并重新启动 opencontext 桌面客户端",
-		feishuConnectRestartDescWeb: "建议刷新当前页面，以确保 Lark/飞书监听与集成状态已完全生效",
+		feishuConnectRestartDescWeb:
+			"建议刷新当前页面，以确保 Lark/飞书监听与集成状态已完全生效",
 		feishuConnectRestartConfirm: "知道了",
 		feishuAppIdSecretRequired: "请填写 App ID 和 App Secret",
 		feishuScanDescription: "使用手机 Lark/飞书扫描下方二维码，按提示确认即可",
@@ -1899,19 +1972,25 @@ const zhHans = {
 		feishuSteps1Link: "Lark/飞书开放平台",
 		feishuSteps1After: " ，创建企业自建应用",
 		feishuSteps2: "在「凭证与基础信息」中获取 App ID、App Secret",
-		feishuSteps3: "在配置中填写上述 App ID 和 App Secret，点击「连接 Lark/飞书」按钮",
+		feishuSteps3:
+			"在配置中填写上述 App ID 和 App Secret，点击「连接 Lark/飞书」按钮",
 		feishuSteps4: "重启 opencontext",
 		feishuSteps5: "回到 Lark/飞书开放平台，在「能力」中启用 机器人",
-		feishuSteps6: "选择「权限管理」中的「批量导入/导出权限」，将以下 JSON 代码复制进去",
+		feishuSteps6:
+			"选择「权限管理」中的「批量导入/导出权限」，将以下 JSON 代码复制进去",
 		feishuStepsNote: "注：如果此处未显示长连接，尝试重启 opencontext",
-		feishuSteps7: "在「事件与回调」中，点击「事件配置」，选择「使用长连接接收事件」",
-		feishuSteps8: "选择「添加事件」，搜索接收消息，订阅接收消息 v2.0(im.message.receive_v1)",
-		feishuSteps9: "在「应用发布」的「版本管理与发布」中，创建版本，填写基础信息，保存并发布",
+		feishuSteps7:
+			"在「事件与回调」中，点击「事件配置」，选择「使用长连接接收事件」",
+		feishuSteps8:
+			"选择「添加事件」，搜索接收消息，订阅接收消息 v2.0(im.message.receive_v1)",
+		feishuSteps9:
+			"在「应用发布」的「版本管理与发布」中，创建版本，填写基础信息，保存并发布",
 		feishuStepsSection2Title: "二、将机器人添加到常用",
 		feishuStepsAddFav1: "在工作台点击添加常用",
 		feishuStepsAddFav2: "搜索刚刚创建的机器人名称并添加",
 		feishuStepsAddFav3: "可以看到机器人已添加到常用中，双击可进入对话界面",
-		dingtalkDes: "使用钉钉开放平台 Client ID 与 Client Secret，通过 Stream 长连接与 opencontext 对话。",
+		dingtalkDes:
+			"使用钉钉开放平台 Client ID 与 Client Secret，通过 Stream 长连接与 opencontext 对话。",
 		dingtalkTitle: "连接钉钉",
 		dingtalkDescription:
 			"在钉钉开放平台创建企业内部应用，添加 Stream 模式机器人，将 Client ID（AppKey）与 Client Secret 填入下方即可与 opencontext 对话。",
@@ -1923,20 +2002,28 @@ const zhHans = {
 		dingtalkClientIdSecretRequired: "请填写 Client ID 和 Client Secret",
 		dingtalkBotDescription: "通过钉钉与 opencontext 对话",
 		dingtalkConnectRestartTitle: "钉钉连接成功",
-		dingtalkConnectRestartDescTauri: "为使钉钉消息监听稳定生效，请完全退出并重新启动 opencontext 桌面客户端",
-		dingtalkConnectRestartDescWeb: "建议刷新当前页面，以确保钉钉监听与集成状态已完全生效",
+		dingtalkConnectRestartDescTauri:
+			"为使钉钉消息监听稳定生效，请完全退出并重新启动 opencontext 桌面客户端",
+		dingtalkConnectRestartDescWeb:
+			"建议刷新当前页面，以确保钉钉监听与集成状态已完全生效",
 		dingtalkConnectRestartConfirm: "知道了",
 		dingtalkStepsLink: "接入步骤",
 		dingtalkStepsSection1Title: "创建应用并开通 Stream 机器人",
 		dingtalkSteps1Before: "打开 ",
 		dingtalkSteps1Link: "钉钉开放平台 · Stream 机器人",
-		dingtalkSteps1After: " ，创建企业内部应用并获取 Client ID、Client Secret（即 AppKey / AppSecret）",
-		dingtalkSteps2: "应用能力中添加「机器人」，选择 Stream 模式（长连接接收消息）",
-		dingtalkSteps3: "发布应用后，在 opencontext 中填写 Client ID 与 Client Secret 并连接",
-		dingtalkSteps4: "网页部署时服务端会自动拉起 Stream；桌面端连接后建议重启应用",
-		qqbotDes: "使用 QQ 开放平台 AppID 和 AppSecret，通过 WebSocket 与 opencontext 对话。",
+		dingtalkSteps1After:
+			" ，创建企业内部应用并获取 Client ID、Client Secret（即 AppKey / AppSecret）",
+		dingtalkSteps2:
+			"应用能力中添加「机器人」，选择 Stream 模式（长连接接收消息）",
+		dingtalkSteps3:
+			"发布应用后，在 opencontext 中填写 Client ID 与 Client Secret 并连接",
+		dingtalkSteps4:
+			"网页部署时服务端会自动拉起 Stream；桌面端连接后建议重启应用",
+		qqbotDes:
+			"使用 QQ 开放平台 AppID 和 AppSecret，通过 WebSocket 与 opencontext 对话。",
 		qqbotTitle: "连接 QQ",
-		qqbotDescription: "在 QQ 开放平台创建机器人，获取 AppID 和 AppSecret 填入下方即可与 opencontext 对话。",
+		qqbotDescription:
+			"在 QQ 开放平台创建机器人，获取 AppID 和 AppSecret 填入下方即可与 opencontext 对话。",
 		qqbotAppId: "App ID",
 		qqbotAppSecret: "App Secret",
 		qqbotDisplayName: "显示名称（可选）",
@@ -1979,9 +2066,11 @@ const zhHans = {
 		weixinErrorNoQr: "无法获取二维码",
 		weixinErrorLoginFailed: "登录失败",
 		imessageConnectTitle: "连接 iMessage",
-		imessageConnectDescription: "连接您的 Mac iMessage 以在 opencontext 中读取和发送消息。",
+		imessageConnectDescription:
+			"连接您的 Mac iMessage 以在 opencontext 中读取和发送消息。",
 		imessageMacOnly: "仅支持 macOS",
-		imessageMacOnlyDesc: "iMessage 集成仅在 macOS 系统上可用。请在 Mac 电脑上使用此功能。",
+		imessageMacOnlyDesc:
+			"iMessage 集成仅在 macOS 系统上可用。请在 Mac 电脑上使用此功能。",
 		imessageChecking: "正在检查 iMessage 可用性...",
 		imessageErrorMacOSOnly: "iMessage 仅在 macOS 系统上可用",
 		imessageErrorInitFailed:
@@ -1994,18 +2083,21 @@ const zhHans = {
 		imessageErrorPermission:
 			"需要授予完全磁盘访问权限才能读取 iMessage 数据库。请在 系统设置 > 隐私与安全性 > 完全磁盘访问权限 中添加当前运行应用的进程（如 Terminal、Node 或 opencontext），然后重启应用再试。",
 		imessageErrorConnection: "无法连接到 iMessage: {{message}}",
-		imessageNotAvailable: "iMessage 不可用。请确保您正在 macOS 系统上运行，并已授予完全磁盘访问权限。",
+		imessageNotAvailable:
+			"iMessage 不可用。请确保您正在 macOS 系统上运行，并已授予完全磁盘访问权限。",
 		imessagePermissionTitle: "需要的权限",
 		imessagePermission1: "完全磁盘访问权限 - 用于读取消息数据库",
 		imessagePermission2: "自动化权限 - 用于发送消息",
 		displayName: "显示名称",
 		imessageDisplayNamePlaceholder: "我的 iMessage",
-		imessageDisplayNameHint: "这个名称将用于在 opencontext 中标识您的 iMessage 账户",
+		imessageDisplayNameHint:
+			"这个名称将用于在 opencontext 中标识您的 iMessage 账户",
 		imessageDataNote:
 			"您的消息数据将保留在本地设备上。opencontext 只会在您使用时读取最近的消息用于生成洞察。",
 		imessageConnecting: "正在连接 iMessage...",
 		imessageConnected: "iMessage 已连接",
-		imessageConnectedDesc: "您现在可以通过 opencontext 访问您的 iMessage 消息了。",
+		imessageConnectedDesc:
+			"您现在可以通过 opencontext 访问您的 iMessage 消息了。",
 		imessageError: "连接失败",
 		imessageConnect: "连接 iMessage",
 		displayNameRequired: "请输入显示名称",
@@ -2024,7 +2116,8 @@ const zhHans = {
 		instagramSuccess: "Instagram 连接成功！",
 		instagramFailed: "Instagram 授权失败，请重试。",
 		info: "权限说明",
-		infoItem0: "我们仅获取必要的权限来提供服务，包括读取和发送信息。你可以随时在设置中撤销这些权限",
+		infoItem0:
+			"我们仅获取必要的权限来提供服务，包括读取和发送信息。你可以随时在设置中撤销这些权限",
 		infoItem1: "我们不会分享你的个人信息给第三方",
 		infoItem2: "所有消息内容都经过加密处理",
 		infoItem3: "你可以随时断开任何集成的连接",
@@ -2048,11 +2141,14 @@ const zhHans = {
 		telegramLogout: "已成功退出 Telegram 登录",
 		disconnectSuccess: "已成功断开连接",
 		telegramLogin: "Telegram 账号登录成功！",
-		telegramLoginHint: "现在可以在 Telegram「Saved Messages」中发送消息，开始与 AI 对话",
+		telegramLoginHint:
+			"现在可以在 Telegram「Saved Messages」中发送消息，开始与 AI 对话",
 		whatsappLogout: "已成功断开 WhatsApp 连接",
 		whatsappLogin: "WhatsApp 账号连接成功！",
-		whatsappLoginHint: "现在可以在 WhatsApp「收藏提醒」中发送消息，开始与 AI 对话",
-		telegramDuplicateError: "Telegram 授权失败，检测到重复的会话密钥。请退出当前账号并重新登录以继续使用。",
+		whatsappLoginHint:
+			"现在可以在 WhatsApp「收藏提醒」中发送消息，开始与 AI 对话",
+		telegramDuplicateError:
+			"Telegram 授权失败，检测到重复的会话密钥。请退出当前账号并重新登录以继续使用。",
 		desktopSessionExpired:
 			"Telegram 桌面会话已过期。请在 Telegram 桌面客户端中登录后重试，或使用手机号方式登录。",
 		phone: "手机号码",
@@ -2063,14 +2159,16 @@ const zhHans = {
 		sentCode: "温馨提示：验证码已发送",
 		seeInTelegramApp: "请尽快打开 Telegram 应用内查看验证码查看并完成验证哦。",
 		codeHintTitle: "验证码已发送，请在 Telegram 内查收",
-		codeHintDesc: "打开 Telegram，找到来自「Telegram」的消息即可查看登录验证码。",
+		codeHintDesc:
+			"打开 Telegram，找到来自「Telegram」的消息即可查看登录验证码。",
 		codeHintAlt: "Telegram 验证码通知示例",
 		resendAfter: "{{countdown}}s 后重发",
 		resend: "重新发送",
 		finishLogin: "完成登录",
 		twoStepVerification: "两步验证",
 		enterPassword: "请输入密码",
-		passwordRequiredDesc: "因为该账号启用了两步验证，因此需要额外输入您的 Telegram 密码。",
+		passwordRequiredDesc:
+			"因为该账号启用了两步验证，因此需要额外输入您的 Telegram 密码。",
 		backToCode: "返回验证码",
 		submitPassword: "提交密码",
 		passwordError: "请输入您的密码",
@@ -2116,11 +2214,13 @@ const zhHans = {
 		quickLogin: "快捷登录",
 		qrLogin: "二维码",
 		phoneNumber: "手机号码",
-		whatsappPhoneHint: "请输入您的手机号码，包含国家代码（例如：+8613800138000）",
+		whatsappPhoneHint:
+			"请输入您的手机号码，包含国家代码（例如：+8613800138000）",
 		getPairingCode: "获取配对码",
 		whatsappGeneratingCode: "正在生成配对码...",
 		whatsappEnterCodeTitle: "在您的手机上输入此代码",
-		whatsappEnterCodeSteps: "打开 WhatsApp > 设置 > 已连接的设备 > 使用手机号码链接",
+		whatsappEnterCodeSteps:
+			"打开 WhatsApp > 设置 > 已连接的设备 > 使用手机号码链接",
 		scanQrTitle: "扫描二维码登录",
 		scanQrDesc: "使用 Telegram 应用扫描此二维码",
 		noQrCode: "暂无二维码",
@@ -2136,7 +2236,8 @@ const zhHans = {
 		refreshQr: "刷新二维码",
 		usePhoneLogin: "使用手机号登录",
 		quickLoginTitle: "一键授权登录",
-		quickLoginDesc: "如果已在本地安装 Telegram Desktop，可直接使用现有会话登录，无需输入手机号和验证码",
+		quickLoginDesc:
+			"如果已在本地安装 Telegram Desktop，可直接使用现有会话登录，无需输入手机号和验证码",
 		quickLoginHint: "登录后将自动关联您的 Telegram 账户",
 		telegramLoginQr: "Telegram 登录二维码",
 		securityAndInfo: "安全信息",
@@ -2153,7 +2254,8 @@ const zhHans = {
 		appPasswordMethod: "应用专用密码",
 		oauthMethodDesc: "使用 Google OAuth 安全连接，推荐方式，安全性更高。",
 		connectWithOAuth: "使用 OAuth 连接",
-		appPasswordNote: "应用专用密码是 16 位字符，用于第三方应用安全访问您的 Google 账户",
+		appPasswordNote:
+			"应用专用密码是 16 位字符，用于第三方应用安全访问您的 Google 账户",
 		appPasswordDocLink: "如何创建应用专用密码（Google 官方教程）",
 		googleNote1: "注意：您需要先为 Google 账户启用两步验证",
 		googleNote2: "应用专用密码与您的 Google 账户密码不同",
@@ -2166,7 +2268,8 @@ const zhHans = {
 			"您的 Google 账户未开启「两步验证」，请先在 Google 账户设置中开启两步验证，然后生成应用专用密码。",
 		googleAuthTooManyAttempts:
 			"登录尝试次数过多，请稍后再试，或前往 Google 账户安全设置查看是否有异常登录警告。",
-		googleAuthAccountDisabled: "您的 Google 账户已被禁用，请检查 Google 账户状态或联系 Google 支持。",
+		googleAuthAccountDisabled:
+			"您的 Google 账户已被禁用，请检查 Google 账户状态或联系 Google 支持。",
 		googleAuthInvalidPassword:
 			"应用专用密码错误，请确认您输入的密码正确，且该密码未被撤销。如未生成过专用密码，请前往 Google 账户生成。",
 		googleAuthNetworkError:
@@ -2182,9 +2285,14 @@ const zhHans = {
 			streamError: {
 				title: "流连接错误",
 				description: "与服务器的连接中断，可能是网络问题或服务超时。",
-				suggestions: ["检查网络连接是否稳定", "稍后重试", "如果问题持续，可能是服务器负载过高"],
+				suggestions: [
+					"检查网络连接是否稳定",
+					"稍后重试",
+					"如果问题持续，可能是服务器负载过高",
+				],
 				retrying: "流连接中断，正在自动重试 ({{current}}/{{max}})...",
-				maxRetriesReached: "流连接错误，已达到最大重试次数 ({{max}})，请稍后重试",
+				maxRetriesReached:
+					"流连接错误，已达到最大重试次数 ({{max}})，请稍后重试",
 				retryPrompt: "请继续完成刚才的任务：",
 				analyzeImages: "请分析这些图片",
 				analyzeContent: "请分析这些内容",
@@ -2192,27 +2300,47 @@ const zhHans = {
 			apiError: {
 				title: "API 调用失败",
 				description: "后端服务出现问题，无法完成请求。",
-				suggestions: ["检查后端服务是否运行", "查看服务器日志获取详细错误信息", "稍后重试"],
+				suggestions: [
+					"检查后端服务是否运行",
+					"查看服务器日志获取详细错误信息",
+					"稍后重试",
+				],
 			},
 			rateLimitError: {
 				title: "请求过于频繁",
 				description: "您的请求频率超过了限制，请稍后重试。",
-				suggestions: ["等待几秒后重试", "减少请求频率", "如果问题持续存在，请联系支持"],
+				suggestions: [
+					"等待几秒后重试",
+					"减少请求频率",
+					"如果问题持续存在，请联系支持",
+				],
 			},
 			networkError: {
 				title: "网络连接错误",
 				description: "无法连接到服务器，请检查您的网络连接。",
-				suggestions: ["检查网络连接", "稍后重试", "如果问题持续存在，请联系支持"],
+				suggestions: [
+					"检查网络连接",
+					"稍后重试",
+					"如果问题持续存在，请联系支持",
+				],
 			},
 			permissionError: {
 				title: "权限错误",
 				description: "您没有执行此操作的权限。",
-				suggestions: ["检查文件路径是否正确", "确认 Tauri 应用有文件访问权限", "尝试在其他位置创建文件"],
+				suggestions: [
+					"检查文件路径是否正确",
+					"确认 Tauri 应用有文件访问权限",
+					"尝试在其他位置创建文件",
+				],
 			},
 			fileNotFoundError: {
 				title: "文件未找到",
 				description: "找不到指定的文件。",
-				suggestions: ["检查文件路径是否正确", "确认文件是否存在", "使用完整的文件路径"],
+				suggestions: [
+					"检查文件路径是否正确",
+					"确认文件是否存在",
+					"使用完整的文件路径",
+				],
 			},
 			timeoutError: {
 				title: "操作超时",
@@ -2222,16 +2350,25 @@ const zhHans = {
 			processCrashError: {
 				title: "Agent 进程崩溃",
 				description: "Agent 进程因资源不足意外终止。系统会自动重试。",
-				suggestions: ["系统将自动重试", "如持续失败，请检查系统内存", "查看日志文件了解详情"],
+				suggestions: [
+					"系统将自动重试",
+					"如持续失败，请检查系统内存",
+					"查看日志文件了解详情",
+				],
 			},
 			agentTimeoutError: {
 				title: "Agent 执行超时",
 				description: "任务执行时间过长导致超时。系统会自动重试。",
-				suggestions: ["系统将自动重试", "尝试简化任务或拆分成多个小任务", "检查网络连接"],
+				suggestions: [
+					"系统将自动重试",
+					"尝试简化任务或拆分成多个小任务",
+					"检查网络连接",
+				],
 				// 提供方超时中断卡片：当长任务在工具调用过程中被强制停止时
 				// 渲染这些文案。注意此处与上面的通用超时说明措辞不同 —— 本场景
 				// 没有自动重试，因此不能承诺会重试。
-				completedArtifacts: "上一轮已生成 {{count}} 个文件，保留在工作目录中可以继续复用。",
+				completedArtifacts:
+					"上一轮已生成 {{count}} 个文件，保留在工作目录中可以继续复用。",
 				continueAction: "从断点继续",
 			},
 			genericError: {
@@ -2242,7 +2379,11 @@ const zhHans = {
 			requestTooLargeError: {
 				title: "文件过大",
 				description: "请求的文件大小超过了 20MB 的限制，请使用更小的文件。",
-				suggestions: ["压缩文件后重试", "分割成多个较小的文件", "删除不必要的文件内容"],
+				suggestions: [
+					"压缩文件后重试",
+					"分割成多个较小的文件",
+					"删除不必要的文件内容",
+				],
 			},
 			insufficientCreditsError: {
 				title: "积分不足",
@@ -2252,7 +2393,11 @@ const zhHans = {
 			customApiError: {
 				title: "API 配置错误",
 				description: "API 调用失败，请检查配置后重试。",
-				suggestions: ["检查 API 配置", "请重试", "如果问题持续存在，请联系支持"],
+				suggestions: [
+					"检查 API 配置",
+					"请重试",
+					"如果问题持续存在，请联系支持",
+				],
 			},
 			// 当内置 Claude runtime 没有鉴权（例如从未运行 `claude auth login`
 			// 或会话被清理）时展示。仿照 alloomi 的 `authentication_error`
@@ -2271,7 +2416,8 @@ const zhHans = {
 	},
 	survey: {
 		title: "欢迎加入 opencontext！",
-		intro: "为了更好地服务您，请花约 1 分钟完成这份简短的问卷，感谢您的宝贵意见！",
+		intro:
+			"为了更好地服务您，请花约 1 分钟完成这份简短的问卷，感谢您的宝贵意见！",
 		shared: {
 			other: "其他",
 		},
@@ -2458,7 +2604,8 @@ const zhHans = {
 	},
 	insightPreferences: {
 		title: "理解与回复偏好",
-		subtitle: "告诉 opencontext 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
+		subtitle:
+			"告诉 opencontext 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
 		loading: "正在载入偏好设置…",
 		languageLabel: "回复语言",
 		languageDescription: "AI 将优先使用该语言进行回复。",
@@ -2479,8 +2626,10 @@ const zhHans = {
 		},
 		identity: {
 			heading: "行业与工作背景",
-			description: "基于 Onboarding 与问卷输入推断的行业语境，将直接影响理解语气与内容重点。",
-			introDescription: "你提供的信息越完整，opencontext 就能越准确地判断什么值得你关注。",
+			description:
+				"基于 Onboarding 与问卷输入推断的行业语境，将直接影响理解语气与内容重点。",
+			introDescription:
+				"你提供的信息越完整，opencontext 就能越准确地判断什么值得你关注。",
 			industryHeading: "行业识别",
 			industryEmpty: "暂未识别行业，完成 Onboarding 问卷即可解锁更精确的语境。",
 			industryLabel: "我的行业",
@@ -2493,9 +2642,11 @@ const zhHans = {
 			roleHint: "你主要承担哪些职责？最多 4 个",
 			roleCustomPlaceholder: "输入自定义角色",
 			workHeading: "工作内容",
-			workEmpty: "还没有工作内容描述，可以在 Onboarding 第一环节补充以提升理解精准度。",
+			workEmpty:
+				"还没有工作内容描述，可以在 Onboarding 第一环节补充以提升理解精准度。",
 			workDescriptionLabel: "我的描述",
-			workDescriptionHint: "用自己的话介绍你的工作和日常，opencontext 会用这些信息更好地理解你的上下文",
+			workDescriptionHint:
+				"用自己的话介绍你的工作和日常，opencontext 会用这些信息更好地理解你的上下文",
 			workDescriptionPlaceholder:
 				"例如：我是一家 B2B SaaS 公司的联创，主要负责产品和融资。每天在 Slack 和邮件里处理大量信息，最关注客户续约和新一轮融资进展。",
 			emptyResults: "无结果，可输入自定义",
@@ -2503,7 +2654,8 @@ const zhHans = {
 		},
 		roles: {
 			heading: "角色增强与偏好",
-			description: "查看当前用于定制理解的角色，并按需添加额外增强，让 opencontext 更贴近你的职责。",
+			description:
+				"查看当前用于定制理解的角色，并按需添加额外增强，让 opencontext 更贴近你的职责。",
 			currentLabel: "已识别的角色",
 			noneDetected: "暂未检测到角色—连接更多渠道或完善问卷即可激活角色增强。",
 			selectionLabel: "手动调整角色焦点",
@@ -2538,7 +2690,8 @@ const zhHans = {
 			},
 			remote_worker: {
 				name: "远程协同负责人",
-				description: '把跨时区的碎片消息整理为"我负责 / 等我 / 等他人"的任务清单。',
+				description:
+					'把跨时区的碎片消息整理为"我负责 / 等我 / 等他人"的任务清单。',
 			},
 			indie_maker: {
 				name: "独立开发者",
@@ -2624,12 +2777,19 @@ const zhHans = {
 		focusPeopleExamplePhrase1: "财务部的Jess",
 		focusPeopleExamplePhrase2: "@founder频道的内容",
 		focusTopicsLabel: "我关注的主题",
-		focusTopicsDescription: "列出你关心的关键字或提示词，我们会主动标记匹配的理解。",
+		focusTopicsDescription:
+			"列出你关心的关键字或提示词，我们会主动标记匹配的理解。",
 		focusPlaceholder: "填写对方的账号、昵称，或你们日常交流中惯用的称呼",
 		focusTopicsPlaceholder: "填写关键词、项目名或一句描述",
 		focusExampleHint: "不知道写什么？点一下示例马上添加：",
-		focusPeopleExamples: ["只关注财务部 Jess 的更新", "优先提示来自 @founders 频道的内容"],
-		focusTopicsExamples: ["关注阻碍新品发布的 Blocker，并给出下一步行动", "帮我拟定紧急客户升级问题的回复"],
+		focusPeopleExamples: [
+			"只关注财务部 Jess 的更新",
+			"优先提示来自 @founders 频道的内容",
+		],
+		focusTopicsExamples: [
+			"关注阻碍新品发布的 Blocker，并给出下一步行动",
+			"帮我拟定紧急客户升级问题的回复",
+		],
 		autoSaveHint: "点击保存后会立即生效。",
 		lastUpdatedLabel: "最后更新",
 		lastUpdated: "最近更新 {{time}}",
@@ -2649,7 +2809,8 @@ const zhHans = {
 			failure: "保存失败，请稍后再试。",
 		},
 		syncToMemory: "同步到策略记忆",
-		syncToMemoryDescription: "将关注的内容同步到策略记忆，让 AI 更好地了解您关注的重点",
+		syncToMemoryDescription:
+			"将关注的内容同步到策略记忆，让 AI 更好地了解您关注的重点",
 		syncPeopleSuccess: "成功同步 {{count}} 位关注人物到策略记忆",
 		syncPeopleFailed: "同步到策略记忆失败",
 		syncTopicsSuccess: "成功同步 {{count}} 个关注话题到策略记忆",
@@ -2672,20 +2833,24 @@ const zhHans = {
 		commitmentTitle: "opencontext 对您的 Telegram 数据的承诺",
 		permissions: {
 			readMessages: "读取消息内容",
-			readMessagesDesc: "我们将读取您的 Telegram 消息，用于生成对话理解、提供快速回复建议以及识别重要信息。",
+			readMessagesDesc:
+				"我们将读取您的 Telegram 消息，用于生成对话理解、提供快速回复建议以及识别重要信息。",
 			sendMessages: "发送消息",
 			sendMessagesDesc:
 				"只有在您明确指示的情况下，opencontext 才会代表您在 Telegram 中发送消息，以帮助您高效回复。",
 			viewGroups: "查看群组和联系人",
-			viewGroupsDesc: "这有助于 opencontext 了解您的社交网络，智能识别沟通上下文和提及内容。",
+			viewGroupsDesc:
+				"这有助于 opencontext 了解您的社交网络，智能识别沟通上下文和提及内容。",
 		},
 		principles: {
 			leastAccess: "最小权限原则",
 			leastAccessDesc: "仅访问完成任务所必需的最少数据。",
 			localFirst: "本地优先",
-			localFirstDesc: "原始聊天记录或者邮件信息仅存在于您的设备上，不会上传到我们的云端。",
+			localFirstDesc:
+				"原始聊天记录或者邮件信息仅存在于您的设备上，不会上传到我们的云端。",
 			encryptedStorage: "加密存储",
-			encryptedStorageDesc: "授权、理解和配置数据采用行业标准加密（AES-256 / TLS 1.2+）。",
+			encryptedStorageDesc:
+				"授权、理解和配置数据采用行业标准加密（AES-256 / TLS 1.2+）。",
 			accessControl: "访问控制",
 			accessControlDesc: "所有系统操作都有权限验证和审计日志。",
 		},
@@ -2740,7 +2905,8 @@ const zhHans = {
 		},
 		linkSuccess: {
 			title: "关联成功",
-			description: "您的 Telegram 账户已成功关联。现在您可以通过 Telegram 接收消息通知。",
+			description:
+				"您的 Telegram 账户已成功关联。现在您可以通过 Telegram 接收消息通知。",
 			backToHome: "返回首页",
 			openBot: "打开 Telegram Bot",
 		},
@@ -2791,7 +2957,8 @@ const zhHans = {
 			officialWebsite: "官方网站",
 			orSwitchMethod: "或切换到其他登录方式",
 			needDesktop: "快捷登录需要本地安装 Telegram Desktop",
-			downloadFromOfficial: "请从官方网站下载（非 Microsoft Store 或 App Store）",
+			downloadFromOfficial:
+				"请从官方网站下载（非 Microsoft Store 或 App Store）",
 			specifyCustomPath: "或指定自定义客户端路径",
 			pathLabel: "Telegram Desktop 路径：",
 			pathPlaceholder: "/path/to/TelegramDesktop",
@@ -2802,10 +2969,13 @@ const zhHans = {
 			openBot: "在 Telegram 中打开 Bot",
 			selectPathTitle: "选择 Telegram Desktop 数据目录",
 			selectFolder: "选择文件夹",
-			macPathHint: "可以直接选择 /Applications/Telegram Desktop.app，系统会自动定位数据目录",
+			macPathHint:
+				"可以直接选择 /Applications/Telegram Desktop.app，系统会自动定位数据目录",
 			useLocalSession: "使用本地 Telegram Desktop 会话登录",
-			openFailed: "无法打开 Telegram Desktop，请手动打开应用并在 Bot 中完成登录",
-			sessionNotImplemented: "快捷登录功能正在开发中，暂时请使用手机号或二维码登录",
+			openFailed:
+				"无法打开 Telegram Desktop，请手动打开应用并在 Bot 中完成登录",
+			sessionNotImplemented:
+				"快捷登录功能正在开发中，暂时请使用手机号或二维码登录",
 			tauriOnly: "快捷登录功能仅在桌面应用中支持",
 			sessionReadFailed: "读取 session 失败，请重试",
 			loggingIn: "登录中...",
@@ -2819,7 +2989,8 @@ const zhHans = {
 		pendingMessage: "正在绑定你的 opencontext 账号…",
 		missingTokenError: "缺少登录令牌，请重新在 Discord 中发送 /login。",
 		defaultLinkError: "绑定失败",
-		successMessage: "绑定成功！现在可以回到 Discord 使用 opencontext 机器人了。",
+		successMessage:
+			"绑定成功！现在可以回到 Discord 使用 opencontext 机器人了。",
 		defaultRetryError: "绑定失败，请返回 Discord 并重新发送 /login。",
 		backToConsoleBtn: "返回 opencontext 控制台",
 		retryBtn: "重新尝试",
@@ -2859,7 +3030,8 @@ const zhHans = {
 		title: "过去 {{days}} 天我们确定了哪些截止日期或跟进事项？",
 	},
 	insightActionPrefix: '针对 "{{title}}"，',
-	insightActionAndMessagePrefix: '针对 "{{platform}}" 平台, "{{title}}" 和消息 "{{message}}"，',
+	insightActionAndMessagePrefix:
+		'针对 "{{platform}}" 平台, "{{title}}" 和消息 "{{message}}"，',
 	summarySuggestedAction1st: {
 		title: "快捷回复",
 		action: "帮我生成一个快捷回复",
@@ -2928,12 +3100,14 @@ const zhHans = {
 		slashNoMatchHint: "尝试输入技能名称搜索",
 		untitledEvent: "未命名事件",
 		focused: "已聚焦",
-		addEventHint: "选择追踪事件后，该追踪事件将被聚焦到对话中，AI 将基于该追踪事件上下文进行回复",
+		addEventHint:
+			"选择追踪事件后，该追踪事件将被聚焦到对话中，AI 将基于该追踪事件上下文进行回复",
 		documentReadyTitle: "文档已就绪:",
 		documentsReadyTitle: "{{count}} 个文档已就绪:",
 		attachedDocuments: "已附加文档:",
 		imageOnlyWarning: "对话功能目前仅支持图片文件。以下文件已被忽略: {{files}}",
-		unsupportedFilesWarning: "以下文件类型暂不支持发送给 AI: {{files}}。已自动过滤，仅发送图片和音频附件。",
+		unsupportedFilesWarning:
+			"以下文件类型暂不支持发送给 AI: {{files}}。已自动过滤，仅发送图片和音频附件。",
 		unsupportedFileTypes:
 			"不支持的文件类型：{{files}}。支持的类型：图片（JPEG、PNG、WebP、GIF）、文档（PDF、DOC、PPT、XLS、TXT、Markdown）和音频（WAV、MP3、FLAC、AAC、OGG、M4A）",
 		dropFilesHere: "拖放文件到这里",
@@ -2945,11 +3119,13 @@ const zhHans = {
 		documentReady: "你现在可以问关于 '{{name}}' 的问题",
 		imageUploadSuccess: "{{count}} 张图片已上传",
 		audioUploadSuccess: "{{count}} 个音频文件已上传",
-		unsupportedFileType: "不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
+		unsupportedFileType:
+			"不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
 		emptyFile: "文件为空",
 		fileTooLarge: "文件过大: {{fileName}}。最大大小为 {{maxSize}}MB",
 		uploadFailed: "上传失败",
-		maxAttachmentsReached: "最多只能上传 {{max}} 个附件。当前已有 {{current}} 个附件。",
+		maxAttachmentsReached:
+			"最多只能上传 {{max}} 个附件。当前已有 {{current}} 个附件。",
 		attachments: {
 			download: "下载",
 			save: "保存",
@@ -3035,9 +3211,11 @@ const zhHans = {
 	},
 	files: {
 		title: "已保存文件",
-		subtitle: "在此管理你从对话中保存的图片、视频和文档（每次保存会消耗 2 积分）。",
+		subtitle:
+			"在此管理你从对话中保存的图片、视频和文档（每次保存会消耗 2 积分）。",
 		uploadTitle: "上传文件",
-		uploadDescription: "从本地上传文件到 opencontext 存储，之后即可直接进行分析。",
+		uploadDescription:
+			"从本地上传文件到 opencontext 存储，之后即可直接进行分析。",
 		uploadButton: "上传文件",
 		uploading: "正在上传...",
 		uploadSuccess: "文件上传成功。",
@@ -3191,11 +3369,15 @@ const zhHans = {
 				tooltip: {
 					iconLabel: "任务说明",
 					openDocButton: "了解更多",
-					connectTelegram: "连接 Telegram 后，你可以直接在 Telegram 里和 opencontext 对话。",
-					connectWhatsApp: "连接 WhatsApp 后，你可以直接在 WhatsApp 里和 opencontext 对话。",
-					connectIMessage: "连接 iMessage 后，你可以直接在 iMessage 里和 opencontext 对话。",
+					connectTelegram:
+						"连接 Telegram 后，你可以直接在 Telegram 里和 opencontext 对话。",
+					connectWhatsApp:
+						"连接 WhatsApp 后，你可以直接在 WhatsApp 里和 opencontext 对话。",
+					connectIMessage:
+						"连接 iMessage 后，你可以直接在 iMessage 里和 opencontext 对话。",
 					connectQQ: "连接 QQ 后，你可以直接在 QQ 里和 opencontext 对话。",
-					connectFeishu: "连接 Lark/飞书后，你可以直接在 Lark/飞书里和 opencontext 对话。",
+					connectFeishu:
+						"连接 Lark/飞书后，你可以直接在 Lark/飞书里和 opencontext 对话。",
 					linkPlatform:
 						"连接 Slack、Gmail、Telegram 等平台。opencontext 会读取你的对话，主动识别哪些事情需要跟进——不需要你反复查看。",
 					addSubscription:
@@ -3424,13 +3606,16 @@ const zhHans = {
 		dailyFocusNoData: "暂无数据",
 		dailyFocusAnalysisComplete: "今日聚焦分析完成",
 		dailyFocusItemsAnalyzed: "{{count}} 条事项已分析",
-		dailyFocusV1Summary: "{{urgent}} 条紧急、{{important}} 条重要、{{monitor}} 条监控",
+		dailyFocusV1Summary:
+			"{{urgent}} 条紧急、{{important}} 条重要、{{monitor}} 条监控",
 		dailyFocusReasoningChain: "思维链 ({{count}})",
 		dailyFocusRawContent: "原始信息",
 		dailyFocusActionPrefix: "操作: {{label}}",
-		dailyFocusSendMessageInstruction: "帮我发送一条消息给 {{recipients}}{{platformText}}：{{message}}",
+		dailyFocusSendMessageInstruction:
+			"帮我发送一条消息给 {{recipients}}{{platformText}}：{{message}}",
 		dailyFocusSendMessagePlatformText: "（通过 {{platform}}）",
-		dailyFocusReplyEmailInstruction: "帮我回复邮件给 {{recipients}}{{subjectText}}：{{message}}",
+		dailyFocusReplyEmailInstruction:
+			"帮我回复邮件给 {{recipients}}{{subjectText}}：{{message}}",
 		dailyFocusReplyEmailSubjectText: "，主题：{{subject}}",
 		dailyFocusTodayBadge: "今天",
 		dailyFocusDeadline: "截止 {{deadline}}",
@@ -3445,15 +3630,18 @@ const zhHans = {
 		dailyFocusSnoozeNextWeek: "下周",
 		dailyFocusSnoozeCustom: "自定义...",
 		dailyFocusSnoozeCustomTitle: "自定义推迟时间",
-		dailyFocusSnoozeCustomDescription: "选择这个事项重新出现在今日聚焦里的具体日期和时间。",
+		dailyFocusSnoozeCustomDescription:
+			"选择这个事项重新出现在今日聚焦里的具体日期和时间。",
 		dailyFocusSnoozeCustomDate: "日期",
 		dailyFocusSnoozeCustomTime: "时间",
 		dailyFocusSnoozeCustomTimePlaceholder: "选择时间",
 		dailyFocusSnoozeCustomInvalid: "请选择一个未来时间。",
 		dailyFocusConfirmCompletedTitle: "确认已完成这个事项？",
-		dailyFocusConfirmCompletedDescription: "确认后，这个事项会从今日聚焦中移除，并按已完成处理。",
+		dailyFocusConfirmCompletedDescription:
+			"确认后，这个事项会从今日聚焦中移除，并按已完成处理。",
 		dailyFocusConfirmDismissTitle: "确认不用管这个事项？",
-		dailyFocusConfirmDismissDescription: "确认后，这个事项会从今日聚焦中移除，相似更新也会被隐藏。",
+		dailyFocusConfirmDismissDescription:
+			"确认后，这个事项会从今日聚焦中移除，相似更新也会被隐藏。",
 		dailyFocusRetireFailed: "更新今日聚焦事项失败。",
 		dailyFocusCleared: "今日聚焦已清理完。",
 		dailyFocusSections: {
@@ -3509,7 +3697,8 @@ const zhHans = {
 			description:
 				"持续分析我的集成收到的内容和事件，自动提取人物、公司、主题等实体及其关系，构建可视化知识图谱。帮助用户发现信息之间的隐藏关联，支持基于 GraphRAG 的上下文检索。使用前端设计技能构建交互式看板，将所有图谱数据嵌入单个 HTML 文件中，无需额外文件。",
 			insightTitle: "关系发现",
-			insightDescription: "从信息中提取人物、公司、主题关系，生成可视化关系网络",
+			insightDescription:
+				"从信息中提取人物、公司、主题关系，生成可视化关系网络",
 		},
 		xAutomation: {
 			name: "X 账号增长助手",
@@ -3689,10 +3878,12 @@ const zhHans = {
 		legalNotice: "法律声明",
 	},
 	workspace: {
-		selectChatHint: "在 Agent 对话中可查看该对话的工作区文件与工具执行。下方为知识库文件。",
+		selectChatHint:
+			"在 Agent 对话中可查看该对话的工作区文件与工具执行。下方为知识库文件。",
 		goToAgent: "前往 Agent",
 		openChat: "在对话中打开",
-		noChatSelected: "请先在 Agent 中选择或打开一个对话，或通过对话页进入库以查看该对话的工作区文件。",
+		noChatSelected:
+			"请先在 Agent 中选择或打开一个对话，或通过对话页进入库以查看该对话的工作区文件。",
 		noChatForTools: "请先选择对话以查看工具执行记录。",
 		groupByConversation: "Chat",
 		groupByNone: "不分组",
@@ -3758,7 +3949,8 @@ const zhHans = {
 		storageConfirmDeleteAll: "确定要删除所有会话数据吗？此操作不可撤销。",
 		storageConfirmClean: "确定要清理吗？此操作不可撤销。",
 		storageCleanBrowserTemp: "清理缓存",
-		storageConfirmBrowserTemp: "确定要清理所有会话中的浏览器临时文件吗？此操作不可撤销。",
+		storageConfirmBrowserTemp:
+			"确定要清理所有会话中的浏览器临时文件吗？此操作不可撤销。",
 		storageDeleted: "删除成功",
 		storageCleanupFailed: "清理失败",
 		storageNoSessions: "暂无会话",
@@ -3809,7 +4001,8 @@ const zhHans = {
 		stats: {
 			messageCount:
 				"过去 24 小时，{{agentName}} 一共帮您处理了 {{messageCount}} 条信息源，生成了 {{insightCount}} 条洞察事件",
-			messageCountShort: "过去 24 小时，opencontext 一共帮您处理了 {{messageCount}} 条信息源",
+			messageCountShort:
+				"过去 24 小时，opencontext 一共帮您处理了 {{messageCount}} 条信息源",
 		},
 	},
 	agent: {
@@ -4067,7 +4260,8 @@ const zhHans = {
 				refreshSuccess: "文件列表已刷新",
 				uploadSuccess: "文件上传成功",
 				uploadFailed: "上传失败",
-				unsupportedFileType: "不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
+				unsupportedFileType:
+					"不支持的文件类型。请上传 PDF、Word、Excel、PowerPoint、文本、图片或音频文件。",
 				fileTooLarge: "文件过大。最大大小为 10MB。",
 				fetchDetailFailed: "获取文件详情失败",
 				noResults: "未找到文件",
@@ -4077,7 +4271,8 @@ const zhHans = {
 				loading: "加载中...",
 				upgradeToUnlockStorage: "升级套餐即可解锁已保存文件的云端存储。",
 				dropFilesHere: "拖放文件到此处上传",
-				supportedFormats: "PDF、Word、Excel、PowerPoint、文本、Markdown、图片、音频",
+				supportedFormats:
+					"PDF、Word、Excel、PowerPoint、文本、Markdown、图片、音频",
 				fileDropArea: "文件拖放区域",
 			},
 			workspacePanel: {
@@ -4130,7 +4325,8 @@ const zhHans = {
 				modelDefault: "默认",
 				plan: "计划",
 				description: "描述",
-				descriptionPlaceholder: "搜索昨天的AI行业新闻，整理为一份简报发送到我的Gmail邮箱。",
+				descriptionPlaceholder:
+					"搜索昨天的AI行业新闻，整理为一份简报发送到我的Gmail邮箱。",
 				scheduleType: "计划类型",
 				cronExpression: "Cron 表达式",
 				cronPreset: "Cron 预设",
@@ -4161,7 +4357,8 @@ const zhHans = {
 				custom: "自定义",
 				agent: "智能体",
 				insight_refresh: "洞察刷新",
-				cronFormatHint: '格式：分钟 小时 日期 月份 星期（例如："0 * * * *" = 每小时）',
+				cronFormatHint:
+					'格式：分钟 小时 日期 月份 星期（例如："0 * * * *" = 每小时）',
 				scheduleDate: "计划日期",
 				scheduleTime: "计划时间",
 				webhookUrl: "Webhook URL",
@@ -4330,7 +4527,8 @@ const zhHans = {
 	endOfHistory: "您已到达聊天历史记录的末尾。",
 	loadChart: "正在加载聊天...",
 	confirmBtn: "是否确定",
-	alertDialogDescription: "此操作无法撤消。这将永久删除您的聊天并将其从我们的服务器中删除。",
+	alertDialogDescription:
+		"此操作无法撤消。这将永久删除您的聊天并将其从我们的服务器中删除。",
 	cookie: {
 		title: "我们使用 Cookie 帮你更高效地沟通",
 		description:
@@ -4343,15 +4541,18 @@ const zhHans = {
 			"opencontext 目前处于 Alpha 测试阶段，功能仍在持续迭代优化，我们期待与您一起共创，帮助 opencontext 变得更好；",
 		info2:
 			"为了保证服务稳定和控制运行成本，本阶段提供有限的免费使用额度。您每天可免费体验小时级理解刷新和 20 轮对话，额度次日刷新；",
-		info3: "未来将推出正式订阅版，提供更大规模、更智能的消息处理能力，Alpha 用户将享受专属优惠。",
+		info3:
+			"未来将推出正式订阅版，提供更大规模、更智能的消息处理能力，Alpha 用户将享受专属优惠。",
 	},
 	plans: {
 		choosePlan: "价格方案",
-		planDescription: "让沟通回归专注，让时间重获自由\n从信息过载中解脱，每天节省数小时宝贵时间",
+		planDescription:
+			"让沟通回归专注，让时间重获自由\n从信息过载中解脱，每天节省数小时宝贵时间",
 		individual: "个人版",
 		business: "团队版",
 		free: "免费版",
-		freeDesc: "零成本开启您的智能通信之旅。体验 AI 如何帮您自动整理消息、生成摘要,让日常沟通更高效。",
+		freeDesc:
+			"零成本开启您的智能通信之旅。体验 AI 如何帮您自动整理消息、生成摘要,让日常沟通更高效。",
 		basic: "基础版",
 		basicDesc:
 			"为日常工作繁忙的您提供更强大的消息处理能力。更长的历史记录、更多的处理量,以及每周自动学习您的沟通习惯。",
@@ -4359,7 +4560,8 @@ const zhHans = {
 		proDesc:
 			"为专业人士和高强度沟通场景设计。大幅提升的处理能力、更长的记忆周期,让 opencontext 成为真正懂您的智能助理。",
 		team: "团队版",
-		teamDesc: "为团队打造的协作型智能通信中枢。共享积分池让团队灵活分配资源,统一的消息管理确保信息透明。",
+		teamDesc:
+			"为团队打造的协作型智能通信中枢。共享积分池让团队灵活分配资源,统一的消息管理确保信息透明。",
 		enterprise: "企业定制版",
 		enterpriseDesc:
 			"为大型组织量身定制的解决方案。从灵活的配置到符合企业合规要求的安全标准,确保完全适配业务需求。",
@@ -4503,7 +4705,8 @@ const zhHans = {
 		title: "推广计划",
 		subtitle:
 			"向你的受众推荐 opencontext，每一笔订阅都能获得 30% 的持续返佣，让他们享受更智能的对话，你也能持续获得收益。",
-		heroSupporting: "内容创作者、社区负责人和自动化专家都在使用opencontext，将对话转化为可靠的收入来源。",
+		heroSupporting:
+			"内容创作者、社区负责人和自动化专家都在使用opencontext，将对话转化为可靠的收入来源。",
 		loading: "正在加载推广数据...",
 		status: {
 			approved: "已通过",
@@ -4536,7 +4739,8 @@ const zhHans = {
 		codeCopied: "推广码已复制。",
 		linkLabel: "推广链接",
 		linkCopied: "推广链接已复制。",
-		shareHint: "在任意 opencontext 链接上添加 ?ref={{code}}，访问者会自动保存推广信息。",
+		shareHint:
+			"在任意 opencontext 链接上添加 ?ref={{code}}，访问者会自动保存推广信息。",
 		requestPayout: "申请提现",
 		transactionsTitle: "最近佣金",
 		table: {
@@ -4603,9 +4807,11 @@ const zhHans = {
 		stepsApplyTitle: "提交申请",
 		stepsApplyDescription: "简单介绍你的受众群体和计划推广的渠道。",
 		stepsShareTitle: "获取专属链接",
-		stepsShareDescription: "我们将在 2 个工作日内审核你的申请，并发送专属推广后台及推广素材。",
+		stepsShareDescription:
+			"我们将在 2 个工作日内审核你的申请，并发送专属推广后台及推广素材。",
 		stepsEarnTitle: "赚取佣金",
-		stepsEarnDescription: "每成功推荐一位付费订阅用户，即可赚取高达 30% 的循环佣金。",
+		stepsEarnDescription:
+			"每成功推荐一位付费订阅用户，即可赚取高达 30% 的循环佣金。",
 		faqTitle: "常见问题",
 		faq: {
 			earnings: {
@@ -4614,11 +4820,13 @@ const zhHans = {
 			},
 			payout: {
 				question: "何时能收到款项？",
-				answer: "佣金每月结算一次，一旦变为可提现状态，将通过 Stripe 或 PayPal 支付。",
+				answer:
+					"佣金每月结算一次，一旦变为可提现状态，将通过 Stripe 或 PayPal 支付。",
 			},
 			audience: {
 				question: "谁可以加入？",
-				answer: "欢迎内容创作者、社区管理者和AI爱好者加入，只要你热爱并愿意推广 opencontext。",
+				answer:
+					"欢迎内容创作者、社区管理者和AI爱好者加入，只要你热爱并愿意推广 opencontext。",
 			},
 			tracking: {
 				question: "推荐如何追踪？",
@@ -4629,7 +4837,8 @@ const zhHans = {
 	},
 	quota: {
 		creditDepletedTitle: "您的积分已用尽",
-		creditDepletedDescription: "由于当前套餐的积分不足，我们无法发送刚刚的请求。{{detail}}",
+		creditDepletedDescription:
+			"由于当前套餐的积分不足，我们无法发送刚刚的请求。{{detail}}",
 		creditDepletedStepReview: "打开订阅页面，查看不同方案并补充可用额度。",
 		creditDepletedStepSupport: "需要建议？联系我们的团队获取合适方案的建议。",
 		creditDepletedPrimary: "前往订阅页面",
@@ -4700,7 +4909,8 @@ const zhHans = {
 		successTitle: "订阅已确认",
 		successDescription: "您已成功订阅 {{plan}}，我们稍后将发送收据。",
 		whatsNext: "下一步",
-		activationNote: "新的订阅权益将在几分钟内在 opencontext 中生效，如需更多信息我们会通知您。",
+		activationNote:
+			"新的订阅权益将在几分钟内在 opencontext 中生效，如需更多信息我们会通知您。",
 		successChecklist1: "立即开始使用新的额度和集成自动化功能。",
 		successChecklist2: "可随时前往订阅中心管理账单或调整订阅计划。",
 		returnToDashboard: "返回控制台",
@@ -4839,7 +5049,8 @@ const zhHans = {
 		accountAvatarFileTooLarge: "图片过大，请选择小于 5MB 的文件。",
 		accountAvatarFileTypeInvalid: "文件类型不支持，请选择图片文件。",
 		accountAvatarUploadFailed: "头像上传失败，请重试。",
-		accountUsernameReadOnlyHint: "当前用户名与邮箱前缀一致。若需更换登录邮箱，请联系 support@melandlabs.ai。",
+		accountUsernameReadOnlyHint:
+			"当前用户名与邮箱前缀一致。若需更换登录邮箱，请联系 support@melandlabs.ai。",
 		accountUsernameGotIt: "知道了",
 		passwordTitle: "密码",
 		passwordDescription: "设置或修改邮箱登录密码，OAuth 登录仍可使用。",
@@ -4851,7 +5062,8 @@ const zhHans = {
 		passwordSaveCta: "更新密码",
 		passwordSaved: "密码已更新",
 		passwordSaveError: "更新密码失败，请重试。",
-		passwordSavedAllDevices: "密码已更新。为保障安全，您已在所有其他设备上被登出。",
+		passwordSavedAllDevices:
+			"密码已更新。为保障安全，您已在所有其他设备上被登出。",
 		passwordErrorMismatch: "两次输入的新密码不一致。",
 		passwordErrorCurrentRequired: "请输入当前密码。",
 		passwordErrorCurrentInvalid: "当前密码不正确。",
@@ -4863,7 +5075,8 @@ const zhHans = {
 		subscriptionDescription: "管理您的订阅计划和积分使用情况",
 		personalizationDescription:
 			"告诉 opencontext 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
-		rolesDescription: "查看系统识别的角色、行业与工作背景，并手动固定你希望 opencontext 着重关注的身份。",
+		rolesDescription:
+			"查看系统识别的角色、行业与工作背景，并手动固定你希望 opencontext 着重关注的身份。",
 		personalizationTabs: {
 			avatar: "助手形象",
 			basic: "opencontext Soul",
@@ -4874,7 +5087,8 @@ const zhHans = {
 			linkedAccounts: "连接器",
 			skills: "我的技能",
 		},
-		basicSettingsDescription: "配置 opencontext 的基础设置，包括理解与回复的语言以及理解刷新频率。",
+		basicSettingsDescription:
+			"配置 opencontext 的基础设置，包括理解与回复的语言以及理解刷新频率。",
 		peopleDescription:
 			"告诉 opencontext 你关注的人和主题，它会在追踪时优先处理这些内容，让最重要的信息第一时间呈现。",
 		contextsDescription:
@@ -4882,7 +5096,8 @@ const zhHans = {
 		contextsListTitle: "我的情景",
 		categoryName: "情景名称",
 		categoryDescription: "情景描述",
-		categoryDescriptionPlaceholder: "用自然语言描述这个情景的含义，AI会根据描述自动将相关洞察归入此情景",
+		categoryDescriptionPlaceholder:
+			"用自然语言描述这个情景的含义，AI会根据描述自动将相关洞察归入此情景",
 		addCategory: "添加情景",
 		addNewContext: "添加新的情景",
 		templateContexts: "模板情景",
@@ -4896,31 +5111,38 @@ const zhHans = {
 		contextTemplates: {
 			News: {
 				name: "资讯",
-				description: "包括行业新闻、政治新闻、企业新闻等。用于快速掌握值得关注的资讯。",
+				description:
+					"包括行业新闻、政治新闻、企业新闻等。用于快速掌握值得关注的资讯。",
 			},
 			Meetings: {
 				name: "会议",
-				description: "包括正式会议、行业研讨会、内部会议、在线会议等。用于不再错过任何重要会议。",
+				description:
+					"包括正式会议、行业研讨会、内部会议、在线会议等。用于不再错过任何重要会议。",
 			},
 			Funding: {
 				name: "融资",
-				description: "包括融资轮次、投资交易、筹款更新、资本筹集状态等。用于聚焦与你融资相关的关键进展。",
+				description:
+					"包括融资轮次、投资交易、筹款更新、资本筹集状态等。用于聚焦与你融资相关的关键进展。",
 			},
 			"R&D": {
 				name: "研发",
-				description: "包括研发里程碑、技术突破、产品开发更新、原型测试等。用于追踪研发与产品推进的关键节点。",
+				description:
+					"包括研发里程碑、技术突破、产品开发更新、原型测试等。用于追踪研发与产品推进的关键节点。",
 			},
 			Partnerships: {
 				name: "合作",
-				description: "包括战略合作、合资企业、合作协议、外部联盟等。用于集中呈现外部合作中的关键动态。",
+				description:
+					"包括战略合作、合资企业、合作协议、外部联盟等。用于集中呈现外部合作中的关键动态。",
 			},
 			"User Growth": {
 				name: "用户增长",
-				description: "包括用户获取、活跃用户指标、用户留存、市场渗透等。用于捕捉用户增长中的重要变化。",
+				description:
+					"包括用户获取、活跃用户指标、用户留存、市场渗透等。用于捕捉用户增长中的重要变化。",
 			},
 			Branding: {
 				name: "品牌",
-				description: "包括品牌参与、营销活动、品牌推广、公关活动等。用于关注品牌相关的重要反馈与互动。",
+				description:
+					"包括品牌参与、营销活动、品牌推广、公关活动等。用于关注品牌相关的重要反馈与互动。",
 			},
 			Marketing: {
 				name: "营销",
@@ -4929,11 +5151,13 @@ const zhHans = {
 			},
 			HR: {
 				name: "人力",
-				description: "包括人员变动、团队扩展、人才获取等。用于留意团队与人才相关的重要变化。",
+				description:
+					"包括人员变动、团队扩展、人才获取等。用于留意团队与人才相关的重要变化。",
 			},
 			Recruiting: {
 				name: "招聘",
-				description: "包括招聘活动、人才获取、团队扩展等。用于留意团队与人才相关的重要变化。",
+				description:
+					"包括招聘活动、人才获取、团队扩展等。用于留意团队与人才相关的重要变化。",
 			},
 			P: {
 				name: "P",
@@ -4941,11 +5165,13 @@ const zhHans = {
 			},
 			"L & M": {
 				name: "L & M",
-				description: "领导层与管理层更新、组织变动、战略和决策。用于留意管理层重要动态。",
+				description:
+					"领导层与管理层更新、组织变动、战略和决策。用于留意管理层重要动态。",
 			},
 			AI: {
 				name: "AI",
-				description: "AI 相关技术、工具、模型更新和应用。用于跟踪 AI 领域的最新动态。",
+				description:
+					"AI 相关技术、工具、模型更新和应用。用于跟踪 AI 领域的最新动态。",
 			},
 		},
 		confirmDeleteCategory: "确定要删除情景 {{name}} 吗？",
@@ -4987,7 +5213,8 @@ const zhHans = {
 		comingSoon: "功能即将推出",
 		cancelSubscription: "取消订阅",
 		cancelling: "取消中...",
-		confirmCancelSubscription: "确定要取消订阅吗？订阅将在当前计费周期结束时取消，下月起不再扣费。",
+		confirmCancelSubscription:
+			"确定要取消订阅吗？订阅将在当前计费周期结束时取消，下月起不再扣费。",
 		cancelSubscriptionTitle: "取消订阅",
 		confirmCancel: "确认取消",
 		subscriptionCancelled: "订阅已取消，将在当前计费周期结束时生效。",
@@ -5050,7 +5277,8 @@ const zhHans = {
 		choosePlatform: "选择集成",
 		selectPlatformShare: "选择您想要分享到的集成",
 		shareTipsTitle: "分享提示",
-		shareTipsDescription: "自定义您的消息以获得更好的互动效果。带有个人备注的分享内容更容易被查看。",
+		shareTipsDescription:
+			"自定义您的消息以获得更好的互动效果。带有个人备注的分享内容更容易被查看。",
 		otherSharingOptions: "其他分享选项",
 		copyDirectLink: "复制直接链接",
 		moreOptions: "更多选项",
@@ -5090,7 +5318,8 @@ const zhHans = {
 			},
 			mate: {
 				title: "招募你的第一个 AI Mate",
-				description: "根据你填写的信息，我们已经帮你预选了几位伙伴。你可以直接招募，也可以手动调整。",
+				description:
+					"根据你填写的信息，我们已经帮你预选了几位伙伴。你可以直接招募，也可以手动调整。",
 				marketplaceHint: "已为你默认勾选 3 位伙伴，你也可以自由调整。",
 				checking: "正在检查 Mate...",
 				exists: "你已经有至少一个 Mate。",
@@ -5110,7 +5339,8 @@ const zhHans = {
 			workDescriptionTextareaPlaceholder:
 				"请描述你平时主要做的工作内容，比如对接客户询盘、管理订单发货、协调供应商...",
 			instruction: "先让opencontext认识一下你吧",
-			description: "告诉 opencontext 你的角色和工作重点，\n让它更好地理解你的思考方式和关注方向。",
+			description:
+				"告诉 opencontext 你的角色和工作重点，\n让它更好地理解你的思考方式和关注方向。",
 			selectorHint: "可多选；再次点击或删除标签即可取消。",
 			doneButton: "完成填写",
 		},
@@ -5135,12 +5365,14 @@ const zhHans = {
 		},
 		painPoints: {
 			title: "opencontext 该如何组织你的注意力？",
-			subtitle: "选择关注的情景，opencontext将自动归类事件，助你轻松切换关注模式。",
+			subtitle:
+				"选择关注的情景，opencontext将自动归类事件，助你轻松切换关注模式。",
 			configuredTitle: "已设置的关注规则",
 			configuredSubtitle: "需要时可以继续添加或删除",
 			configuredEmpty: "还没有关注规则，先从下方模板填写几个场景吧。",
 			templatesTitle: "选择模板后完成填空",
-			templatesSubtitle: "点击一个选项并补全空白，opencontext 才能准确理解你要盯的信号",
+			templatesSubtitle:
+				"点击一个选项并补全空白，opencontext 才能准确理解你要盯的信号",
 			templatesHint: "不知道写什么？选择一个模板填入，再修改它",
 			customLabel: "完全自定义输入",
 			customSubtitle: "如果模板不适用，可以直接描述你想关注的场景",
@@ -5235,7 +5467,8 @@ const zhHans = {
 					title: "团队 @ 提及我的消息",
 					description: "有人点名找我",
 					helper: "标注具体的群组以及你需要采取的动作。",
-					preview: "当 {{channel}} 里有 @ 我且需要我 {{action}} 的消息时提醒我。",
+					preview:
+						"当 {{channel}} 里有 @ 我且需要我 {{action}} 的消息时提醒我。",
 					fields: {
 						channel: {
 							label: "频道/群组",
@@ -5299,7 +5532,8 @@ const zhHans = {
 					title: "需要我回复的消息",
 					description: "有人在等我反馈",
 					helper: "写出常常找你的人，以及希望的响应时限。",
-					preview: "当 {{audience}} 发来需要我在 {{deadline}} 前处理的事项时提醒我。",
+					preview:
+						"当 {{audience}} 发来需要我在 {{deadline}} 前处理的事项时提醒我。",
 					fields: {
 						audience: {
 							label: "发送人/团队",
@@ -5315,7 +5549,8 @@ const zhHans = {
 					title: "紧急和时效性信息",
 					description: "deadline、突发事件",
 					helper: "描述触发条件以及你要多快响应。",
-					preview: "当发生 {{trigger}} 且需要在 {{timeframe}} 内响应时标记为紧急。",
+					preview:
+						"当发生 {{trigger}} 且需要在 {{timeframe}} 内响应时标记为紧急。",
 					fields: {
 						trigger: {
 							label: "触发条件",
@@ -5360,7 +5595,8 @@ const zhHans = {
 		},
 		complete: {
 			title: "认识你的 AI 助手",
-			subtitle: "opencontext会帮你过滤噪音，将零散信号转化为清晰事件，一切由你掌控。",
+			subtitle:
+				"opencontext会帮你过滤噪音，将零散信号转化为清晰事件，一切由你掌控。",
 			nameLabel: "AI助手名称",
 			namePlaceholder: "给我起个名字吧",
 			openSettings: "打开个性化设置",
@@ -5368,7 +5604,8 @@ const zhHans = {
 		},
 		integration: {
 			title: "连接平台，解锁更深入的洞察",
-			subtitle: "授权平台，让opencontext有真实的信息可供理解。你可以先连接一个，之后随时添加或移除。",
+			subtitle:
+				"授权平台，让opencontext有真实的信息可供理解。你可以先连接一个，之后随时添加或移除。",
 			privacyTipsTitle: "隐私承诺🔐",
 			privacyTips:
 				"opencontext 仅访问完成任务所必需的最少数据。\n原始聊天记录与邮件内容仅保存在你的设备中，不会上传至云端。\n授权与配置数据均采用行业标准加密（AES-256 / TLS 1.2+）。\n你可以随时断开任何平台的连接。",
@@ -5383,7 +5620,8 @@ const zhHans = {
 			rewardProgress: "进度：{{connected}} / {{total}} 个平台",
 			rewardCompleted: "奖励已准备就绪！",
 			rewardClaimedBadge: "+{{credits}} 积分",
-			footerNote: "你可以前往集成管理页面授权 opencontext 获取更多内容，例如RSS源或上传文件。",
+			footerNote:
+				"你可以前往集成管理页面授权 opencontext 获取更多内容，例如RSS源或上传文件。",
 		},
 		hub: {
 			title: "认识 opencontext",
@@ -5416,17 +5654,22 @@ const zhHans = {
 					bullet2: "追踪事件会按情景自动分类，便于后续查看",
 					bullet3: "有了追踪事件后，就可以让 opencontext 帮你分析或给建议",
 					popoverHint: "选择一种方式创建第一个追踪事件",
-					popoverSubtitle: "告诉 opencontext 你想追踪什么，它会自动监控进展、提醒你关键更新。",
+					popoverSubtitle:
+						"告诉 opencontext 你想追踪什么，它会自动监控进展、提醒你关键更新。",
 					actionAuthorizePlatform: "自动追踪",
-					actionAuthorizePlatformDesc: "连接你的账号，opencontext 将自动发现值得追踪的内容",
+					actionAuthorizePlatformDesc:
+						"连接你的账号，opencontext 将自动发现值得追踪的内容",
 					actionChatWithAI: "和 opencontext 对话",
-					actionChatWithAIDesc: "用对话或上传文件，让 opencontext 理解并创建追踪事件",
-					createTrackingPrompt: "使用 opencontext-event-creator 技能帮我创建每小时提醒我喝水的追踪",
+					actionChatWithAIDesc:
+						"用对话或上传文件，让 opencontext 理解并创建追踪事件",
+					createTrackingPrompt:
+						"使用 opencontext-event-creator 技能帮我创建每小时提醒我喝水的追踪",
 				},
 				trackingByContext: {
 					title: "将你的追踪事件按照情景自动分类",
 					desc: "选择关注的情景，opencontext 将自动归类事件，助你轻松切换关注模式",
-					subtitle: "选择关注的情景，opencontext 将自动归类事件，助你轻松切换关注模式",
+					subtitle:
+						"选择关注的情景，opencontext 将自动归类事件，助你轻松切换关注模式",
 					actionButton: "完成",
 				},
 				opencontextFirstTask: {
@@ -5439,31 +5682,43 @@ const zhHans = {
 					popoverSubtitle: "告诉 opencontext 你想做什么，它会帮你完成。",
 					tryIt: "试试看",
 					action1Title: "起草消息",
-					action1Desc: "告诉 opencontext 你想表达什么，她来帮你把意思说得专业、有温度。",
-					action1Prompt: "帮我起草一条消息，发给我的投资人，告诉他 A 轮进展顺利，下周安排一次同步。",
+					action1Desc:
+						"告诉 opencontext 你想表达什么，她来帮你把意思说得专业、有温度。",
+					action1Prompt:
+						"帮我起草一条消息，发给我的投资人，告诉他 A 轮进展顺利，下周安排一次同步。",
 					action2Title: "和 opencontext 一起写",
-					action2Desc: "把脑子里的想法说出来，opencontext 陪你一起思考，把零散的创意变成真正可用的内容。",
+					action2Desc:
+						"把脑子里的想法说出来，opencontext 陪你一起思考，把零散的创意变成真正可用的内容。",
 					action2Prompt: "我想写一份产品定位文档，我来说想法，你帮我整理成型。",
 					action3Title: "拆解任务",
 					action3Desc:
 						"没有结构的目标很难推进。描述你想达成的事，opencontext 帮你拆解成清晰、可执行的下一步。",
-					action3Prompt: "我想在 30 天内签下前 10 个付费用户，帮我拆解成具体的行动计划。",
+					action3Prompt:
+						"我想在 30 天内签下前 10 个付费用户，帮我拆解成具体的行动计划。",
 					action4Title: "规划内容策略",
 					action4Desc:
 						"内容是品牌最持久的资产。告诉 opencontext 你的产品和受众，她帮你规划有节奏的内容矩阵。",
-					action4Prompt: "我的产品是面向 SMB 创始人的 AI 工作助手，帮我制定一份 LinkedIn 内容发布策略。",
+					action4Prompt:
+						"我的产品是面向 SMB 创始人的 AI 工作助手，帮我制定一份 LinkedIn 内容发布策略。",
 					action5Title: "激发营销创意",
-					action5Desc: "好的市场创意往往就差一个切入角度。告诉 opencontext 你在推什么，她帮你找到亮点。",
-					action5Prompt: "我们即将发布 AI Agent 产品的新功能，帮我想 5 个有传播性的创意推广方案。",
+					action5Desc:
+						"好的市场创意往往就差一个切入角度。告诉 opencontext 你在推什么，她帮你找到亮点。",
+					action5Prompt:
+						"我们即将发布 AI Agent 产品的新功能，帮我想 5 个有传播性的创意推广方案。",
 					action6Title: "搭建演示框架",
-					action6Desc: "演示的结构决定说服力。描述主题和对象，opencontext 帮你搭框架，让你专注内容本身。",
-					action6Prompt: "帮我做一份面向 VC 的融资 Deck 大纲，我们是 AI 通讯助手早期创业公司，Pre-A 轮。",
+					action6Desc:
+						"演示的结构决定说服力。描述主题和对象，opencontext 帮你搭框架，让你专注内容本身。",
+					action6Prompt:
+						"帮我做一份面向 VC 的融资 Deck 大纲，我们是 AI 通讯助手早期创业公司，Pre-A 轮。",
 					action7Title: "AI 行业简报",
-					action7Desc: "AI 领域每天都在变。opencontext 过滤噪音，只呈现真正值得关注的行业信号。",
+					action7Desc:
+						"AI 领域每天都在变。opencontext 过滤噪音，只呈现真正值得关注的行业信号。",
 					action7Prompt: "今天 AI 行业有什么值得关注的动态？帮我做一个简报。",
 					action8Title: "opencontext 能帮我做什么？",
-					action8Desc: "不知道如何使用 opencontext？这里是你的起点，探索她能做什么，找到最适合你的使用方式。",
-					action8Prompt: "我是早期创业公司的创始人，每天要处理大量沟通，opencontext 能帮我做什么？",
+					action8Desc:
+						"不知道如何使用 opencontext？这里是你的起点，探索她能做什么，找到最适合你的使用方式。",
+					action8Prompt:
+						"我是早期创业公司的创始人，每天要处理大量沟通，opencontext 能帮我做什么？",
 				},
 				updateEvents: {
 					title: "更新你的事件",
@@ -5489,7 +5744,8 @@ const zhHans = {
 					bullet1: "在已连接的通讯软件中向 opencontext 发送消息",
 					bullet2: "可询问今日追踪事件、让 opencontext 执行任务或获取建议",
 					bullet3: "对话与网页端同步，多端无缝衔接",
-					bullet4: "注意：需要保持电脑开机和软件打开才能接受消息，所有数据均存储在本地",
+					bullet4:
+						"注意：需要保持电脑开机和软件打开才能接受消息，所有数据均存储在本地",
 				},
 				exploreAgents: {
 					title: "了解智能代理",
@@ -5533,7 +5789,8 @@ const zhHans = {
 			finishAlertDescription:
 				"现在可以进入 opencontext 了，也可以继续完成后面的步骤。\n想重新回来？菜单底部的「新手引导」随时可用。",
 			startHereFirstTitle: "先从这里开始",
-			startHereFirstDescription: "先花 2 分钟完成这 3 步，opencontext 会更懂你。",
+			startHereFirstDescription:
+				"先花 2 分钟完成这 3 步，opencontext 会更懂你。",
 			finishError: "完成引导失败，请重试",
 			finishing: "正在完成...",
 		},
@@ -5711,7 +5968,10 @@ function deriveInsightCopy(input: unknown): unknown {
 	}
 	if (input && typeof input === "object") {
 		return Object.fromEntries(
-			Object.entries(input as Record<string, unknown>).map(([key, value]) => [key, deriveInsightCopy(value)]),
+			Object.entries(input as Record<string, unknown>).map(([key, value]) => [
+				key,
+				deriveInsightCopy(value),
+			]),
 		);
 	}
 	if (typeof input === "string") {
@@ -5746,7 +6006,8 @@ function deriveInsightCopy(input: unknown): unknown {
 	goToPage: "跳转",
 };
 
-const tourNodeZh = (zhHans as Record<string, unknown>).tour as Record<string, unknown> | undefined;
+const tourNodeZh = (zhHans as Record<string, unknown>).tour as
+	Record<string, unknown> | undefined;
 (zhHans as Record<string, unknown>).tour = {
 	...(tourNodeZh ?? {}),
 	insight: deriveInsightCopy((tourNodeZh?.summary as unknown) ?? {}),

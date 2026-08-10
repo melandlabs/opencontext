@@ -78,7 +78,9 @@ export class OpenAIVideoGenProvider extends VideoGenProvider {
 		return SORA_CAPABILITIES;
 	}
 
-	async generate(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+	async generate(
+		request: VideoGenerationRequest,
+	): Promise<VideoGenerationResponse> {
 		const apiKey = process.env.OPENAI_API_KEY;
 		if (!apiKey) {
 			return {
@@ -126,7 +128,10 @@ export class OpenAIVideoGenProvider extends VideoGenProvider {
 			}
 
 			// Add reference_image_urls if provided
-			if (request.reference_image_urls && request.reference_image_urls.length > 0) {
+			if (
+				request.reference_image_urls &&
+				request.reference_image_urls.length > 0
+			) {
 				payload.reference_image_urls = request.reference_image_urls;
 			}
 
@@ -212,7 +217,8 @@ export class OpenAIVideoGenProvider extends VideoGenProvider {
 				aspect_ratio: request.aspect_ratio || "16:9",
 				duration: request.duration || 10,
 				provider: this.name,
-				error: error instanceof Error ? error.message : "Unknown error occurred",
+				error:
+					error instanceof Error ? error.message : "Unknown error occurred",
 				error_type: "unknown_error",
 			};
 		}

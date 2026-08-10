@@ -40,7 +40,9 @@ export interface PostgresRawMessageManagerLike {
 	}): Promise<unknown[]>;
 }
 
-export type PostgresFactoryFn = (env?: MemoryStoreEnv) => Promise<PostgresRawMessageManagerLike>;
+export type PostgresFactoryFn = (
+	env?: MemoryStoreEnv,
+) => Promise<PostgresRawMessageManagerLike>;
 
 let factory: PostgresFactoryFn | null = null;
 

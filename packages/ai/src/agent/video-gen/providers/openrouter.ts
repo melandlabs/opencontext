@@ -121,7 +121,9 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 		return OPENROUTER_CAPABILITIES;
 	}
 
-	async generate(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
+	async generate(
+		request: VideoGenerationRequest,
+	): Promise<VideoGenerationResponse> {
 		if (!this.isAvailable()) {
 			return {
 				success: false,
@@ -131,7 +133,8 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 				aspect_ratio: request.aspect_ratio || "16:9",
 				duration: request.duration || 10,
 				provider: this.name,
-				error: "OpenRouter API not configured. Save an OpenRouter API key in your AI provider preferences.",
+				error:
+					"OpenRouter API not configured. Save an OpenRouter API key in your AI provider preferences.",
 				error_type: "configuration_error",
 			};
 		}
@@ -208,7 +211,9 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 					aspect_ratio: aspectRatio,
 					duration: duration,
 					provider: this.name,
-					error: submitResult.error || "Invalid response from OpenRouter: missing job id or polling_url",
+					error:
+						submitResult.error ||
+						"Invalid response from OpenRouter: missing job id or polling_url",
 					error_type: "api_error",
 				};
 			}
@@ -317,7 +322,8 @@ export class OpenRouterVideoGenProvider extends VideoGenProvider {
 				aspect_ratio: request.aspect_ratio || "16:9",
 				duration: request.duration || 10,
 				provider: this.name,
-				error: error instanceof Error ? error.message : "Unknown error occurred",
+				error:
+					error instanceof Error ? error.message : "Unknown error occurred",
 				error_type: "unknown_error",
 			};
 		}

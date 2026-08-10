@@ -79,7 +79,8 @@ export interface BuildMemoryGovernanceExplanationReportInput {
 	metadata?: Record<string, unknown>;
 }
 
-export type MemoryGovernanceCommandType = "correct-content" | "change-status" | "rollback-artifact";
+export type MemoryGovernanceCommandType =
+	"correct-content" | "change-status" | "rollback-artifact";
 
 export type MemoryGovernanceCommandReasonCode =
 	| "command_valid"
@@ -201,7 +202,8 @@ export interface BuildMemoryGovernanceAuditScenarioReportInput {
 	metadata?: Record<string, unknown>;
 }
 
-export type MemoryGraphRolloutDecision = "ready-for-limited-rollout" | "blocked";
+export type MemoryGraphRolloutDecision =
+	"ready-for-limited-rollout" | "blocked";
 
 export type MemoryGraphRolloutGateReasonCode =
 	| "memory_graph_rollout_governance"
@@ -325,7 +327,9 @@ export interface MemoryGraphRolloutRuntimeEvidence {
 	metadata?: Record<string, unknown>;
 }
 
-function copyMetadata(metadata: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function copyMetadata(
+	metadata: Record<string, unknown> | undefined,
+): Record<string, unknown> | undefined {
 	return metadata ? { ...metadata } : undefined;
 }
 
@@ -340,8 +344,14 @@ function copyRollback(
 		: undefined;
 }
 
-function relationTouchesArtifact(relation: SemanticMemoryRevisionRelation, artifactId: string): boolean {
-	return relation.sourceArtifactId === artifactId || relation.targetArtifactId === artifactId;
+function relationTouchesArtifact(
+	relation: SemanticMemoryRevisionRelation,
+	artifactId: string,
+): boolean {
+	return (
+		relation.sourceArtifactId === artifactId ||
+		relation.targetArtifactId === artifactId
+	);
 }
 
 function relationToExplanation(
@@ -382,11 +392,16 @@ function buildTrace(
 	};
 }
 
-function uniqueReasonCodes<ReasonCode extends string>(reasonCodes: ReasonCode[]): ReasonCode[] {
+function uniqueReasonCodes<ReasonCode extends string>(
+	reasonCodes: ReasonCode[],
+): ReasonCode[] {
 	return [...new Set(reasonCodes)];
 }
 
-function missingIds(actual: string[], expected: string[] | undefined): string[] {
+function missingIds(
+	actual: string[],
+	expected: string[] | undefined,
+): string[] {
 	if (!expected || expected.length === 0) {
 		return [];
 	}
@@ -415,14 +430,26 @@ function buildMemoryGraphRolloutRetrievalScenario(
 		...input.result.hiddenDeprecatedNodeIds,
 		...auditNodeIds,
 	];
-	const missingRankedNodeIds = missingIds(input.result.rankedNodeIds, input.expectedRankedNodeIds);
+	const missingRankedNodeIds = missingIds(
+		input.result.rankedNodeIds,
+		input.expectedRankedNodeIds,
+	);
 	const missingHiddenDeprecatedNodeIds = missingIds(
 		input.result.hiddenDeprecatedNodeIds,
 		input.expectedHiddenDeprecatedNodeIds,
 	);
-	const missingAuditTrailNodeIds = missingIds(auditNodeIds, input.expectedAuditTrailNodeIds);
-	const leakedForbiddenNodeIds = intersectIds(input.result.rankedNodeIds, input.forbiddenNodeIds);
-	const crossScopeLeakNodeIds = intersectIds(allObservedNodeIds, input.crossScopeNodeIds);
+	const missingAuditTrailNodeIds = missingIds(
+		auditNodeIds,
+		input.expectedAuditTrailNodeIds,
+	);
+	const leakedForbiddenNodeIds = intersectIds(
+		input.result.rankedNodeIds,
+		input.forbiddenNodeIds,
+	);
+	const crossScopeLeakNodeIds = intersectIds(
+		allObservedNodeIds,
+		input.crossScopeNodeIds,
+	);
 	const passed =
 		missingRankedNodeIds.length === 0 &&
 		missingHiddenDeprecatedNodeIds.length === 0 &&
@@ -480,10 +507,12 @@ function defaultRolloutThresholds(
 	return {
 		minExpectedCandidateAccuracy: thresholds?.minExpectedCandidateAccuracy ?? 1,
 		maxNoisePromotionRate: thresholds?.maxNoisePromotionRate ?? 0,
-		maxTemporaryOverrideLeakageRate: thresholds?.maxTemporaryOverrideLeakageRate ?? 0,
+		maxTemporaryOverrideLeakageRate:
+			thresholds?.maxTemporaryOverrideLeakageRate ?? 0,
 		minContestedClusterCoverage: thresholds?.minContestedClusterCoverage ?? 1,
 		minDecayPrecisionProxy: thresholds?.minDecayPrecisionProxy ?? 1,
-		maxUnresolvedPollutedArtifactCount: thresholds?.maxUnresolvedPollutedArtifactCount ?? 0,
+		maxUnresolvedPollutedArtifactCount:
+			thresholds?.maxUnresolvedPollutedArtifactCount ?? 0,
 		requireCorrectionCommand: thresholds?.requireCorrectionCommand ?? true,
 		requireRollbackCommand: thresholds?.requireRollbackCommand ?? true,
 		requireAuditTrail: thresholds?.requireAuditTrail ?? true,
@@ -499,14 +528,18 @@ export function buildMemoryGraphRolloutGovernanceReport(
 	const graphRetrievalScenarios = (input.graphRetrievalScenarios ?? []).map(
 		buildMemoryGraphRolloutRetrievalScenario,
 	);
-	const semanticRetrievalScenarios = [...(input.semanticRetrievalScenarios ?? [])];
+	const semanticRetrievalScenarios = [
+		...(input.semanticRetrievalScenarios ?? []),
+	];
 
 	if (input.consolidationMetrics) {
 		const metrics = input.consolidationMetrics;
 		gates.push(
 			buildGate({
 				gateId: "consolidation.expected-candidate-accuracy",
-				passed: metrics.expectedCandidateAccuracy >= thresholds.minExpectedCandidateAccuracy,
+				passed:
+					metrics.expectedCandidateAccuracy >=
+					thresholds.minExpectedCandidateAccuracy,
 				actual: metrics.expectedCandidateAccuracy,
 				threshold: thresholds.minExpectedCandidateAccuracy,
 				passReasonCode: "metric_gate_passed",
@@ -522,7 +555,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			}),
 			buildGate({
 				gateId: "consolidation.temporary-override-leakage-rate",
-				passed: metrics.temporaryOverrideLeakageRate <= thresholds.maxTemporaryOverrideLeakageRate,
+				passed:
+					metrics.temporaryOverrideLeakageRate <=
+					thresholds.maxTemporaryOverrideLeakageRate,
 				actual: metrics.temporaryOverrideLeakageRate,
 				threshold: thresholds.maxTemporaryOverrideLeakageRate,
 				passReasonCode: "metric_gate_passed",
@@ -530,7 +565,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			}),
 			buildGate({
 				gateId: "consolidation.contested-cluster-coverage",
-				passed: metrics.contestedClusterCoverage >= thresholds.minContestedClusterCoverage,
+				passed:
+					metrics.contestedClusterCoverage >=
+					thresholds.minContestedClusterCoverage,
 				actual: metrics.contestedClusterCoverage,
 				threshold: thresholds.minContestedClusterCoverage,
 				passReasonCode: "metric_gate_passed",
@@ -538,7 +575,8 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			}),
 			buildGate({
 				gateId: "consolidation.decay-precision-proxy",
-				passed: metrics.decayPrecisionProxy >= thresholds.minDecayPrecisionProxy,
+				passed:
+					metrics.decayPrecisionProxy >= thresholds.minDecayPrecisionProxy,
 				actual: metrics.decayPrecisionProxy,
 				threshold: thresholds.minDecayPrecisionProxy,
 				passReasonCode: "metric_gate_passed",
@@ -563,7 +601,8 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			buildGate({
 				gateId: "retrieval.graph-scenarios",
 				passed: graphRetrievalScenarios.every((scenario) => scenario.passed),
-				actual: graphRetrievalScenarios.filter((scenario) => scenario.passed).length,
+				actual: graphRetrievalScenarios.filter((scenario) => scenario.passed)
+					.length,
 				threshold: graphRetrievalScenarios.length,
 				passReasonCode: "retrieval_eval_gate_passed",
 				failReasonCode: "retrieval_eval_gate_failed",
@@ -579,7 +618,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 					gateId: "retrieval.audit-trail",
 					passed:
 						auditScenarioCount > 0 &&
-						graphRetrievalScenarios.every((scenario) => scenario.missingAuditTrailNodeIds.length === 0),
+						graphRetrievalScenarios.every(
+							(scenario) => scenario.missingAuditTrailNodeIds.length === 0,
+						),
 					actual: auditScenarioCount,
 					threshold: 1,
 					passReasonCode: "audit_trail_gate_passed",
@@ -590,7 +631,11 @@ export function buildMemoryGraphRolloutGovernanceReport(
 
 		if (thresholds.requireNoCrossScopeNodes) {
 			const crossScopeLeakNodeIds = [
-				...new Set(graphRetrievalScenarios.flatMap((scenario) => scenario.crossScopeLeakNodeIds)),
+				...new Set(
+					graphRetrievalScenarios.flatMap(
+						(scenario) => scenario.crossScopeLeakNodeIds,
+					),
+				),
 			].sort();
 			gates.push(
 				buildGate({
@@ -621,7 +666,8 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			buildGate({
 				gateId: "retrieval.semantic-eval-scenarios",
 				passed: semanticRetrievalScenarios.every((scenario) => scenario.passed),
-				actual: semanticRetrievalScenarios.filter((scenario) => scenario.passed).length,
+				actual: semanticRetrievalScenarios.filter((scenario) => scenario.passed)
+					.length,
 				threshold: semanticRetrievalScenarios.length,
 				passReasonCode: "semantic_retrieval_eval_gate_passed",
 				failReasonCode: "semantic_retrieval_eval_gate_failed",
@@ -647,7 +693,8 @@ export function buildMemoryGraphRolloutGovernanceReport(
 				passed:
 					input.auditScenarioReport.summary.unresolvedPollutedArtifactCount <=
 					thresholds.maxUnresolvedPollutedArtifactCount,
-				actual: input.auditScenarioReport.summary.unresolvedPollutedArtifactCount,
+				actual:
+					input.auditScenarioReport.summary.unresolvedPollutedArtifactCount,
 				threshold: thresholds.maxUnresolvedPollutedArtifactCount,
 				passReasonCode: "polluted_memory_gate_passed",
 				failReasonCode: "polluted_memory_gate_failed",
@@ -680,8 +727,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 	if (thresholds.requireCorrectionCommand) {
 		const validCorrectionCount =
 			input.runtimeEvidence?.correctionOperationIds.length ??
-			input.commandReport?.commands.filter((command) => command.type === "correct-content" && command.valid)
-				.length ??
+			input.commandReport?.commands.filter(
+				(command) => command.type === "correct-content" && command.valid,
+			).length ??
 			0;
 		gates.push(
 			buildGate({
@@ -699,8 +747,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 	if (thresholds.requireRollbackCommand) {
 		const validRollbackCount =
 			input.runtimeEvidence?.rollbackOperationIds.length ??
-			input.commandReport?.commands.filter((command) => command.type === "rollback-artifact" && command.valid)
-				.length ??
+			input.commandReport?.commands.filter(
+				(command) => command.type === "rollback-artifact" && command.valid,
+			).length ??
 			0;
 		gates.push(
 			buildGate({
@@ -722,7 +771,8 @@ export function buildMemoryGraphRolloutGovernanceReport(
 	// is added unconditionally: a gate that could not be evaluated has to be
 	// distinguishable from one that passed, and a conditional gate disappears
 	// into a `failedGateCount === 0` that reads as success.
-	const observedOperationCount = input.runtimeEvidence?.operationIds.length ?? 0;
+	const observedOperationCount =
+		input.runtimeEvidence?.operationIds.length ?? 0;
 	gates.push(
 		buildGate({
 			gateId: "runtime.observed-evidence",
@@ -740,8 +790,12 @@ export function buildMemoryGraphRolloutGovernanceReport(
 
 	if (input.runtimeEvidence) {
 		const pendingSummaryIds = input.runtimeEvidence.pendingSummaryIds ?? [];
-		const rawVisibilityMismatchNodeIds = input.runtimeEvidence.rawVisibilityMismatchNodeIds ?? [];
-		const unresolvedPublicationIds = [...pendingSummaryIds, ...rawVisibilityMismatchNodeIds];
+		const rawVisibilityMismatchNodeIds =
+			input.runtimeEvidence.rawVisibilityMismatchNodeIds ?? [];
+		const unresolvedPublicationIds = [
+			...pendingSummaryIds,
+			...rawVisibilityMismatchNodeIds,
+		];
 		gates.push(
 			buildGate({
 				gateId: "runtime.publication-convergence",
@@ -770,9 +824,13 @@ export function buildMemoryGraphRolloutGovernanceReport(
 			passedGateCount: gates.length - failedGateCount,
 			failedGateCount,
 			graphRetrievalScenarioCount: graphRetrievalScenarios.length,
-			graphRetrievalPassedCount: graphRetrievalScenarios.filter((scenario) => scenario.passed).length,
+			graphRetrievalPassedCount: graphRetrievalScenarios.filter(
+				(scenario) => scenario.passed,
+			).length,
 			semanticRetrievalScenarioCount: semanticRetrievalScenarios.length,
-			semanticRetrievalPassedCount: semanticRetrievalScenarios.filter((scenario) => scenario.passed).length,
+			semanticRetrievalPassedCount: semanticRetrievalScenarios.filter(
+				(scenario) => scenario.passed,
+			).length,
 			dryRun: true,
 		},
 		gates,
@@ -794,10 +852,18 @@ export function buildMemoryGraphRolloutGovernanceReport(
 						runtimeEvidence: {
 							...input.runtimeEvidence,
 							operationIds: [...input.runtimeEvidence.operationIds],
-							correctionOperationIds: [...input.runtimeEvidence.correctionOperationIds],
-							rollbackOperationIds: [...input.runtimeEvidence.rollbackOperationIds],
-							pendingSummaryIds: [...(input.runtimeEvidence.pendingSummaryIds ?? [])],
-							rawVisibilityMismatchNodeIds: [...(input.runtimeEvidence.rawVisibilityMismatchNodeIds ?? [])],
+							correctionOperationIds: [
+								...input.runtimeEvidence.correctionOperationIds,
+							],
+							rollbackOperationIds: [
+								...input.runtimeEvidence.rollbackOperationIds,
+							],
+							pendingSummaryIds: [
+								...(input.runtimeEvidence.pendingSummaryIds ?? []),
+							],
+							rawVisibilityMismatchNodeIds: [
+								...(input.runtimeEvidence.rawVisibilityMismatchNodeIds ?? []),
+							],
 						},
 					}
 				: {}),
@@ -808,7 +874,9 @@ export function buildMemoryGraphRolloutGovernanceReport(
 export function buildMemoryGovernanceExplanationReport(
 	input: BuildMemoryGovernanceExplanationReportInput,
 ): MemoryGovernanceExplanationReport {
-	const sourceRecordsById = new Map((input.sourceRecords ?? []).map((record) => [record.id, record]));
+	const sourceRecordsById = new Map(
+		(input.sourceRecords ?? []).map((record) => [record.id, record]),
+	);
 	const missingSourceRecordIds = new Set<string>();
 	const memories = input.memories.map((memory) => {
 		const supportingTraces = memory.sourceRecordIds.map((recordId) => {
@@ -819,7 +887,9 @@ export function buildMemoryGovernanceExplanationReport(
 			return trace;
 		});
 		const relations = (input.relations ?? [])
-			.filter((relation) => relationTouchesArtifact(relation, memory.artifactId))
+			.filter((relation) =>
+				relationTouchesArtifact(relation, memory.artifactId),
+			)
 			.map(relationToExplanation);
 		const competitionDiagnostic = input.competitionDiagnostics?.find(
 			(diagnostic) => diagnostic.artifactId === memory.artifactId,
@@ -827,8 +897,12 @@ export function buildMemoryGovernanceExplanationReport(
 		const rollback = copyRollback(memory.rollback);
 		const reasonCodes = uniqueReasonCodes([
 			"memory_explanation",
-			...(supportingTraces.some((trace) => trace.found) ? (["source_trace_found"] as const) : []),
-			...(supportingTraces.some((trace) => !trace.found) ? (["source_trace_missing"] as const) : []),
+			...(supportingTraces.some((trace) => trace.found)
+				? (["source_trace_found"] as const)
+				: []),
+			...(supportingTraces.some((trace) => !trace.found)
+				? (["source_trace_missing"] as const)
+				: []),
 			...(rollback ? (["rollback_available"] as const) : []),
 			...memory.reasonCodes,
 			...relations.flatMap((relation) => relation.reasonCodes),
@@ -857,7 +931,9 @@ export function buildMemoryGovernanceExplanationReport(
 			metadata: copyMetadata(memory.metadata),
 		};
 	});
-	const allReasonCodes = uniqueReasonCodes([...memories.flatMap((memory) => memory.reasonCodes)]);
+	const allReasonCodes = uniqueReasonCodes([
+		...memories.flatMap((memory) => memory.reasonCodes),
+	]);
 
 	return {
 		summary: {
@@ -865,10 +941,18 @@ export function buildMemoryGovernanceExplanationReport(
 			sourceRecordCount: input.sourceRecords?.length ?? 0,
 			missingSourceRecordCount: missingSourceRecordIds.size,
 			relationCount: input.relations?.length ?? 0,
-			activeCount: memories.filter((memory) => memory.revisionStatus === "active").length,
-			deprecatedCount: memories.filter((memory) => memory.revisionStatus === "deprecated").length,
-			conflictedCount: memories.filter((memory) => memory.revisionStatus === "conflicted").length,
-			rollbackAvailableCount: memories.filter((memory) => memory.rollbackAvailable).length,
+			activeCount: memories.filter(
+				(memory) => memory.revisionStatus === "active",
+			).length,
+			deprecatedCount: memories.filter(
+				(memory) => memory.revisionStatus === "deprecated",
+			).length,
+			conflictedCount: memories.filter(
+				(memory) => memory.revisionStatus === "conflicted",
+			).length,
+			rollbackAvailableCount: memories.filter(
+				(memory) => memory.rollbackAvailable,
+			).length,
 		},
 		memories,
 		missingSourceRecordIds: [...missingSourceRecordIds].sort(),
@@ -877,7 +961,9 @@ export function buildMemoryGovernanceExplanationReport(
 	};
 }
 
-function commandTargetStatus(command: MemoryGovernanceCommand): SemanticMemoryRevisionStatus | undefined {
+function commandTargetStatus(
+	command: MemoryGovernanceCommand,
+): SemanticMemoryRevisionStatus | undefined {
 	return command.type === "change-status" ? command.targetStatus : undefined;
 }
 
@@ -902,7 +988,10 @@ function commandValidationReasons(
 		reasonCodes.push("missing_artifact");
 	}
 
-	if (command.type === "correct-content" && command.correctedContent.trim().length === 0) {
+	if (
+		command.type === "correct-content" &&
+		command.correctedContent.trim().length === 0
+	) {
 		reasonCodes.push("missing_corrected_content");
 	}
 
@@ -925,14 +1014,19 @@ export function buildMemoryGovernanceCommandDryRunReport(
 	input: BuildMemoryGovernanceCommandDryRunReportInput,
 ): MemoryGovernanceCommandDryRunReport {
 	const memoriesByArtifactId = new Map(
-		(input.explanationReport?.memories ?? []).map((memory) => [memory.artifactId, memory]),
+		(input.explanationReport?.memories ?? []).map((memory) => [
+			memory.artifactId,
+			memory,
+		]),
 	);
 	const commands = input.commands.map((command) => {
 		const memory = memoriesByArtifactId.get(command.artifactId);
 		const validationReasons = commandValidationReasons(command, memory);
 		const valid =
 			validationReasons.length === 0 ||
-			validationReasons.every((reasonCode) => reasonCode === "rollback_available");
+			validationReasons.every(
+				(reasonCode) => reasonCode === "rollback_available",
+			);
 		const reasonCodes = uniqueReasonCodes([
 			...(valid ? (["command_valid"] as const) : []),
 			"dry_run_only",
@@ -948,9 +1042,14 @@ export function buildMemoryGovernanceCommandDryRunReport(
 			dryRun: true as const,
 			currentRevisionStatus: memory?.revisionStatus,
 			targetRevisionStatus: commandTargetStatus(command),
-			correctedContent: command.type === "correct-content" ? command.correctedContent : undefined,
+			correctedContent:
+				command.type === "correct-content"
+					? command.correctedContent
+					: undefined,
 			sourceRecordIds: memory ? [...memory.sourceRecordIds] : [],
-			rollbackAvailable: Boolean(memory?.rollbackAvailable || commandRollback(command, memory)),
+			rollbackAvailable: Boolean(
+				memory?.rollbackAvailable || commandRollback(command, memory),
+			),
 			rollback: commandRollback(command, memory),
 			reasonCodes,
 			requestedBy: command.requestedBy,
@@ -966,7 +1065,9 @@ export function buildMemoryGovernanceCommandDryRunReport(
 			dryRun: true,
 		},
 		commands,
-		reasonCodes: uniqueReasonCodes(commands.flatMap((command) => command.reasonCodes)),
+		reasonCodes: uniqueReasonCodes(
+			commands.flatMap((command) => command.reasonCodes),
+		),
 		metadata: copyMetadata(input.metadata),
 	};
 }
@@ -975,9 +1076,15 @@ export function buildMemoryGovernanceAuditScenarioReport(
 	input: BuildMemoryGovernanceAuditScenarioReportInput,
 ): MemoryGovernanceAuditScenarioReport {
 	const memoriesByArtifactId = new Map(
-		(input.explanationReport?.memories ?? []).map((memory) => [memory.artifactId, memory]),
+		(input.explanationReport?.memories ?? []).map((memory) => [
+			memory.artifactId,
+			memory,
+		]),
 	);
-	const commandsByArtifactId = new Map<string, MemoryGovernanceCommandDryRunEntry[]>();
+	const commandsByArtifactId = new Map<
+		string,
+		MemoryGovernanceCommandDryRunEntry[]
+	>();
 
 	for (const command of input.commandReport?.commands ?? []) {
 		const existing = commandsByArtifactId.get(command.artifactId) ?? [];
@@ -985,34 +1092,38 @@ export function buildMemoryGovernanceAuditScenarioReport(
 		commandsByArtifactId.set(command.artifactId, existing);
 	}
 
-	const pollutedMemories = [...new Set(input.pollutedArtifactIds)].map((artifactId) => {
-		const memory = memoriesByArtifactId.get(artifactId);
-		const commands = commandsByArtifactId.get(artifactId) ?? [];
-		const validCommands = commands.filter((command) => command.valid);
-		const explained = Boolean(memory);
-		const unresolved = !explained || validCommands.length === 0;
-		const reasonCodes = uniqueReasonCodes([
-			"polluted_memory_observed",
-			...(explained ? (["polluted_memory_explained"] as const) : []),
-			...(validCommands.length > 0 ? (["dry_run_command_available"] as const) : []),
-			...(unresolved ? (["polluted_memory_unresolved"] as const) : []),
-			...(memory?.reasonCodes ?? []),
-			...commands.flatMap((command) => command.reasonCodes),
-		]);
+	const pollutedMemories = [...new Set(input.pollutedArtifactIds)].map(
+		(artifactId) => {
+			const memory = memoriesByArtifactId.get(artifactId);
+			const commands = commandsByArtifactId.get(artifactId) ?? [];
+			const validCommands = commands.filter((command) => command.valid);
+			const explained = Boolean(memory);
+			const unresolved = !explained || validCommands.length === 0;
+			const reasonCodes = uniqueReasonCodes([
+				"polluted_memory_observed",
+				...(explained ? (["polluted_memory_explained"] as const) : []),
+				...(validCommands.length > 0
+					? (["dry_run_command_available"] as const)
+					: []),
+				...(unresolved ? (["polluted_memory_unresolved"] as const) : []),
+				...(memory?.reasonCodes ?? []),
+				...commands.flatMap((command) => command.reasonCodes),
+			]);
 
-		return {
-			artifactId,
-			explained,
-			unresolved,
-			revisionStatus: memory?.revisionStatus,
-			sourceRecordIds: memory ? [...memory.sourceRecordIds] : [],
-			rollbackAvailable: Boolean(memory?.rollbackAvailable),
-			commandIds: commands.map((command) => command.commandId),
-			validCommandIds: validCommands.map((command) => command.commandId),
-			reasonCodes,
-			metadata: copyMetadata(memory?.metadata),
-		};
-	});
+			return {
+				artifactId,
+				explained,
+				unresolved,
+				revisionStatus: memory?.revisionStatus,
+				sourceRecordIds: memory ? [...memory.sourceRecordIds] : [],
+				rollbackAvailable: Boolean(memory?.rollbackAvailable),
+				commandIds: commands.map((command) => command.commandId),
+				validCommandIds: validCommands.map((command) => command.commandId),
+				reasonCodes,
+				metadata: copyMetadata(memory?.metadata),
+			};
+		},
+	);
 	const unresolvedArtifactIds = pollutedMemories
 		.filter((memory) => memory.unresolved)
 		.map((memory) => memory.artifactId)
@@ -1022,14 +1133,21 @@ export function buildMemoryGovernanceAuditScenarioReport(
 		summary: {
 			scenarioId: input.scenarioId,
 			pollutedArtifactCount: pollutedMemories.length,
-			explainedPollutedArtifactCount: pollutedMemories.filter((memory) => memory.explained).length,
-			validCommandCount: pollutedMemories.reduce((sum, memory) => sum + memory.validCommandIds.length, 0),
+			explainedPollutedArtifactCount: pollutedMemories.filter(
+				(memory) => memory.explained,
+			).length,
+			validCommandCount: pollutedMemories.reduce(
+				(sum, memory) => sum + memory.validCommandIds.length,
+				0,
+			),
 			unresolvedPollutedArtifactCount: unresolvedArtifactIds.length,
 			dryRun: true,
 		},
 		pollutedMemories,
 		unresolvedArtifactIds,
-		reasonCodes: uniqueReasonCodes(pollutedMemories.flatMap((memory) => memory.reasonCodes)),
+		reasonCodes: uniqueReasonCodes(
+			pollutedMemories.flatMap((memory) => memory.reasonCodes),
+		),
 		metadata: copyMetadata(input.metadata),
 	};
 }

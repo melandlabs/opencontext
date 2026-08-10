@@ -8,7 +8,12 @@ export const RAW_MESSAGES_SCHEMA_VERSION = 2;
  * `ALTER TABLE` only when needed. This keeps `initializeRawMessageSchema`
  * safe to call on databases created by older versions of the schema.
  */
-function addColumnIfMissing(db: Database.Database, table: string, column: string, definition: string): void {
+function addColumnIfMissing(
+	db: Database.Database,
+	table: string,
+	column: string,
+	definition: string,
+): void {
 	const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
 		name: string;
 	}>;

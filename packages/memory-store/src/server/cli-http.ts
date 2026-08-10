@@ -32,7 +32,9 @@ function parseArgs(argv: string[]): CliArgs {
 			args.host = next;
 			i += 1;
 		} else if (arg === "--help" || arg === "-h") {
-			console.log("Usage: opencontext-memory-http [--port <port>] [--host <host>]");
+			console.log(
+				"Usage: opencontext-memory-http [--port <port>] [--host <host>]",
+			);
 			process.exit(0);
 		}
 	}

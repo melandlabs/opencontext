@@ -1,8 +1,8 @@
 import * as crypto from "node:crypto";
 import * as FernetImport from "fernet";
 
-const Fernet = ((FernetImport as unknown as { default?: typeof FernetImport }).default ??
-	FernetImport) as typeof FernetImport;
+const Fernet = ((FernetImport as unknown as { default?: typeof FernetImport })
+	.default ?? FernetImport) as typeof FernetImport;
 
 export class TokenEncryption {
 	private fernetSecret?: FernetImport.Secret;
@@ -25,7 +25,9 @@ export class TokenEncryption {
 
 		const envKey = process.env.ENCRYPTION_KEY;
 		if (!envKey) {
-			throw new Error("No encryption key available. Set ENCRYPTION_KEY environment variable.");
+			throw new Error(
+				"No encryption key available. Set ENCRYPTION_KEY environment variable.",
+			);
 		}
 
 		try {
@@ -116,9 +118,14 @@ export class TokenEncryption {
 	 * @param refreshToken Optional refresh token to encrypt
 	 * @returns Encrypted token pair
 	 */
-	encryptTokenPair(accessToken: string, refreshToken?: string): [string, string | null] {
+	encryptTokenPair(
+		accessToken: string,
+		refreshToken?: string,
+	): [string, string | null] {
 		const encryptedAccess = this.encryptToken(accessToken);
-		const encryptedRefresh = refreshToken ? this.encryptToken(refreshToken) : null;
+		const encryptedRefresh = refreshToken
+			? this.encryptToken(refreshToken)
+			: null;
 
 		return [encryptedAccess, encryptedRefresh];
 	}
@@ -129,9 +136,14 @@ export class TokenEncryption {
 	 * @param encryptedRefreshToken Optional encrypted refresh token
 	 * @returns Decrypted token pair
 	 */
-	decryptTokenPair(encryptedAccessToken: string, encryptedRefreshToken?: string): [string, string | null] {
+	decryptTokenPair(
+		encryptedAccessToken: string,
+		encryptedRefreshToken?: string,
+	): [string, string | null] {
 		const accessToken = this.decryptToken(encryptedAccessToken);
-		const refreshToken = encryptedRefreshToken ? this.decryptToken(encryptedRefreshToken) : null;
+		const refreshToken = encryptedRefreshToken
+			? this.decryptToken(encryptedRefreshToken)
+			: null;
 		return [accessToken, refreshToken];
 	}
 }
@@ -148,7 +160,10 @@ export function decryptToken(encryptedToken: string): string {
 	return tokenEncryption.decryptToken(encryptedToken);
 }
 
-export function encryptTokenPair(accessToken: string, refreshToken?: string): [string, string | null] {
+export function encryptTokenPair(
+	accessToken: string,
+	refreshToken?: string,
+): [string, string | null] {
 	return tokenEncryption.encryptTokenPair(accessToken, refreshToken);
 }
 
@@ -156,5 +171,8 @@ export function decryptTokenPair(
 	encryptedAccessToken: string,
 	encryptedRefreshToken?: string,
 ): [string, string | null] {
-	return tokenEncryption.decryptTokenPair(encryptedAccessToken, encryptedRefreshToken);
+	return tokenEncryption.decryptTokenPair(
+		encryptedAccessToken,
+		encryptedRefreshToken,
+	);
 }

@@ -41,5 +41,8 @@ export const INTEGRATION_IDS = [
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
 export function isIntegrationId(value: unknown): value is IntegrationId {
-	return typeof value === "string" && (INTEGRATION_IDS as readonly string[]).includes(value);
+	return (
+		typeof value === "string" &&
+		(INTEGRATION_IDS as readonly string[]).includes(value)
+	);
 }

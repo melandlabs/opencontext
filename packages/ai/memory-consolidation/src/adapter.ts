@@ -1,10 +1,16 @@
-import type { MemoryEvidenceRecord, MemoryEvidenceTier } from "./evidence-cluster";
+import type {
+	MemoryEvidenceRecord,
+	MemoryEvidenceTier,
+} from "./evidence-cluster";
 import {
 	type BuildMemoryRelationPipelineInput,
 	type MemoryRelationPipeline,
 	buildMemoryRelationPipeline,
 } from "./pipeline";
-import type { MemoryConsolidationAction, MemoryConsolidationReasonCode } from "./plan";
+import type {
+	MemoryConsolidationAction,
+	MemoryConsolidationReasonCode,
+} from "./plan";
 import type { MemoryGraphClusterStatus } from "./relation-graph";
 
 type PrimitiveValue = string | number | boolean;
@@ -25,7 +31,9 @@ export interface MemoryConsolidationSourceRecord {
 	metadata?: Record<string, unknown>;
 }
 
-export interface MemoryConsolidationRecordSelectors<TRecord = MemoryConsolidationSourceRecord> {
+export interface MemoryConsolidationRecordSelectors<
+	TRecord = MemoryConsolidationSourceRecord,
+> {
 	getId?(record: TRecord): string | undefined;
 	getUserId?(record: TRecord): string | undefined;
 	getTimestamp?(record: TRecord): number | undefined;
@@ -37,21 +45,26 @@ export interface MemoryConsolidationRecordSelectors<TRecord = MemoryConsolidatio
 	getImportanceScore?(record: TRecord): number | undefined;
 	getIsPinned?(record: TRecord): boolean | undefined;
 	getArchivedAt?(record: TRecord): number | undefined;
-	getDimensions?(record: TRecord): Record<string, PrimitiveValue | undefined> | undefined;
+	getDimensions?(
+		record: TRecord,
+	): Record<string, PrimitiveValue | undefined> | undefined;
 	getMetadata?(record: TRecord): Record<string, unknown> | undefined;
 	getRelationGroup?(record: TRecord): string | undefined;
 	getRelationValue?(record: TRecord): string | undefined;
 	getRelationScope?(record: TRecord): string | undefined;
 }
 
-export type MemoryConsolidationAdapterSkipReason = "missing_id" | "missing_timestamp";
+export type MemoryConsolidationAdapterSkipReason =
+	"missing_id" | "missing_timestamp";
 
 export interface MemoryConsolidationSkippedRecord {
 	sourceIndex: number;
 	reasonCodes: MemoryConsolidationAdapterSkipReason[];
 }
 
-export interface AdaptMemoryRecordsForConsolidationInput<TRecord = MemoryConsolidationSourceRecord> {
+export interface AdaptMemoryRecordsForConsolidationInput<
+	TRecord = MemoryConsolidationSourceRecord,
+> {
 	records: TRecord[];
 	defaultUserId?: string;
 	defaultTier?: MemoryEvidenceTier;
@@ -64,10 +77,15 @@ export interface AdaptMemoryRecordsForConsolidationResult {
 	sourceIndexesByRecordId: Record<string, number>;
 }
 
-export type MemoryRelationPipelineTemporaryScopeBehavior = "related" | "default";
+export type MemoryRelationPipelineTemporaryScopeBehavior =
+	"related" | "default";
 
-export interface BuildMemoryRelationPipelineDiagnosticsInput<TRecord = MemoryConsolidationSourceRecord>
-	extends Omit<BuildMemoryRelationPipelineInput, "records" | "getCandidateKeys"> {
+export interface BuildMemoryRelationPipelineDiagnosticsInput<
+	TRecord = MemoryConsolidationSourceRecord,
+> extends Omit<
+	BuildMemoryRelationPipelineInput,
+	"records" | "getCandidateKeys"
+> {
 	records: TRecord[];
 	defaultUserId?: string;
 	defaultTier?: MemoryEvidenceTier;
@@ -191,16 +209,23 @@ export interface MemoryConsolidationDiagnosticsReport {
 }
 
 const DEFAULT_TIER: MemoryEvidenceTier = "short";
-const DEFAULT_TEMPORARY_SCOPE_BEHAVIOR: MemoryRelationPipelineTemporaryScopeBehavior = "related";
+const DEFAULT_TEMPORARY_SCOPE_BEHAVIOR: MemoryRelationPipelineTemporaryScopeBehavior =
+	"related";
 
-function fallbackRecord(record: unknown): Partial<MemoryConsolidationSourceRecord> {
+function fallbackRecord(
+	record: unknown,
+): Partial<MemoryConsolidationSourceRecord> {
 	return typeof record === "object" && record !== null
 		? (record as Partial<MemoryConsolidationSourceRecord>)
 		: {};
 }
 
 function isPrimitive(value: unknown): value is PrimitiveValue {
-	return typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+	return (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
+	);
 }
 
 function stringOrUndefined(value: unknown): string | undefined {
@@ -208,7 +233,9 @@ function stringOrUndefined(value: unknown): string | undefined {
 }
 
 function numberOrUndefined(value: unknown): number | undefined {
-	return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+	return typeof value === "number" && Number.isFinite(value)
+		? value
+		: undefined;
 }
 
 function booleanOrUndefined(value: unknown): boolean | undefined {
@@ -224,10 +251,14 @@ function stringArrayOrUndefined(value: unknown): string[] | undefined {
 }
 
 function tierOrUndefined(value: unknown): MemoryEvidenceTier | undefined {
-	return value === "short" || value === "mid" || value === "long" ? value : undefined;
+	return value === "short" || value === "mid" || value === "long"
+		? value
+		: undefined;
 }
 
-function dimensionsOrUndefined(value: unknown): Record<string, PrimitiveValue | undefined> | undefined {
+function dimensionsOrUndefined(
+	value: unknown,
+): Record<string, PrimitiveValue | undefined> | undefined {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		return undefined;
 	}
@@ -243,7 +274,9 @@ function dimensionsOrUndefined(value: unknown): Record<string, PrimitiveValue | 
 	return dimensions;
 }
 
-function metadataOrUndefined(value: unknown): Record<string, unknown> | undefined {
+function metadataOrUndefined(
+	value: unknown,
+): Record<string, unknown> | undefined {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
 		return undefined;
 	}
@@ -299,11 +332,20 @@ function isTemporaryScope(scope: string | undefined): boolean {
 	return scope === "temporary" || scope === "ephemeral";
 }
 
-function addCount(countsByRecordId: Map<string, number>, recordId: string, increment = 1): void {
-	countsByRecordId.set(recordId, (countsByRecordId.get(recordId) ?? 0) + increment);
+function addCount(
+	countsByRecordId: Map<string, number>,
+	recordId: string,
+	increment = 1,
+): void {
+	countsByRecordId.set(
+		recordId,
+		(countsByRecordId.get(recordId) ?? 0) + increment,
+	);
 }
 
-function countCandidateLinks(pipeline: MemoryRelationPipeline): Map<string, number> {
+function countCandidateLinks(
+	pipeline: MemoryRelationPipeline,
+): Map<string, number> {
 	const counts = new Map<string, number>();
 
 	for (const candidate of pipeline.candidates) {
@@ -341,7 +383,11 @@ export function adaptMemoryRecordsForConsolidation<TRecord>(
 
 	input.records.forEach((sourceRecord, sourceIndex) => {
 		const fallback = fallbackRecord(sourceRecord);
-		const id = pickWithFallback(sourceRecord, input.selectors?.getId, stringOrUndefined(fallback.id));
+		const id = pickWithFallback(
+			sourceRecord,
+			input.selectors?.getId,
+			stringOrUndefined(fallback.id),
+		);
 		const timestamp = pickWithFallback(
 			sourceRecord,
 			input.selectors?.getTimestamp,
@@ -362,11 +408,27 @@ export function adaptMemoryRecordsForConsolidation<TRecord>(
 
 		const recordId: string = id;
 		const recordTimestamp: number = timestamp;
-		const relationGroup = pickWithFallback(sourceRecord, input.selectors?.getRelationGroup, undefined);
-		const relationValue = pickWithFallback(sourceRecord, input.selectors?.getRelationValue, undefined);
-		const relationScope = pickWithFallback(sourceRecord, input.selectors?.getRelationScope, undefined);
+		const relationGroup = pickWithFallback(
+			sourceRecord,
+			input.selectors?.getRelationGroup,
+			undefined,
+		);
+		const relationValue = pickWithFallback(
+			sourceRecord,
+			input.selectors?.getRelationValue,
+			undefined,
+		);
+		const relationScope = pickWithFallback(
+			sourceRecord,
+			input.selectors?.getRelationScope,
+			undefined,
+		);
 		const metadata = relationMetadata(
-			pickWithFallback(sourceRecord, input.selectors?.getMetadata, metadataOrUndefined(fallback.metadata)),
+			pickWithFallback(
+				sourceRecord,
+				input.selectors?.getMetadata,
+				metadataOrUndefined(fallback.metadata),
+			),
 			relationGroup,
 			relationValue,
 			relationScope,
@@ -375,18 +437,30 @@ export function adaptMemoryRecordsForConsolidation<TRecord>(
 		records.push({
 			id: recordId,
 			userId:
-				pickWithFallback(sourceRecord, input.selectors?.getUserId, stringOrUndefined(fallback.userId)) ??
+				pickWithFallback(
+					sourceRecord,
+					input.selectors?.getUserId,
+					stringOrUndefined(fallback.userId),
+				) ??
 				input.defaultUserId ??
 				"unknown",
 			timestamp: recordTimestamp,
-			text: pickWithFallback(sourceRecord, input.selectors?.getText, stringOrUndefined(fallback.text)),
+			text: pickWithFallback(
+				sourceRecord,
+				input.selectors?.getText,
+				stringOrUndefined(fallback.text),
+			),
 			mediaRefs: pickWithFallback(
 				sourceRecord,
 				input.selectors?.getMediaRefs,
 				stringArrayOrUndefined(fallback.mediaRefs),
 			),
 			tier:
-				pickWithFallback(sourceRecord, input.selectors?.getTier, tierOrUndefined(fallback.tier)) ??
+				pickWithFallback(
+					sourceRecord,
+					input.selectors?.getTier,
+					tierOrUndefined(fallback.tier),
+				) ??
 				input.defaultTier ??
 				DEFAULT_TIER,
 			accessCount: pickWithFallback(
@@ -453,16 +527,18 @@ export function buildMemoryRelationPipelineDiagnostics<TRecord>(
 		}),
 	);
 	const candidateKeysByRecordId = new Map<string, string[]>();
-	const temporaryScopeBehavior = input.temporaryScopeBehavior ?? DEFAULT_TEMPORARY_SCOPE_BEHAVIOR;
+	const temporaryScopeBehavior =
+		input.temporaryScopeBehavior ?? DEFAULT_TEMPORARY_SCOPE_BEHAVIOR;
 	const pipeline = buildMemoryRelationPipeline({
 		...input,
 		records: adapted.records,
 		getCandidateKeys(record) {
 			const source = sourceRecordById.get(record.id);
 			const keys = source
-				? [...(input.getCandidateKeys?.(record, source) ?? defaultAdapterCandidateKeys(record))].filter(
-						(key): key is string => Boolean(key),
-					)
+				? [
+						...(input.getCandidateKeys?.(record, source) ??
+							defaultAdapterCandidateKeys(record)),
+					].filter((key): key is string => Boolean(key))
 				: defaultAdapterCandidateKeys(record);
 
 			candidateKeysByRecordId.set(record.id, [...new Set(keys)].sort());
@@ -471,15 +547,24 @@ export function buildMemoryRelationPipelineDiagnostics<TRecord>(
 		judgment: {
 			...input.judgment,
 			judgeCandidate(candidate, context) {
-				const callerDecision = input.judgment?.judgeCandidate?.(candidate, context);
+				const callerDecision = input.judgment?.judgeCandidate?.(
+					candidate,
+					context,
+				);
 
 				if (callerDecision) {
 					return callerDecision;
 				}
 
 				if (temporaryScopeBehavior === "related") {
-					const fromScope = relationStringFromRecord(context.fromRecord, "relationScope");
-					const toScope = relationStringFromRecord(context.toRecord, "relationScope");
+					const fromScope = relationStringFromRecord(
+						context.fromRecord,
+						"relationScope",
+					);
+					const toScope = relationStringFromRecord(
+						context.toRecord,
+						"relationScope",
+					);
 
 					if (isTemporaryScope(fromScope) || isTemporaryScope(toScope)) {
 						return {
@@ -498,23 +583,36 @@ export function buildMemoryRelationPipelineDiagnostics<TRecord>(
 	const supportCounts = countRelationsByKind(pipeline, "support");
 	const competeCounts = countRelationsByKind(pipeline, "compete");
 	const relatedCounts = countRelationsByKind(pipeline, "related");
-	const clusterByKey = new Map(pipeline.assignment.clusters.map((cluster) => [cluster.clusterId, cluster]));
-	const planEntryByClusterKey = new Map(pipeline.plan.entries.map((entry) => [entry.clusterKey, entry]));
+	const clusterByKey = new Map(
+		pipeline.assignment.clusters.map((cluster) => [cluster.clusterId, cluster]),
+	);
+	const planEntryByClusterKey = new Map(
+		pipeline.plan.entries.map((entry) => [entry.clusterKey, entry]),
+	);
 	const summaryCandidateByClusterKey = new Map(
-		pipeline.summaryCandidates.map((candidate) => [candidate.clusterKey, candidate]),
+		pipeline.summaryCandidates.map((candidate) => [
+			candidate.clusterKey,
+			candidate,
+		]),
 	);
 
 	const recordDiagnostics = adapted.records.map((record) => {
 		const clusterKey = pipeline.assignment.recordClusterKeys[record.id];
 		const cluster = clusterKey ? clusterByKey.get(clusterKey) : undefined;
-		const planEntry = clusterKey ? planEntryByClusterKey.get(clusterKey) : undefined;
-		const summaryCandidate = clusterKey ? summaryCandidateByClusterKey.get(clusterKey) : undefined;
+		const planEntry = clusterKey
+			? planEntryByClusterKey.get(clusterKey)
+			: undefined;
+		const summaryCandidate = clusterKey
+			? summaryCandidateByClusterKey.get(clusterKey)
+			: undefined;
 
 		return {
 			recordId: record.id,
 			sourceIndex: adapted.sourceIndexesByRecordId[record.id] ?? -1,
 			clusterKey,
-			competitionKey: clusterKey ? pipeline.assignment.clusterCompetitionKeys[clusterKey] : undefined,
+			competitionKey: clusterKey
+				? pipeline.assignment.clusterCompetitionKeys[clusterKey]
+				: undefined,
 			graphStatus: cluster?.status,
 			planAction: planEntry?.action,
 			planReasonCodes: planEntry?.reasonCodes ?? [],
@@ -547,9 +645,15 @@ export function buildMemoryRelationPipelineDiagnostics<TRecord>(
 			).length,
 			candidateCount: pipeline.candidates.length,
 			relationCount: pipeline.relations.length,
-			supportRelationCount: pipeline.relations.filter((edge) => edge.relation === "support").length,
-			competeRelationCount: pipeline.relations.filter((edge) => edge.relation === "compete").length,
-			relatedRelationCount: pipeline.relations.filter((edge) => edge.relation === "related").length,
+			supportRelationCount: pipeline.relations.filter(
+				(edge) => edge.relation === "support",
+			).length,
+			competeRelationCount: pipeline.relations.filter(
+				(edge) => edge.relation === "compete",
+			).length,
+			relatedRelationCount: pipeline.relations.filter(
+				(edge) => edge.relation === "related",
+			).length,
 			clusterCount: pipeline.assignment.clusters.length,
 			competitionGroupCount: pipeline.assignment.competitionGroups.length,
 			preserveCount: pipeline.plan.actions.preserve.length,
@@ -564,10 +668,16 @@ export function buildMemoryConsolidationDiagnosticsReport(
 	diagnostics: MemoryRelationPipelineDiagnostics,
 ): MemoryConsolidationDiagnosticsReport {
 	const summaryCandidateByClusterKey = new Map(
-		diagnostics.pipeline.summaryCandidates.map((candidate) => [candidate.clusterKey, candidate]),
+		diagnostics.pipeline.summaryCandidates.map((candidate) => [
+			candidate.clusterKey,
+			candidate,
+		]),
 	);
 	const graphStatusByClusterKey = new Map(
-		diagnostics.pipeline.assignment.clusters.map((cluster) => [cluster.clusterId, cluster.status]),
+		diagnostics.pipeline.assignment.clusters.map((cluster) => [
+			cluster.clusterId,
+			cluster.status,
+		]),
 	);
 
 	const preservedClusters = diagnostics.pipeline.plan.actions.preserve
@@ -578,7 +688,8 @@ export function buildMemoryConsolidationDiagnosticsReport(
 			evidenceCount: entry.evidenceCount,
 			score: entry.score,
 			reasonCodes: [...entry.reasonCodes],
-			summaryPriority: summaryCandidateByClusterKey.get(entry.clusterKey)?.priority,
+			summaryPriority: summaryCandidateByClusterKey.get(entry.clusterKey)
+				?.priority,
 		}))
 		.sort((a, b) => {
 			const priorityDelta = (b.summaryPriority ?? 0) - (a.summaryPriority ?? 0);

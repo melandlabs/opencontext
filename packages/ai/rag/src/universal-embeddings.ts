@@ -18,7 +18,8 @@ export class UniversalEmbeddings implements EmbeddingProvider {
 		provider?: EmbeddingProvider,
 		options: Omit<EmbeddingProviderFactoryOptions, "userAuthToken"> = {},
 	) {
-		this.provider = provider ?? getConfiguredEmbeddingProvider({ ...options, userAuthToken });
+		this.provider =
+			provider ?? getConfiguredEmbeddingProvider({ ...options, userAuthToken });
 	}
 
 	async embedDocuments(texts: string[]): Promise<number[][]> {

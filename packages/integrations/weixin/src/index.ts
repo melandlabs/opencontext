@@ -11,8 +11,16 @@
  */
 
 import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
-import type { File as FileMsg, Image, Message, Messages } from "@melandlabs/integrations-channels";
-import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
+import type {
+	File as FileMsg,
+	Image,
+	Message,
+	Messages,
+} from "@melandlabs/integrations-channels";
+import type {
+	MessageEvent,
+	MessageTarget,
+} from "@melandlabs/integrations-channels";
 import {
 	CDN_BASE_URL,
 	weixinSendFileMessage,
@@ -88,21 +96,27 @@ function describeUnsupportedMessage(message: Message): string {
 async function imageToBuffer(img: Image): Promise<Buffer> {
 	// base64 data (may include data URI prefix)
 	if (img.base64) {
-		const b64 = img.base64.includes(",") ? img.base64.split(",")[1] : img.base64;
+		const b64 = img.base64.includes(",")
+			? img.base64.split(",")[1]
+			: img.base64;
 		return Buffer.from(b64, "base64");
 	}
 
 	// Local file path (file:// or absolute path)
 	if (img.url.startsWith("file://") || img.url.startsWith("/")) {
 		const { readFile } = await import("node:fs/promises");
-		const filePath = img.url.startsWith("file://") ? new URL(img.url).pathname : img.url;
+		const filePath = img.url.startsWith("file://")
+			? new URL(img.url).pathname
+			: img.url;
 		return readFile(filePath);
 	}
 
 	// Remote HTTP(S) URL
 	const res = await fetch(img.url, { signal: AbortSignal.timeout(30_000) });
 	if (!res.ok) {
-		throw new Error(`[WeixinAdapter] Image download failed HTTP ${res.status}: ${img.url.slice(0, 100)}`);
+		throw new Error(
+			`[WeixinAdapter] Image download failed HTTP ${res.status}: ${img.url.slice(0, 100)}`,
+		);
 	}
 	return Buffer.from(await res.arrayBuffer());
 }
@@ -113,13 +127,17 @@ async function imageToBuffer(img: Image): Promise<Buffer> {
 async function fileToBuffer(file: FileMsg): Promise<Buffer> {
 	if (file.url.startsWith("file://") || file.url.startsWith("/")) {
 		const { readFile } = await import("node:fs/promises");
-		const filePath = file.url.startsWith("file://") ? new URL(file.url).pathname : file.url;
+		const filePath = file.url.startsWith("file://")
+			? new URL(file.url).pathname
+			: file.url;
 		return readFile(filePath);
 	}
 
 	const res = await fetch(file.url, { signal: AbortSignal.timeout(60_000) });
 	if (!res.ok) {
-		throw new Error(`[WeixinAdapter] File download failed HTTP ${res.status}: ${file.url.slice(0, 100)}`);
+		throw new Error(
+			`[WeixinAdapter] File download failed HTTP ${res.status}: ${file.url.slice(0, 100)}`,
+		);
 	}
 	return Buffer.from(await res.arrayBuffer());
 }
@@ -139,7 +157,11 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 	 * WeChat reply must include context_token (from the other party's previous message)
 	 * Text and image messages are sent separately: text first, then images one by one
 	 */
-	async sendMessagesWithContext(peerUserId: string, messages: Messages, contextToken: string): Promise<void> {
+	async sendMessagesWithContext(
+		peerUserId: string,
+		messages: Messages,
+		contextToken: string,
+	): Promise<void> {
 		await this.runWithAdapterError("sendMessagesWithContext", async () => {
 			if (!contextToken?.trim()) {
 				throw this.createAdapterError(
@@ -177,7 +199,11 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 
 			const combinedText = textParts.join("\n").trim();
 
-			if (combinedText && imageMessages.length === 0 && fileMessages.length === 0) {
+			if (
+				combinedText &&
+				imageMessages.length === 0 &&
+				fileMessages.length === 0
+			) {
 				await weixinSendTextMessage({
 					credentials: this.credentials,
 					toUserId: peerUserId,
@@ -244,7 +270,11 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 				}
 			}
 
-			if (imageMessages.length === 0 && fileMessages.length === 0 && !combinedText) {
+			if (
+				imageMessages.length === 0 &&
+				fileMessages.length === 0 &&
+				!combinedText
+			) {
 				throw this.createAdapterError(
 					"sendMessagesWithContext",
 					"invalid_request_error",
@@ -258,7 +288,11 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 		});
 	}
 
-	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
+	async sendMessages(
+		target: MessageTarget,
+		id: string,
+		messages: Messages,
+	): Promise<void> {
 		throw this.createAdapterError(
 			"sendMessages",
 			"invalid_request_error",
@@ -266,7 +300,11 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 		);
 	}
 
-	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
+	async replyMessages(
+		event: MessageEvent,
+		messages: Messages,
+		_quoteOrigin = false,
+	): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			const raw = event.sourcePlatformObject as
 				| {

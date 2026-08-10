@@ -60,9 +60,13 @@ class TelegramConversationStore {
 		const today = new Date().toISOString().slice(0, 10);
 
 		// loadDay returns all messages for the full key + accountId pair
-		const rawMsgs = loadChannelDay(this.memoryDir, this.PREFIX, today, key, "") as Array<
-			ConversationMessage & { timestamp?: number }
-		>;
+		const rawMsgs = loadChannelDay(
+			this.memoryDir,
+			this.PREFIX,
+			today,
+			key,
+			"",
+		) as Array<ConversationMessage & { timestamp?: number }>;
 
 		this.cache.set(key, {
 			userId,
@@ -85,7 +89,9 @@ class TelegramConversationStore {
 				maxMessages: this.DEFAULT_MAX_MESSAGES,
 				lastUpdated: new Date(),
 			});
-			console.log(`[TelegramConversationStore] Created new conversation for ${key}`);
+			console.log(
+				`[TelegramConversationStore] Created new conversation for ${key}`,
+			);
 		}
 
 		this.ensureLoaded(userId, accountId);
@@ -93,7 +99,12 @@ class TelegramConversationStore {
 		return this.cache.get(key)!;
 	}
 
-	addMessage(userId: string, accountId: string, role: "user" | "assistant", content: string): void {
+	addMessage(
+		userId: string,
+		accountId: string,
+		role: "user" | "assistant",
+		content: string,
+	): void {
 		const key = this.buildKey(userId, accountId);
 		const conversation = this.getConversation(userId, accountId);
 
@@ -109,7 +120,10 @@ class TelegramConversationStore {
 		console.log(`[TelegramConversationStore] Added ${role} message for ${key}`);
 	}
 
-	getConversationHistory(userId: string, accountId: string): ConversationMessage[] {
+	getConversationHistory(
+		userId: string,
+		accountId: string,
+	): ConversationMessage[] {
 		const conversation = this.getConversation(userId, accountId);
 		return [...conversation.messages];
 	}
@@ -143,7 +157,9 @@ class TelegramConversationStore {
 
 		clearChannelForUserPrefix(this.memoryDir, this.PREFIX, prefix);
 
-		console.log(`[TelegramConversationStore] Cleared ${clearedCount} conversation(s) for user ${userId}`);
+		console.log(
+			`[TelegramConversationStore] Cleared ${clearedCount} conversation(s) for user ${userId}`,
+		);
 	}
 
 	private clearExpiredConversations(): void {
@@ -151,12 +167,18 @@ class TelegramConversationStore {
 		let clearedCount = 0;
 
 		for (const [key, conversation] of this.cache.entries()) {
-			const hoursSinceLastUpdate = (now.getTime() - conversation.lastUpdated.getTime()) / (1000 * 60 * 60);
+			const hoursSinceLastUpdate =
+				(now.getTime() - conversation.lastUpdated.getTime()) / (1000 * 60 * 60);
 
 			if (hoursSinceLastUpdate > this.EXPIRY_HOURS) {
 				this.cache.delete(key);
 				clearedCount++;
-				clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, key, "");
+				clearChannelConversationFromAllDays(
+					this.memoryDir,
+					this.PREFIX,
+					key,
+					"",
+				);
 				console.log(
 					`[TelegramConversationStore] Cleared expired conversation: ${key} (${hoursSinceLastUpdate.toFixed(1)}h old)`,
 				);
@@ -164,7 +186,9 @@ class TelegramConversationStore {
 		}
 
 		if (clearedCount > 0) {
-			console.log(`[TelegramConversationStore] Cleanup: ${clearedCount} expired conversation(s) cleared`);
+			console.log(
+				`[TelegramConversationStore] Cleanup: ${clearedCount} expired conversation(s) cleared`,
+			);
 		}
 	}
 
@@ -181,8 +205,10 @@ class TelegramConversationStore {
 
 		for (const conversation of this.cache.values()) {
 			totalMessages += conversation.messages.length;
-			if (!oldest || conversation.lastUpdated < oldest) oldest = conversation.lastUpdated;
-			if (!newest || conversation.lastUpdated > newest) newest = conversation.lastUpdated;
+			if (!oldest || conversation.lastUpdated < oldest)
+				oldest = conversation.lastUpdated;
+			if (!newest || conversation.lastUpdated > newest)
+				newest = conversation.lastUpdated;
 		}
 
 		return {
@@ -195,7 +221,10 @@ class TelegramConversationStore {
 
 	private startCleanupInterval(): void {
 		if (this.cleanupInterval) return;
-		this.cleanupInterval = setInterval(() => this.clearExpiredConversations(), 60 * 60 * 1000);
+		this.cleanupInterval = setInterval(
+			() => this.clearExpiredConversations(),
+			60 * 60 * 1000,
+		);
 	}
 
 	stopCleanupInterval(): void {

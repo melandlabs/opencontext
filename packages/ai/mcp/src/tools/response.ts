@@ -1,7 +1,10 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
 import { OpenContextApiError, OpenContextClient } from "../opencontext/client";
-import { checkOpenContextReadiness, formatOpenContextReadiness } from "../opencontext/readiness";
+import {
+	checkOpenContextReadiness,
+	formatOpenContextReadiness,
+} from "../opencontext/readiness";
 import type { OpenContextToolContext } from "./index";
 
 const MAX_TEXT_RESULT_LENGTH = 12000;
@@ -40,8 +43,14 @@ export function jsonToolResult(
 	};
 }
 
-export function apiErrorToolResult(title: string, error: unknown): OpenContextToolResult {
-	if (error instanceof Error && (error.name === "AbortError" || /aborted/i.test(error.message))) {
+export function apiErrorToolResult(
+	title: string,
+	error: unknown,
+): OpenContextToolResult {
+	if (
+		error instanceof Error &&
+		(error.name === "AbortError" || /aborted/i.test(error.message))
+	) {
 		const message = "Request timed out before OpenContext responded.";
 		return {
 			content: [{ type: "text", text: `${title}: ${message}` }],
@@ -88,7 +97,10 @@ export function apiErrorToolResult(title: string, error: unknown): OpenContextTo
 
 export async function requireReadyOpenContextClient(
 	context: OpenContextToolContext,
-): Promise<{ ready: true; client: OpenContextClient } | { ready: false; result: OpenContextToolResult }> {
+): Promise<
+	| { ready: true; client: OpenContextClient }
+	| { ready: false; result: OpenContextToolResult }
+> {
 	const readiness = await checkOpenContextReadiness({
 		authToken: context.authToken,
 		preferredBaseUrl: context.client.baseUrl,

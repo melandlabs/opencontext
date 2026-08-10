@@ -31,7 +31,9 @@ export function configureParsers(config: ParsersConfig): void {
 
 function getConfig(): ParsersConfig {
 	if (!_config) {
-		throw new Error("RAG parsers not configured. Call configureParsers() with { estimateTokens } first.");
+		throw new Error(
+			"RAG parsers not configured. Call configureParsers() with { estimateTokens } first.",
+		);
 	}
 	return _config;
 }
@@ -78,7 +80,8 @@ export class AppleDocumentLoader {
 			try {
 				const pdfData = await previewFile.async("uint8array");
 				await writeFile(tempPdfPath, Buffer.from(pdfData));
-				const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
+				const { PDFLoader } =
+					await import("@langchain/community/document_loaders/fs/pdf");
 				const loader = new PDFLoader(tempPdfPath, { splitPages: false });
 				return await loader.load();
 			} finally {
@@ -146,9 +149,12 @@ export interface FileContent {
 function getExtension(contentType: string): string {
 	const typeMap: Record<string, string> = {
 		"application/pdf": ".pdf",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
-		"application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
-		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+			".docx",
+		"application/vnd.openxmlformats-officedocument.presentationml.presentation":
+			".pptx",
+		"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+			".xlsx",
 		"text/plain": ".txt",
 		"text/markdown": ".md",
 		"text/csv": ".csv",
@@ -173,10 +179,14 @@ export async function getPdfPageCount(buffer: Buffer): Promise<number> {
 	} catch (_error) {
 		// Fallback: try using PDFLoader which also provides page count
 		const extension = ".pdf";
-		const tempFilePath = join(tmpdir(), `temp_pdf_pages_${Date.now()}${extension}`);
+		const tempFilePath = join(
+			tmpdir(),
+			`temp_pdf_pages_${Date.now()}${extension}`,
+		);
 		try {
 			await writeFile(tempFilePath, buffer);
-			const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
+			const { PDFLoader } =
+				await import("@langchain/community/document_loaders/fs/pdf");
 			const loader = new PDFLoader(tempFilePath, { splitPages: false });
 			const docs = await loader.load();
 			return docs.length;
@@ -242,7 +252,15 @@ function convertDocToDocx(docPath: string): string {
 	try {
 		execFileSync(
 			"python",
-			[join(scriptDir, "soffice.py"), "--headless", "--convert-to", "docx", "--outdir", outDir, docPath],
+			[
+				join(scriptDir, "soffice.py"),
+				"--headless",
+				"--convert-to",
+				"docx",
+				"--outdir",
+				outDir,
+				docPath,
+			],
 			{ stdio: "pipe" },
 		);
 	} catch (e) {
@@ -259,17 +277,23 @@ function convertDocToDocx(docPath: string): string {
  * Get the appropriate LangChain document loader for the content type.
  * Uses dynamic imports to lazy-load LangChain modules only when needed.
  */
-async function getLoader(contentType: string, filePath: string, tempDocxPaths: Set<string>) {
+async function getLoader(
+	contentType: string,
+	filePath: string,
+	tempDocxPaths: Set<string>,
+) {
 	switch (contentType) {
 		case "application/pdf": {
-			const { PDFLoader } = await import("@langchain/community/document_loaders/fs/pdf");
+			const { PDFLoader } =
+				await import("@langchain/community/document_loaders/fs/pdf");
 			return new PDFLoader(filePath, {
 				splitPages: false, // Return entire document as one page
 			});
 		}
 
 		case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-			const { DocxLoader } = await import("@langchain/community/document_loaders/fs/docx");
+			const { DocxLoader } =
+				await import("@langchain/community/document_loaders/fs/docx");
 			return new DocxLoader(filePath);
 		}
 
@@ -277,12 +301,14 @@ async function getLoader(contentType: string, filePath: string, tempDocxPaths: S
 			// Auto-convert .doc → .docx, then use DocxLoader
 			const docxPath = convertDocToDocx(filePath);
 			tempDocxPaths.add(docxPath);
-			const { DocxLoader } = await import("@langchain/community/document_loaders/fs/docx");
+			const { DocxLoader } =
+				await import("@langchain/community/document_loaders/fs/docx");
 			return new DocxLoader(docxPath);
 		}
 
 		case "text/csv": {
-			const { CSVLoader } = await import("@langchain/community/document_loaders/fs/csv");
+			const { CSVLoader } =
+				await import("@langchain/community/document_loaders/fs/csv");
 			return new CSVLoader(filePath, "text");
 		}
 
@@ -312,7 +338,10 @@ async function getLoader(contentType: string, filePath: string, tempDocxPaths: S
 /**
  * Parse file buffer and extract text content.
  */
-export async function parseFile(buffer: Buffer, contentType: string): Promise<FileContent> {
+export async function parseFile(
+	buffer: Buffer,
+	contentType: string,
+): Promise<FileContent> {
 	// Create a temporary file
 	const extension = getExtension(contentType);
 	const tempFilePath = join(tmpdir(), `temp_${Date.now()}${extension}`);

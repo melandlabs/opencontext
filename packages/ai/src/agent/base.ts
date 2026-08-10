@@ -35,10 +35,15 @@ import type {
  *     (locks to {@link UserLocale.default} so the model does not silently
  *     follow the user's input language)
  */
-export function getLanguageInstructionForBase(language: string | undefined): string {
+export function getLanguageInstructionForBase(
+	language: string | undefined,
+): string {
 	if (!language) return "";
 	const locale = UserLocale.fromString(language) ?? UserLocale.default();
-	return defaultLanguageDirectiveBuilder.buildDirective(locale, "conversational");
+	return defaultLanguageDirectiveBuilder.buildDirective(
+		locale,
+		"conversational",
+	);
 }
 
 /**
@@ -46,7 +51,9 @@ export function getLanguageInstructionForBase(language: string | undefined): str
  * Keep these rules plain and restrained so the model does not mirror noisy
  * Markdown or emoji-heavy instruction formatting in final answers.
  */
-export function getProfessionalOutputStyleInstruction(language: string | undefined): string {
+export function getProfessionalOutputStyleInstruction(
+	language: string | undefined,
+): string {
 	const isChinese = UserLocale.fromString(language)?.isChinese() ?? false;
 
 	const localizedRules = isChinese
@@ -191,7 +198,10 @@ export abstract class BaseAgent implements IAgent {
 	/**
 	 * Update session phase
 	 */
-	protected updateSessionPhase(sessionId: string, phase: AgentSession["phase"]): void {
+	protected updateSessionPhase(
+		sessionId: string,
+		phase: AgentSession["phase"],
+	): void {
 		const session = this.sessions.get(sessionId);
 		if (session) {
 			session.phase = phase;
@@ -292,9 +302,15 @@ export abstract class BaseAgent implements IAgent {
 	}
 
 	// Abstract methods to be implemented by providers
-	abstract run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage>;
+	abstract run(
+		prompt: string,
+		options?: AgentOptions,
+	): AsyncGenerator<AgentMessage>;
 
-	abstract plan(prompt: string, options?: PlanOptions): AsyncGenerator<AgentMessage>;
+	abstract plan(
+		prompt: string,
+		options?: PlanOptions,
+	): AsyncGenerator<AgentMessage>;
 
 	abstract execute(options: ExecuteOptions): AsyncGenerator<AgentMessage>;
 }
@@ -305,7 +321,8 @@ export abstract class BaseAgent implements IAgent {
 export const PLANNING_INSTRUCTION = (timezone?: string) => {
 	// Add current date info (using user's timezone or local timezone as fallback)
 	const now = new Date();
-	const effectiveTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const effectiveTimezone =
+		timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const localDate = now.toLocaleDateString("zh-CN", {
 		timeZone: effectiveTimezone,
 	});
@@ -445,7 +462,8 @@ export function getWorkspaceInstruction(
 ): string {
 	// Add current date info (using user's timezone or local timezone as fallback)
 	const now = new Date();
-	const effectiveTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const effectiveTimezone =
+		timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
 	const localDate = now.toLocaleDateString("zh-CN", {
 		timeZone: effectiveTimezone,
 	});
@@ -587,7 +605,9 @@ export function formatPlanForExecution(
 	language?: string,
 	timezone?: string,
 ): string {
-	const stepsText = plan.steps.map((step, index) => `${index + 1}. ${step.description}`).join("\n");
+	const stepsText = plan.steps
+		.map((step, index) => `${index + 1}. ${step.description}`)
+		.join("\n");
 
 	// IMPORTANT: aiSoulPrompt must come BEFORE workspaceNote to override default identity
 	const aiSoulInstruction =
@@ -619,7 +639,8 @@ Original request: `;
 /**
  * Response type from planning phase
  */
-export type PlanningResponse = { type: "direct_answer"; answer: string } | { type: "plan"; plan: TaskPlan };
+export type PlanningResponse =
+	{ type: "direct_answer"; answer: string } | { type: "plan"; plan: TaskPlan };
 
 /**
  * Extract a complete JSON object from text, properly handling nested braces and strings
@@ -668,13 +689,17 @@ function extractJsonObject(text: string, startIndex = 0): string | undefined {
 /**
  * Parse planning response from text - can be either a direct answer or a plan
  */
-export function parsePlanningResponse(responseText: string): PlanningResponse | undefined {
+export function parsePlanningResponse(
+	responseText: string,
+): PlanningResponse | undefined {
 	try {
 		// Try to find JSON in the response
 		let jsonString: string | undefined;
 
 		// Pattern 1: JSON in markdown code block
-		const codeBlockMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+		const codeBlockMatch = responseText.match(
+			/```(?:json)?\s*(\{[\s\S]*\})\s*```/,
+		);
 		if (codeBlockMatch) {
 			// Extract proper JSON from code block
 			jsonString = extractJsonObject(codeBlockMatch[1]);
@@ -710,7 +735,10 @@ export function parsePlanningResponse(responseText: string): PlanningResponse | 
 		}
 
 		// Check if it's a plan (either explicit type or implicit by having steps)
-		if (parsed.type === "plan" || (parsed.goal && Array.isArray(parsed.steps))) {
+		if (
+			parsed.type === "plan" ||
+			(parsed.goal && Array.isArray(parsed.steps))
+		) {
 			const plan = parsePlanFromResponse(responseText);
 			if (plan) {
 				return { type: "plan", plan };
@@ -726,13 +754,17 @@ export function parsePlanningResponse(responseText: string): PlanningResponse | 
 /**
  * Parse plan JSON from response text
  */
-export function parsePlanFromResponse(responseText: string): TaskPlan | undefined {
+export function parsePlanFromResponse(
+	responseText: string,
+): TaskPlan | undefined {
 	try {
 		// Try multiple patterns to find JSON in the response
 		let jsonString: string | undefined;
 
 		// Pattern 1: JSON in markdown code block
-		const codeBlockMatch = responseText.match(/```(?:json)?\s*(\{[\s\S]*\})\s*```/);
+		const codeBlockMatch = responseText.match(
+			/```(?:json)?\s*(\{[\s\S]*\})\s*```/,
+		);
 		if (codeBlockMatch) {
 			jsonString = extractJsonObject(codeBlockMatch[1]);
 		}
@@ -791,11 +823,13 @@ export function parsePlanFromResponse(responseText: string): TaskPlan | undefine
 		const finalSteps =
 			validSteps.length > 0
 				? validSteps
-				: (parsed.steps || []).map((step: { id?: string; description?: string }, index: number) => ({
-						id: step.id || String(index + 1),
-						description: step.description || "Unknown step",
-						status: "pending" as const,
-					}));
+				: (parsed.steps || []).map(
+						(step: { id?: string; description?: string }, index: number) => ({
+							id: step.id || String(index + 1),
+							description: step.description || "Unknown step",
+							status: "pending" as const,
+						}),
+					);
 
 		return {
 			id: nanoid(),

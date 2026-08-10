@@ -20,7 +20,10 @@ function limitItems<T>(items: T[], limit?: number): T[] {
 	return items.slice(0, limit);
 }
 
-export function registerLoopTools(server: McpServer, context: OpenContextToolContext): void {
+export function registerLoopTools(
+	server: McpServer,
+	context: OpenContextToolContext,
+): void {
 	server.registerTool(
 		"opencontext_loop_state",
 		{
@@ -35,12 +38,16 @@ export function registerLoopTools(server: McpServer, context: OpenContextToolCon
 			},
 		},
 		async () =>
-			withReadyOpenContextClient(context, "OpenContext Loop state failed", async (client) => {
-				const result = await client.getJson("/api/loop/state", {
-					timeoutMs: LOOP_READ_TIMEOUT_MS,
-				});
-				return jsonToolResult("OpenContext Loop state", result);
-			}),
+			withReadyOpenContextClient(
+				context,
+				"OpenContext Loop state failed",
+				async (client) => {
+					const result = await client.getJson("/api/loop/state", {
+						timeoutMs: LOOP_READ_TIMEOUT_MS,
+					});
+					return jsonToolResult("OpenContext Loop state", result);
+				},
+			),
 	);
 
 	server.registerTool(
@@ -50,8 +57,16 @@ export function registerLoopTools(server: McpServer, context: OpenContextToolCon
 			description:
 				"List local OpenContext Loop decisions. Defaults to pending decisions for the user's approval queue.",
 			inputSchema: {
-				status: decisionStatusSchema.optional().describe("Decision bucket to list. Defaults to pending."),
-				limit: z.number().int().min(1).max(100).optional().describe("Maximum number of decisions to return."),
+				status: decisionStatusSchema
+					.optional()
+					.describe("Decision bucket to list. Defaults to pending."),
+				limit: z
+					.number()
+					.int()
+					.min(1)
+					.max(100)
+					.optional()
+					.describe("Maximum number of decisions to return."),
 			},
 			annotations: {
 				readOnlyHint: true,
@@ -61,24 +76,33 @@ export function registerLoopTools(server: McpServer, context: OpenContextToolCon
 			},
 		},
 		async (args) =>
-			withReadyOpenContextClient(context, "OpenContext Loop decision listing failed", async (client) => {
-				const status = args.status ?? "pending";
-				const result = await client.getJson(`/api/loop/decisions?status=${encodeURIComponent(status)}`, {
-					timeoutMs: LOOP_READ_TIMEOUT_MS,
-				});
-				const items =
-					isRecord(result) && Array.isArray(result.items) ? limitItems(result.items, args.limit) : [];
-				const filtered = {
-					...(isRecord(result) ? result : { result }),
-					items,
-					count: items.length,
-					filters: {
-						status,
-						limit: args.limit ?? null,
-					},
-				};
+			withReadyOpenContextClient(
+				context,
+				"OpenContext Loop decision listing failed",
+				async (client) => {
+					const status = args.status ?? "pending";
+					const result = await client.getJson(
+						`/api/loop/decisions?status=${encodeURIComponent(status)}`,
+						{
+							timeoutMs: LOOP_READ_TIMEOUT_MS,
+						},
+					);
+					const items =
+						isRecord(result) && Array.isArray(result.items)
+							? limitItems(result.items, args.limit)
+							: [];
+					const filtered = {
+						...(isRecord(result) ? result : { result }),
+						items,
+						count: items.length,
+						filters: {
+							status,
+							limit: args.limit ?? null,
+						},
+					};
 
-				return jsonToolResult("OpenContext Loop decisions", filtered);
-			}),
+					return jsonToolResult("OpenContext Loop decisions", filtered);
+				},
+			),
 	);
 }

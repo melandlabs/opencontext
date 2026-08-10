@@ -61,7 +61,10 @@ export class PlatformAdapterError extends Error {
 	public readonly rawMessage: string;
 	public readonly originalCause?: unknown;
 
-	constructor(envelope: PlatformErrorEnvelope, context: PlatformAdapterErrorContext) {
+	constructor(
+		envelope: PlatformErrorEnvelope,
+		context: PlatformAdapterErrorContext,
+	) {
 		super(platformErrorEnvelopeToWireMessage(envelope));
 		this.name = "PlatformAdapterError";
 		this.error = envelope.error;
@@ -83,7 +86,9 @@ export class PlatformAdapterError extends Error {
 	}
 }
 
-export function platformErrorEnvelopeToWireMessage(envelope: PlatformErrorEnvelope): string {
+export function platformErrorEnvelopeToWireMessage(
+	envelope: PlatformErrorEnvelope,
+): string {
 	return JSON.stringify({
 		type: envelope.type,
 		error: envelope.error,
@@ -91,19 +96,23 @@ export function platformErrorEnvelopeToWireMessage(envelope: PlatformErrorEnvelo
 	});
 }
 
-export function isPlatformAdapterError(input: unknown): input is PlatformAdapterError {
+export function isPlatformAdapterError(
+	input: unknown,
+): input is PlatformAdapterError {
 	return (
 		input instanceof PlatformAdapterError ||
 		Boolean(
 			input &&
-				typeof input === "object" &&
-				(input as { name?: unknown }).name === "PlatformAdapterError" &&
-				isPlatformErrorEnvelope(input),
+			typeof input === "object" &&
+			(input as { name?: unknown }).name === "PlatformAdapterError" &&
+			isPlatformErrorEnvelope(input),
 		)
 	);
 }
 
-export function isPlatformErrorEnvelope(input: unknown): input is PlatformErrorEnvelope {
+export function isPlatformErrorEnvelope(
+	input: unknown,
+): input is PlatformErrorEnvelope {
 	if (!input || typeof input !== "object") return false;
 	const candidate = input as {
 		type?: unknown;
@@ -144,7 +153,10 @@ export function toPlatformAdapterError(
 	const code = getStringProperty(error, "code");
 	const raw = coerceErrorMessage(error) || opts?.fallbackMessage || operation;
 	const status = explicitStatus ?? extractHttpStatus(raw);
-	const errorCode = classifyPlatformErrorCode(error, raw, status) ?? opts?.fallbackCode ?? "api_error";
+	const errorCode =
+		classifyPlatformErrorCode(error, raw, status) ??
+		opts?.fallbackCode ??
+		"api_error";
 	const message = `[${platform}] ${operation} failed: ${raw}`;
 
 	return new PlatformAdapterError(
@@ -176,7 +188,10 @@ export function createPlatformAdapterError(
 	);
 }
 
-function getNumericProperty(input: unknown, ...keys: string[]): number | undefined {
+function getNumericProperty(
+	input: unknown,
+	...keys: string[]
+): number | undefined {
 	if (!input || typeof input !== "object") return undefined;
 	const obj = input as Record<string, unknown>;
 	for (const key of keys) {
@@ -185,7 +200,9 @@ function getNumericProperty(input: unknown, ...keys: string[]): number | undefin
 	}
 	const response = (obj.response ?? obj.res) as Record<string, unknown> | null;
 	const responseStatus = response?.status;
-	return typeof responseStatus === "number" && Number.isFinite(responseStatus) ? responseStatus : undefined;
+	return typeof responseStatus === "number" && Number.isFinite(responseStatus)
+		? responseStatus
+		: undefined;
 }
 
 function getStringProperty(input: unknown, key: string): string | undefined {
@@ -195,7 +212,9 @@ function getStringProperty(input: unknown, key: string): string | undefined {
 }
 
 function extractHttpStatus(raw: string): number | undefined {
-	const match = raw.match(/\bHTTP\s+([1-5]\d{2})\b/i) ?? raw.match(/\bstatus[=: ]+([1-5]\d{2})\b/i);
+	const match =
+		raw.match(/\bHTTP\s+([1-5]\d{2})\b/i) ??
+		raw.match(/\bstatus[=: ]+([1-5]\d{2})\b/i);
 	if (!match) return undefined;
 	const status = Number.parseInt(match[1], 10);
 	return Number.isFinite(status) ? status : undefined;
@@ -229,7 +248,10 @@ function classifyPlatformErrorCode(
 ): PlatformAgentErrorCode | null {
 	if (input && typeof input === "object") {
 		const embeddedCode = (input as { error?: { type?: unknown } }).error?.type;
-		if (typeof embeddedCode === "string" && KNOWN_CODES.has(embeddedCode as PlatformAgentErrorCode)) {
+		if (
+			typeof embeddedCode === "string" &&
+			KNOWN_CODES.has(embeddedCode as PlatformAgentErrorCode)
+		) {
 			return embeddedCode as PlatformAgentErrorCode;
 		}
 	}
@@ -292,7 +314,11 @@ function classifyPlatformErrorCode(
 	) {
 		return "network_offline";
 	}
-	if (lower.includes("etimedout") || lower.includes("timed out") || lower.includes("timeout")) {
+	if (
+		lower.includes("etimedout") ||
+		lower.includes("timed out") ||
+		lower.includes("timeout")
+	) {
 		return "timeout_error";
 	}
 	if (lower.includes("permission") || lower.includes("forbidden")) {

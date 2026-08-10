@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Telegram](https://telegram.org/) integration for OpenContext, powered by the
 [`telegram`](https://www.npmjs.com/package/telegram) (MTProto) client.
 Includes channel adapter, markdown rendering, conversation store, state

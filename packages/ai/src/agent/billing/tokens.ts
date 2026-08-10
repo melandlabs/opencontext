@@ -1,5 +1,9 @@
 import type { ModelType } from "./model-pricing";
-import { calculateInputCredits, calculateOutputCredits, calculateTotalCredits } from "./model-pricing";
+import {
+	calculateInputCredits,
+	calculateOutputCredits,
+	calculateTotalCredits,
+} from "./model-pricing";
 
 // Re-export estimateTokens from shared
 export { estimateTokens } from "@melandlabs/shared";
@@ -15,7 +19,10 @@ export const OUTPUT_TOKENS_PER_CREDIT = 7.5;
  * @param model Model type (uses default model if not specified)
  * @returns Number of credits required
  */
-export function getInputCredits(inputTokens: number, model?: ModelType): number {
+export function getInputCredits(
+	inputTokens: number,
+	model?: ModelType,
+): number {
 	if (model && model !== "default") {
 		return calculateInputCredits(inputTokens, model);
 	}
@@ -29,7 +36,10 @@ export function getInputCredits(inputTokens: number, model?: ModelType): number 
  * @param model Model type (uses default model if not specified)
  * @returns Number of credits required
  */
-export function getOutputCredits(outputTokens: number, model?: ModelType): number {
+export function getOutputCredits(
+	outputTokens: number,
+	model?: ModelType,
+): number {
 	if (model && model !== "default") {
 		return calculateOutputCredits(outputTokens, model);
 	}
@@ -44,12 +54,19 @@ export function getOutputCredits(outputTokens: number, model?: ModelType): numbe
  * @param model Model type (uses default model if not specified)
  * @returns Total credits required
  */
-export function getTotalCredits(inputTokens: number, outputTokens: number, model?: ModelType): number {
+export function getTotalCredits(
+	inputTokens: number,
+	outputTokens: number,
+	model?: ModelType,
+): number {
 	if (model && model !== "default") {
 		return calculateTotalCredits(inputTokens, outputTokens, model);
 	}
 	// Legacy calculation for default model
-	return inputTokens / INPUT_TOKENS_PER_CREDIT + outputTokens / OUTPUT_TOKENS_PER_CREDIT;
+	return (
+		inputTokens / INPUT_TOKENS_PER_CREDIT +
+		outputTokens / OUTPUT_TOKENS_PER_CREDIT
+	);
 }
 
 // Re-export model pricing types and utilities

@@ -51,7 +51,11 @@ function getApiKey(): string {
  * @param type - Search type: "web" (default) or "news"
  * @param count - Number of results to return (default: 10, max: 20)
  */
-export async function search(query: string, type: SearchType = "web", count = 10): Promise<SearchResult[]> {
+export async function search(
+	query: string,
+	type: SearchType = "web",
+	count = 10,
+): Promise<SearchResult[]> {
 	const apiKey = getApiKey();
 	const safeCount = Math.min(count, 20);
 	const baseUrl = type === "news" ? BRAVE_NEWS_API_URL : BRAVE_SEARCH_API_URL;

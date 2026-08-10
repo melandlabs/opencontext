@@ -16,7 +16,8 @@ export type ContentSegment =
  * Use local regex inside function to avoid state issues caused by global g flag
  */
 export function parseContentWithRefs(content: string): ContentSegment[] {
-	if (!content || typeof content !== "string") return [{ type: "text", value: content ?? "" }];
+	if (!content || typeof content !== "string")
+		return [{ type: "text", value: content ?? "" }];
 	const segments: ContentSegment[] = [];
 	let lastIndex = 0;
 	const re = new RegExp(REF_MARKER_REGEX.source, "g");
@@ -86,14 +87,18 @@ export function extractRefsFromContent(content: string): {
 		const kind = m[1];
 		const label = m[2] ?? "";
 		if (kind === "people") people.push({ name: label });
-		else if (kind === "task") taskIds.push(label.startsWith("manual:") ? label : label);
+		else if (kind === "task")
+			taskIds.push(label.startsWith("manual:") ? label : label);
 		else if (kind === "channel") {
 			const lastColon = label.lastIndexOf(":");
 			const name = lastColon === -1 ? label : label.slice(0, lastColon);
-			const platform = lastColon === -1 ? undefined : label.slice(lastColon + 1);
+			const platform =
+				lastColon === -1 ? undefined : label.slice(lastColon + 1);
 			channels.push({ name, platform });
 		} else if (kind === "event") {
-			const id = label.includes("|") ? (label.split("|")[0]?.trim() ?? label) : label;
+			const id = label.includes("|")
+				? (label.split("|")[0]?.trim() ?? label)
+				: label;
 			if (id && !eventIds.includes(id)) eventIds.push(id);
 		}
 		m = REF_MARKER_REGEX.exec(content);

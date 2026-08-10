@@ -68,6 +68,9 @@ export function getTauriLogsPath(): string {
 
 // Re-export for server-side convenience (these are just getTauriDataDir() based)
 export const TAURI_DATA_DIR = getTauriDataDir();
-export const TAURI_DB_PATH = process.env.TAURI_DB_PATH || `${TAURI_DATA_DIR}/data.db`;
-export const TAURI_STORAGE_PATH = process.env.TAURI_STORAGE_PATH || `${TAURI_DATA_DIR}/storage`;
-export const TAURI_LOGS_PATH = process.env.TAURI_LOGS_PATH || `${TAURI_DATA_DIR}/logs`;
+export const TAURI_DB_PATH =
+	process.env.TAURI_DB_PATH || `${TAURI_DATA_DIR}/data.db`;
+export const TAURI_STORAGE_PATH =
+	process.env.TAURI_STORAGE_PATH || `${TAURI_DATA_DIR}/storage`;
+export const TAURI_LOGS_PATH =
+	process.env.TAURI_LOGS_PATH || `${TAURI_DATA_DIR}/logs`;

@@ -10,7 +10,8 @@ import type OpenAI from "openai";
 
 // Configuration from environment
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_AUDIO_BASE_URL = process.env.OPENAI_AUDIO_BASE_URL || "https://api.openai.com/v1";
+const OPENAI_AUDIO_BASE_URL =
+	process.env.OPENAI_AUDIO_BASE_URL || "https://api.openai.com/v1";
 
 // Lazy-loaded OpenAI client instance
 let _openAIClient: OpenAI | null = null;
@@ -21,7 +22,9 @@ let _openAIClient: OpenAI | null = null;
  */
 export async function getOpenAIAudioClient(): Promise<OpenAI> {
 	if (!OPENAI_API_KEY) {
-		throw new Error("OPENAI_API_KEY environment variable is not set. Please set it to use audio APIs.");
+		throw new Error(
+			"OPENAI_API_KEY environment variable is not set. Please set it to use audio APIs.",
+		);
 	}
 
 	if (_openAIClient) {

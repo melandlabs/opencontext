@@ -40,8 +40,10 @@ const DEFAULT_OPTIONS: Required<CompactionPreprocessOptions> = {
 	keepCodeBlockTailLines: 20,
 };
 
-const IMAGE_DATA_URL_RE = /data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/g;
-const FILE_DATA_URL_RE = /data:(application|text)\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/g;
+const IMAGE_DATA_URL_RE =
+	/data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/g;
+const FILE_DATA_URL_RE =
+	/data:(application|text)\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\s]+/g;
 const IMAGE_MARKDOWN_RE = /!\[[^\]]*?\]\(([^)]+)\)/g;
 const CODE_BLOCK_RE = /```([\w+-]*)\n([\s\S]*?)```/g;
 
@@ -49,11 +51,22 @@ const CODE_BLOCK_RE = /```([\w+-]*)\n([\s\S]*?)```/g;
  * Normalize caller-provided bounds so the preprocessing pipeline behaves
  * consistently across apps that consume the shared package.
  */
-function normalizeOptions(options?: CompactionPreprocessOptions): Required<CompactionPreprocessOptions> {
+function normalizeOptions(
+	options?: CompactionPreprocessOptions,
+): Required<CompactionPreprocessOptions> {
 	return {
-		maxMergedMessages: Math.max(1, options?.maxMergedMessages ?? DEFAULT_OPTIONS.maxMergedMessages),
-		maxCharsPerMessage: Math.max(500, options?.maxCharsPerMessage ?? DEFAULT_OPTIONS.maxCharsPerMessage),
-		maxCodeBlockLines: Math.max(20, options?.maxCodeBlockLines ?? DEFAULT_OPTIONS.maxCodeBlockLines),
+		maxMergedMessages: Math.max(
+			1,
+			options?.maxMergedMessages ?? DEFAULT_OPTIONS.maxMergedMessages,
+		),
+		maxCharsPerMessage: Math.max(
+			500,
+			options?.maxCharsPerMessage ?? DEFAULT_OPTIONS.maxCharsPerMessage,
+		),
+		maxCodeBlockLines: Math.max(
+			20,
+			options?.maxCodeBlockLines ?? DEFAULT_OPTIONS.maxCodeBlockLines,
+		),
 		keepCodeBlockHeadLines: Math.max(
 			5,
 			options?.keepCodeBlockHeadLines ?? DEFAULT_OPTIONS.keepCodeBlockHeadLines,
@@ -85,7 +98,10 @@ function replaceMediaMarkers(content: string): string {
  * Preserve the beginning and end of large code blocks, where filenames,
  * signatures, errors, and final edits are usually most informative.
  */
-function truncateCodeBlock(code: string, options: Required<CompactionPreprocessOptions>): string {
+function truncateCodeBlock(
+	code: string,
+	options: Required<CompactionPreprocessOptions>,
+): string {
 	const lines = code.split("\n");
 	if (lines.length <= options.maxCodeBlockLines) {
 		return code;
@@ -93,26 +109,44 @@ function truncateCodeBlock(code: string, options: Required<CompactionPreprocessO
 
 	const head = lines.slice(0, options.keepCodeBlockHeadLines);
 	const tail = lines.slice(-options.keepCodeBlockTailLines);
-	const omitted = Math.max(0, lines.length - options.keepCodeBlockHeadLines - options.keepCodeBlockTailLines);
+	const omitted = Math.max(
+		0,
+		lines.length -
+			options.keepCodeBlockHeadLines -
+			options.keepCodeBlockTailLines,
+	);
 
-	return [...head, `... [${omitted} lines omitted for compaction] ...`, ...tail].join("\n");
+	return [
+		...head,
+		`... [${omitted} lines omitted for compaction] ...`,
+		...tail,
+	].join("\n");
 }
 
 /**
  * Apply long-code truncation only inside fenced blocks so prose outside the
  * block remains untouched.
  */
-function truncateCodeBlocks(content: string, options: Required<CompactionPreprocessOptions>): string {
-	return content.replace(CODE_BLOCK_RE, (_match, lang: string, code: string) => {
-		return `\`\`\`${lang}\n${truncateCodeBlock(code, options)}\n\`\`\``;
-	});
+function truncateCodeBlocks(
+	content: string,
+	options: Required<CompactionPreprocessOptions>,
+): string {
+	return content.replace(
+		CODE_BLOCK_RE,
+		(_match, lang: string, code: string) => {
+			return `\`\`\`${lang}\n${truncateCodeBlock(code, options)}\n\`\`\``;
+		},
+	);
 }
 
 /**
  * If a message is still too large after code truncation, keep the head and
  * tail so the summarizer still sees setup plus outcome.
  */
-function truncateLongMessage(content: string, options: Required<CompactionPreprocessOptions>): string {
+function truncateLongMessage(
+	content: string,
+	options: Required<CompactionPreprocessOptions>,
+): string {
 	if (content.length <= options.maxCharsPerMessage) {
 		return content;
 	}
@@ -163,14 +197,18 @@ export function sanitizeCompactionMessages(
 ): CompactionPreprocessMessage[] {
 	return messages
 		.map((message) => sanitizeCompactionMessage(message, options))
-		.filter((message): message is CompactionPreprocessMessage => message !== null);
+		.filter(
+			(message): message is CompactionPreprocessMessage => message !== null,
+		);
 }
 
 /**
  * Merge one compatible run into a synthetic block so the summarizer sees fewer
  * fragments and more coherent chunks of context.
  */
-function mergeGroup(messages: CompactionPreprocessMessage[]): CompactionMessageGroup {
+function mergeGroup(
+	messages: CompactionPreprocessMessage[],
+): CompactionMessageGroup {
 	const content =
 		messages.length === 1
 			? messages[0].content
@@ -235,7 +273,9 @@ export function groupCompactionMessages(
  * Convert merged groups back into the flat shape used by current compaction
  * callers and transport layers.
  */
-export function flattenCompactionGroups(groups: CompactionMessageGroup[]): CompactionPreprocessMessage[] {
+export function flattenCompactionGroups(
+	groups: CompactionMessageGroup[],
+): CompactionPreprocessMessage[] {
 	return groups.map((group) => ({
 		role: group.role,
 		type: group.type,

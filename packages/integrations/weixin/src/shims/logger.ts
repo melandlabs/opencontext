@@ -2,7 +2,8 @@ type LogMethod = (...args: unknown[]) => void;
 
 const noop: LogMethod = () => {};
 
-const shouldEnableDebug = process.env.NODE_ENV !== "production" || process.env.WEIXIN_DEBUG === "1";
+const shouldEnableDebug =
+	process.env.NODE_ENV !== "production" || process.env.WEIXIN_DEBUG === "1";
 
 const safeLog =
 	(fn: LogMethod): LogMethod =>

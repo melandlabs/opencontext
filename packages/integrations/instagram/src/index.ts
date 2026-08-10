@@ -51,7 +51,10 @@ export class InstagramAdapter {
 		if (!response.ok) {
 			const text = await response.text();
 			console.error(`[Bot ${this.botId}] Instagram API error ${path}: ${text}`);
-			throw new AppError("bad_request:bot", `Instagram API failed (${response.status})`);
+			throw new AppError(
+				"bad_request:bot",
+				`Instagram API failed (${response.status})`,
+			);
 		}
 		return (await response.json()) as T;
 	}
@@ -60,7 +63,8 @@ export class InstagramAdapter {
 		const conversationsResponse = await this.fetchGraph<{
 			data?: InstagramConversation[];
 		}>(`${this.igBusinessId}/conversations`, {
-			fields: "id,participants{id,username},messages.limit(50){id,text,from,to,created_time}",
+			fields:
+				"id,participants{id,username},messages.limit(50){id,text,from,to,created_time}",
 			limit: "20",
 		});
 
@@ -70,7 +74,9 @@ export class InstagramAdapter {
 		for (const convo of conversations) {
 			const messages = convo.messages?.data ?? [];
 			for (const message of messages) {
-				const created = message.created_time ? new Date(message.created_time).getTime() : Date.now();
+				const created = message.created_time
+					? new Date(message.created_time).getTime()
+					: Date.now();
 				if (created < since * 1000) continue;
 
 				const sender =
@@ -98,15 +104,23 @@ export class InstagramAdapter {
 		return result;
 	}
 
-	async sendMessages(_channel: "private", recipients: string[], messages: Messages): Promise<void> {
+	async sendMessages(
+		_channel: "private",
+		recipients: string[],
+		messages: Messages,
+	): Promise<void> {
 		if (recipients.length === 0) {
 			throw new AppError("bad_request:bot", "No Instagram recipient provided.");
 		}
 		const textPart = messages.find(
-			(item): item is string => typeof item === "string" && item.trim().length > 0,
+			(item): item is string =>
+				typeof item === "string" && item.trim().length > 0,
 		);
 		if (!textPart) {
-			throw new AppError("bad_request:bot", "Instagram DM requires text content.");
+			throw new AppError(
+				"bad_request:bot",
+				"Instagram DM requires text content.",
+			);
 		}
 		const recipientId = recipients[0];
 		const body = new URLSearchParams({
@@ -116,15 +130,21 @@ export class InstagramAdapter {
 			access_token: this.accessToken,
 		});
 
-		const response = await fetch(`https://graph.facebook.com/v20.0/${this.pageId}/messages`, {
-			method: "POST",
-			headers: { "Content-Type": "application/x-www-form-urlencoded" },
-			body,
-		});
+		const response = await fetch(
+			`https://graph.facebook.com/v20.0/${this.pageId}/messages`,
+			{
+				method: "POST",
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+				body,
+			},
+		);
 		if (!response.ok) {
 			const text = await response.text();
 			console.error(`[Bot ${this.botId}] Instagram send DM failed: ${text}`);
-			throw new AppError("bad_request:bot", `Instagram send failed (${response.status})`);
+			throw new AppError(
+				"bad_request:bot",
+				`Instagram send failed (${response.status})`,
+			);
 		}
 	}
 

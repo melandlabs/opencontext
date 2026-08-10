@@ -158,7 +158,8 @@ export type SemanticMemoryDraftSummarizerProviderInvoke = (
 	input: SemanticMemoryDraftSummarizerInputContract,
 ) => Promise<SemanticMemoryDraft>;
 
-export type SemanticMemoryDraftSummarizerProviderAdapterStatus = "summarized" | "skipped" | "failed";
+export type SemanticMemoryDraftSummarizerProviderAdapterStatus =
+	"summarized" | "skipped" | "failed";
 
 export type SemanticMemoryDraftSummarizerProviderAdapterReasonCode =
 	| "request_not_ready"
@@ -196,13 +197,14 @@ export interface BuildSemanticMemoryDraftSummarizerInputContractInput {
 	minConfidence?: number;
 }
 
-export interface InvokeSemanticMemoryDraftSummarizerProviderInput
-	extends BuildSemanticMemoryDraftSummarizerInputContractInput {
+export interface InvokeSemanticMemoryDraftSummarizerProviderInput extends BuildSemanticMemoryDraftSummarizerInputContractInput {
 	invoke: SemanticMemoryDraftSummarizerProviderInvoke;
 }
 
-export interface InvokeSemanticMemoryDraftSummarizerProviderBatchInput
-	extends Omit<InvokeSemanticMemoryDraftSummarizerProviderInput, "candidate"> {
+export interface InvokeSemanticMemoryDraftSummarizerProviderBatchInput extends Omit<
+	InvokeSemanticMemoryDraftSummarizerProviderInput,
+	"candidate"
+> {
 	candidates: MemorySemanticDraftCandidate[];
 }
 
@@ -225,7 +227,11 @@ function clamp01(value: number): number {
 }
 
 function primitiveString(value: unknown): string | undefined {
-	if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+	if (
+		typeof value !== "string" &&
+		typeof value !== "number" &&
+		typeof value !== "boolean"
+	) {
 		return undefined;
 	}
 
@@ -244,7 +250,9 @@ function explicitSuggestedType(
 	records: MemoryEvidenceRecord[],
 ): MemorySemanticDraftSuggestedType | undefined {
 	for (const record of records) {
-		const suggestedType = relationValue(record, "memoryType") ?? primitiveString(record.metadata?.type);
+		const suggestedType =
+			relationValue(record, "memoryType") ??
+			primitiveString(record.metadata?.type);
 
 		if (suggestedType) {
 			return suggestedType;
@@ -254,7 +262,9 @@ function explicitSuggestedType(
 	return undefined;
 }
 
-function inferSuggestedTypeFromText(value: string | undefined): MemorySemanticDraftSuggestedType | undefined {
+function inferSuggestedTypeFromText(
+	value: string | undefined,
+): MemorySemanticDraftSuggestedType | undefined {
 	if (!value) {
 		return undefined;
 	}
@@ -282,7 +292,11 @@ function inferSuggestedTypeFromText(value: string | undefined): MemorySemanticDr
 		return "project_state";
 	}
 
-	if (normalized.includes("decision") || normalized.includes("decided") || normalized.includes("choice")) {
+	if (
+		normalized.includes("decision") ||
+		normalized.includes("decided") ||
+		normalized.includes("choice")
+	) {
 		return "decision";
 	}
 
@@ -309,7 +323,9 @@ function inferSuggestedType(
 	}
 
 	for (const record of records) {
-		const fromRelationGroup = inferSuggestedTypeFromText(relationValue(record, "relationGroup"));
+		const fromRelationGroup = inferSuggestedTypeFromText(
+			relationValue(record, "relationGroup"),
+		);
 
 		if (fromRelationGroup) {
 			return fromRelationGroup;
@@ -363,7 +379,9 @@ function copyContext(
 	};
 }
 
-function toProviderAdapterError(error: unknown): SemanticMemoryDraftSummarizerProviderAdapterError {
+function toProviderAdapterError(
+	error: unknown,
+): SemanticMemoryDraftSummarizerProviderAdapterError {
 	if (error instanceof Error) {
 		return {
 			name: error.name,
@@ -382,7 +400,10 @@ function buildSummarizerResponseDiagnostics(
 ): SemanticMemoryDraftSummarizerResponseDiagnostics {
 	const hasContent = draft.content.trim().length > 0;
 	const preservesType = draft.type === candidate.suggestedType;
-	const preservesSourceRecordIds = sameStringSet(draft.sourceRecordIds, candidate.sourceRecordIds);
+	const preservesSourceRecordIds = sameStringSet(
+		draft.sourceRecordIds,
+		candidate.sourceRecordIds,
+	);
 	const reasonCodes: SemanticMemoryDraftSummarizerResponseReasonCode[] = [];
 
 	if (!hasContent) {
@@ -416,7 +437,9 @@ function buildSummarizerResponseDiagnostics(
 export function buildSemanticMemoryDraftCandidates(
 	input: BuildSemanticMemoryDraftCandidatesInput,
 ): MemorySemanticDraftCandidate[] {
-	const recordsById = new Map((input.records ?? []).map((record) => [record.id, record]));
+	const recordsById = new Map(
+		(input.records ?? []).map((record) => [record.id, record]),
+	);
 	const maxCandidates = resolveMaxCandidates(input.maxCandidates);
 
 	return input.report.preservedClusters
@@ -426,7 +449,8 @@ export function buildSemanticMemoryDraftCandidates(
 				return record ? [record] : [];
 			});
 			const suggestedType =
-				input.getSuggestedType?.({ cluster, records }) ?? inferSuggestedType(cluster, records);
+				input.getSuggestedType?.({ cluster, records }) ??
+				inferSuggestedType(cluster, records);
 
 			return {
 				draftId: draftId(cluster.clusterKey),
@@ -444,7 +468,11 @@ export function buildSemanticMemoryDraftCandidates(
 		})
 		.sort((a, b) => {
 			const priorityDelta = (b.summaryPriority ?? 0) - (a.summaryPriority ?? 0);
-			return priorityDelta || b.score - a.score || a.sourceClusterKey.localeCompare(b.sourceClusterKey);
+			return (
+				priorityDelta ||
+				b.score - a.score ||
+				a.sourceClusterKey.localeCompare(b.sourceClusterKey)
+			);
 		})
 		.slice(0, maxCandidates);
 }
@@ -452,19 +480,27 @@ export function buildSemanticMemoryDraftCandidates(
 export async function summarizeSemanticMemoryDraftCandidate(
 	input: SummarizeSemanticMemoryDraftCandidateInput,
 ): Promise<SemanticMemoryDraft> {
-	const recordsById = new Map(input.records.map((record) => [record.id, record]));
+	const recordsById = new Map(
+		input.records.map((record) => [record.id, record]),
+	);
 	const sourceRecords = input.candidate.sourceRecordIds.flatMap((recordId) => {
 		const record = recordsById.get(recordId);
 		return record ? [record] : [];
 	});
 
-	return input.summarizer.summarizeDraft(input.candidate, sourceRecords, input.context);
+	return input.summarizer.summarizeDraft(
+		input.candidate,
+		sourceRecords,
+		input.context,
+	);
 }
 
 export function analyzeSemanticMemoryDraftReadiness(
 	input: AnalyzeSemanticMemoryDraftReadinessInput,
 ): SemanticMemoryDraftReadinessDiagnostics {
-	const recordsById = new Map(input.records.map((record) => [record.id, record]));
+	const recordsById = new Map(
+		input.records.map((record) => [record.id, record]),
+	);
 	const minConfidence = clamp01(input.minConfidence ?? 0);
 	const sourceRecordIds = [...input.candidate.sourceRecordIds];
 	const availableSourceRecordIds: string[] = [];
@@ -546,14 +582,18 @@ export function buildSemanticMemoryDraftSummarizerDiagnostics(
 
 	return {
 		request,
-		response: input.draft ? buildSummarizerResponseDiagnostics(input.candidate, input.draft) : undefined,
+		response: input.draft
+			? buildSummarizerResponseDiagnostics(input.candidate, input.draft)
+			: undefined,
 	};
 }
 
 export function buildSemanticMemoryDraftSummarizerInputContract(
 	input: BuildSemanticMemoryDraftSummarizerInputContractInput,
 ): SemanticMemoryDraftSummarizerInputContract {
-	const recordsById = new Map(input.records.map((record) => [record.id, record]));
+	const recordsById = new Map(
+		input.records.map((record) => [record.id, record]),
+	);
 	const diagnostics = buildSemanticMemoryDraftSummarizerDiagnostics({
 		candidate: input.candidate,
 		records: input.records,
@@ -665,11 +705,16 @@ export async function invokeSemanticMemoryDraftSummarizerProviderBatch(
 	return {
 		summary: {
 			candidateCount: input.candidates.length,
-			summarizedCount: results.filter((result) => result.status === "summarized").length,
-			skippedCount: results.filter((result) => result.status === "skipped").length,
-			failedCount: results.filter((result) => result.status === "failed").length,
+			summarizedCount: results.filter(
+				(result) => result.status === "summarized",
+			).length,
+			skippedCount: results.filter((result) => result.status === "skipped")
+				.length,
+			failedCount: results.filter((result) => result.status === "failed")
+				.length,
 			responseIssueCount: results.filter(
-				(result) => result.status === "summarized" && result.reasonCodes.length > 0,
+				(result) =>
+					result.status === "summarized" && result.reasonCodes.length > 0,
 			).length,
 		},
 		results,

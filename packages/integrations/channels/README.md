@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Multi-channel integration framework for OpenContext. Provides the shared
 `Channel`, `Platform`, and `ExtractedMessageInfo` types, plus re-exports of
 per-platform adapters (Telegram, WhatsApp, WeChat, DingTalk, Feishu, QQ Bot,

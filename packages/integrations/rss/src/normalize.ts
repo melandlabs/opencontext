@@ -44,7 +44,8 @@ export function buildRssItemInserts({
 	limit = DEFAULT_MAX_ITEMS,
 }: BuildOptions): InsertRssItem[] {
 	const now = new Date();
-	const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_MAX_ITEMS;
+	const safeLimit =
+		Number.isFinite(limit) && limit > 0 ? limit : DEFAULT_MAX_ITEMS;
 	const trimmedItems = items.slice(0, safeLimit);
 
 	return trimmedItems.map((item, index) => {
@@ -54,10 +55,15 @@ export function buildRssItemInserts({
 			item.link ??
 			item.title ??
 			`${subscription.sourceUrl}:${index}`;
-		const guidHash = createHash("sha256").update(`${subscription.id}:${digestSource}`).digest("hex");
+		const guidHash = createHash("sha256")
+			.update(`${subscription.id}:${digestSource}`)
+			.digest("hex");
 
 		const publishedAt = parseDate(item.isoDate ?? item.pubDate ?? null);
-		const author = (item as { creator?: string }).creator ?? (item as { author?: string }).author ?? null;
+		const author =
+			(item as { creator?: string }).creator ??
+			(item as { author?: string }).author ??
+			null;
 
 		const metadata: Record<string, unknown> = {
 			feedTitle: feedTitle ?? subscription.title ?? null,
@@ -78,13 +84,16 @@ export function buildRssItemInserts({
 		}
 
 		const encodedContent =
-			(item as { "content:encoded"?: string })["content:encoded"] ?? item.content ?? null;
+			(item as { "content:encoded"?: string })["content:encoded"] ??
+			item.content ??
+			null;
 
 		return {
 			subscriptionId: subscription.id,
 			guidHash,
 			title: item.title ?? null,
-			summary: item.contentSnippet ?? (item as { summary?: string }).summary ?? null,
+			summary:
+				item.contentSnippet ?? (item as { summary?: string }).summary ?? null,
 			content: encodedContent,
 			link: (item.link as string | null) ?? null,
 			publishedAt: publishedAt ?? null,

@@ -51,7 +51,13 @@ class DingTalkConversationStore {
 		}
 
 		const today = new Date().toISOString().slice(0, 10);
-		const msgs = loadChannelDay(this.memoryDir, PLATFORM, today, userKey, accountId) as ConversationMessage[];
+		const msgs = loadChannelDay(
+			this.memoryDir,
+			PLATFORM,
+			today,
+			userKey,
+			accountId,
+		) as ConversationMessage[];
 		this.cache.get(userKey)?.set(accountId, msgs);
 		this.loadedPairs.add(pk);
 	}
@@ -68,7 +74,12 @@ class DingTalkConversationStore {
 		}));
 	}
 
-	addMessage(senderId: string, chatId: string, role: "user" | "assistant", content: string): void {
+	addMessage(
+		senderId: string,
+		chatId: string,
+		role: "user" | "assistant",
+		content: string,
+	): void {
 		const userKey = this.getUserKey(senderId);
 		this.ensureLoaded(userKey, chatId);
 
@@ -81,7 +92,9 @@ class DingTalkConversationStore {
 		this.cache.get(userKey)?.get(chatId)?.push(message);
 		saveChannelMessage(this.memoryDir, PLATFORM, userKey, chatId, message);
 
-		console.log(`[DingTalkConversationStore] Added ${role} message for sender ${senderId}, chat ${chatId}`);
+		console.log(
+			`[DingTalkConversationStore] Added ${role} message for sender ${senderId}, chat ${chatId}`,
+		);
 	}
 
 	clearConversation(senderId: string, chatId: string): void {
@@ -90,9 +103,16 @@ class DingTalkConversationStore {
 
 		this.cache.get(userKey)?.get(chatId)?.splice(0);
 		this.loadedPairs.delete(pk);
-		clearChannelConversationFromAllDays(this.memoryDir, PLATFORM, userKey, chatId);
+		clearChannelConversationFromAllDays(
+			this.memoryDir,
+			PLATFORM,
+			userKey,
+			chatId,
+		);
 
-		console.log(`[DingTalkConversationStore] Cleared conversation for sender ${senderId}, chat ${chatId}`);
+		console.log(
+			`[DingTalkConversationStore] Cleared conversation for sender ${senderId}, chat ${chatId}`,
+		);
 	}
 
 	clearAllConversations(senderId: string): void {
@@ -106,7 +126,9 @@ class DingTalkConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, PLATFORM, userKey);
 
-		console.log(`[DingTalkConversationStore] Cleared all conversations for sender ${senderId}`);
+		console.log(
+			`[DingTalkConversationStore] Cleared all conversations for sender ${senderId}`,
+		);
 	}
 
 	private getUserKey(senderId: string): string {

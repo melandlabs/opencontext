@@ -11,7 +11,11 @@ import type {
 	MemoryGraphUpdatePlan,
 	OwnerScope,
 } from "./graph-contracts";
-import { buildMemoryGraphCompetitionComponents, ownerScopeKey, sameOwnerScope } from "./graph-evolution";
+import {
+	buildMemoryGraphCompetitionComponents,
+	ownerScopeKey,
+	sameOwnerScope,
+} from "./graph-evolution";
 
 export interface MemoryGraphLifecyclePolicyOptions {
 	stableMinEvidence?: number;
@@ -81,9 +85,16 @@ function stablePart(value: string): string {
 	return encodeURIComponent(value);
 }
 
-function applicabilityKey(value: MemoryApplicabilityContext | undefined): string {
+function applicabilityKey(
+	value: MemoryApplicabilityContext | undefined,
+): string {
 	if (!value) return "global";
-	return [value.scope, value.key ?? "", value.validFrom ?? "", value.validUntil ?? ""]
+	return [
+		value.scope,
+		value.key ?? "",
+		value.validFrom ?? "",
+		value.validUntil ?? "",
+	]
 		.map((part) => stablePart(String(part)))
 		.join(":");
 }
@@ -95,7 +106,10 @@ function sameApplicability(
 	return applicabilityKey(left) === applicabilityKey(right);
 }
 
-function rawSourceNodeIds(cluster: MemoryGraphClusterSnapshot, snapshot: MemoryGraphSnapshot): string[] {
+function rawSourceNodeIds(
+	cluster: MemoryGraphClusterSnapshot,
+	snapshot: MemoryGraphSnapshot,
+): string[] {
 	const nodesById = new Map(snapshot.nodes.map((node) => [node.id, node]));
 	return cluster.nodeIds.filter((nodeId) => {
 		const node = nodesById.get(nodeId);
@@ -103,7 +117,10 @@ function rawSourceNodeIds(cluster: MemoryGraphClusterSnapshot, snapshot: MemoryG
 	});
 }
 
-function strength(cluster: MemoryGraphClusterSnapshot, sourceNodeIds: string[]): number {
+function strength(
+	cluster: MemoryGraphClusterSnapshot,
+	sourceNodeIds: string[],
+): number {
 	return sourceNodeIds.length + (cluster.supportScore ?? 0);
 }
 
@@ -117,7 +134,11 @@ function lifecycleOperationId(
 	return `memory-graph-lifecycle:${ownerScopeKey(ownerScope)}:${stablePart(clusterId)}:${fromStatus}:${toStatus}:${stablePart(expectedVersion)}`;
 }
 
-function planId(kind: string, ownerScope: OwnerScope, identity: string): string {
+function planId(
+	kind: string,
+	ownerScope: OwnerScope,
+	identity: string,
+): string {
 	return `memory-graph-${kind}:${ownerScopeKey(ownerScope)}:${stablePart(identity)}`;
 }
 
@@ -129,13 +150,17 @@ function operationId(kind: string, identity: string): string {
 	return `memory-graph-operation:${kind}:${stablePart(identity)}`;
 }
 
-function copyCluster(cluster: MemoryGraphClusterSnapshot): MemoryGraphClusterSnapshot {
+function copyCluster(
+	cluster: MemoryGraphClusterSnapshot,
+): MemoryGraphClusterSnapshot {
 	return {
 		...cluster,
 		ownerScope: { ...cluster.ownerScope },
 		nodeIds: [...cluster.nodeIds],
 		reasonCodes: [...cluster.reasonCodes],
-		applicability: cluster.applicability ? { ...cluster.applicability } : undefined,
+		applicability: cluster.applicability
+			? { ...cluster.applicability }
+			: undefined,
 		metadata: cluster.metadata ? { ...cluster.metadata } : undefined,
 	};
 }
@@ -170,22 +195,35 @@ export function buildMemoryGraphLifecyclePlan(
 	);
 	const stableMinSupportScore = Math.max(
 		0,
-		Math.min(1, input.policy?.stableMinSupportScore ?? DEFAULT_STABLE_MIN_SUPPORT_SCORE),
+		Math.min(
+			1,
+			input.policy?.stableMinSupportScore ?? DEFAULT_STABLE_MIN_SUPPORT_SCORE,
+		),
 	);
-	const decayAfterMs = Math.max(0, input.policy?.decayAfterMs ?? DEFAULT_DECAY_AFTER_MS);
+	const decayAfterMs = Math.max(
+		0,
+		input.policy?.decayAfterMs ?? DEFAULT_DECAY_AFTER_MS,
+	);
 	const supersessionMinEvidence = Math.max(
 		1,
-		Math.floor(input.policy?.supersessionMinEvidence ?? DEFAULT_SUPERSESSION_MIN_EVIDENCE),
+		Math.floor(
+			input.policy?.supersessionMinEvidence ??
+				DEFAULT_SUPERSESSION_MIN_EVIDENCE,
+		),
 	);
 	const supersessionStrengthMargin = Math.max(
 		0,
-		input.policy?.supersessionStrengthMargin ?? DEFAULT_SUPERSESSION_STRENGTH_MARGIN,
+		input.policy?.supersessionStrengthMargin ??
+			DEFAULT_SUPERSESSION_STRENGTH_MARGIN,
 	);
 	const clusters = input.snapshot.clusters.filter((cluster) =>
 		sameOwnerScope(cluster.ownerScope, input.ownerScope),
 	);
 	const sourcesByCluster = new Map(
-		clusters.map((cluster) => [cluster.clusterId, rawSourceNodeIds(cluster, input.snapshot)]),
+		clusters.map((cluster) => [
+			cluster.clusterId,
+			rawSourceNodeIds(cluster, input.snapshot),
+		]),
 	);
 	const competitionByClusterId = new Map<
 		string,
@@ -215,7 +253,8 @@ export function buildMemoryGraphLifecyclePlan(
 		if (
 			winnerSources.length < supersessionMinEvidence ||
 			(winner.supportScore ?? 0) < stableMinSupportScore ||
-			strength(winner, winnerSources) - strength(runnerUp, runnerUpSources) < supersessionStrengthMargin
+			strength(winner, winnerSources) - strength(runnerUp, runnerUpSources) <
+				supersessionStrengthMargin
 		) {
 			for (const cluster of group) {
 				competitionByClusterId.set(cluster.clusterId, {
@@ -246,7 +285,8 @@ export function buildMemoryGraphLifecyclePlan(
 	const transitions: ClusterLifecycleTransition[] = [];
 	const candidateClusters: MemoryGraphClusterSnapshot[] = [];
 	const operations: MemoryGraphOperation[] = [];
-	const consolidationCandidates: MemoryGraphLifecycleConsolidationCandidate[] = [];
+	const consolidationCandidates: MemoryGraphLifecycleConsolidationCandidate[] =
+		[];
 	const decayingClusterIds: string[] = [];
 
 	for (const cluster of clusters) {
@@ -264,7 +304,9 @@ export function buildMemoryGraphLifecyclePlan(
 			targetStatus = "superseded";
 			transitionReason = "supersession_preserved";
 		} else if (sourceNodeIds.length === 0) {
-			targetStatus = cluster.representativeNodeId ? cluster.lifecycleStatus : "audit-only";
+			targetStatus = cluster.representativeNodeId
+				? cluster.lifecycleStatus
+				: "audit-only";
 			transitionReason = "cluster_without_active_sources";
 		} else if (isWinner) {
 			targetStatus = "stable";
@@ -335,7 +377,9 @@ export function buildMemoryGraphLifecyclePlan(
 				score: cluster.supportScore ?? 0,
 				reasonCodes: unique([
 					transitionReason,
-					...(supersededClusterIds.length > 0 ? ["sustained_competition_can_supersede"] : []),
+					...(supersededClusterIds.length > 0
+						? ["sustained_competition_can_supersede"]
+						: []),
 				]),
 			});
 		}
@@ -344,7 +388,9 @@ export function buildMemoryGraphLifecyclePlan(
 	const reasonCodes = unique([
 		"memory_graph_lifecycle_evaluated",
 		...(transitions.length > 0 ? ["memory_graph_lifecycle_changed"] : []),
-		...(consolidationCandidates.length > 0 ? ["stable_cluster_ready_for_consolidation"] : []),
+		...(consolidationCandidates.length > 0
+			? ["stable_cluster_ready_for_consolidation"]
+			: []),
 		...(decayingClusterIds.length > 0 ? ["weak_cluster_decaying"] : []),
 	]);
 	const plan = emptyPlan({
@@ -372,7 +418,8 @@ export function buildMemoryGraphRepresentativePlan(
 ): MemoryGraphUpdatePlan {
 	const winner = input.snapshot.clusters.find(
 		(cluster) =>
-			cluster.clusterId === input.candidate.clusterId && sameOwnerScope(cluster.ownerScope, input.ownerScope),
+			cluster.clusterId === input.candidate.clusterId &&
+			sameOwnerScope(cluster.ownerScope, input.ownerScope),
 	);
 	if (!winner) {
 		return emptyPlan({
@@ -393,14 +440,20 @@ export function buildMemoryGraphRepresentativePlan(
 					sameApplicability(cluster.applicability, winner.applicability),
 			),
 		)
-		.filter((cluster): cluster is MemoryGraphClusterSnapshot => Boolean(cluster));
+		.filter((cluster): cluster is MemoryGraphClusterSnapshot =>
+			Boolean(cluster),
+		);
 	const supersededSourceNodeIds = supersededClusters.flatMap((cluster) =>
 		rawSourceNodeIds(cluster, input.snapshot),
 	);
-	const nodesById = new Map(input.snapshot.nodes.map((node) => [node.id, node]));
+	const nodesById = new Map(
+		input.snapshot.nodes.map((node) => [node.id, node]),
+	);
 	const supersededRepresentativeNodes = supersededClusters
 		.map((cluster) =>
-			cluster.representativeNodeId ? nodesById.get(cluster.representativeNodeId) : undefined,
+			cluster.representativeNodeId
+				? nodesById.get(cluster.representativeNodeId)
+				: undefined,
 		)
 		.filter(
 			(node): node is MemoryGraphNode =>
@@ -408,19 +461,20 @@ export function buildMemoryGraphRepresentativePlan(
 				(node?.type === "summary" || node?.type === "artifact") &&
 				node.visibility !== "audit-only",
 		)
-		.map(
-			(node): MemoryGraphNode => ({
-				...node,
-				ownerScope: { ...node.ownerScope },
-				visibility: "audit-only",
-				updatedAt: input.now,
-				metadata: {
-					...(node.metadata ?? {}),
-					supersededBySummaryId: input.summaryId,
-				},
-			}),
-		);
-	const coveredSourceNodeIds = unique([...input.candidate.sourceNodeIds, ...supersededSourceNodeIds]);
+		.map((node): MemoryGraphNode => ({
+			...node,
+			ownerScope: { ...node.ownerScope },
+			visibility: "audit-only",
+			updatedAt: input.now,
+			metadata: {
+				...(node.metadata ?? {}),
+				supersededBySummaryId: input.summaryId,
+			},
+		}));
+	const coveredSourceNodeIds = unique([
+		...input.candidate.sourceNodeIds,
+		...supersededSourceNodeIds,
+	]);
 	const coveredNodeIds = unique([
 		...coveredSourceNodeIds,
 		...supersededRepresentativeNodes.map((node) => node.id),
@@ -433,34 +487,44 @@ export function buildMemoryGraphRepresentativePlan(
 		createdAt: input.now,
 		updatedAt: input.now,
 		visibility: "default",
-		applicability: winner.applicability ? { ...winner.applicability } : undefined,
+		applicability: winner.applicability
+			? { ...winner.applicability }
+			: undefined,
 		metadata: {
 			clusterId: winner.clusterId,
 			publicationRevision: input.publicationRevision,
 			previousPublicationRevision: input.previousPublicationRevision,
 			sourceNodeIds: [...input.candidate.sourceNodeIds],
-			supersededClusterIds: supersededClusters.map((cluster) => cluster.clusterId),
-			supersededRepresentativeNodeIds: supersededRepresentativeNodes.map((node) => node.id),
+			supersededClusterIds: supersededClusters.map(
+				(cluster) => cluster.clusterId,
+			),
+			supersededRepresentativeNodeIds: supersededRepresentativeNodes.map(
+				(node) => node.id,
+			),
 		},
 	};
-	const candidateEdges: MemoryGraphEdge[] = coveredNodeIds.map((sourceNodeId) => ({
-		id: edgeId(sourceNodeId, input.summaryId),
-		ownerScope: { ...input.ownerScope },
-		fromNodeId: sourceNodeId,
-		toNodeId: input.summaryId,
-		kind: "supersede",
-		weight: 1,
-		confidence: 1,
-		evidenceNodeIds: [sourceNodeId],
-		reasonCodes: [
-			input.candidate.sourceNodeIds.includes(sourceNodeId)
-				? "stable_cluster_represented"
-				: "competing_cluster_superseded",
-		],
-		applicability: winner.applicability ? { ...winner.applicability } : undefined,
-		createdAt: input.now,
-		updatedAt: input.now,
-	}));
+	const candidateEdges: MemoryGraphEdge[] = coveredNodeIds.map(
+		(sourceNodeId) => ({
+			id: edgeId(sourceNodeId, input.summaryId),
+			ownerScope: { ...input.ownerScope },
+			fromNodeId: sourceNodeId,
+			toNodeId: input.summaryId,
+			kind: "supersede",
+			weight: 1,
+			confidence: 1,
+			evidenceNodeIds: [sourceNodeId],
+			reasonCodes: [
+				input.candidate.sourceNodeIds.includes(sourceNodeId)
+					? "stable_cluster_represented"
+					: "competing_cluster_superseded",
+			],
+			applicability: winner.applicability
+				? { ...winner.applicability }
+				: undefined,
+			createdAt: input.now,
+			updatedAt: input.now,
+		}),
+	);
 	const updatedWinner = copyCluster(winner);
 	updatedWinner.nodeIds = unique([...updatedWinner.nodeIds, input.summaryId]);
 	updatedWinner.representativeNodeId = input.summaryId;
@@ -474,7 +538,10 @@ export function buildMemoryGraphRepresentativePlan(
 		const updated = copyCluster(cluster);
 		updated.lifecycleStatus = "superseded";
 		updated.updatedAt = input.now;
-		updated.reasonCodes = unique([...updated.reasonCodes, "sustained_competition_superseded"]);
+		updated.reasonCodes = unique([
+			...updated.reasonCodes,
+			"sustained_competition_superseded",
+		]);
 		updated.metadata = {
 			...(updated.metadata ?? {}),
 			supersededByClusterId: winner.clusterId,
@@ -491,28 +558,27 @@ export function buildMemoryGraphRepresentativePlan(
 			clusterId: winner.clusterId,
 			reasonCodes: ["stable_cluster_representative_persisted"],
 		},
-		...candidateEdges.map(
-			(edge): MemoryGraphOperation => ({
-				operationId: operationId("supersede-edge", edge.id),
-				ownerScope: { ...input.ownerScope },
-				kind: "create-edge",
-				nodeIds: [edge.fromNodeId, edge.toNodeId],
-				edgeIds: [edge.id],
-				clusterId: winner.clusterId,
-				supersededByNodeId: input.summaryId,
-				reasonCodes: [...edge.reasonCodes],
-			}),
-		),
-		...supersededRepresentativeNodes.map(
-			(node): MemoryGraphOperation => ({
-				operationId: operationId("supersede-representative", `${node.id}:${input.summaryId}`),
-				ownerScope: { ...input.ownerScope },
-				kind: "supersede-node",
-				nodeIds: [node.id],
-				supersededByNodeId: input.summaryId,
-				reasonCodes: ["sustained_competition_superseded"],
-			}),
-		),
+		...candidateEdges.map((edge): MemoryGraphOperation => ({
+			operationId: operationId("supersede-edge", edge.id),
+			ownerScope: { ...input.ownerScope },
+			kind: "create-edge",
+			nodeIds: [edge.fromNodeId, edge.toNodeId],
+			edgeIds: [edge.id],
+			clusterId: winner.clusterId,
+			supersededByNodeId: input.summaryId,
+			reasonCodes: [...edge.reasonCodes],
+		})),
+		...supersededRepresentativeNodes.map((node): MemoryGraphOperation => ({
+			operationId: operationId(
+				"supersede-representative",
+				`${node.id}:${input.summaryId}`,
+			),
+			ownerScope: { ...input.ownerScope },
+			kind: "supersede-node",
+			nodeIds: [node.id],
+			supersededByNodeId: input.summaryId,
+			reasonCodes: ["sustained_competition_superseded"],
+		})),
 		{
 			operationId: operationId("set-representative", input.summaryId),
 			ownerScope: { ...input.ownerScope },
@@ -522,19 +588,20 @@ export function buildMemoryGraphRepresentativePlan(
 			supersededByNodeId: input.summaryId,
 			reasonCodes: ["stable_cluster_representative_persisted"],
 		},
-		...supersededClusters.map(
-			(cluster): MemoryGraphOperation => ({
-				operationId: operationId("supersede-cluster", `${cluster.clusterId}:${input.summaryId}`),
-				ownerScope: { ...input.ownerScope },
-				kind: "set-cluster-lifecycle",
-				nodeIds: [...cluster.nodeIds],
-				clusterId: cluster.clusterId,
-				fromStatus: cluster.lifecycleStatus,
-				toStatus: "superseded",
-				supersededByNodeId: input.summaryId,
-				reasonCodes: ["sustained_competition_superseded"],
-			}),
-		),
+		...supersededClusters.map((cluster): MemoryGraphOperation => ({
+			operationId: operationId(
+				"supersede-cluster",
+				`${cluster.clusterId}:${input.summaryId}`,
+			),
+			ownerScope: { ...input.ownerScope },
+			kind: "set-cluster-lifecycle",
+			nodeIds: [...cluster.nodeIds],
+			clusterId: cluster.clusterId,
+			fromStatus: cluster.lifecycleStatus,
+			toStatus: "superseded",
+			supersededByNodeId: input.summaryId,
+			reasonCodes: ["sustained_competition_superseded"],
+		})),
 	];
 
 	return {
@@ -571,28 +638,24 @@ export function buildMemoryGraphVisibilityPlan(
 				node.visibility !== "audit-only" &&
 				sameOwnerScope(node.ownerScope, input.ownerScope),
 		)
-		.map(
-			(node): MemoryGraphNode => ({
-				...node,
-				ownerScope: { ...node.ownerScope },
-				visibility: "audit-only",
-				updatedAt: input.now,
-				metadata: {
-					...(node.metadata ?? {}),
-					supersededBySummaryId: input.summaryId,
-				},
-			}),
-		);
-	const operations = candidateNodes.map(
-		(node): MemoryGraphOperation => ({
-			operationId: operationId("set-audit-only", `${node.id}:${input.summaryId}`),
-			ownerScope: { ...input.ownerScope },
-			kind: "supersede-node",
-			nodeIds: [node.id],
-			supersededByNodeId: input.summaryId,
-			reasonCodes: ["source_soft_deprecated_after_representative"],
-		}),
-	);
+		.map((node): MemoryGraphNode => ({
+			...node,
+			ownerScope: { ...node.ownerScope },
+			visibility: "audit-only",
+			updatedAt: input.now,
+			metadata: {
+				...(node.metadata ?? {}),
+				supersededBySummaryId: input.summaryId,
+			},
+		}));
+	const operations = candidateNodes.map((node): MemoryGraphOperation => ({
+		operationId: operationId("set-audit-only", `${node.id}:${input.summaryId}`),
+		ownerScope: { ...input.ownerScope },
+		kind: "supersede-node",
+		nodeIds: [node.id],
+		supersededByNodeId: input.summaryId,
+		reasonCodes: ["source_soft_deprecated_after_representative"],
+	}));
 	return {
 		planId: planId("visibility", input.ownerScope, input.summaryId),
 		ownerScope: { ...input.ownerScope },

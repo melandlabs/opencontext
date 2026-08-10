@@ -46,13 +46,22 @@ export interface GoalCommandIdentity {
  * lookup and mutation to ownerId.
  */
 export interface AgentGoalStatePort {
-	getRuntimeSessionRunEpoch(ownerId: string, runtimeSessionId: string): Promise<number>;
+	getRuntimeSessionRunEpoch(
+		ownerId: string,
+		runtimeSessionId: string,
+	): Promise<number>;
 
 	getGoal(ownerId: string, goalId: string): Promise<PersistedAgentGoal | null>;
 
-	getActivePrimaryGoal(ownerId: string, runtimeSessionId: string): Promise<PersistedAgentGoal | null>;
+	getActivePrimaryGoal(
+		ownerId: string,
+		runtimeSessionId: string,
+	): Promise<PersistedAgentGoal | null>;
 
-	listInstructions(ownerId: string, runtimeSessionId: string): Promise<RuntimeInstruction[]>;
+	listInstructions(
+		ownerId: string,
+		runtimeSessionId: string,
+	): Promise<RuntimeInstruction[]>;
 
 	findCommitByIdempotency(input: {
 		ownerId: string;
@@ -212,7 +221,9 @@ export interface RuntimeSessionLifecycleControlPort extends RuntimeInstructionTr
 	 * synchronous runtime operation, so an SDK handoff cannot occur between
 	 * those two observations.
 	 */
-	captureTurnBoundaryAndHoldPendingInput(expectedRunEpoch: number): RuntimeTurnBoundaryInputHold;
+	captureTurnBoundaryAndHoldPendingInput(
+		expectedRunEpoch: number,
+	): RuntimeTurnBoundaryInputHold;
 
 	waitForTurnTerminal(input: {
 		expectedRunEpoch: number;
@@ -227,7 +238,10 @@ export interface RuntimeSessionLifecycleControlPort extends RuntimeInstructionTr
 }
 
 export interface RuntimeSessionResolverPort {
-	resolve(ownerId: string, runtimeSessionId: string): Promise<RuntimeInstructionTransportPort | null>;
+	resolve(
+		ownerId: string,
+		runtimeSessionId: string,
+	): Promise<RuntimeInstructionTransportPort | null>;
 }
 
 export interface RuntimeClockPort {

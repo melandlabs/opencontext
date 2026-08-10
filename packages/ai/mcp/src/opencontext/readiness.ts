@@ -1,7 +1,12 @@
-import { DEFAULT_OPENCONTEXT_BASE_URLS, OpenContextApiError, OpenContextClient } from "./client";
+import {
+	DEFAULT_OPENCONTEXT_BASE_URLS,
+	OpenContextApiError,
+	OpenContextClient,
+} from "./client";
 import { type OpenContextAuthToken, readOpenContextAuthToken } from "./token";
 
-export const OPENCONTEXT_INSTALL_URL = "https://opencontext.ai/docs/getting-started";
+export const OPENCONTEXT_INSTALL_URL =
+	"https://opencontext.ai/docs/getting-started";
 
 export type OpenContextReadinessState =
 	| "READY"
@@ -43,11 +48,17 @@ export interface OpenContextReadiness {
 }
 
 function uniqueStrings(values: Array<string | undefined>): string[] {
-	return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+	return Array.from(
+		new Set(values.filter((value): value is string => Boolean(value))),
+	);
 }
 
 function getCandidateBaseUrls(preferredBaseUrl?: string): string[] {
-	return uniqueStrings([preferredBaseUrl, process.env.OPENCONTEXT_API_URL, ...DEFAULT_OPENCONTEXT_BASE_URLS]);
+	return uniqueStrings([
+		preferredBaseUrl,
+		process.env.OPENCONTEXT_API_URL,
+		...DEFAULT_OPENCONTEXT_BASE_URLS,
+	]);
 }
 
 async function probeOpenContextApi(input: {
@@ -174,7 +185,9 @@ export async function checkOpenContextReadiness(
 		),
 	);
 	const selectedProbe =
-		probes.find((probe) => probe.authOk) ?? probes.find((probe) => probe.reachable) ?? null;
+		probes.find((probe) => probe.authOk) ??
+		probes.find((probe) => probe.reachable) ??
+		null;
 	const state = resolveReadinessState({
 		tokenPresent: Boolean(token),
 		selectedProbe,
@@ -205,11 +218,15 @@ export async function checkOpenContextReadiness(
 	};
 }
 
-export function formatOpenContextReadiness(readiness: OpenContextReadiness): string {
+export function formatOpenContextReadiness(
+	readiness: OpenContextReadiness,
+): string {
 	const lines = [
 		`OpenContext MCP readiness: ${readiness.state}`,
 		`Desktop API: ${
-			readiness.api.reachable ? `reachable at ${readiness.api.selectedBaseUrl}` : "not detected"
+			readiness.api.reachable
+				? `reachable at ${readiness.api.selectedBaseUrl}`
+				: "not detected"
 		}`,
 		`Token: ${readiness.token.present ? `found via ${readiness.token.source}` : "missing"}`,
 		`Auth: ${readiness.auth.ok ? "passed" : "not ready"}`,

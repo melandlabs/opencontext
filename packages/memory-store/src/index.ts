@@ -8,7 +8,10 @@
  */
 
 import type { MemoryStoreConfig } from "./config";
-import { type UnifiedSearch, createUnifiedSearch } from "./search/unified-search";
+import {
+	type UnifiedSearch,
+	createUnifiedSearch,
+} from "./search/unified-search";
 import {
 	type RawMessageStore,
 	configureRawMessageStore,
@@ -29,7 +32,9 @@ export interface MemoryStore {
 	searchRawMemorySemantically: UnifiedSearch["searchRawMemorySemantically"];
 }
 
-export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise<MemoryStore> {
+export async function createMemoryStore(
+	config: MemoryStoreConfig = {},
+): Promise<MemoryStore> {
 	const raw = createRawMessageStore({ env: config.env });
 	const search = createUnifiedSearch(config.unified);
 

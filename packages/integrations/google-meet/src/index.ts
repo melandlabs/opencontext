@@ -148,7 +148,9 @@ export class GoogleMeetAdapter {
 		};
 	}
 
-	async listRecordings(conferenceRecordName: string): Promise<GoogleMeetRecording[]> {
+	async listRecordings(
+		conferenceRecordName: string,
+	): Promise<GoogleMeetRecording[]> {
 		const data = await this.proxy<{ recordings?: Record<string, unknown>[] }>({
 			method: "GET",
 			endpoint: `https://meet.googleapis.com/v2/${encodeMeetResourceName(conferenceRecordName)}/recordings`,
@@ -156,7 +158,9 @@ export class GoogleMeetAdapter {
 		return (data.recordings ?? []).map(toRecording);
 	}
 
-	async listTranscripts(conferenceRecordName: string): Promise<GoogleMeetTranscript[]> {
+	async listTranscripts(
+		conferenceRecordName: string,
+	): Promise<GoogleMeetTranscript[]> {
 		const data = await this.proxy<{ transcripts?: Record<string, unknown>[] }>({
 			method: "GET",
 			endpoint: `https://meet.googleapis.com/v2/${encodeMeetResourceName(conferenceRecordName)}/transcripts`,
@@ -164,7 +168,9 @@ export class GoogleMeetAdapter {
 		return (data.transcripts ?? []).map(toTranscript);
 	}
 
-	async listTranscriptEntries(transcriptName: string): Promise<GoogleMeetTranscriptEntry[]> {
+	async listTranscriptEntries(
+		transcriptName: string,
+	): Promise<GoogleMeetTranscriptEntry[]> {
 		const data = await this.proxy<{
 			transcriptEntries?: Record<string, unknown>[];
 		}>({
@@ -201,7 +207,9 @@ function toMeetSpace(item: Record<string, unknown>): GoogleMeetSpace {
 	};
 }
 
-function toConferenceRecord(item: Record<string, unknown>): GoogleMeetConferenceRecord {
+function toConferenceRecord(
+	item: Record<string, unknown>,
+): GoogleMeetConferenceRecord {
 	return {
 		name: stringOrFallback(item.name, "conferenceRecords/unknown"),
 		space: stringOrNull(item.space),
@@ -244,7 +252,9 @@ function toTranscript(item: Record<string, unknown>): GoogleMeetTranscript {
 	};
 }
 
-function toTranscriptEntry(item: Record<string, unknown>): GoogleMeetTranscriptEntry {
+function toTranscriptEntry(
+	item: Record<string, unknown>,
+): GoogleMeetTranscriptEntry {
 	return {
 		name: stringOrFallback(item.name, "entries/unknown"),
 		participant: stringOrNull(item.participant),
@@ -271,7 +281,9 @@ function stringOrFallback(value: unknown, fallback: string) {
 }
 
 function recordOrNull(value: unknown): Record<string, unknown> | null {
-	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+	return typeof value === "object" && value !== null
+		? (value as Record<string, unknown>)
+		: null;
 }
 
 function dateOrNull(value: unknown) {

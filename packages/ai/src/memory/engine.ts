@@ -44,9 +44,14 @@ function clampTimestamp(value: number): number {
 	return Math.max(0, Math.floor(value));
 }
 
-function stableDimensionKey(record: MemoryRecord, dimensionKeys: string[]): string {
+function stableDimensionKey(
+	record: MemoryRecord,
+	dimensionKeys: string[],
+): string {
 	const dimensions = record.dimensions ?? {};
-	return dimensionKeys.map((key) => `${key}=${String(dimensions[key] ?? "")}`).join("|");
+	return dimensionKeys
+		.map((key) => `${key}=${String(dimensions[key] ?? "")}`)
+		.join("|");
 }
 
 function hashString(input: string): string {
@@ -109,7 +114,9 @@ function groupRecordsForTransition(params: {
 		if (records.length < params.minRecordsPerGroup) {
 			continue;
 		}
-		const startTimestamp = Math.min(...records.map((record) => record.timestamp));
+		const startTimestamp = Math.min(
+			...records.map((record) => record.timestamp),
+		);
 		const endTimestamp = Math.max(...records.map((record) => record.timestamp));
 		groups.push({
 			groupId,
@@ -168,7 +175,8 @@ export function createMemoryForgettingEngine(
 			let createdSummaries = 0;
 			let transitionedRecords = 0;
 			let archivedDetailRecords = 0;
-			let deprecationStatus: MemoryForgettingRunResult["deprecationStatus"] | undefined;
+			let deprecationStatus:
+				MemoryForgettingRunResult["deprecationStatus"] | undefined;
 			let deprecationPlannedRecords = 0;
 			let deprecatedRecords = 0;
 			const deprecationReasonCodes = new Set<string>();
@@ -210,7 +218,9 @@ export function createMemoryForgettingEngine(
 					const scored = toScoredRecords(records, scorer, now);
 					const eligible = scored.filter(
 						(record) =>
-							!record.isPinned && record.archivedAt === undefined && record.valueScore <= phase.threshold,
+							!record.isPinned &&
+							record.archivedAt === undefined &&
+							record.valueScore <= phase.threshold,
 					);
 
 					eligibleRecords += eligible.length;
@@ -284,7 +294,8 @@ export function createMemoryForgettingEngine(
 								deprecatedRecords += deprecationResult.persistedCount;
 								if (
 									deprecationStatus !== "failed" &&
-									(deprecationStatus !== "persisted" || deprecationResult.status === "persisted")
+									(deprecationStatus !== "persisted" ||
+										deprecationResult.status === "persisted")
 								) {
 									deprecationStatus = deprecationResult.status;
 								}
@@ -292,7 +303,9 @@ export function createMemoryForgettingEngine(
 									deprecationReasonCodes.add(reasonCode);
 								}
 							} catch {
-								const plannedIds = new Set(deprecationPlan.entries.flatMap((entry) => entry.recordIds));
+								const plannedIds = new Set(
+									deprecationPlan.entries.flatMap((entry) => entry.recordIds),
+								);
 								deprecationStatus = "failed";
 								deprecationPlannedRecords += plannedIds.size;
 								deprecationReasonCodes.add("adapter_deprecate_records_error");
@@ -306,7 +319,10 @@ export function createMemoryForgettingEngine(
 								summaryId: summary.summaryId,
 							});
 
-							if (group.targetTier === "long" && input.storage.archiveRecordDetails) {
+							if (
+								group.targetTier === "long" &&
+								input.storage.archiveRecordDetails
+							) {
 								await input.storage.archiveRecordDetails({
 									userId: runInput.userId,
 									ids: summary.sourceRecordIds,

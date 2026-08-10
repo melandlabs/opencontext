@@ -26,9 +26,13 @@ async function postRegistration(
 		body: new URLSearchParams(body),
 		signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
 	});
-	const json = (await resp.json().catch(() => null)) as Record<string, unknown> | null;
+	const json = (await resp.json().catch(() => null)) as Record<
+		string,
+		unknown
+	> | null;
 	if (!resp.ok) {
-		const msg = json && typeof json.msg === "string" ? json.msg : `HTTP ${resp.status}`;
+		const msg =
+			json && typeof json.msg === "string" ? json.msg : `HTTP ${resp.status}`;
 		throw new Error(`Feishu registration HTTP error: ${msg}`);
 	}
 	return json ?? {};
@@ -37,7 +41,9 @@ async function postRegistration(
 /**
  * Check if current environment supports client_secret device code registration
  */
-export async function initAppRegistration(domain: FeishuAccountsDomain = "feishu"): Promise<void> {
+export async function initAppRegistration(
+	domain: FeishuAccountsDomain = "feishu",
+): Promise<void> {
 	const res = await postRegistration(domain, { action: "init" });
 	const methods = res.supported_auth_methods;
 	if (!Array.isArray(methods) || !methods.includes("client_secret")) {
@@ -66,7 +72,8 @@ export async function beginAppRegistration(
 		request_user_info: "open_id",
 	});
 	if (typeof res.error === "string" && res.error) {
-		const desc = typeof res.error_description === "string" ? res.error_description : "";
+		const desc =
+			typeof res.error_description === "string" ? res.error_description : "";
 		throw new Error(`feishu_registration_begin: ${res.error} ${desc}`.trim());
 	}
 	const verificationUriComplete = res.verification_uri_complete;
@@ -139,7 +146,9 @@ export async function pollAppRegistrationOnce(params: {
 
 	const userInfo = pollRes.user_info as Record<string, unknown> | undefined;
 	const tenantBrand =
-		userInfo && typeof userInfo.tenant_brand === "string" ? userInfo.tenant_brand : undefined;
+		userInfo && typeof userInfo.tenant_brand === "string"
+			? userInfo.tenant_brand
+			: undefined;
 	if (tenantBrand === "lark" && !params.domainAlreadySwitched) {
 		return {
 			kind: "pending",
@@ -183,7 +192,10 @@ export async function pollAppRegistrationOnce(params: {
 		return { kind: "expired" };
 	}
 	if (typeof err === "string" && err) {
-		const desc = typeof pollRes.error_description === "string" ? pollRes.error_description : "";
+		const desc =
+			typeof pollRes.error_description === "string"
+				? pollRes.error_description
+				: "";
 		return { kind: "error", message: `${err}: ${desc || "unknown"}` };
 	}
 

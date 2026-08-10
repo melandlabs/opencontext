@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [WhatsApp](https://www.whatsapp.com/) integration for OpenContext, powered by
 [`@whiskeysockets/baileys`](https://www.npmjs.com/package/@whiskeysockets/baileys)
 (a WebSocket-based multi-device client). Includes channel adapter,

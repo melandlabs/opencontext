@@ -1,5 +1,8 @@
 /** Build CDN download URL. */
-export function buildCdnDownloadUrl(encryptedQueryParam: string, cdnBaseUrl: string): string {
+export function buildCdnDownloadUrl(
+	encryptedQueryParam: string,
+	cdnBaseUrl: string,
+): string {
 	return `${cdnBaseUrl}/download?encrypted_query_param=${encodeURIComponent(encryptedQueryParam)}`;
 }
 

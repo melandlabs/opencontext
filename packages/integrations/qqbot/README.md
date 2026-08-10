@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [QQ Bot](https://bot.q.qq.com/) (QQ机器人) adapter for OpenContext. Sends and
 receives QQ guild / group messages through Tencent's open bot platform.
 

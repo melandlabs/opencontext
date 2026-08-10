@@ -36,7 +36,11 @@ function isNonProjectPath(filePath: string): boolean {
 			return false;
 		}
 		// Skip /dev/null, /proc and other system pseudo-files
-		if (resolved.startsWith("/dev/") || resolved.startsWith("/proc/") || resolved.startsWith("/sys/")) {
+		if (
+			resolved.startsWith("/dev/") ||
+			resolved.startsWith("/proc/") ||
+			resolved.startsWith("/sys/")
+		) {
 			return false;
 		}
 		return true;
@@ -54,11 +58,15 @@ export function installAuditInterceptors() {
 
 	try {
 		const { resolve } = require("node:path") as typeof import("node:path");
-		const { logFileRead, logCommandExec } = require("./logger") as typeof import("./logger");
+		const { logFileRead, logCommandExec } =
+			require("./logger") as typeof import("./logger");
 
 		projectRoot = resolve(globalThis.process.cwd());
 		// If started from apps/web, project root is two levels up
-		if (projectRoot.endsWith("/apps/web") || projectRoot.endsWith("\\apps\\web")) {
+		if (
+			projectRoot.endsWith("/apps/web") ||
+			projectRoot.endsWith("\\apps\\web")
+		) {
 			projectRoot = resolve(projectRoot, "..", "..");
 		}
 
@@ -76,7 +84,10 @@ export function installAuditInterceptors() {
 		const origSpawnSync = cp.spawnSync;
 
 		// ────────── Intercept fs.readFileSync ──────────
-		fs.readFileSync = function auditedReadFileSync(path: unknown, ...args: unknown[]) {
+		fs.readFileSync = function auditedReadFileSync(
+			path: unknown,
+			...args: unknown[]
+		) {
 			try {
 				const p = String(path);
 				if (isNonProjectPath(p)) {
@@ -104,7 +115,10 @@ export function installAuditInterceptors() {
 		// Intercept fs.promises.readFile
 		if (fs.promises) {
 			const origPromisesReadFile = fs.promises.readFile;
-			fs.promises.readFile = function auditedPromisesReadFile(path: unknown, ...args: unknown[]) {
+			fs.promises.readFile = function auditedPromisesReadFile(
+				path: unknown,
+				...args: unknown[]
+			) {
 				try {
 					const p = String(path);
 					if (isNonProjectPath(p)) {
@@ -118,7 +132,10 @@ export function installAuditInterceptors() {
 		}
 
 		// ────────── Intercept child_process.execSync ──────────
-		cp.execSync = function auditedExecSync(command: unknown, ...args: unknown[]) {
+		cp.execSync = function auditedExecSync(
+			command: unknown,
+			...args: unknown[]
+		) {
 			try {
 				logCommandExec(String(command));
 			} catch {
@@ -138,9 +155,15 @@ export function installAuditInterceptors() {
 		};
 
 		// ────────── Intercept child_process.spawn ──────────
-		cp.spawn = function auditedSpawn(command: unknown, spawnArgs?: unknown, ...rest: unknown[]) {
+		cp.spawn = function auditedSpawn(
+			command: unknown,
+			spawnArgs?: unknown,
+			...rest: unknown[]
+		) {
 			try {
-				const argsArr = Array.isArray(spawnArgs) ? spawnArgs.map(String) : undefined;
+				const argsArr = Array.isArray(spawnArgs)
+					? spawnArgs.map(String)
+					: undefined;
 				logCommandExec(String(command), argsArr);
 			} catch {
 				// Does not affect original call
@@ -149,9 +172,15 @@ export function installAuditInterceptors() {
 		};
 
 		// ────────── Intercept child_process.spawnSync ──────────
-		cp.spawnSync = function auditedSpawnSync(command: unknown, spawnArgs?: unknown, ...rest: unknown[]) {
+		cp.spawnSync = function auditedSpawnSync(
+			command: unknown,
+			spawnArgs?: unknown,
+			...rest: unknown[]
+		) {
 			try {
-				const argsArr = Array.isArray(spawnArgs) ? spawnArgs.map(String) : undefined;
+				const argsArr = Array.isArray(spawnArgs)
+					? spawnArgs.map(String)
+					: undefined;
 				logCommandExec(String(command), argsArr);
 			} catch {
 				// Does not affect original call

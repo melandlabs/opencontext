@@ -76,7 +76,10 @@ export class XAdapter {
 		if (!this.isTokenExpiringSoon()) {
 			const token = this.client.accessToken;
 			if (!token) {
-				throw new AppError("unauthorized:x_token_expired", `Bot ${this.botId}: X access token is missing.`);
+				throw new AppError(
+					"unauthorized:x_token_expired",
+					`Bot ${this.botId}: X access token is missing.`,
+				);
 			}
 			return token;
 		}
@@ -88,7 +91,9 @@ export class XAdapter {
 	 */
 	private async refreshAccessToken(): Promise<string> {
 		if (!this.refreshToken || !this.clientId || !this.clientSecret) {
-			console.warn(`[Bot ${this.botId}] No refresh token available for X, cannot refresh.`);
+			console.warn(
+				`[Bot ${this.botId}] No refresh token available for X, cannot refresh.`,
+			);
 			const token = this.client.accessToken;
 			if (!token) {
 				throw new AppError(
@@ -120,7 +125,9 @@ export class XAdapter {
 
 			if (!response.ok) {
 				const text = await response.text();
-				console.error(`[Bot ${this.botId}] X token refresh failed (${response.status}): ${text}`);
+				console.error(
+					`[Bot ${this.botId}] X token refresh failed (${response.status}): ${text}`,
+				);
 				const token = this.client.accessToken;
 				if (!token) {
 					throw new AppError(
@@ -147,7 +154,9 @@ export class XAdapter {
 					);
 				})();
 			const newRefreshToken = data.refresh_token ?? this.refreshToken;
-			const newExpiresAt = data.expires_in ? Date.now() + data.expires_in * 1000 : this.expiresAt;
+			const newExpiresAt = data.expires_in
+				? Date.now() + data.expires_in * 1000
+				: this.expiresAt;
 
 			// Update in-memory state
 			this.client = new Client({ accessToken: newAccessToken });
@@ -163,14 +172,20 @@ export class XAdapter {
 						expiresAt: newExpiresAt ?? undefined,
 					});
 				} catch (err) {
-					console.error(`[Bot ${this.botId}] Failed to persist refreshed X credentials:`, err);
+					console.error(
+						`[Bot ${this.botId}] Failed to persist refreshed X credentials:`,
+						err,
+					);
 				}
 			}
 
 			console.log(`[Bot ${this.botId}] X access token refreshed successfully.`);
 			return newAccessToken;
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] X token refresh threw an error:`, error);
+			console.error(
+				`[Bot ${this.botId}] X token refresh threw an error:`,
+				error,
+			);
 			const token = this.client.accessToken;
 			if (!token) {
 				throw new AppError(
@@ -185,24 +200,37 @@ export class XAdapter {
 	/**
 	 * Wrap SDK calls to handle ApiError → AppError conversion.
 	 */
-	private async withTokenRefresh<T>(fn: () => Promise<T>, name: string): Promise<T> {
+	private async withTokenRefresh<T>(
+		fn: () => Promise<T>,
+		name: string,
+	): Promise<T> {
 		await this.ensureAccessToken();
 		try {
 			return await fn();
 		} catch (error) {
 			if (error instanceof ApiError) {
-				console.error(`[Bot ${this.botId}] X SDK error (${name}): ${error.status} ${error.statusText}`);
-				console.error(`[Bot ${this.botId}] X SDK error data:`, JSON.stringify(error.data, null, 2));
+				console.error(
+					`[Bot ${this.botId}] X SDK error (${name}): ${error.status} ${error.statusText}`,
+				);
+				console.error(
+					`[Bot ${this.botId}] X SDK error data:`,
+					JSON.stringify(error.data, null, 2),
+				);
 				if (error.status === 401) {
 					throw new AppError(
 						"unauthorized:x_token_expired",
 						"X access token expired. Please reconnect X in Settings > Integrations.",
 					);
 				}
-				const data = error.data as { detail?: string; title?: string; errors?: unknown[] } | undefined;
-				const errorMsg = data?.detail ?? data?.title ?? `X API error (${error.status})`;
+				const data = error.data as
+					{ detail?: string; title?: string; errors?: unknown[] } | undefined;
+				const errorMsg =
+					data?.detail ?? data?.title ?? `X API error (${error.status})`;
 				if (data?.errors && Array.isArray(data.errors)) {
-					console.error(`[Bot ${this.botId}] X API errors:`, JSON.stringify(data.errors, null, 2));
+					console.error(
+						`[Bot ${this.botId}] X API errors:`,
+						JSON.stringify(data.errors, null, 2),
+					);
 				}
 				throw new AppError("bad_request:bot", `X API error: ${errorMsg}`);
 			}
@@ -212,7 +240,10 @@ export class XAdapter {
 
 	async getMessagesByTime(since: number): Promise<ExtractedMessageInfo[]> {
 		const token = await this.ensureAccessToken();
-		const fetchWithToken = async <T>(path: string, params?: Record<string, string>): Promise<T> => {
+		const fetchWithToken = async <T>(
+			path: string,
+			params?: Record<string, string>,
+		): Promise<T> => {
 			const search = params ? `?${new URLSearchParams(params).toString()}` : "";
 			const url = `https://api.twitter.com/2/${path}${search}`;
 			const response = await fetch(url, {
@@ -227,7 +258,10 @@ export class XAdapter {
 						"X access token expired. Please reconnect X in Settings > Integrations.",
 					);
 				}
-				throw new AppError("bad_request:bot", `X API failed (${response.status})`);
+				throw new AppError(
+					"bad_request:bot",
+					`X API failed (${response.status})`,
+				);
 			}
 			return response.json() as Promise<T>;
 		};
@@ -251,12 +285,19 @@ export class XAdapter {
 
 			const messages = messagesResp.data ?? [];
 			for (const message of messages) {
-				const created = message.event_time ? new Date(message.event_time).getTime() : Date.now();
+				const created = message.event_time
+					? new Date(message.event_time).getTime()
+					: Date.now();
 				if (created < since * 1000) continue;
 
 				const senderId = message.sender_id ?? "";
 				const isSelf = senderId === this.userId;
-				const sender = isSelf && this.username ? this.username : isSelf ? "Me" : senderId || "X User";
+				const sender =
+					isSelf && this.username
+						? this.username
+						: isSelf
+							? "Me"
+							: senderId || "X User";
 				const chatName = `DM ${convoId}`;
 
 				result.push({
@@ -273,12 +314,17 @@ export class XAdapter {
 		return result;
 	}
 
-	async sendMessages(_channel: "private", recipients: string[], messages: Messages): Promise<void> {
+	async sendMessages(
+		_channel: "private",
+		recipients: string[],
+		messages: Messages,
+	): Promise<void> {
 		if (recipients.length === 0) {
 			throw new AppError("bad_request:bot", "No X DM recipient provided.");
 		}
 		const textPart = messages.find(
-			(item): item is string => typeof item === "string" && item.trim().length > 0,
+			(item): item is string =>
+				typeof item === "string" && item.trim().length > 0,
 		);
 		if (!textPart) {
 			throw new AppError("bad_request:bot", "X DM requires text content.");
@@ -292,24 +338,32 @@ export class XAdapter {
 
 		const token = await this.ensureAccessToken();
 		for (const recipient of recipients) {
-			const response = await fetch(`https://api.twitter.com/2/dm_conversations/with/${recipient}/messages`, {
-				method: "POST",
-				headers: {
-					Authorization: `Bearer ${token}`,
-					"Content-Type": "application/json",
+			const response = await fetch(
+				`https://api.twitter.com/2/dm_conversations/with/${recipient}/messages`,
+				{
+					method: "POST",
+					headers: {
+						Authorization: `Bearer ${token}`,
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify(body),
 				},
-				body: JSON.stringify(body),
-			});
+			);
 			if (!response.ok) {
 				const text = await response.text();
-				console.error(`[Bot ${this.botId}] X DM send failed: ${response.status} ${text}`);
+				console.error(
+					`[Bot ${this.botId}] X DM send failed: ${response.status} ${text}`,
+				);
 				if (response.status === 401) {
 					throw new AppError(
 						"unauthorized:x_token_expired",
 						"X access token expired. Please reconnect X in Settings > Integrations.",
 					);
 				}
-				throw new AppError("bad_request:bot", `X DM send failed (${response.status})`);
+				throw new AppError(
+					"bad_request:bot",
+					`X DM send failed (${response.status})`,
+				);
 			}
 		}
 	}
@@ -323,8 +377,13 @@ export class XAdapter {
 	/**
 	 * Post a new tweet (text only)
 	 */
-	async postTweet(text: string, quoteTweetId?: string): Promise<{ id: string; text: string }> {
-		console.log(`[X postTweet] userId=${this.userId} username=${this.username} botId=${this.botId}`);
+	async postTweet(
+		text: string,
+		quoteTweetId?: string,
+	): Promise<{ id: string; text: string }> {
+		console.log(
+			`[X postTweet] userId=${this.userId} username=${this.username} botId=${this.botId}`,
+		);
 		return this.withTokenRefresh(async () => {
 			const result = await this.client.posts.create({
 				text,
@@ -333,7 +392,10 @@ export class XAdapter {
 			if (result.errors?.length) {
 				const err = result.errors[0];
 				console.error(`[X postTweet] failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X postTweet failed: ${err.detail ?? JSON.stringify(err)}`);
+				throw new AppError(
+					"bad_request:bot",
+					`X postTweet failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			const data = result.data as { id: string; text: string } | undefined;
 			if (!data) {
@@ -359,7 +421,9 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X postTweetWithMedia failed: ${JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X postTweetWithMedia failed: ${JSON.stringify(err)}`,
+				);
 				throw new AppError(
 					"bad_request:bot",
 					`X postTweetWithMedia failed: ${err.detail ?? JSON.stringify(err)}`,
@@ -367,7 +431,10 @@ export class XAdapter {
 			}
 			const data = result.data as { id: string; text: string } | undefined;
 			if (!data) {
-				throw new AppError("bad_request:bot", "X postTweetWithMedia returned no data");
+				throw new AppError(
+					"bad_request:bot",
+					"X postTweetWithMedia returned no data",
+				);
 			}
 			return data;
 		}, "posts.create");
@@ -389,7 +456,8 @@ export class XAdapter {
 				);
 			}
 			const buffer = await response.arrayBuffer();
-			const contentType = response.headers.get("content-type") || "application/octet-stream";
+			const contentType =
+				response.headers.get("content-type") || "application/octet-stream";
 
 			// Determine media category based on content type
 			let category: "tweet_image" | "tweet_video" | "tweet_gif" = "tweet_image";
@@ -408,13 +476,21 @@ export class XAdapter {
 
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X uploadMedia failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X uploadMedia failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X uploadMedia failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X uploadMedia failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 
 			const data = result.data as { media_id_string?: string } | undefined;
 			if (!data?.media_id_string) {
-				throw new AppError("bad_request:bot", "X uploadMedia returned no media_id");
+				throw new AppError(
+					"bad_request:bot",
+					"X uploadMedia returned no media_id",
+				);
 			}
 			return data.media_id_string;
 		}, "media.upload");
@@ -447,9 +523,14 @@ export class XAdapter {
 				text: tweet.text,
 				authorId: tweet.authorId ?? tweet.author_id ?? "",
 				createdAt: tweet.createdAt ?? tweet.created_at ?? "",
-				likeCount: tweet.publicMetrics?.likeCount ?? tweet.public_metrics?.like_count,
-				retweetCount: tweet.publicMetrics?.retweetCount ?? tweet.public_metrics?.retweet_count,
-				impressionCount: tweet.publicMetrics?.impressionCount ?? tweet.public_metrics?.impression_count,
+				likeCount:
+					tweet.publicMetrics?.likeCount ?? tweet.public_metrics?.like_count,
+				retweetCount:
+					tweet.publicMetrics?.retweetCount ??
+					tweet.public_metrics?.retweet_count,
+				impressionCount:
+					tweet.publicMetrics?.impressionCount ??
+					tweet.public_metrics?.impression_count,
 			};
 		}, "posts.getById");
 	}
@@ -462,8 +543,13 @@ export class XAdapter {
 			const result = await this.client.posts.delete(tweetId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X deleteTweet failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X deleteTweet failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X deleteTweet failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X deleteTweet failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { deleted: true };
 		}, "posts.delete");
@@ -581,8 +667,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X followUser failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X followUser failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X followUser failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X followUser failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { following: true };
 		}, "users.followUser");
@@ -596,8 +687,13 @@ export class XAdapter {
 			const result = await this.client.users.unfollowUser(this.userId, userId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X unfollowUser failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X unfollowUser failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X unfollowUser failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X unfollowUser failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { following: false };
 		}, "users.unfollowUser");
@@ -613,8 +709,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X muteUser failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X muteUser failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X muteUser failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X muteUser failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { muting: true };
 		}, "users.muteUser");
@@ -628,8 +729,13 @@ export class XAdapter {
 			const result = await this.client.users.unmuteUser(this.userId, userId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X unmuteUser failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X unmuteUser failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X unmuteUser failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X unmuteUser failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { muting: false };
 		}, "users.unmuteUser");
@@ -659,8 +765,12 @@ export class XAdapter {
 				id: user.id,
 				username: user.username ?? "",
 				name: user.name ?? "",
-				followersCount: user.publicMetrics?.followersCount ?? user.public_metrics?.followers_count,
-				followingCount: user.publicMetrics?.followingCount ?? user.public_metrics?.following_count,
+				followersCount:
+					user.publicMetrics?.followersCount ??
+					user.public_metrics?.followers_count,
+				followingCount:
+					user.publicMetrics?.followingCount ??
+					user.public_metrics?.following_count,
 			}));
 		}, "users.getFollowers");
 	}
@@ -689,8 +799,12 @@ export class XAdapter {
 				id: user.id,
 				username: user.username ?? "",
 				name: user.name ?? "",
-				followersCount: user.publicMetrics?.followersCount ?? user.public_metrics?.followers_count,
-				followingCount: user.publicMetrics?.followingCount ?? user.public_metrics?.following_count,
+				followersCount:
+					user.publicMetrics?.followersCount ??
+					user.public_metrics?.followers_count,
+				followingCount:
+					user.publicMetrics?.followingCount ??
+					user.public_metrics?.following_count,
 			}));
 		}, "users.getFollowing");
 	}
@@ -748,9 +862,18 @@ export class XAdapter {
 				username: user.username ?? "",
 				name: user.name ?? "",
 				bio: user.description,
-				followersCount: user.publicMetrics?.followersCount ?? user.public_metrics?.followers_count ?? 0,
-				followingCount: user.publicMetrics?.followingCount ?? user.public_metrics?.following_count ?? 0,
-				tweetCount: user.publicMetrics?.tweetCount ?? user.public_metrics?.tweet_count ?? 0,
+				followersCount:
+					user.publicMetrics?.followersCount ??
+					user.public_metrics?.followers_count ??
+					0,
+				followingCount:
+					user.publicMetrics?.followingCount ??
+					user.public_metrics?.following_count ??
+					0,
+				tweetCount:
+					user.publicMetrics?.tweetCount ??
+					user.public_metrics?.tweet_count ??
+					0,
 			};
 		}, "users.getByUsername");
 	}
@@ -854,8 +977,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X followList failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X followList failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X followList failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X followList failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { following: true };
 		}, "users.followList");
@@ -869,8 +997,13 @@ export class XAdapter {
 			const result = await this.client.users.unfollowList(this.userId, listId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X unfollowList failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X unfollowList failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X unfollowList failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X unfollowList failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { following: false };
 		}, "users.unfollowList");
@@ -886,8 +1019,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X pinList failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X pinList failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X pinList failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X pinList failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { pinned: true };
 		}, "users.pinList");
@@ -901,8 +1039,13 @@ export class XAdapter {
 			const result = await this.client.users.unpinList(this.userId, listId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X unpinList failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X unpinList failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X unpinList failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X unpinList failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { pinned: false };
 		}, "users.unpinList");
@@ -1089,7 +1232,9 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X createBookmark failed: ${JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X createBookmark failed: ${JSON.stringify(err)}`,
+				);
 				throw new AppError(
 					"bad_request:bot",
 					`X createBookmark failed: ${err.detail ?? JSON.stringify(err)}`,
@@ -1104,10 +1249,15 @@ export class XAdapter {
 	 */
 	async deleteBookmark(tweetId: string): Promise<{ bookmarked: boolean }> {
 		return this.withTokenRefresh(async () => {
-			const result = await this.client.users.deleteBookmark(this.userId, tweetId);
+			const result = await this.client.users.deleteBookmark(
+				this.userId,
+				tweetId,
+			);
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X deleteBookmark failed: ${JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X deleteBookmark failed: ${JSON.stringify(err)}`,
+				);
 				throw new AppError(
 					"bad_request:bot",
 					`X deleteBookmark failed: ${err.detail ?? JSON.stringify(err)}`,
@@ -1169,7 +1319,10 @@ export class XAdapter {
 		if (!response.ok) {
 			const text = await response.text();
 			console.error(`[Bot ${this.botId}] X searchTweets failed: ${text}`);
-			throw new AppError("bad_request:bot", `X searchTweets failed (${response.status})`);
+			throw new AppError(
+				"bad_request:bot",
+				`X searchTweets failed (${response.status})`,
+			);
 		}
 		const data = (await response.json()) as {
 			data?: Array<{
@@ -1216,7 +1369,10 @@ export class XAdapter {
 		if (!response.ok) {
 			const text = await response.text();
 			console.error(`[Bot ${this.botId}] X getNotifications failed: ${text}`);
-			throw new AppError("bad_request:bot", `X getNotifications failed (${response.status})`);
+			throw new AppError(
+				"bad_request:bot",
+				`X getNotifications failed (${response.status})`,
+			);
 		}
 		const data = (await response.json()) as {
 			data?: Array<{
@@ -1237,7 +1393,10 @@ export class XAdapter {
 	/**
 	 * Reply to a tweet
 	 */
-	async replyTo(tweetId: string, text: string): Promise<{ id: string; text: string }> {
+	async replyTo(
+		tweetId: string,
+		text: string,
+	): Promise<{ id: string; text: string }> {
 		return this.withTokenRefresh(async () => {
 			const result = await this.client.posts.create({
 				text,
@@ -1245,8 +1404,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X replyTo failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X replyTo failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X replyTo failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X replyTo failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			const data = result.data as { id: string; text: string } | undefined;
 			if (!data) {
@@ -1266,8 +1430,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X retweet failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X retweet failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X retweet failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X retweet failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { retweeted: true };
 		}, "users.repostPost");
@@ -1283,8 +1452,13 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
-				console.error(`[Bot ${this.botId}] X likeTweet failed: ${JSON.stringify(err)}`);
-				throw new AppError("bad_request:bot", `X likeTweet failed: ${err.detail ?? JSON.stringify(err)}`);
+				console.error(
+					`[Bot ${this.botId}] X likeTweet failed: ${JSON.stringify(err)}`,
+				);
+				throw new AppError(
+					"bad_request:bot",
+					`X likeTweet failed: ${err.detail ?? JSON.stringify(err)}`,
+				);
 			}
 			return { liked: true };
 		}, "users.likePost");
@@ -1315,9 +1489,18 @@ export class XAdapter {
 				username: user.username ?? "",
 				name: user.name ?? "",
 				bio: user.description,
-				followersCount: user.publicMetrics?.followersCount ?? user.public_metrics?.followers_count ?? 0,
-				followingCount: user.publicMetrics?.followingCount ?? user.public_metrics?.following_count ?? 0,
-				tweetCount: user.publicMetrics?.tweetCount ?? user.public_metrics?.tweet_count ?? 0,
+				followersCount:
+					user.publicMetrics?.followersCount ??
+					user.public_metrics?.followers_count ??
+					0,
+				followingCount:
+					user.publicMetrics?.followingCount ??
+					user.public_metrics?.following_count ??
+					0,
+				tweetCount:
+					user.publicMetrics?.tweetCount ??
+					user.public_metrics?.tweet_count ??
+					0,
 			};
 		}, "users.getById");
 	}

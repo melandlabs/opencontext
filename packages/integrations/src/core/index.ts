@@ -80,12 +80,18 @@ export interface CredentialStore {
 	/**
 	 * Get integration account by platform for a user
 	 */
-	getAccountByPlatform(userId: string, platform: PlatformId): Promise<IntegrationAccountWithBot | null>;
+	getAccountByPlatform(
+		userId: string,
+		platform: PlatformId,
+	): Promise<IntegrationAccountWithBot | null>;
 
 	/**
 	 * Get integration account by ID
 	 */
-	getAccountById(userId: string, platformAccountId: string): Promise<IntegrationAccount | null>;
+	getAccountById(
+		userId: string,
+		platformAccountId: string,
+	): Promise<IntegrationAccount | null>;
 
 	/**
 	 * Update integration account credentials/metadata/status
@@ -396,7 +402,9 @@ export const noopCloudSyncProvider: CloudSyncProvider = {
  * Creates a minimal context with all noop implementations.
  * Useful for testing or when only some dependencies are needed.
  */
-export function createMinimalContext(partial: Partial<IntegrationContext> = {}): IntegrationContext {
+export function createMinimalContext(
+	partial: Partial<IntegrationContext> = {},
+): IntegrationContext {
 	return {
 		credentialStore: partial.credentialStore ?? noopCredentialStore,
 		authProvider: partial.authProvider ?? noopAuthProvider,

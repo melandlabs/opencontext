@@ -61,7 +61,9 @@ export function isIntegrationPlatformConnectable(platform: IntegrationId) {
 }
 
 export function getConnectableIntegrationPlatforms(): IntegrationId[] {
-	return ALL_INTEGRATION_PLATFORMS.filter((platform) => isIntegrationPlatformConnectable(platform));
+	return ALL_INTEGRATION_PLATFORMS.filter((platform) =>
+		isIntegrationPlatformConnectable(platform),
+	);
 }
 
 /**

@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [X (formerly Twitter)](https://developer.x.com/) DM integration for OpenContext,
 powered by the official
 [`@xdevplatform/xdk`](https://www.npmjs.com/package/@xdevplatform/xdk).

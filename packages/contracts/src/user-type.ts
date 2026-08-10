@@ -11,8 +11,17 @@
  */
 export type UserType = "guest" | "regular" | "basic" | "pro" | "team";
 
-export const USER_TYPES: readonly UserType[] = ["guest", "regular", "basic", "pro", "team"] as const;
+export const USER_TYPES: readonly UserType[] = [
+	"guest",
+	"regular",
+	"basic",
+	"pro",
+	"team",
+] as const;
 
 export function isUserType(value: unknown): value is UserType {
-	return typeof value === "string" && (USER_TYPES as readonly string[]).includes(value);
+	return (
+		typeof value === "string" &&
+		(USER_TYPES as readonly string[]).includes(value)
+	);
 }

@@ -51,7 +51,8 @@ export interface BuildMemoryConsolidationRuntimeRecordSelectorsInput {
 }
 
 export interface AdaptRuntimeMemoryRecordsForConsolidationInput<
-	TRecord extends MemoryConsolidationRuntimeMemoryRecord = MemoryConsolidationRuntimeMemoryRecord,
+	TRecord extends MemoryConsolidationRuntimeMemoryRecord =
+		MemoryConsolidationRuntimeMemoryRecord,
 > {
 	records: TRecord[];
 	defaultUserId?: string;
@@ -59,7 +60,9 @@ export interface AdaptRuntimeMemoryRecordsForConsolidationInput<
 	relationKeys?: MemoryConsolidationRuntimeRelationKeys;
 }
 
-export interface MemoryConsolidationDiagnosticsRecordReader<TRecord = MemoryConsolidationSourceRecord> {
+export interface MemoryConsolidationDiagnosticsRecordReader<
+	TRecord = MemoryConsolidationSourceRecord,
+> {
 	listCandidateRecords(input: {
 		userId: string;
 		now: number;
@@ -67,14 +70,21 @@ export interface MemoryConsolidationDiagnosticsRecordReader<TRecord = MemoryCons
 	}): Promise<TRecord[]>;
 }
 
-export interface RunMemoryConsolidationDiagnosticsInput<TRecord = MemoryConsolidationSourceRecord>
-	extends Omit<BuildMemoryRelationPipelineDiagnosticsInput<TRecord>, "records" | "now"> {
+export interface RunMemoryConsolidationDiagnosticsInput<
+	TRecord = MemoryConsolidationSourceRecord,
+> extends Omit<
+	BuildMemoryRelationPipelineDiagnosticsInput<TRecord>,
+	"records" | "now"
+> {
 	userId: string;
 	now?: number;
 	dryRun?: boolean;
 	limit?: number;
 	reader: MemoryConsolidationDiagnosticsRecordReader<TRecord>;
-	semanticDraftCandidates?: Omit<BuildSemanticMemoryDraftCandidatesInput, "report" | "records">;
+	semanticDraftCandidates?: Omit<
+		BuildSemanticMemoryDraftCandidatesInput,
+		"report" | "records"
+	>;
 }
 
 export interface MemoryConsolidationDiagnosticsRunResult {
@@ -104,8 +114,7 @@ export interface MemoryConsolidationDiagnosticsRunReportSummary {
 	semanticDraftCandidateCount: number;
 }
 
-export interface MemoryConsolidationDiagnosticsRunReportPreservedCluster
-	extends MemoryConsolidationPreservedClusterReport {
+export interface MemoryConsolidationDiagnosticsRunReportPreservedCluster extends MemoryConsolidationPreservedClusterReport {
 	semanticDraftCandidateIds: string[];
 }
 
@@ -119,7 +128,9 @@ export interface MemoryConsolidationDiagnosticsRunReport {
 }
 
 export interface MemoryConsolidationDiagnosticsLogSink {
-	logDiagnosticsRun(report: MemoryConsolidationDiagnosticsRunReport): Promise<void> | void;
+	logDiagnosticsRun(
+		report: MemoryConsolidationDiagnosticsRunReport,
+	): Promise<void> | void;
 }
 
 export interface LogMemoryConsolidationDiagnosticsRunInput {
@@ -130,7 +141,8 @@ export interface LogMemoryConsolidationDiagnosticsRunInput {
 
 export type MemoryConsolidationDiagnosticsLogStatus = "disabled" | "logged";
 
-export type MemoryConsolidationDiagnosticsLogReasonCode = "log_disabled" | "log_sink_missing" | "log_only";
+export type MemoryConsolidationDiagnosticsLogReasonCode =
+	"log_disabled" | "log_sink_missing" | "log_only";
 
 export interface LogMemoryConsolidationDiagnosticsRunResult {
 	status: MemoryConsolidationDiagnosticsLogStatus;
@@ -139,7 +151,11 @@ export interface LogMemoryConsolidationDiagnosticsRunResult {
 }
 
 function runtimePrimitiveString(value: unknown): string | undefined {
-	if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+	if (
+		typeof value !== "string" &&
+		typeof value !== "number" &&
+		typeof value !== "boolean"
+	) {
 		return undefined;
 	}
 
@@ -151,11 +167,14 @@ function runtimeRelationValue(
 	record: MemoryConsolidationRuntimeMemoryRecord,
 	key: string,
 ): string | undefined {
-	return runtimePrimitiveString(record.metadata?.[key] ?? record.dimensions?.[key]);
+	return runtimePrimitiveString(
+		record.metadata?.[key] ?? record.dimensions?.[key],
+	);
 }
 
 export function buildMemoryConsolidationRuntimeRecordSelectors<
-	TRecord extends MemoryConsolidationRuntimeMemoryRecord = MemoryConsolidationRuntimeMemoryRecord,
+	TRecord extends MemoryConsolidationRuntimeMemoryRecord =
+		MemoryConsolidationRuntimeMemoryRecord,
 >(
 	input: BuildMemoryConsolidationRuntimeRecordSelectorsInput = {},
 ): MemoryConsolidationRecordSelectors<TRecord> {
@@ -177,15 +196,20 @@ export function buildMemoryConsolidationRuntimeRecordSelectors<
 		getArchivedAt: (record) => record.archivedAt,
 		getDimensions: (record) => record.dimensions,
 		getMetadata: (record) => record.metadata,
-		getRelationGroup: (record) => runtimeRelationValue(record, relationGroupKey),
-		getRelationValue: (record) => runtimeRelationValue(record, relationValueKey),
-		getRelationScope: (record) => runtimeRelationValue(record, relationScopeKey),
+		getRelationGroup: (record) =>
+			runtimeRelationValue(record, relationGroupKey),
+		getRelationValue: (record) =>
+			runtimeRelationValue(record, relationValueKey),
+		getRelationScope: (record) =>
+			runtimeRelationValue(record, relationScopeKey),
 	};
 }
 
 export function adaptRuntimeMemoryRecordsForConsolidation<
 	TRecord extends MemoryConsolidationRuntimeMemoryRecord,
->(input: AdaptRuntimeMemoryRecordsForConsolidationInput<TRecord>): AdaptMemoryRecordsForConsolidationResult {
+>(
+	input: AdaptRuntimeMemoryRecordsForConsolidationInput<TRecord>,
+): AdaptMemoryRecordsForConsolidationResult {
 	return adaptMemoryRecordsForConsolidation({
 		records: input.records,
 		defaultUserId: input.defaultUserId,
@@ -230,7 +254,9 @@ export function buildMemoryConsolidationDiagnosticsRunReport(
 			...cluster,
 			recordIds: [...cluster.recordIds],
 			reasonCodes: [...cluster.reasonCodes],
-			semanticDraftCandidateIds: [...(draftIdsByClusterKey.get(cluster.clusterKey) ?? [])],
+			semanticDraftCandidateIds: [
+				...(draftIdsByClusterKey.get(cluster.clusterKey) ?? []),
+			],
 		})),
 		contestedClusters: result.report.contestedClusters.map((cluster) => ({
 			...cluster,
@@ -244,7 +270,9 @@ export function buildMemoryConsolidationDiagnosticsRunReport(
 			clusterKey: record.clusterKey,
 			reasonCodes: [...record.reasonCodes],
 		})),
-		semanticDraftCandidateIds: result.semanticDraftCandidates.map((candidate) => candidate.draftId),
+		semanticDraftCandidateIds: result.semanticDraftCandidates.map(
+			(candidate) => candidate.draftId,
+		),
 	};
 }
 

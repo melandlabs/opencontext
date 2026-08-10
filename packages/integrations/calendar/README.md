@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 Google Calendar integration for OpenContext. Built on the official
 [`googleapis`](https://www.npmjs.com/package/googleapis) SDK and supports
 event listing, creation, and OAuth credential management.

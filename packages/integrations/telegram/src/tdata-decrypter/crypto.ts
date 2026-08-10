@@ -37,7 +37,12 @@ function xorBuffer(a: Buffer, b: Buffer): void {
 /**
  * AES-256-IGE encrypt/decrypt
  */
-function igeCrypt(buffer: Buffer, aesKey: Buffer, aesIv: Buffer, isEncrypt: boolean): Buffer {
+function igeCrypt(
+	buffer: Buffer,
+	aesKey: Buffer,
+	aesIv: Buffer,
+	isEncrypt: boolean,
+): Buffer {
 	// AES-256-ECB cipher (no IV, we handle IGE manually)
 	const cipher = isEncrypt
 		? crypto.createCipheriv("aes-256-ecb", aesKey, null)
@@ -105,7 +110,8 @@ export function createLocalKey(passcode: Buffer, salt: Buffer): Buffer {
  * Create legacy local key (for older Telegram Desktop versions)
  */
 export function createLegacyLocalKey(passcode: Buffer, salt: Buffer): Buffer {
-	const iterations = passcode.length > 0 ? LocalEncryptIterCount : LocalEncryptNoPwdIterCount;
+	const iterations =
+		passcode.length > 0 ? LocalEncryptIterCount : LocalEncryptNoPwdIterCount;
 
 	return crypto.pbkdf2Sync(passcode, salt, iterations, 256, "sha1");
 }
@@ -125,7 +131,9 @@ export function decryptLocal(encryptedMsg: Buffer, localKey: Buffer): Buffer {
 	const calculatedMsgKey = sha1.digest().subarray(0, 16);
 
 	if (calculatedMsgKey.compare(msgKey) !== 0) {
-		throw new CryptoException("bad decrypt key, data not decrypted - incorrect password");
+		throw new CryptoException(
+			"bad decrypt key, data not decrypted - incorrect password",
+		);
 	}
 
 	// Read length
@@ -140,7 +148,11 @@ export function decryptLocal(encryptedMsg: Buffer, localKey: Buffer): Buffer {
 /**
  * AES-256-IGE decrypt for local data
  */
-export function aesDecryptLocal(encryptedData: Buffer, msgKey: Buffer, localKey: Buffer): Buffer {
+export function aesDecryptLocal(
+	encryptedData: Buffer,
+	msgKey: Buffer,
+	localKey: Buffer,
+): Buffer {
 	const { aesKey, aesIv } = prepareAesOldMtp(localKey, msgKey, false);
 	return igeCrypt(encryptedData, aesKey, aesIv, false);
 }
@@ -153,7 +165,11 @@ interface AesKeyIv {
 	aesIv: Buffer;
 }
 
-export function prepareAesOldMtp(localKey: Buffer, msgKey: Buffer, send = false): AesKeyIv {
+export function prepareAesOldMtp(
+	localKey: Buffer,
+	msgKey: Buffer,
+	send = false,
+): AesKeyIv {
 	const x = send ? 0 : 8;
 
 	const keyPos = (pos: number, size: number): Buffer => {
@@ -170,7 +186,11 @@ export function prepareAesOldMtp(localKey: Buffer, msgKey: Buffer, send = false)
 	const sha1C = crypto.createHash("sha1").update(dataC).digest();
 	const sha1D = crypto.createHash("sha1").update(dataD).digest();
 
-	const aesKey = Buffer.concat([sha1A.subarray(0, 8), sha1B.subarray(8, 20), sha1C.subarray(4, 16)]);
+	const aesKey = Buffer.concat([
+		sha1A.subarray(0, 8),
+		sha1B.subarray(8, 20),
+		sha1C.subarray(4, 16),
+	]);
 
 	const aesIv = Buffer.concat([
 		sha1A.subarray(8, 20),

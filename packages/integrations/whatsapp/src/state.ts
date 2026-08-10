@@ -13,7 +13,8 @@ export type ConnectionState = "connected" | "connecting" | "disconnected";
 /**
  * Standardized message types for routing purposes.
  */
-export type MessageType = "text" | "image" | "video" | "audio" | "document" | "sticker" | "other";
+export type MessageType =
+	"text" | "image" | "video" | "audio" | "document" | "sticker" | "other";
 
 /**
  * Result of QR code state parsing.
@@ -119,7 +120,8 @@ export function routeMessageType(msg: unknown): MessageType {
 
 	// Text types
 	if (message.conversation) return "text";
-	if ((message.extendedTextMessage as Record<string, unknown>)?.text) return "text";
+	if ((message.extendedTextMessage as Record<string, unknown>)?.text)
+		return "text";
 
 	// Media types - check presence, not content
 	if (message.imageMessage) return "image";

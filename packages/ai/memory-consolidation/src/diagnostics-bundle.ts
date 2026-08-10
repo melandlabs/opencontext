@@ -11,7 +11,10 @@ import {
 	buildMemoryWeakRelationObservationReport,
 } from "./pipeline";
 import type { SemanticMemoryRevisionExplanationReport } from "./revision";
-import { type MemorySemanticDraftCandidate, buildSemanticMemoryDraftCandidates } from "./semantic-draft";
+import {
+	type MemorySemanticDraftCandidate,
+	buildSemanticMemoryDraftCandidates,
+} from "./semantic-draft";
 
 export type MemoryConsolidationDiagnosticsBundleReasonCode =
 	| "diagnostics_bundle"
@@ -93,7 +96,8 @@ export function buildMemoryConsolidationDiagnosticsBundle(
 	input: BuildMemoryConsolidationDiagnosticsBundleInput,
 ): MemoryConsolidationDiagnosticsBundle {
 	const consolidationReport =
-		input.consolidationReport ?? buildMemoryConsolidationDiagnosticsReport(input.diagnostics);
+		input.consolidationReport ??
+		buildMemoryConsolidationDiagnosticsReport(input.diagnostics);
 	const semanticDraftCandidates =
 		input.semanticDraftCandidates ??
 		buildSemanticMemoryDraftCandidates({
@@ -115,12 +119,36 @@ export function buildMemoryConsolidationDiagnosticsBundle(
 
 	reasonCodes.add(dryRunOnly ? "dry_run_only" : "storage_write_ready_attached");
 
-	addIf(reasonCodes, Boolean(input.relationDiscoveryReport), "relation_discovery_attached");
-	addIf(reasonCodes, weakRelationObservation.summary.observationCount > 0, "weak_relations_observed");
-	addIf(reasonCodes, semanticDraftCandidates.length > 0, "semantic_draft_candidates_found");
-	addIf(reasonCodes, input.storageDryRunReport?.summary.dryRun === true, "storage_dry_run_attached");
-	addIf(reasonCodes, Boolean(input.revisionExplanationReport), "revision_report_attached");
-	addIf(reasonCodes, Boolean(input.governanceExplanationReport), "governance_report_attached");
+	addIf(
+		reasonCodes,
+		Boolean(input.relationDiscoveryReport),
+		"relation_discovery_attached",
+	);
+	addIf(
+		reasonCodes,
+		weakRelationObservation.summary.observationCount > 0,
+		"weak_relations_observed",
+	);
+	addIf(
+		reasonCodes,
+		semanticDraftCandidates.length > 0,
+		"semantic_draft_candidates_found",
+	);
+	addIf(
+		reasonCodes,
+		input.storageDryRunReport?.summary.dryRun === true,
+		"storage_dry_run_attached",
+	);
+	addIf(
+		reasonCodes,
+		Boolean(input.revisionExplanationReport),
+		"revision_report_attached",
+	);
+	addIf(
+		reasonCodes,
+		Boolean(input.governanceExplanationReport),
+		"governance_report_attached",
+	);
 
 	return {
 		summary: {
@@ -128,8 +156,10 @@ export function buildMemoryConsolidationDiagnosticsBundle(
 			adaptedRecordCount: consolidationReport.summary.adaptedRecordCount,
 			skippedRecordCount: consolidationReport.summary.skippedRecordCount,
 			relationCandidateCount: consolidationReport.summary.candidateCount,
-			discoveredRelationCandidateCount: input.relationDiscoveryReport?.candidates.length,
-			skippedDiscoveredRelationCandidateCount: input.relationDiscoveryReport?.skippedCandidates.length,
+			discoveredRelationCandidateCount:
+				input.relationDiscoveryReport?.candidates.length,
+			skippedDiscoveredRelationCandidateCount:
+				input.relationDiscoveryReport?.skippedCandidates.length,
 			relationCount: consolidationReport.summary.relationCount,
 			weakObservationCount: weakRelationObservation.summary.observationCount,
 			preservedClusterCount: consolidationReport.preservedClusters.length,
@@ -137,9 +167,11 @@ export function buildMemoryConsolidationDiagnosticsBundle(
 			decayedRecordCount: consolidationReport.decayedRecords.length,
 			semanticDraftCandidateCount: semanticDraftCandidates.length,
 			storageArtifactCount: input.storageDryRunReport?.summary.artifactCount,
-			storageWouldWriteCount: input.storageDryRunReport?.summary.wouldWriteCount,
+			storageWouldWriteCount:
+				input.storageDryRunReport?.summary.wouldWriteCount,
 			revisionMemoryCount: input.revisionExplanationReport?.summary.memoryCount,
-			governanceMemoryCount: input.governanceExplanationReport?.summary.memoryCount,
+			governanceMemoryCount:
+				input.governanceExplanationReport?.summary.memoryCount,
 			dryRunOnly,
 			mutatesRuntime: false,
 			mutatesStorage: false,

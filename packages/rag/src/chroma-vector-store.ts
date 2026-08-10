@@ -38,11 +38,14 @@ export class ChromaVectorStore {
 			documents: chunks.map((c) => c.content),
 			metadatas: chunks.map((c) => c.metadata ?? {}),
 		};
-		const res = await fetch(`${this.url}/api/v1/collections/${encodeURIComponent(this.collectionName)}/add`, {
-			method: "POST",
-			headers: { "content-type": "application/json" },
-			body: JSON.stringify(payload),
-		});
+		const res = await fetch(
+			`${this.url}/api/v1/collections/${encodeURIComponent(this.collectionName)}/add`,
+			{
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(payload),
+			},
+		);
 		if (!res.ok) {
 			throw new Error(
 				`ChromaVectorStore.addChunks failed: ${res.status} ${res.statusText} for collection ${this.collectionName}`,

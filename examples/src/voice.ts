@@ -19,7 +19,9 @@ export default async function testVoice() {
 
 	await runSection("@melandlabs/voice-whisper", async () => {
 		const check = makeCheck("voice-whisper");
-		const exported = Object.keys(voiceWhisper).filter((k) => !k.startsWith("_"));
+		const exported = Object.keys(voiceWhisper).filter(
+			(k) => !k.startsWith("_"),
+		);
 		check("module exports symbols", exported.length > 0);
 	});
 }

@@ -15,12 +15,19 @@ export abstract class ImageGenProvider {
 	abstract defaultModel(): string | null;
 	abstract capabilities(): ImageGenerationCapabilities;
 
-	abstract generate(request: ImageGenerationRequest): Promise<ImageGenerationResponse>;
+	abstract generate(
+		request: ImageGenerationRequest,
+	): Promise<ImageGenerationResponse>;
 
 	protected routeModality(
-		request: Pick<ImageGenerationRequest, "referenceImageUrls" | "referenceImages">,
+		request: Pick<
+			ImageGenerationRequest,
+			"referenceImageUrls" | "referenceImages"
+		>,
 	): ImageGenerationModality {
-		return request.referenceImageUrls?.length || request.referenceImages?.length ? "image" : "text";
+		return request.referenceImageUrls?.length || request.referenceImages?.length
+			? "image"
+			: "text";
 	}
 
 	protected dataUrlFromBase64(base64: string, mimeType = "image/png"): string {
@@ -29,7 +36,9 @@ export abstract class ImageGenProvider {
 	}
 
 	protected referenceImageDataUrls(request: ImageGenerationRequest): string[] {
-		const urls = request.referenceImageUrls?.map((url) => url.trim()).filter(Boolean);
+		const urls = request.referenceImageUrls
+			?.map((url) => url.trim())
+			.filter(Boolean);
 		const images = request.referenceImages
 			?.map((image) => this.referenceImageToDataUrl(image))
 			.filter((image): image is string => Boolean(image));
@@ -42,14 +51,18 @@ export abstract class ImageGenProvider {
 	}> {
 		return this.referenceImageDataUrls(request)
 			.map((value, index) => this.dataUrlToFile(value, index))
-			.filter((file): file is { blob: Blob; filename: string } => file !== null);
+			.filter(
+				(file): file is { blob: Blob; filename: string } => file !== null,
+			);
 	}
 
 	protected stripDataUrlPrefix(value: string): string {
 		const trimmed = value.trim();
 		const marker = ";base64,";
 		const markerIndex = trimmed.indexOf(marker);
-		return markerIndex >= 0 ? trimmed.slice(markerIndex + marker.length) : trimmed;
+		return markerIndex >= 0
+			? trimmed.slice(markerIndex + marker.length)
+			: trimmed;
 	}
 
 	protected async sleep(ms: number): Promise<void> {
@@ -65,7 +78,10 @@ export abstract class ImageGenProvider {
 		return this.dataUrlFromBase64(encoded, image.mimeType || "image/png");
 	}
 
-	private dataUrlToFile(value: string, index: number): { blob: Blob; filename: string } | null {
+	private dataUrlToFile(
+		value: string,
+		index: number,
+	): { blob: Blob; filename: string } | null {
 		const parsed = parseDataUrl(value);
 		if (!parsed) return null;
 		const bytes = Buffer.from(parsed.b64Json, "base64");
@@ -76,7 +92,9 @@ export abstract class ImageGenProvider {
 	}
 }
 
-function parseDataUrl(value: string): { mimeType: string; b64Json: string } | null {
+function parseDataUrl(
+	value: string,
+): { mimeType: string; b64Json: string } | null {
 	const match = value.trim().match(/^data:([^;,]+);base64,(.+)$/i);
 	if (!match) return null;
 	return {

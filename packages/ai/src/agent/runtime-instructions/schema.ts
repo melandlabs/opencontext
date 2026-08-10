@@ -1,13 +1,26 @@
 import { z } from "zod";
 
-import { AGENT_GOAL_LIMITS, DEFAULT_GOAL_MAX_TURNS, RUNTIME_INSTRUCTION_SCHEMA_VERSION } from "./constants";
+import {
+	AGENT_GOAL_LIMITS,
+	DEFAULT_GOAL_MAX_TURNS,
+	RUNTIME_INSTRUCTION_SCHEMA_VERSION,
+} from "./constants";
 
 const identifierSchema = z.string().trim().min(1).max(256);
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/i);
 const isoDateTimeSchema = z.iso.datetime({ offset: true });
-const jsonScalarSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
+const jsonScalarSchema = z.union([
+	z.string(),
+	z.number(),
+	z.boolean(),
+	z.null(),
+]);
 const jsonValueSchema: z.ZodType<unknown> = z.lazy(() =>
-	z.union([jsonScalarSchema, z.array(jsonValueSchema), z.record(z.string(), jsonValueSchema)]),
+	z.union([
+		jsonScalarSchema,
+		z.array(jsonValueSchema),
+		z.record(z.string(), jsonValueSchema),
+	]),
 );
 
 function serializedByteLength(value: unknown): number {
@@ -34,7 +47,11 @@ export const GoalStatusSchema = z.enum([
 	"failed",
 ]);
 
-export const GoalCompletionPolicySchema = z.enum(["model_evaluator", "tool_evidence", "manual"]);
+export const GoalCompletionPolicySchema = z.enum([
+	"model_evaluator",
+	"tool_evidence",
+	"manual",
+]);
 
 export const GoalSourceSchema = z
 	.object({
@@ -74,7 +91,11 @@ export const GoalCriterionVerificationSchema = z.discriminatedUnion("type", [
 export const GoalSuccessCriterionSchema = z
 	.object({
 		id: identifierSchema,
-		description: z.string().trim().min(1).max(AGENT_GOAL_LIMITS.criterionDescriptionCharacters),
+		description: z
+			.string()
+			.trim()
+			.min(1)
+			.max(AGENT_GOAL_LIMITS.criterionDescriptionCharacters),
 		verification: GoalCriterionVerificationSchema,
 		required: z.boolean(),
 	})
@@ -83,7 +104,11 @@ export const GoalSuccessCriterionSchema = z
 export const GoalConstraintSchema = z
 	.object({
 		id: identifierSchema,
-		description: z.string().trim().min(1).max(AGENT_GOAL_LIMITS.constraintDescriptionCharacters),
+		description: z
+			.string()
+			.trim()
+			.min(1)
+			.max(AGENT_GOAL_LIMITS.constraintDescriptionCharacters),
 		enforcement: z.enum(["model_guidance", "runtime_enforced"]),
 		authority: z.enum(["user", "organization_policy", "automation"]),
 		sourceRef: z.string().trim().min(1).max(2_048).optional(),
@@ -91,13 +116,15 @@ export const GoalConstraintSchema = z
 	.strict()
 	.superRefine((constraint, context) => {
 		if (
-			(constraint.enforcement === "runtime_enforced" || constraint.authority === "organization_policy") &&
+			(constraint.enforcement === "runtime_enforced" ||
+				constraint.authority === "organization_policy") &&
 			constraint.sourceRef === undefined
 		) {
 			context.addIssue({
 				code: "custom",
 				path: ["sourceRef"],
-				message: "A runtime-enforced or organization-policy constraint must reference its source",
+				message:
+					"A runtime-enforced or organization-policy constraint must reference its source",
 			});
 		}
 	});
@@ -118,11 +145,17 @@ export const GoalContextReferenceSchema = z
 		]),
 		refId: identifierSchema,
 		label: z.string().trim().min(1).max(512).optional(),
-		summary: z.string().trim().max(AGENT_GOAL_LIMITS.contextSummaryCharacters).optional(),
+		summary: z
+			.string()
+			.trim()
+			.max(AGENT_GOAL_LIMITS.contextSummaryCharacters)
+			.optional(),
 		origin: z.enum(["connector", "memory", "user", "opencontext"]),
 		sourceRef: z.string().trim().min(1).max(2_048).optional(),
 		digest: sha256Schema.optional(),
-		attributes: boundedJsonRecord(AGENT_GOAL_LIMITS.contextAttributesBytes).optional(),
+		attributes: boundedJsonRecord(
+			AGENT_GOAL_LIMITS.contextAttributesBytes,
+		).optional(),
 	})
 	.strict()
 	.superRefine((reference, context) => {
@@ -139,10 +172,21 @@ const agentGoalObjectSchema = z
 	.object({
 		id: z.uuid(),
 		revision: z.int().positive(),
-		objective: z.string().trim().min(1).max(AGENT_GOAL_LIMITS.objectiveCharacters),
-		successCriteria: z.array(GoalSuccessCriterionSchema).min(1).max(AGENT_GOAL_LIMITS.successCriteria),
-		constraints: z.array(GoalConstraintSchema).max(AGENT_GOAL_LIMITS.constraints),
-		contextRefs: z.array(GoalContextReferenceSchema).max(AGENT_GOAL_LIMITS.contextReferences),
+		objective: z
+			.string()
+			.trim()
+			.min(1)
+			.max(AGENT_GOAL_LIMITS.objectiveCharacters),
+		successCriteria: z
+			.array(GoalSuccessCriterionSchema)
+			.min(1)
+			.max(AGENT_GOAL_LIMITS.successCriteria),
+		constraints: z
+			.array(GoalConstraintSchema)
+			.max(AGENT_GOAL_LIMITS.constraints),
+		contextRefs: z
+			.array(GoalContextReferenceSchema)
+			.max(AGENT_GOAL_LIMITS.contextReferences),
 		priority: z.int().min(0).max(100),
 		status: GoalStatusSchema,
 		deadline: isoDateTimeSchema.optional(),
@@ -173,7 +217,10 @@ type GoalInvariantFields = Pick<
 	| "updatedAt"
 >;
 
-function validateGoalInvariants(goal: GoalInvariantFields, context: z.RefinementCtx): void {
+function validateGoalInvariants(
+	goal: GoalInvariantFields,
+	context: z.RefinementCtx,
+): void {
 	if (
 		goal.deadline === undefined &&
 		goal.maxTurns === undefined &&
@@ -214,7 +261,9 @@ function validateGoalInvariants(goal: GoalInvariantFields, context: z.Refinement
 	}
 }
 
-export const AgentGoalSchema = agentGoalObjectSchema.superRefine(validateGoalInvariants);
+export const AgentGoalSchema = agentGoalObjectSchema.superRefine(
+	validateGoalInvariants,
+);
 
 export const CreateAgentGoalInputSchema = agentGoalObjectSchema
 	.omit({
@@ -240,7 +289,9 @@ export const AgentGoalUpdateSchema = z
 		deadline: agentGoalObjectSchema.shape.deadline.nullable().optional(),
 		maxTurns: agentGoalObjectSchema.shape.maxTurns.nullable().optional(),
 		maxTokens: agentGoalObjectSchema.shape.maxTokens.nullable().optional(),
-		maxDurationSeconds: agentGoalObjectSchema.shape.maxDurationSeconds.nullable().optional(),
+		maxDurationSeconds: agentGoalObjectSchema.shape.maxDurationSeconds
+			.nullable()
+			.optional(),
 		completionPolicy: agentGoalObjectSchema.shape.completionPolicy.optional(),
 	})
 	.strict()
@@ -252,8 +303,12 @@ export const GoalEvaluationResultSchema = z
 	.object({
 		completed: z.boolean(),
 		confidence: z.number().min(0).max(1),
-		satisfiedCriteria: z.array(identifierSchema).max(AGENT_GOAL_LIMITS.successCriteria),
-		missingCriteria: z.array(identifierSchema).max(AGENT_GOAL_LIMITS.successCriteria),
+		satisfiedCriteria: z
+			.array(identifierSchema)
+			.max(AGENT_GOAL_LIMITS.successCriteria),
+		missingCriteria: z
+			.array(identifierSchema)
+			.max(AGENT_GOAL_LIMITS.successCriteria),
 		evidence: z
 			.array(
 				z
@@ -316,12 +371,21 @@ export const RuntimeInstructionKindSchema = z.enum([
 	"control.interrupt",
 ]);
 
-export const RuntimeInstructionDeliveryModeSchema = z.enum(["steer", "next_boundary", "interrupt_replace"]);
+export const RuntimeInstructionDeliveryModeSchema = z.enum([
+	"steer",
+	"next_boundary",
+	"interrupt_replace",
+]);
 
 export const RuntimeInstructionSourceSchema = z
 	.object({
 		type: z.enum(["user", "automation", "connector", "policy"]),
-		authority: z.enum(["user", "organization_policy", "automation", "untrusted_data"]),
+		authority: z.enum([
+			"user",
+			"organization_policy",
+			"automation",
+			"untrusted_data",
+		]),
 		sourceRef: z.string().trim().min(1).max(2_048).optional(),
 	})
 	.strict()
@@ -339,7 +403,10 @@ export const RuntimeInstructionSourceSchema = z
 				message: `${source.type} instructions require ${requiredAuthority[source.type]} authority`,
 			});
 		}
-		if ((source.type === "connector" || source.type === "policy") && source.sourceRef === undefined) {
+		if (
+			(source.type === "connector" || source.type === "policy") &&
+			source.sourceRef === undefined
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["sourceRef"],
@@ -360,13 +427,19 @@ const instructionEnvelopeSchema = z
 		// existing OpenContext agent runtime uses nanoid rather than UUID.
 		targetSessionId: identifierSchema,
 		source: RuntimeInstructionSourceSchema,
-		idempotencyKey: z.string().trim().min(1).max(AGENT_GOAL_LIMITS.idempotencyKeyCharacters),
+		idempotencyKey: z
+			.string()
+			.trim()
+			.min(1)
+			.max(AGENT_GOAL_LIMITS.idempotencyKeyCharacters),
 		issuedAt: isoDateTimeSchema,
 		expiresAt: isoDateTimeSchema.optional(),
 	})
 	.strict();
 
-const optionalReasonSchema = z.object({ reason: z.string().trim().min(1).max(4_000).optional() }).strict();
+const optionalReasonSchema = z
+	.object({ reason: z.string().trim().min(1).max(4_000).optional() })
+	.strict();
 
 const interruptingLifecyclePayloadSchema = z
 	.object({
@@ -474,7 +547,10 @@ export const RuntimeInstructionSchema = z
 		}),
 	])
 	.superRefine((instruction, context) => {
-		if ((instruction.goalId === undefined) !== (instruction.goalRevision === undefined)) {
+		if (
+			(instruction.goalId === undefined) !==
+			(instruction.goalRevision === undefined)
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["goalRevision"],
@@ -491,21 +567,30 @@ export const RuntimeInstructionSchema = z
 				message: "Instruction expiry must be later than its issue time",
 			});
 		}
-		if (serializedByteLength(instruction.payload) > AGENT_GOAL_LIMITS.instructionPayloadBytes) {
+		if (
+			serializedByteLength(instruction.payload) >
+			AGENT_GOAL_LIMITS.instructionPayloadBytes
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["payload"],
 				message: "Instruction payload exceeds the serialized size limit",
 			});
 		}
-		if (instruction.source.authority === "untrusted_data" && !instruction.kind.startsWith("context.")) {
+		if (
+			instruction.source.authority === "untrusted_data" &&
+			!instruction.kind.startsWith("context.")
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["source", "authority"],
 				message: "Untrusted data may only produce context instructions",
 			});
 		}
-		if (instruction.kind === "control.interrupt" && instruction.deliveryMode !== "interrupt_replace") {
+		if (
+			instruction.kind === "control.interrupt" &&
+			instruction.deliveryMode !== "interrupt_replace"
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["deliveryMode"],
@@ -513,7 +598,8 @@ export const RuntimeInstructionSchema = z
 			});
 		}
 		if (
-			(instruction.kind === "goal.pause" || instruction.kind === "goal.cancel") &&
+			(instruction.kind === "goal.pause" ||
+				instruction.kind === "goal.cancel") &&
 			instruction.deliveryMode !== "interrupt_replace"
 		) {
 			context.addIssue({
@@ -522,12 +608,19 @@ export const RuntimeInstructionSchema = z
 				message: `${instruction.kind} requires interrupt_replace delivery`,
 			});
 		}
-		if (instruction.kind === "control.interrupt" && instruction.payload.replacementGoalId !== undefined) {
-			if (instruction.goalId === undefined || instruction.goalRevision === undefined) {
+		if (
+			instruction.kind === "control.interrupt" &&
+			instruction.payload.replacementGoalId !== undefined
+		) {
+			if (
+				instruction.goalId === undefined ||
+				instruction.goalRevision === undefined
+			) {
 				context.addIssue({
 					code: "custom",
 					path: ["goalId"],
-					message: "A replacement interrupt must identify the superseded Goal and revision",
+					message:
+						"A replacement interrupt must identify the superseded Goal and revision",
 				});
 			}
 			if (instruction.payload.replacementGoalId === instruction.goalId) {
@@ -539,7 +632,8 @@ export const RuntimeInstructionSchema = z
 			}
 		}
 		if (
-			(instruction.kind === "goal.activate" || instruction.kind === "goal.update") &&
+			(instruction.kind === "goal.activate" ||
+				instruction.kind === "goal.update") &&
 			(instruction.payload.goal.id !== instruction.goalId ||
 				instruction.payload.goal.revision !== instruction.goalRevision)
 		) {
@@ -549,7 +643,10 @@ export const RuntimeInstructionSchema = z
 				message: "Instruction and payload Goal identity/revision must match",
 			});
 		}
-		if (instruction.kind === "goal.activate" && instruction.payload.goal.status !== "active") {
+		if (
+			instruction.kind === "goal.activate" &&
+			instruction.payload.goal.status !== "active"
+		) {
 			context.addIssue({
 				code: "custom",
 				path: ["payload", "goal", "status"],
@@ -567,7 +664,9 @@ export const RuntimeInstructionSchema = z
 			});
 		}
 		if (instruction.kind === "goal.continue") {
-			const criterionIds = instruction.payload.missingCriteria.map((criterion) => criterion.id);
+			const criterionIds = instruction.payload.missingCriteria.map(
+				(criterion) => criterion.id,
+			);
 			if (new Set(criterionIds).size !== criterionIds.length) {
 				context.addIssue({
 					code: "custom",
@@ -577,7 +676,8 @@ export const RuntimeInstructionSchema = z
 			}
 			if (
 				instruction.payload.remainingBudget.deadline !== undefined &&
-				Date.parse(instruction.payload.remainingBudget.deadline) <= Date.parse(instruction.issuedAt)
+				Date.parse(instruction.payload.remainingBudget.deadline) <=
+					Date.parse(instruction.issuedAt)
 			) {
 				context.addIssue({
 					code: "custom",
@@ -655,7 +755,12 @@ export const GoalEvidenceSchema = z
 		observedAt: isoDateTimeSchema,
 	})
 	.strict()
-	.refine((evidence) => serializedByteLength(evidence.payload) <= AGENT_GOAL_LIMITS.evidencePayloadBytes, {
-		path: ["payload"],
-		message: "Evidence payload exceeds the size limit",
-	});
+	.refine(
+		(evidence) =>
+			serializedByteLength(evidence.payload) <=
+			AGENT_GOAL_LIMITS.evidencePayloadBytes,
+		{
+			path: ["payload"],
+			message: "Evidence payload exceeds the size limit",
+		},
+	);

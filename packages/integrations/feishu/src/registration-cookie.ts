@@ -27,9 +27,15 @@ function decodePayload(raw: string): FeishuRegistrationCookiePayload | null {
 	try {
 		const json = Buffer.from(raw, "base64url").toString("utf8");
 		const p = JSON.parse(json) as FeishuRegistrationCookiePayload;
-		if (p.v !== 1 || typeof p.userId !== "string" || typeof p.deviceCode !== "string") return null;
+		if (
+			p.v !== 1 ||
+			typeof p.userId !== "string" ||
+			typeof p.deviceCode !== "string"
+		)
+			return null;
 		if (p.domain !== "feishu" && p.domain !== "lark") return null;
-		if (typeof p.intervalSec !== "number" || typeof p.deadlineMs !== "number") return null;
+		if (typeof p.intervalSec !== "number" || typeof p.deadlineMs !== "number")
+			return null;
 		if (typeof p.domainSwitched !== "boolean") return null;
 		return p;
 	} catch {
@@ -37,7 +43,10 @@ function decodePayload(raw: string): FeishuRegistrationCookiePayload | null {
 	}
 }
 
-export function signRegistrationCookie(payload: FeishuRegistrationCookiePayload, secret: string): string {
+export function signRegistrationCookie(
+	payload: FeishuRegistrationCookiePayload,
+	secret: string,
+): string {
 	const body = encodePayload(payload);
 	const sig = createHmac("sha256", secret).update(body).digest("base64url");
 	return `${body}.${sig}`;
@@ -51,7 +60,9 @@ export function verifyRegistrationCookie(
 	if (lastDot <= 0) return null;
 	const body = token.slice(0, lastDot);
 	const sig = token.slice(lastDot + 1);
-	const expected = createHmac("sha256", secret).update(body).digest("base64url");
+	const expected = createHmac("sha256", secret)
+		.update(body)
+		.digest("base64url");
 	try {
 		const a = Buffer.from(sig, "base64url");
 		const b = Buffer.from(expected, "base64url");

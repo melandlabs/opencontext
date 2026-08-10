@@ -36,7 +36,9 @@ function errorToMessage(error: unknown): string {
 	return String(error);
 }
 
-export function getConnectorNetworkAuthErrorMessage(platform: ConnectorAuthPlatform): string {
+export function getConnectorNetworkAuthErrorMessage(
+	platform: ConnectorAuthPlatform,
+): string {
 	return `Unable to connect to ${platformNames[platform]}. Please check your network connection and try again.`;
 }
 

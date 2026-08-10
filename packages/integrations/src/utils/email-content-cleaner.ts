@@ -13,7 +13,9 @@ const turndownService = new TurndownService({
 turndownService.addRule("tableRow", {
 	filter: "tr",
 	replacement(content, node) {
-		const cellNodes = Array.from(node.childNodes).filter((c) => c.nodeName === "TD" || c.nodeName === "TH");
+		const cellNodes = Array.from(node.childNodes).filter(
+			(c) => c.nodeName === "TD" || c.nodeName === "TH",
+		);
 
 		// Layout detection: any cell with long textContent, or only contains single cell with block-level elements
 		const isLayoutRow = cellNodes.some((cell) => {
@@ -21,7 +23,8 @@ turndownService.addRule("tableRow", {
 			if (text.length > 300) return true;
 			const el = cell as Element;
 			if (typeof el.querySelector === "function") {
-				if (el.querySelector("table,div,p,h1,h2,h3,h4,h5,h6,ul,ol,blockquote")) return true;
+				if (el.querySelector("table,div,p,h1,h2,h3,h4,h5,h6,ul,ol,blockquote"))
+					return true;
 			}
 			return false;
 		});
@@ -72,7 +75,10 @@ export function cleanEmailForLLM({
 		// Always use sanitizeEmailHtmlContent to preserve original HTML structure (including tables),
 		// instead of simplified version rebuilt by markdownToBasicHtml
 		const sanitizedHtml = sanitizeEmailHtmlContent(rawHtml);
-		const fallbackPlain = plain.trim().length > 0 ? plain : stripQuotedText(htmlToPlainText(rawHtml));
+		const fallbackPlain =
+			plain.trim().length > 0
+				? plain
+				: stripQuotedText(htmlToPlainText(rawHtml));
 		return {
 			markdown: markdown || cleanupMarkdown(htmlToPlainText(rawHtml)),
 			plain: fallbackPlain,
@@ -160,11 +166,17 @@ export function stripQuotedText(text: string): string {
 				nextLineIndex++;
 			}
 
-			if (nextLineIndex < lines.length && lines[nextLineIndex].trim().startsWith(">")) {
+			if (
+				nextLineIndex < lines.length &&
+				lines[nextLineIndex].trim().startsWith(">")
+			) {
 				continue;
 			}
 
-			if (/^From:\s/i.test(trimmed) || /^-{2,}\s*Original Message\s*-{2,}/i.test(trimmed)) {
+			if (
+				/^From:\s/i.test(trimmed) ||
+				/^-{2,}\s*Original Message\s*-{2,}/i.test(trimmed)
+			) {
 				break;
 			}
 		}
@@ -177,7 +189,10 @@ export function stripQuotedText(text: string): string {
 
 function stripQuotedHtml(html: string): string {
 	return html
-		.replace(/<blockquote[^>]*class="gmail_quote"[^>]*>[\s\S]*?<\/blockquote>/gi, "")
+		.replace(
+			/<blockquote[^>]*class="gmail_quote"[^>]*>[\s\S]*?<\/blockquote>/gi,
+			"",
+		)
 		.replace(/<div[^>]*class="gmail_quote"[^>]*>[\s\S]*?<\/div>/gi, "")
 		.replace(/<div[^>]*class="gmail_attr"[^>]*>[\s\S]*?<\/div>/gi, "")
 		.replace(/<blockquote[^>]*type="cite"[^>]*>[\s\S]*?<\/blockquote>/gi, "")
@@ -207,7 +222,11 @@ export function isBoilerplate(text: string): boolean {
 		"safe unsubscribe",
 	];
 
-	if (exactBoilerplate.some((k) => lower === k || (lower.startsWith(k) && lower.length < 50))) {
+	if (
+		exactBoilerplate.some(
+			(k) => lower === k || (lower.startsWith(k) && lower.length < 50),
+		)
+	) {
 		return true;
 	}
 
@@ -347,10 +366,24 @@ function sanitizeEmailHtmlContent(html: string): string {
 				if (!src) return true;
 			}
 			// Don't do boilerplate check on container-level elements, avoid false positives on entire tables/rows
-			const containerTags = new Set(["table", "thead", "tbody", "tfoot", "tr", "ul", "ol"]);
+			const containerTags = new Set([
+				"table",
+				"thead",
+				"tbody",
+				"tfoot",
+				"tr",
+				"ul",
+				"ol",
+			]);
 			if (containerTags.has(frame.tag)) return false;
 			const text = (frame.text ?? "").trim();
-			if (!text && frame.tag !== "img" && frame.tag !== "br" && frame.tag !== "hr") return false;
+			if (
+				!text &&
+				frame.tag !== "img" &&
+				frame.tag !== "br" &&
+				frame.tag !== "hr"
+			)
+				return false;
 			return isBoilerplate(text);
 		},
 	});
@@ -469,7 +502,9 @@ function selectPrimaryMarkdown(html: string): {
 	// Keep positive-scoring blocks in original order, discard negative-scoring blocks (promotional/boilerplate)
 	const chosen = blocks.filter((block) => scoreContentBlock(block) > 0);
 
-	const finalMarkdown = collapseBlankLines((chosen.length > 0 ? chosen : blocks.slice(0, 3)).join("\n\n"));
+	const finalMarkdown = collapseBlankLines(
+		(chosen.length > 0 ? chosen : blocks.slice(0, 3)).join("\n\n"),
+	);
 	const plain = markdownToPlainText(finalMarkdown);
 	return {
 		markdown: finalMarkdown,
@@ -503,7 +538,10 @@ function markdownToBasicHtml(markdown: string): string {
 
 		if (isList) {
 			const items = lines
-				.map((line) => `<li>${escapeHtml(line.replace(/^[-*+]\s+/, "").trim())}</li>`)
+				.map(
+					(line) =>
+						`<li>${escapeHtml(line.replace(/^[-*+]\s+/, "").trim())}</li>`,
+				)
 				.join("");
 			htmlParts.push(`<ul>${items}</ul>`);
 			continue;
@@ -514,7 +552,9 @@ function markdownToBasicHtml(markdown: string): string {
 			const content = escapeHtml(lines[0].replace(/^#{1,6}\s+/, "").trim());
 			htmlParts.push(`<h${level}>${content}</h${level}>`);
 			if (lines.length > 1) {
-				htmlParts.push(`<p>${escapeHtml(lines.slice(1).join(" ")).replace(/\n/g, "<br/>")}</p>`);
+				htmlParts.push(
+					`<p>${escapeHtml(lines.slice(1).join(" ")).replace(/\n/g, "<br/>")}</p>`,
+				);
 			}
 			continue;
 		}

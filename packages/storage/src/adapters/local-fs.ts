@@ -4,7 +4,13 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { readFile, readdir, stat, unlink as unlinkCb, writeFile } from "node:fs";
+import {
+	readFile,
+	readdir,
+	stat,
+	unlink as unlinkCb,
+	writeFile,
+} from "node:fs";
 import { join, relative } from "node:path";
 import { promisify } from "node:util";
 
@@ -61,7 +67,10 @@ export async function uploadToLocalFs(
 /**
  * Delete file from local file system
  */
-export async function deleteFromLocalFs(pathname: string, storageBasePath: string): Promise<void> {
+export async function deleteFromLocalFs(
+	pathname: string,
+	storageBasePath: string,
+): Promise<void> {
 	const fullPath = join(storageBasePath, pathname);
 
 	if (existsSync(fullPath)) {
@@ -72,7 +81,10 @@ export async function deleteFromLocalFs(pathname: string, storageBasePath: strin
 /**
  * List files in local file system
  */
-export async function listLocalFiles(storageBasePath: string, prefix?: string): Promise<LocalFileMeta[]> {
+export async function listLocalFiles(
+	storageBasePath: string,
+	prefix?: string,
+): Promise<LocalFileMeta[]> {
 	const searchPath = prefix ? join(storageBasePath, prefix) : storageBasePath;
 
 	if (!existsSync(searchPath)) {
@@ -108,7 +120,10 @@ export async function listLocalFiles(storageBasePath: string, prefix?: string): 
 /**
  * Read local file
  */
-export async function readLocalFile(pathname: string, storageBasePath: string): Promise<Buffer> {
+export async function readLocalFile(
+	pathname: string,
+	storageBasePath: string,
+): Promise<Buffer> {
 	const fullPath = join(storageBasePath, pathname);
 
 	if (!existsSync(fullPath)) {
@@ -122,7 +137,10 @@ export async function readLocalFile(pathname: string, storageBasePath: string): 
 /**
  * Check if local file exists
  */
-export function localFileExists(pathname: string, storageBasePath: string): boolean {
+export function localFileExists(
+	pathname: string,
+	storageBasePath: string,
+): boolean {
 	const fullPath = join(storageBasePath, pathname);
 	return existsSync(fullPath);
 }

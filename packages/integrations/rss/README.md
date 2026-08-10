@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 RSS feed parsing, OPML support, and tagging utilities.
 
 ## Installation

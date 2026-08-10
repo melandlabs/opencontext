@@ -114,11 +114,15 @@ function normalizeTimestampToMs(value: number | undefined): number {
 }
 
 function toStringValue(value: unknown, fallback = ""): string {
-	return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
+	return typeof value === "string" && value.trim().length > 0
+		? value.trim()
+		: fallback;
 }
 
 function toNullableString(value: unknown): string | null {
-	return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+	return typeof value === "string" && value.trim().length > 0
+		? value.trim()
+		: null;
 }
 
 function toBooleanValue(value: unknown): boolean {
@@ -165,17 +169,24 @@ function rawMessageToChunk(message: RawMessage): DocumentChunk | null {
 			embeddingDimensions: message.embeddingDimensions,
 			contentHash: message.embeddingContentHash,
 			archived: Boolean(message.archivedAt),
-			role: typeof message.metadata?.role === "string" ? message.metadata.role : undefined,
+			role:
+				typeof message.metadata?.role === "string"
+					? message.metadata.role
+					: undefined,
 		},
 	};
 }
 
-export async function upsertRawMessagesToChroma(messages: RawMessage[]): Promise<number> {
+export async function upsertRawMessagesToChroma(
+	messages: RawMessage[],
+): Promise<number> {
 	if (!isRawMessageChromaEnabled() || messages.length === 0) {
 		return 0;
 	}
 
-	const chunks = messages.map(rawMessageToChunk).filter((chunk): chunk is DocumentChunk => chunk !== null);
+	const chunks = messages
+		.map(rawMessageToChunk)
+		.filter((chunk): chunk is DocumentChunk => chunk !== null);
 	if (chunks.length === 0) {
 		return 0;
 	}
@@ -230,14 +241,19 @@ export async function searchRawMessagesWithChroma(input: {
 		.slice(0, input.limit);
 }
 
-export async function upsertInsightsToChroma(insights: ChromaInsightVectorInput[]): Promise<number> {
+export async function upsertInsightsToChroma(
+	insights: ChromaInsightVectorInput[],
+): Promise<number> {
 	if (!isInsightChromaEnabled() || insights.length === 0) {
 		return 0;
 	}
 
 	const chunks = insights
 		.filter(
-			(item) => item.content.trim().length > 0 && Array.isArray(item.embedding) && item.embedding.length > 0,
+			(item) =>
+				item.content.trim().length > 0 &&
+				Array.isArray(item.embedding) &&
+				item.embedding.length > 0,
 		)
 		.map<DocumentChunk>((item) => ({
 			id: item.insightId,
@@ -285,7 +301,8 @@ export async function searchInsightsWithChroma(input: {
 		return [];
 	}
 
-	const botIdSet = input.botIds && input.botIds.length > 0 ? new Set(input.botIds) : null;
+	const botIdSet =
+		input.botIds && input.botIds.length > 0 ? new Set(input.botIds) : null;
 	const store = getChromaStore(getInsightsCollectionName());
 	const results = await store.similaritySearch(
 		input.queryEmbedding,

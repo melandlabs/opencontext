@@ -1,7 +1,18 @@
-import { ChromaVectorStore, type ChromaVectorStoreOptions } from "./chroma-store";
-import { type EmbeddingProvider, getConfiguredEmbeddingProvider } from "./embedding-provider";
+import {
+	ChromaVectorStore,
+	type ChromaVectorStoreOptions,
+} from "./chroma-store";
+import {
+	type EmbeddingProvider,
+	getConfiguredEmbeddingProvider,
+} from "./embedding-provider";
 import { type SchemaModule, getSQLiteVecStore } from "./sqlite-vec-store";
-import type { DocumentChunk, IVectorStore, VectorSearchFilter, VectorSearchResult } from "./vector-service";
+import type {
+	DocumentChunk,
+	IVectorStore,
+	VectorSearchFilter,
+	VectorSearchResult,
+} from "./vector-service";
 
 const DEFAULT_SEARCH_LIMIT = 10;
 const DEFAULT_SEARCH_THRESHOLD = 0;
@@ -74,7 +85,8 @@ export class UnifiedVectorSearchService {
 	private embeddingProvider: EmbeddingProvider;
 
 	constructor(options: UnifiedVectorSearchServiceOptions = {}) {
-		this.embeddingProvider = options.embeddingProvider ?? getConfiguredEmbeddingProvider();
+		this.embeddingProvider =
+			options.embeddingProvider ?? getConfiguredEmbeddingProvider();
 	}
 
 	async initialize(config: VectorStoreConfig): Promise<void> {
@@ -91,7 +103,9 @@ export class UnifiedVectorSearchService {
 		// Embed only records that do not already carry a vector. This lets callers
 		// migrate or replay pre-embedded data without paying the embedding cost again.
 		const missingEmbeddingIndexes = messages
-			.map((message, index) => (message.embedding && message.embedding.length > 0 ? -1 : index))
+			.map((message, index) =>
+				message.embedding && message.embedding.length > 0 ? -1 : index,
+			)
 			.filter((index) => index >= 0);
 
 		const generatedEmbeddings =
@@ -112,7 +126,9 @@ export class UnifiedVectorSearchService {
 		const chunks: DocumentChunk[] = messages.map((message, index) => {
 			const embedding = message.embedding ?? generatedByIndex.get(index);
 			if (!embedding || embedding.length === 0) {
-				throw new Error(`No embedding generated for vector record ${message.id}`);
+				throw new Error(
+					`No embedding generated for vector record ${message.id}`,
+				);
 			}
 			const embeddingWasGenerated = generatedByIndex.has(index);
 
@@ -129,7 +145,9 @@ export class UnifiedVectorSearchService {
 					timestamp: message.timestamp ?? message.metadata?.timestamp,
 					embeddingModel:
 						message.metadata?.embeddingModel ??
-						(embeddingWasGenerated ? this.embeddingProvider.getModelName() : undefined),
+						(embeddingWasGenerated
+							? this.embeddingProvider.getModelName()
+							: undefined),
 					embeddingDimensions: embedding.length,
 				},
 			};
@@ -138,7 +156,9 @@ export class UnifiedVectorSearchService {
 		await store.addChunks(chunks);
 	}
 
-	async searchByText(options: VectorSearchOptions): Promise<UnifiedVectorSearchResult[]> {
+	async searchByText(
+		options: VectorSearchOptions,
+	): Promise<UnifiedVectorSearchResult[]> {
 		const query = options.query.trim();
 		if (!query) {
 			return [];
@@ -186,14 +206,19 @@ export class UnifiedVectorSearchService {
 			.map(toUnifiedResult);
 	}
 
-	async deleteOlderThan(timestamp: number, timestampField = "timestamp"): Promise<number> {
+	async deleteOlderThan(
+		timestamp: number,
+		timestampField = "timestamp",
+	): Promise<number> {
 		if (!Number.isFinite(timestamp)) {
 			throw new Error("deleteOlderThan requires a finite timestamp");
 		}
 
 		const store = this.getInitializedStore();
 		if (!store.deleteOlderThan) {
-			throw new Error(`Vector backend ${this.backend ?? "unknown"} does not support deleteOlderThan`);
+			throw new Error(
+				`Vector backend ${this.backend ?? "unknown"} does not support deleteOlderThan`,
+			);
 		}
 
 		return store.deleteOlderThan(timestamp, timestampField);
@@ -219,7 +244,9 @@ export class UnifiedVectorSearchService {
 
 	private getInitializedStore(): IVectorStore {
 		if (!this.store) {
-			throw new Error("UnifiedVectorSearchService is not initialized. Call initialize() first.");
+			throw new Error(
+				"UnifiedVectorSearchService is not initialized. Call initialize() first.",
+			);
 		}
 		return this.store;
 	}
@@ -229,7 +256,9 @@ export class UnifiedVectorSearchService {
  * Build a vector store from a serializable backend choice, or accept a custom
  * implementation for tests and future backends such as Qdrant or Weaviate.
  */
-export async function createVectorStore(config: VectorStoreConfig): Promise<IVectorStore> {
+export async function createVectorStore(
+	config: VectorStoreConfig,
+): Promise<IVectorStore> {
 	switch (config.type) {
 		case "chroma": {
 			const { type: _type, ...options } = config;
@@ -258,7 +287,10 @@ function normalizeThreshold(value: number | undefined): number {
 	return Math.min(1, Math.max(-1, value as number));
 }
 
-function matchesFilter(result: VectorSearchResult, filter?: VectorSearchFilter): boolean {
+function matchesFilter(
+	result: VectorSearchResult,
+	filter?: VectorSearchFilter,
+): boolean {
 	if (!filter) {
 		return true;
 	}
@@ -306,7 +338,9 @@ function normalizeMetadataTimestamp(value: unknown): number {
 	return Number.NaN;
 }
 
-function toUnifiedResult(result: VectorSearchResult): UnifiedVectorSearchResult {
+function toUnifiedResult(
+	result: VectorSearchResult,
+): UnifiedVectorSearchResult {
 	return {
 		id: result.id,
 		content: result.content,

@@ -13,7 +13,10 @@ import {
 	ownerScopeKey,
 	sameOwnerScope,
 } from "../../ai/memory-consolidation/src";
-import type { MemoryQueryGraphRetrievalOptions, MemorySearchWithFallbackResult } from "../../ai/src/memory";
+import type {
+	MemoryQueryGraphRetrievalOptions,
+	MemorySearchWithFallbackResult,
+} from "../../ai/src/memory";
 import { isMemorySummaryPublicationPending } from "../../ai/src/memory/summary-publication";
 import { queryMemoryWithFallback } from "./forgetting";
 import {
@@ -33,7 +36,9 @@ interface SemanticSearchInput {
 }
 
 export interface MemoryGraphRolloutEvaluationStorage extends RawMessageGraphEvolutionStorage {
-	searchMessagesSemantically?: (input: SemanticSearchInput) => Promise<unknown[]>;
+	searchMessagesSemantically?: (
+		input: SemanticSearchInput,
+	) => Promise<unknown[]>;
 	querySummaries(query: {
 		userId?: string;
 		pageSize?: number;
@@ -73,9 +78,13 @@ function semanticResultMessageId(value: unknown): string | undefined {
 	return typeof message.messageId === "string" ? message.messageId : undefined;
 }
 
-function runtimeRetrievalNodeIds(result: MemorySearchWithFallbackResult): string[] {
+function runtimeRetrievalNodeIds(
+	result: MemorySearchWithFallbackResult,
+): string[] {
 	return unique(
-		result.items.map((item) => (item.sourceType === "raw" ? item.record.id : item.summary.summaryId)),
+		result.items.map((item) =>
+			item.sourceType === "raw" ? item.record.id : item.summary.summaryId,
+		),
 	);
 }
 
@@ -83,7 +92,9 @@ function runtimeCrossScopeNodeIds(
 	result: MemorySearchWithFallbackResult,
 	scopedNodeIds: Set<string>,
 ): string[] {
-	return runtimeRetrievalNodeIds(result).filter((nodeId) => !scopedNodeIds.has(nodeId));
+	return runtimeRetrievalNodeIds(result).filter(
+		(nodeId) => !scopedNodeIds.has(nodeId),
+	);
 }
 
 function runtimeGraphRetrievalResult(input: {
@@ -96,8 +107,12 @@ function runtimeGraphRetrievalResult(input: {
 		ownerScope: graphResult?.ownerScope ?? { ...input.ownerScope },
 		rankedNodeIds: runtimeRetrievalNodeIds(input.result),
 		hiddenDeprecatedNodeIds: [...(graphResult?.hiddenDeprecatedNodeIds ?? [])],
-		withheldBaselineNodes: (graphResult?.withheldBaselineNodes ?? []).map((entry) => ({ ...entry })),
-		addedBeyondBaselineNodes: (graphResult?.addedBeyondBaselineNodes ?? []).map((entry) => ({ ...entry })),
+		withheldBaselineNodes: (graphResult?.withheldBaselineNodes ?? []).map(
+			(entry) => ({ ...entry }),
+		),
+		addedBeyondBaselineNodes: (graphResult?.addedBeyondBaselineNodes ?? []).map(
+			(entry) => ({ ...entry }),
+		),
 		expandedClusterIds: [...(graphResult?.expandedClusterIds ?? [])],
 		auditTrail: graphResult?.auditTrail?.map((trail) => ({
 			...trail,
@@ -115,7 +130,10 @@ function runtimeGraphRetrievalResult(input: {
 	};
 }
 
-function ownerScope(userId: string, input: { workspaceId?: string; tenantId?: string }): OwnerScope {
+function ownerScope(
+	userId: string,
+	input: { workspaceId?: string; tenantId?: string },
+): OwnerScope {
 	return {
 		userId,
 		workspaceId: input.workspaceId,
@@ -123,7 +141,10 @@ function ownerScope(userId: string, input: { workspaceId?: string; tenantId?: st
 	};
 }
 
-function operationKinds(operations: MemoryGraphOperation[], kinds: MemoryGraphOperation["kind"][]): string[] {
+function operationKinds(
+	operations: MemoryGraphOperation[],
+	kinds: MemoryGraphOperation["kind"][],
+): string[] {
 	const accepted = new Set(kinds);
 	return operations
 		.filter((operation) => accepted.has(operation.kind))
@@ -137,9 +158,16 @@ function semanticScenario(input: {
 	crossScopeIds: string[];
 	snapshotVersion?: string;
 }): MemorySemanticRetrievalEvalScenarioReport {
-	const leaked = input.defaultIds.filter((id) => input.deprecatedIds.includes(id));
-	const missingAudit = input.deprecatedIds.filter((id) => !input.auditIds.includes(id));
-	const passed = leaked.length === 0 && missingAudit.length === 0 && input.crossScopeIds.length === 0;
+	const leaked = input.defaultIds.filter((id) =>
+		input.deprecatedIds.includes(id),
+	);
+	const missingAudit = input.deprecatedIds.filter(
+		(id) => !input.auditIds.includes(id),
+	);
+	const passed =
+		leaked.length === 0 &&
+		missingAudit.length === 0 &&
+		input.crossScopeIds.length === 0;
 	return {
 		scenarioId: "runtime-semantic-deprecated-visibility",
 		query: "runtime memory graph semantic audit",
@@ -148,13 +176,20 @@ function semanticScenario(input: {
 		suppressedDraftIds: leaked,
 		fallbackRecordIds: [...input.defaultIds],
 		missingSelectedDraftIds: [],
-		missingSuppressedDraftIds: unique([...missingAudit, ...input.crossScopeIds]),
+		missingSuppressedDraftIds: unique([
+			...missingAudit,
+			...input.crossScopeIds,
+		]),
 		missingFallbackRecordIds: [],
 		selectedPassed: true,
 		suppressedPassed: leaked.length === 0,
 		fallbackPassed: missingAudit.length === 0,
 		passed,
-		reasonCodes: [passed ? "semantic_retrieval_eval_passed" : "semantic_retrieval_eval_failed"],
+		reasonCodes: [
+			passed
+				? "semantic_retrieval_eval_passed"
+				: "semantic_retrieval_eval_failed",
+		],
 		metadata: {
 			source: "persisted_memory_graph_runtime",
 			snapshotVersion: input.snapshotVersion,
@@ -172,31 +207,39 @@ function auditScenario(input: {
 	const corrected = new Set(
 		input.operations
 			.filter((operation) =>
-				["correct-node", "remove-cluster-member", "rollback-supersession"].includes(operation.kind),
+				[
+					"correct-node",
+					"remove-cluster-member",
+					"rollback-supersession",
+				].includes(operation.kind),
 			)
 			.flatMap((operation) => operation.nodeIds),
 	);
-	const pollutedMemories = unique(input.pollutedArtifactIds).map((artifactId) => {
-		const resolved = corrected.has(artifactId);
-		const commandIds = input.operations
-			.filter((operation) => operation.nodeIds.includes(artifactId))
-			.map((operation) => operation.operationId);
-		return {
-			artifactId,
-			explained: true,
-			unresolved: !resolved,
-			sourceRecordIds: [artifactId],
-			rollbackAvailable: resolved,
-			commandIds,
-			validCommandIds: resolved ? commandIds : [],
-			reasonCodes: [
-				"polluted_memory_observed",
-				"polluted_memory_explained",
-				...(resolved ? (["dry_run_command_available"] as const) : (["polluted_memory_unresolved"] as const)),
-			],
-			metadata: { source: "persisted_operation_history" },
-		};
-	});
+	const pollutedMemories = unique(input.pollutedArtifactIds).map(
+		(artifactId) => {
+			const resolved = corrected.has(artifactId);
+			const commandIds = input.operations
+				.filter((operation) => operation.nodeIds.includes(artifactId))
+				.map((operation) => operation.operationId);
+			return {
+				artifactId,
+				explained: true,
+				unresolved: !resolved,
+				sourceRecordIds: [artifactId],
+				rollbackAvailable: resolved,
+				commandIds,
+				validCommandIds: resolved ? commandIds : [],
+				reasonCodes: [
+					"polluted_memory_observed",
+					"polluted_memory_explained",
+					...(resolved
+						? (["dry_run_command_available"] as const)
+						: (["polluted_memory_unresolved"] as const)),
+				],
+				metadata: { source: "persisted_operation_history" },
+			};
+		},
+	);
 	const unresolvedArtifactIds = pollutedMemories
 		.filter((item) => item.unresolved)
 		.map((item) => item.artifactId);
@@ -205,7 +248,8 @@ function auditScenario(input: {
 			scenarioId: input.scenarioId,
 			pollutedArtifactCount: pollutedMemories.length,
 			explainedPollutedArtifactCount: pollutedMemories.length,
-			validCommandCount: pollutedMemories.filter((item) => !item.unresolved).length,
+			validCommandCount: pollutedMemories.filter((item) => !item.unresolved)
+				.length,
 			unresolvedPollutedArtifactCount: unresolvedArtifactIds.length,
 			dryRun: true,
 		},
@@ -232,20 +276,33 @@ export async function runMemoryGraphRolloutEvaluation(
 	});
 	const applicabilityNow = snapshot.capturedAt ?? now;
 	const evaluationNodes = snapshot.nodes.filter((node) =>
-		applicabilityMatchesTrustedContexts(node.applicability, [], applicabilityNow),
+		applicabilityMatchesTrustedContexts(
+			node.applicability,
+			[],
+			applicabilityNow,
+		),
 	);
 	const snapshotNodeIds = new Set(snapshot.nodes.map((node) => node.id));
 	const evaluationNodeIds = new Set(evaluationNodes.map((node) => node.id));
 	const evaluationClusters = snapshot.clusters.filter((cluster) =>
-		applicabilityMatchesTrustedContexts(cluster.applicability, [], applicabilityNow),
+		applicabilityMatchesTrustedContexts(
+			cluster.applicability,
+			[],
+			applicabilityNow,
+		),
 	);
-	const pollutedArtifactIds = (input.pollutedArtifactIds ?? []).filter((id) => evaluationNodeIds.has(id));
+	const pollutedArtifactIds = (input.pollutedArtifactIds ?? []).filter((id) =>
+		evaluationNodeIds.has(id),
+	);
 	const operations = await store.readAppliedOperations({ ownerScope: scope });
 	const storedSummaries = await input.storage.querySummaries({
 		userId: scope.userId,
 		pageSize: 1000,
 	});
-	const retrievalPageSize = Math.max(1000, snapshot.nodes.length + storedSummaries.length + 1);
+	const retrievalPageSize = Math.max(
+		1000,
+		snapshot.nodes.length + storedSummaries.length + 1,
+	);
 	const graphRetrieval: MemoryQueryGraphRetrievalOptions = {
 		enabled: true,
 		ownerScope: scope,
@@ -298,13 +355,24 @@ export async function runMemoryGraphRolloutEvaluation(
 		ownerScope: scope,
 	});
 	const scopedNodeIds = evaluationNodeIds;
-	const defaultCrossScopeNodeIds = runtimeCrossScopeNodeIds(defaultRuntime, scopedNodeIds);
-	const auditCrossScopeNodeIds = runtimeCrossScopeNodeIds(auditRuntime, scopedNodeIds);
-	const conflictCrossScopeNodeIds = runtimeCrossScopeNodeIds(conflictRuntime, scopedNodeIds);
+	const defaultCrossScopeNodeIds = runtimeCrossScopeNodeIds(
+		defaultRuntime,
+		scopedNodeIds,
+	);
+	const auditCrossScopeNodeIds = runtimeCrossScopeNodeIds(
+		auditRuntime,
+		scopedNodeIds,
+	);
+	const conflictCrossScopeNodeIds = runtimeCrossScopeNodeIds(
+		conflictRuntime,
+		scopedNodeIds,
+	);
 	const persistedTrails = await Promise.all(
 		unique([
 			...auditGraph.rankedNodeIds,
-			...evaluationNodes.filter((node) => node.type === "summary").map((node) => node.id),
+			...evaluationNodes
+				.filter((node) => node.type === "summary")
+				.map((node) => node.id),
 		]).map((nodeId) =>
 			store.readAuditTrail({
 				ownerScope: scope,
@@ -319,20 +387,32 @@ export async function runMemoryGraphRolloutEvaluation(
 
 	const hiddenRawIds = evaluationNodes
 		.filter(
-			(node) => node.type === "raw" && (node.visibility === "deprecated" || node.visibility === "audit-only"),
+			(node) =>
+				node.type === "raw" &&
+				(node.visibility === "deprecated" || node.visibility === "audit-only"),
 		)
 		.map((node) => node.id);
 	const defaultExpectedIds = evaluationNodes
-		.filter((node) => node.visibility === "default" && (node.type === "raw" || node.type === "summary"))
+		.filter(
+			(node) =>
+				node.visibility === "default" &&
+				(node.type === "raw" || node.type === "summary"),
+		)
 		.map((node) => node.id);
-	const summaryIds = evaluationNodes.filter((node) => node.type === "summary").map((node) => node.id);
+	const summaryIds = evaluationNodes
+		.filter((node) => node.type === "summary")
+		.map((node) => node.id);
 	const scopedRawNodeIds = new Set(
-		evaluationNodes.filter((node) => node.type === "raw").map((node) => node.id),
+		evaluationNodes
+			.filter((node) => node.type === "raw")
+			.map((node) => node.id),
 	);
 	const scopedStoredSummaries = storedSummaries.filter(
 		(summary) =>
 			summaryIds.includes(summary.summaryId) ||
-			summary.sourceRecordIds.some((sourceId) => scopedRawNodeIds.has(sourceId)),
+			summary.sourceRecordIds.some((sourceId) =>
+				scopedRawNodeIds.has(sourceId),
+			),
 	);
 	const unlinkedSummaryIds = scopedStoredSummaries
 		.map((summary) => summary.summaryId)
@@ -341,14 +421,17 @@ export async function runMemoryGraphRolloutEvaluation(
 		.filter(isMemorySummaryPublicationPending)
 		.map((summary) => summary.summaryId);
 	const rawNodes = evaluationNodes.filter((node) => node.type === "raw");
-	const rawMessages = await Promise.all(rawNodes.map((node) => input.storage.getMessageById(node.id)));
+	const rawMessages = await Promise.all(
+		rawNodes.map((node) => input.storage.getMessageById(node.id)),
+	);
 	const rawVisibilityMismatchNodeIds = rawNodes
 		.filter((node, index) => {
 			const message = rawMessages[index];
 			if (!message || !sameOwnerScope(ownerScopeFromMessage(message), scope)) {
 				return true;
 			}
-			const graphHidesRaw = node.visibility === "deprecated" || node.visibility === "audit-only";
+			const graphHidesRaw =
+				node.visibility === "deprecated" || node.visibility === "audit-only";
 			return graphHidesRaw !== (message.deprecatedAt !== undefined);
 		})
 		.map((node) => node.id);
@@ -381,7 +464,8 @@ export async function runMemoryGraphRolloutEvaluation(
 		});
 	}
 
-	const semanticRetrievalScenarios: MemorySemanticRetrievalEvalScenarioReport[] = [];
+	const semanticRetrievalScenarios: MemorySemanticRetrievalEvalScenarioReport[] =
+		[];
 	let semanticDefaultRecordIds: string[] = [];
 	let semanticAuditRecordIds: string[] = [];
 	if (
@@ -415,12 +499,20 @@ export async function runMemoryGraphRolloutEvaluation(
 		semanticDefaultRecordIds = semanticDefaultResultIds.filter((messageId) =>
 			evaluationNodeIds.has(messageId),
 		);
-		semanticAuditRecordIds = semanticAuditResultIds.filter((messageId) => evaluationNodeIds.has(messageId));
-		const scopedRawIds = new Set(
-			evaluationNodes.filter((node) => node.type === "raw").map((node) => node.id),
+		semanticAuditRecordIds = semanticAuditResultIds.filter((messageId) =>
+			evaluationNodeIds.has(messageId),
 		);
-		const semanticCrossScopeIds = unique([...semanticDefaultResultIds, ...semanticAuditResultIds]).filter(
-			(messageId) => !scopedRawIds.has(messageId) && !snapshotNodeIds.has(messageId),
+		const scopedRawIds = new Set(
+			evaluationNodes
+				.filter((node) => node.type === "raw")
+				.map((node) => node.id),
+		);
+		const semanticCrossScopeIds = unique([
+			...semanticDefaultResultIds,
+			...semanticAuditResultIds,
+		]).filter(
+			(messageId) =>
+				!scopedRawIds.has(messageId) && !snapshotNodeIds.has(messageId),
 		);
 		semanticRetrievalScenarios.push(
 			semanticScenario({
@@ -433,18 +525,25 @@ export async function runMemoryGraphRolloutEvaluation(
 		);
 	}
 
-	const stableClusters = evaluationClusters.filter((cluster) => cluster.lifecycleStatus === "stable");
+	const stableClusters = evaluationClusters.filter(
+		(cluster) => cluster.lifecycleStatus === "stable",
+	);
 	const invalidStableRepresentatives = stableClusters.filter(
 		(cluster) =>
 			!cluster.representativeNodeId ||
 			!evaluationNodes.some(
-				(node) => node.id === cluster.representativeNodeId && node.visibility === "default",
+				(node) =>
+					node.id === cluster.representativeNodeId &&
+					node.visibility === "default",
 			),
 	);
 	const formingPromotions = evaluationClusters.filter(
-		(cluster) => cluster.lifecycleStatus === "forming" && cluster.representativeNodeId,
+		(cluster) =>
+			cluster.lifecycleStatus === "forming" && cluster.representativeNodeId,
 	);
-	const decayingClusters = evaluationClusters.filter((cluster) => cluster.lifecycleStatus === "decaying");
+	const decayingClusters = evaluationClusters.filter(
+		(cluster) => cluster.lifecycleStatus === "decaying",
+	);
 	const invalidDecay = decayingClusters.filter(
 		(cluster) => (cluster.supportScore ?? 0) > 1 && cluster.nodeIds.length > 1,
 	);
@@ -452,19 +551,26 @@ export async function runMemoryGraphRolloutEvaluation(
 		ownerScopeKey: ownerScopeKey(scope),
 		snapshotVersion: snapshot.version,
 		operationIds: operations.map((operation) => operation.operationId),
-		correctionOperationIds: operationKinds(operations, ["correct-node", "remove-cluster-member"]),
+		correctionOperationIds: operationKinds(operations, [
+			"correct-node",
+			"remove-cluster-member",
+		]),
 		rollbackOperationIds: operationKinds(operations, ["rollback-supersession"]),
 		defaultRetrievedNodeIds: [...defaultGraph.rankedNodeIds],
 		auditRetrievedNodeIds: [...auditGraph.rankedNodeIds],
 		semanticDefaultRecordIds,
 		semanticAuditRecordIds,
-		sourceRecordIds: evaluationNodes.filter((node) => node.type === "raw").map((node) => node.id),
+		sourceRecordIds: evaluationNodes
+			.filter((node) => node.type === "raw")
+			.map((node) => node.id),
 		summaryIds,
 		pendingSummaryIds,
 		rawVisibilityMismatchNodeIds,
 		metadata: {
 			capturedAt: snapshot.capturedAt,
-			storedSummaryIds: scopedStoredSummaries.map((summary) => summary.summaryId),
+			storedSummaryIds: scopedStoredSummaries.map(
+				(summary) => summary.summaryId,
+			),
 			unlinkedSummaryIds,
 			pendingSummaryIds,
 			rawVisibilityMismatchNodeIds,
@@ -474,7 +580,8 @@ export async function runMemoryGraphRolloutEvaluation(
 		scenarioId: input.scenarioId,
 		consolidationMetrics: {
 			scenarioCount: 1,
-			expectedCandidateAccuracy: invalidStableRepresentatives.length === 0 ? 1 : 0,
+			expectedCandidateAccuracy:
+				invalidStableRepresentatives.length === 0 ? 1 : 0,
 			noisePromotionRate:
 				unlinkedSummaryIds.length > 0
 					? 1
@@ -484,12 +591,17 @@ export async function runMemoryGraphRolloutEvaluation(
 			temporaryOverrideLeakageRate: 0,
 			adaptationAccuracy: 1,
 			projectStateAccuracy: 1,
-			contestedClusterCoverage: conflictGraph.reasonCodes.includes("competing_alternatives_exposed")
+			contestedClusterCoverage: conflictGraph.reasonCodes.includes(
+				"competing_alternatives_exposed",
+			)
 				? 1
 				: evaluationClusters.some((cluster) => cluster.competitionKey)
 					? 0
 					: 1,
-			decayPrecisionProxy: invalidDecay.length === 0 ? 1 : 1 - invalidDecay.length / decayingClusters.length,
+			decayPrecisionProxy:
+				invalidDecay.length === 0
+					? 1
+					: 1 - invalidDecay.length / decayingClusters.length,
 		},
 		graphRetrievalScenarios: retrievalScenarios,
 		semanticRetrievalScenarios,

@@ -20,7 +20,10 @@ import type {
 	Message as opencontextMessage,
 } from "@melandlabs/integrations-channels";
 import type { MessageTarget } from "@melandlabs/integrations-channels";
-import type { DialogInfo, ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
+import type {
+	DialogInfo,
+	ExtractedMessageInfo,
+} from "@melandlabs/integrations-channels/sources/types";
 import { timeBeforeHours } from "@melandlabs/shared";
 
 // Minimal contact metadata type - only what's needed by this package
@@ -63,7 +66,9 @@ export function isIMessageAvailable(): boolean {
 }
 
 // iMessage SDK type
-type IMessageSDKType = InstanceType<typeof import("@photon-ai/imessage-kit").IMessageSDK>;
+type IMessageSDKType = InstanceType<
+	typeof import("@photon-ai/imessage-kit").IMessageSDK
+>;
 
 /**
  * Check if running in Tauri mode
@@ -95,13 +100,21 @@ export class IMessageAdapter extends MessagePlatformAdapter {
 	/**
 	 * Send text via AppleScript (compatible with newer macOS versions)
 	 */
-	private async sendViaAppleScript(chatId: string, text: string): Promise<void> {
+	private async sendViaAppleScript(
+		chatId: string,
+		text: string,
+	): Promise<void> {
 		const execAsync = promisify(exec);
 
 		const coreId = chatId.replace(/^iMessage;[+-];?/i, "");
 		const normalizedChatId = formatIMessageChatId(coreId);
-		const escapedChatId = normalizedChatId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-		const escapedText = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+		const escapedChatId = normalizedChatId
+			.replace(/\\/g, "\\\\")
+			.replace(/"/g, '\\"');
+		const escapedText = text
+			.replace(/\\/g, "\\\\")
+			.replace(/"/g, '\\"')
+			.replace(/\n/g, "\\n");
 
 		const script = `tell application "Messages"
     set targetChat to chat id "${escapedChatId}"
@@ -187,10 +200,16 @@ end tell`;
 				dialogs.push(dialogInfo);
 			}
 
-			if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Retrieved ${dialogs.length} dialogs`);
+			if (DEBUG)
+				console.log(
+					`[Bot ${this.botId}] [imessage] Retrieved ${dialogs.length} dialogs`,
+				);
 			return dialogs;
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] [imessage] Failed to get dialog list:`, error);
+			console.error(
+				`[Bot ${this.botId}] [imessage] Failed to get dialog list:`,
+				error,
+			);
 			throw error;
 		}
 	}
@@ -216,7 +235,10 @@ end tell`;
 
 			if (!result) return extractedMessages;
 
-			if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Retrieved ${result.messages.length} messages`);
+			if (DEBUG)
+				console.log(
+					`[Bot ${this.botId}] [imessage] Retrieved ${result.messages.length} messages`,
+				);
 
 			for (const msg of result.messages) {
 				const extractedInfo = this.extractMessageInfo(msg);
@@ -226,10 +248,15 @@ end tell`;
 			}
 
 			if (DEBUG)
-				console.log(`[Bot ${this.botId}] [imessage] Extracted ${extractedMessages.length} valid messages`);
+				console.log(
+					`[Bot ${this.botId}] [imessage] Extracted ${extractedMessages.length} valid messages`,
+				);
 			return extractedMessages;
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] [imessage] Failed to get messages:`, error);
+			console.error(
+				`[Bot ${this.botId}] [imessage] Failed to get messages:`,
+				error,
+			);
 			throw error;
 		}
 	}
@@ -279,7 +306,10 @@ end tell`;
 
 			return { messages: extractedMessages, hasMore };
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] [imessage] Failed to get messages in chunks:`, error);
+			console.error(
+				`[Bot ${this.botId}] [imessage] Failed to get messages in chunks:`,
+				error,
+			);
 			return { messages: [], hasMore: false };
 		}
 	}
@@ -290,7 +320,9 @@ end tell`;
 	private extractMessageInfo(msg: any): ExtractedMessageInfo | null {
 		try {
 			const chatName = msg.chatId || "Unknown chat";
-			const sender = msg.isFromMe ? "Me" : msg.senderName || msg.sender || "Unknown sender";
+			const sender = msg.isFromMe
+				? "Me"
+				: msg.senderName || msg.sender || "Unknown sender";
 			const text = msg.text || "";
 			const timestamp = msg.date
 				? Math.floor(new Date(msg.date).getTime() / 1000)
@@ -307,7 +339,10 @@ end tell`;
 				attachments: undefined, // TODO: Handle attachments
 			};
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] [imessage] Failed to extract message info:`, error);
+			console.error(
+				`[Bot ${this.botId}] [imessage] Failed to extract message info:`,
+				error,
+			);
 			return null;
 		}
 	}
@@ -316,7 +351,11 @@ end tell`;
 	 * Send messages
 	 * Supports text, images (URL/path/base64), and files (URL)
 	 */
-	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
+	async sendMessages(
+		target: MessageTarget,
+		id: string,
+		messages: Messages,
+	): Promise<void> {
 		// Collect temp files that need cleanup
 		const tempFilesToCleanup: string[] = [];
 
@@ -335,7 +374,10 @@ end tell`;
 					}
 				} else if (this.isFileMessage(message)) {
 					// File message: need to download URL to temp file
-					const tempPath = await this.downloadToTempFile(message.url, message.name);
+					const tempPath = await this.downloadToTempFile(
+						message.url,
+						message.name,
+					);
 					filePaths.push(tempPath);
 					tempFilesToCleanup.push(tempPath);
 				} else if (this.isImageMessage(message)) {
@@ -345,19 +387,31 @@ end tell`;
 						imagePaths.push(message.path);
 					} else if (message.base64) {
 						// base64 needs to be saved as temp file
-						const tempPath = await this.base64ToTempFile(message.base64, message.contentType);
+						const tempPath = await this.base64ToTempFile(
+							message.base64,
+							message.contentType,
+						);
 						imagePaths.push(tempPath);
 						tempFilesToCleanup.push(tempPath);
 					} else if (message.url) {
 						// Handle different URL types
-						if (message.url.startsWith("http://") || message.url.startsWith("https://")) {
+						if (
+							message.url.startsWith("http://") ||
+							message.url.startsWith("https://")
+						) {
 							// Full HTTP URL: download to temp file
-							const tempPath = await this.downloadToTempFile(message.url, message.id);
+							const tempPath = await this.downloadToTempFile(
+								message.url,
+								message.id,
+							);
 							imagePaths.push(tempPath);
 							tempFilesToCleanup.push(tempPath);
 						} else if (message.url.startsWith("/files/")) {
 							// Local storage files (e.g., /files/...): read directly from local filesystem
-							const tempPath = await this.resolveLocalStorageFile(message.url, message.id);
+							const tempPath = await this.resolveLocalStorageFile(
+								message.url,
+								message.id,
+							);
 							imagePaths.push(tempPath);
 							tempFilesToCleanup.push(tempPath);
 						} else if (message.url.startsWith("/")) {
@@ -399,10 +453,16 @@ end tell`;
 					}
 					try {
 						await this.sdk?.send(id, combinedText);
-						if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Successfully sent text message to ${id}`);
+						if (DEBUG)
+							console.log(
+								`[Bot ${this.botId}] [imessage] Successfully sent text message to ${id}`,
+							);
 					} catch (sdkError) {
 						// Use AppleScript fallback when SDK fails
-						console.warn(`[Bot ${this.botId}] [imessage] SDK send failed, trying AppleScript:`, sdkError);
+						console.warn(
+							`[Bot ${this.botId}] [imessage] SDK send failed, trying AppleScript:`,
+							sdkError,
+						);
 						await this.sendViaAppleScript(id, combinedText);
 						if (DEBUG)
 							console.log(
@@ -470,7 +530,10 @@ end tell`;
 				}
 			}
 		} catch (error) {
-			console.error(`[Bot ${this.botId}] [imessage] Failed to send message to ${id}:`, error);
+			console.error(
+				`[Bot ${this.botId}] [imessage] Failed to send message to ${id}:`,
+				error,
+			);
 			throw this.toAdapterError("sendMessages", error);
 		} finally {
 			// Cleanup temp files
@@ -483,13 +546,20 @@ end tell`;
 	/**
 	 * Send a single message
 	 */
-	async sendMessage(target: MessageTarget, id: string, message: string): Promise<void> {
+	async sendMessage(
+		target: MessageTarget,
+		id: string,
+		message: string,
+	): Promise<void> {
 		await this.sendMessages(target, id, [message]);
 	}
 
 	async replyMessages(event: MessageEvent, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
-			const targetId = event.targetType === "group" ? String(event.sender.group.id) : String(event.sender.id);
+			const targetId =
+				event.targetType === "group"
+					? String(event.sender.group.id)
+					: String(event.sender.id);
 			await this.sendMessages(event.targetType, targetId, messages);
 		});
 	}
@@ -514,7 +584,12 @@ end tell`;
 	 */
 	private isFileMessage(message: opencontextMessage): message is FileMessage {
 		if (typeof message !== "object" || message === null) return false;
-		return "id" in message && "name" in message && "size" in message && "url" in message;
+		return (
+			"id" in message &&
+			"name" in message &&
+			"size" in message &&
+			"url" in message
+		);
 	}
 
 	private describeUnsupportedMessage(message: opencontextMessage): string {
@@ -548,7 +623,10 @@ end tell`;
 	 * @param contentType content type, used to infer file extension
 	 * @returns Local path of the temp file
 	 */
-	private async base64ToTempFile(base64Data: string, contentType?: string): Promise<string> {
+	private async base64ToTempFile(
+		base64Data: string,
+		contentType?: string,
+	): Promise<string> {
 		// Remove data:xxx;base64, prefix if present
 		let pureBase64 = base64Data;
 		let detectedContentType = contentType;
@@ -560,7 +638,9 @@ end tell`;
 		}
 
 		// Infer extension from content type
-		const ext = this.getExtensionFromContentType(detectedContentType || "application/octet-stream");
+		const ext = this.getExtensionFromContentType(
+			detectedContentType || "application/octet-stream",
+		);
 
 		const tempDir = await this.getTempDir();
 		const tempPath = join(tempDir, `${randomUUID()}${ext}`);
@@ -568,7 +648,10 @@ end tell`;
 		const buffer = Buffer.from(pureBase64, "base64");
 		await writeFile(tempPath, buffer);
 
-		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] base64 data saved to temp file: ${tempPath}`);
+		if (DEBUG)
+			console.log(
+				`[Bot ${this.botId}] [imessage] base64 data saved to temp file: ${tempPath}`,
+			);
 		return tempPath;
 	}
 
@@ -578,7 +661,10 @@ end tell`;
 	 * @param filename Optional filename
 	 * @returns Local path of the temp file
 	 */
-	private async downloadToTempFile(url: string, filename?: string): Promise<string> {
+	private async downloadToTempFile(
+		url: string,
+		filename?: string,
+	): Promise<string> {
 		const tempDir = await this.getTempDir();
 
 		// Infer filename from URL or filename parameter
@@ -603,17 +689,25 @@ end tell`;
 
 		const tempPath = join(tempDir, `${randomUUID()}-${finalFilename}`);
 
-		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Downloading remote file: ${url}`);
+		if (DEBUG)
+			console.log(
+				`[Bot ${this.botId}] [imessage] Downloading remote file: ${url}`,
+			);
 
 		const response = await fetch(url);
 		if (!response.ok) {
-			throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+			throw new Error(
+				`Failed to download file: ${response.status} ${response.statusText}`,
+			);
 		}
 
 		const buffer = Buffer.from(await response.arrayBuffer());
 		await writeFile(tempPath, buffer);
 
-		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Remote file downloaded to: ${tempPath}`);
+		if (DEBUG)
+			console.log(
+				`[Bot ${this.botId}] [imessage] Remote file downloaded to: ${tempPath}`,
+			);
 		return tempPath;
 	}
 
@@ -631,9 +725,11 @@ end tell`;
 			"image/avif": ".avif",
 			"application/pdf": ".pdf",
 			"application/msword": ".doc",
-			"application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+				".docx",
 			"application/vnd.ms-excel": ".xls",
-			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+			"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+				".xlsx",
 			"text/plain": ".txt",
 			"text/csv": ".csv",
 			"application/json": ".json",
@@ -654,11 +750,17 @@ end tell`;
 	 * @param filename Optional filename
 	 * @returns Local path of the temp file
 	 */
-	private async resolveLocalStorageFile(virtualPath: string, filename?: string): Promise<string> {
+	private async resolveLocalStorageFile(
+		virtualPath: string,
+		filename?: string,
+	): Promise<string> {
 		// Extract actual pathname from /files/xxx
 		const pathname = virtualPath.replace(/^\/files\//, "");
 
-		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Reading file from local storage: ${pathname}`);
+		if (DEBUG)
+			console.log(
+				`[Bot ${this.botId}] [imessage] Reading file from local storage: ${pathname}`,
+			);
 
 		// Check if in Tauri mode
 		if (!isTauriMode()) {
@@ -682,7 +784,10 @@ end tell`;
 
 		await writeFile(tempPath, buffer);
 
-		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Local file copied to temp directory: ${tempPath}`);
+		if (DEBUG)
+			console.log(
+				`[Bot ${this.botId}] [imessage] Local file copied to temp directory: ${tempPath}`,
+			);
 
 		return tempPath;
 	}
@@ -695,9 +800,15 @@ end tell`;
 		for (const path of paths) {
 			try {
 				await unlink(path);
-				if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Cleaned up temp file: ${path}`);
+				if (DEBUG)
+					console.log(
+						`[Bot ${this.botId}] [imessage] Cleaned up temp file: ${path}`,
+					);
 			} catch (error) {
-				console.warn(`[Bot ${this.botId}] [imessage] Failed to cleanup temp file: ${path}`, error);
+				console.warn(
+					`[Bot ${this.botId}] [imessage] Failed to cleanup temp file: ${path}`,
+					error,
+				);
 			}
 		}
 	}
@@ -710,7 +821,10 @@ end tell`;
 			try {
 				await this.sdk.close();
 			} catch (error) {
-				console.error(`[Bot ${this.botId}] [imessage] Failed to close SDK:`, error);
+				console.error(
+					`[Bot ${this.botId}] [imessage] Failed to close SDK:`,
+					error,
+				);
 			}
 		}
 		this.isInitialized = false;
@@ -753,7 +867,8 @@ end tell`;
 				await sdk.close();
 				return { available: true };
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
 
 				// Check if it's a database locked error (retryable)
 				const isDatabaseLockedError =
@@ -764,8 +879,12 @@ end tell`;
 
 				// If database is locked and retries remaining, wait and retry
 				if (isDatabaseLockedError && attempt < MAX_RETRIES) {
-					console.warn(`[iMessage] Database locked, retrying (${attempt}/${MAX_RETRIES})...`);
-					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * attempt));
+					console.warn(
+						`[iMessage] Database locked, retrying (${attempt}/${MAX_RETRIES})...`,
+					);
+					await new Promise((resolve) =>
+						setTimeout(resolve, RETRY_DELAY * attempt),
+					);
 					continue;
 				}
 
@@ -804,7 +923,9 @@ end tell`;
 /**
  * Check if contact metadata is iMessage type
  */
-export function isIMessageContactMeta(meta: ContactMeta | null | undefined): meta is IMessageContactMeta {
+export function isIMessageContactMeta(
+	meta: ContactMeta | null | undefined,
+): meta is IMessageContactMeta {
 	if (!meta) return false;
 	return (meta as IMessageContactMeta).platform === "imessage";
 }

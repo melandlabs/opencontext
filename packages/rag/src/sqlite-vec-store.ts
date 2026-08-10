@@ -241,7 +241,9 @@ export class SQLiteVecStore {
 					content: chunk?.content || "",
 					score: 1 - result.distance, // Convert distance to similarity score
 					documentId: chunk?.documentId || "",
-					metadata: chunk?.metadata ? JSON.parse(chunk.metadata as string) : undefined,
+					metadata: chunk?.metadata
+						? JSON.parse(chunk.metadata as string)
+						: undefined,
 				};
 			});
 
@@ -402,7 +404,10 @@ export class SQLiteVecStore {
  */
 let vectorStoreInstance: SQLiteVecStore | null = null;
 
-export async function getSQLiteVecStore(dbPath: string, schemaModule: SchemaModule): Promise<SQLiteVecStore> {
+export async function getSQLiteVecStore(
+	dbPath: string,
+	schemaModule: SchemaModule,
+): Promise<SQLiteVecStore> {
 	if (!vectorStoreInstance) {
 		vectorStoreInstance = new SQLiteVecStore(dbPath, schemaModule);
 		// Attach schema module for use in methods

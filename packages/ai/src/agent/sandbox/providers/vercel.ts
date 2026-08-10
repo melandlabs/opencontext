@@ -6,9 +6,17 @@
 
 import { extname } from "node:path";
 
-import type { SandboxExecOptions, SandboxExecResult, ScriptOptions } from "../types";
+import type {
+	SandboxExecOptions,
+	SandboxExecResult,
+	ScriptOptions,
+} from "../types";
 
-import { BaseSandboxProvider, defineSandboxPlugin, detectRuntime } from "../plugin";
+import {
+	BaseSandboxProvider,
+	defineSandboxPlugin,
+	detectRuntime,
+} from "../plugin";
 
 import type { SandboxPlugin, SandboxProviderMetadata } from "../types";
 
@@ -192,7 +200,8 @@ export class VercelProvider extends BaseSandboxProvider {
 				},
 			};
 		} catch (error) {
-			const errorMessage = error instanceof Error ? error.message : String(error);
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
 			return {
 				stdout: "",
 				stderr: errorMessage,
@@ -207,7 +216,11 @@ export class VercelProvider extends BaseSandboxProvider {
 		}
 	}
 
-	async runScript(filePath: string, workDir: string, options?: ScriptOptions): Promise<SandboxExecResult> {
+	async runScript(
+		filePath: string,
+		workDir: string,
+		options?: ScriptOptions,
+	): Promise<SandboxExecResult> {
 		const { runtime } = detectRuntime(filePath);
 		const ext = extname(filePath).toLowerCase();
 
@@ -295,7 +308,8 @@ export class VercelProvider extends BaseSandboxProvider {
 const VERCEL_METADATA: SandboxProviderMetadata = {
 	type: "vercel",
 	name: "Vercel Sandbox",
-	description: "Uses Vercel Sandbox for hardware-isolated code execution in Firecracker MicroVMs.",
+	description:
+		"Uses Vercel Sandbox for hardware-isolated code execution in Firecracker MicroVMs.",
 	version: "1.0.0",
 	priority: 150,
 	builtin: true,

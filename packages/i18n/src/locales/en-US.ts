@@ -75,7 +75,8 @@ const enUS = {
 		all: "All",
 		create: "Create",
 		chatSubTitle: "How can I help you today?",
-		generatingSuggestions: "{{assistantName}} is generating action suggestions for you",
+		generatingSuggestions:
+			"{{assistantName}} is generating action suggestions for you",
 		refreshSuggestions: "Refresh suggestions",
 		refreshingSuggestions: "Refreshing...",
 		tryIt: "Try it",
@@ -126,7 +127,8 @@ const enUS = {
 			},
 			frontendDesign: {
 				title: "Create a website intro for opencontext",
-				description: "Design a beautiful landing page showcasing opencontext features.",
+				description:
+					"Design a beautiful landing page showcasing opencontext features.",
 			},
 			linkedinPost: {
 				title: "Create an event and scheduled task to remind me to drink water",
@@ -147,7 +149,8 @@ const enUS = {
 		},
 		quickAuthPrimaryCta: "Connect an integration",
 		quickAuthTitle: "Connect opencontext to your tools",
-		quickAuthSubtitle: "Pick a channel below to unlock full history and streamlined replies.",
+		quickAuthSubtitle:
+			"Pick a channel below to unlock full history and streamlined replies.",
 		quickAuthStatusConnect: "Connect {{platform}}",
 		quickAuthStatusConnected: "Connected as {{name}}",
 		quickAuthStatusConnectedFallback: "Connected",
@@ -158,15 +161,19 @@ const enUS = {
 		allPlatformsConnected: "You've connected all available integrations.",
 		readyToChat: "You’re all set. Jump back into opencontext anytime.",
 		enterChat: "Go to chat",
-		opencontextIntro1: "I'm your intelligent communication assistant to highlight most important messages,",
-		opencontextIntro2: "helping you stay focused, save time, and communicate with greater ease.",
+		opencontextIntro1:
+			"I'm your intelligent communication assistant to highlight most important messages,",
+		opencontextIntro2:
+			"helping you stay focused, save time, and communicate with greater ease.",
 		contactUs: "Contact Us",
-		suggestion: "If you have suggestions or ideas about using opencontext, we'd love to hear from you.",
+		suggestion:
+			"If you have suggestions or ideas about using opencontext, we'd love to hear from you.",
 		joinTelegram: "Join Our Telegram Group",
 		joinDiscord: "Join Our Discord Community",
 		mailToUs: "Send Us an Email",
 		reply: "We'll reply to your message as soon as possible",
-		desktopAppFeedbackHint: "Join our community to share feedback and suggestions",
+		desktopAppFeedbackHint:
+			"Join our community to share feedback and suggestions",
 		telegramBotHeadline: "Use opencontext Telegram Bot",
 		telegramBotDescription:
 			"Install the official opencontext Bot to surface understandings and run /insight, /ask, and /reply commands right inside Telegram.",
@@ -186,12 +193,14 @@ const enUS = {
 		recipient: "Recipient",
 		cc: "CC",
 		bcc: "BCC",
-		addRecipientHint: "Input and press enter to add a recipient, click × to remove",
+		addRecipientHint:
+			"Input and press enter to add a recipient, click × to remove",
 		selectRecipientMulti: "Select recipient (multiple selection supported)",
 		selectedRecipients: "Selected",
 		addCcHint: "Type and press enter to add CC recipients",
 		addBccHint: "Type and press enter to add BCC recipients",
-		gmailRecipientHint: "Need someone else? Type their full email address and press Enter.",
+		gmailRecipientHint:
+			"Need someone else? Type their full email address and press Enter.",
 		content: "Content",
 		enterContent: "Enter your message content...",
 		attachments: "Attachments",
@@ -202,7 +211,8 @@ const enUS = {
 		confirmSend: "Send Message",
 		sendFailedUnknownReason: "Message sending failed: Unknown error",
 		sendErrorGeneric: "Failed to send request, please try again later",
-		sendErrorCannotFindInputEntity: "You need to add the recipient as your contact in Telegram",
+		sendErrorCannotFindInputEntity:
+			"You need to add the recipient as your contact in Telegram",
 		sending: "Sending...",
 		thinking: "opencontext is thinking...",
 		generating: "Crafting the best reply for you",
@@ -215,11 +225,13 @@ const enUS = {
 		reviewAndSend: "Review & Send",
 		scrollToLatest: "Scroll to latest",
 		newReply: "New reply",
-		replyReady: "I've prepared a message draft for you. Please review it in the tool panel on the right.",
+		replyReady:
+			"I've prepared a message draft for you. Please review it in the tool panel on the right.",
 		clickToViewDetails: "Click to view details",
 		replyRefresh: "Help me regenerate the reply draft.",
 		replyFinish: "I've sent your message to {{recipient}} in {{platform}}",
-		replyError: "Sorry, I encountered an error while sending the message: {{error}}",
+		replyError:
+			"Sorry, I encountered an error while sending the message: {{error}}",
 		replyToneHeading: "Tone presets",
 		replyToneHint: "Used whenever opencontext drafts a reply for you.",
 		replyToneChangeHint: "Switching tones will regenerate the next AI drafts.",
@@ -227,7 +239,8 @@ const enUS = {
 		replyRegenerateFailed: "Couldn't regenerate the draft. Please try again.",
 		replyToneLabel: "Tone: {{tone}}",
 		replyGenerateWithTone: "Please craft the reply in a {{toneLabel}} tone.",
-		replyRefreshWithTone: "Help me regenerate the reply draft. Keep it {{toneLabel}}.",
+		replyRefreshWithTone:
+			"Help me regenerate the reply draft. Keep it {{toneLabel}}.",
 		aiSoulHeading: "opencontext Soul",
 		aiSoulIntroDescription:
 			"Shape opencontext's personality and how it works — so it feels like yours, not just anyone's assistant.",
@@ -236,7 +249,8 @@ const enUS = {
 		aiSoulPromptLabel: "Custom Prompt",
 		aiSoulPromptPlaceholder:
 			"e.g. You are a sharp, direct assistant. Keep responses concise and always lead with action, not analysis.",
-		aiSoulPromptHelper: "This prompt will be added to the system prompt and affect AI behavior patterns.",
+		aiSoulPromptHelper:
+			"This prompt will be added to the system prompt and affect AI behavior patterns.",
 		soulPreset: {
 			default: "Default",
 			strategist: "Strategist",
@@ -247,10 +261,14 @@ const enUS = {
 			custom: "Custom",
 		},
 		soulPresetDescriptions: {
-			default: "A trusted colleague — calm, clear, and always knows what matters next.",
-			strategist: "Razor-sharp thinking partner. Leads with conclusions, thinks at 30,000 feet.",
-			executor: "Zero-bullshit operator. Turns ambiguity into action, always closes the loop.",
-			connector: "Social intelligence navigator. Sees the human network behind every opportunity.",
+			default:
+				"A trusted colleague — calm, clear, and always knows what matters next.",
+			strategist:
+				"Razor-sharp thinking partner. Leads with conclusions, thinks at 30,000 feet.",
+			executor:
+				"Zero-bullshit operator. Turns ambiguity into action, always closes the loop.",
+			connector:
+				"Social intelligence navigator. Sees the human network behind every opportunity.",
 			calm: "Grounding presence in chaos. Simplifies, prioritizes, and keeps you steady.",
 		},
 		descriptionPromptSheetTitle: "Description prompt",
@@ -260,7 +278,8 @@ const enUS = {
 			selectAccountHint: "Select an account to continue",
 			via: "via",
 			selectContactTitle: "Select Contact",
-			selectContactSubtitle: 'Couldn\'t find "{{searchTerm}}". Please select from similar contacts:',
+			selectContactSubtitle:
+				'Couldn\'t find "{{searchTerm}}". Please select from similar contacts:',
 			selectContactHint: "Click a name to select this contact",
 		},
 		connectPlatform: "Connect this integration",
@@ -380,7 +399,8 @@ const enUS = {
 			pendingApproval: "Awaiting confirmation",
 			approveExecution: "Approve",
 			replan: "Replan",
-			approvalHint: "Click 'Approve' to start executing, or click 'Replan' to generate a new plan",
+			approvalHint:
+				"Click 'Approve' to start executing, or click 'Replan' to generate a new plan",
 		},
 		filePreview: {
 			title: "File Preview",
@@ -400,17 +420,23 @@ const enUS = {
 			websiteLoadFailed: "Website preview failed",
 			unknownError: "Unknown error",
 			pptxFailed: "PPTX preview loading failed",
-			pptxFailedHint: "File may be too large or complex, please open with PowerPoint",
+			pptxFailedHint:
+				"File may be too large or complex, please open with PowerPoint",
 			excelFailed: "Excel preview loading failed",
-			excelFailedHint: "File may be too large or complex, please open with Excel",
+			excelFailedHint:
+				"File may be too large or complex, please open with Excel",
 			pdfFailed: "PDF preview loading failed",
-			pdfFailedHint: "File may be too large or complex, please open with a PDF reader",
+			pdfFailedHint:
+				"File may be too large or complex, please open with a PDF reader",
 			pdfPreviewUnavailable: "PDF preview not available",
-			pdfBrowserNotSupported: "Your browser does not support inline PDF preview",
+			pdfBrowserNotSupported:
+				"Your browser does not support inline PDF preview",
 			previewNotAvailable: "File preview not available",
-			fileTypeNotSupported: "This file type (.{{type}}) is not supported for preview",
+			fileTypeNotSupported:
+				"This file type (.{{type}}) is not supported for preview",
 			docxFailed: "DOCX preview loading failed",
-			docxFailedHint: "File may be too large or complex, please open with Microsoft Word",
+			docxFailedHint:
+				"File may be too large or complex, please open with Microsoft Word",
 			binaryNotSupported: "Binary file preview not supported via API",
 			showInFolder: "Show in Folder",
 			openWithDefaultApp: "Open with Default App",
@@ -427,7 +453,8 @@ const enUS = {
 			openInWord: "Open in Word",
 			noContent: "No document content found",
 			loading: "Loading document...",
-			fileTooLargeDesc: "This file ({{size}}MB) is too large to preview. Please open it in Microsoft Word.",
+			fileTooLargeDesc:
+				"This file ({{size}}MB) is too large to preview. Please open it in Microsoft Word.",
 			paragraphs: "paragraphs",
 			noPathAvailable: "No file path available",
 			loadTimeout: "Loading timeout",
@@ -438,7 +465,8 @@ const enUS = {
 		csvPreview: {
 			parsingFailed: "CSV parsing failed",
 			emptyFile: "Empty file or no parseable rows",
-			parseWarning: "Some rows have parsing warnings ({{count}}), displaying parsed content in table anyway",
+			parseWarning:
+				"Some rows have parsing warnings ({{count}}), displaying parsed content in table anyway",
 			rowsColumns: "{{rows}} rows × {{columns}} columns",
 		},
 		spreadsheetPreview: {
@@ -546,7 +574,8 @@ const enUS = {
 			fileTooLargeDesc: "File too large to preview ({{size}} MB)",
 			noSlidesAvailable: "No slides available",
 			openInPowerPoint: "Open in PowerPoint/WPS",
-			previewHint: "Preview is simplified rendering. Open in WPS or PowerPoint for full effects",
+			previewHint:
+				"Preview is simplified rendering. Open in WPS or PowerPoint for full effects",
 			renderingNotice: "Local Preview",
 			highFidelityLoading:
 				"High-fidelity rendering is downloading in the background. Showing simplified preview for now.",
@@ -558,7 +587,8 @@ const enUS = {
 			renderEngineCheckFailed: "Could not check high-fidelity rendering status",
 			getFileInfoFailed: "Failed to get file information",
 			readFileFailed: "Failed to read file",
-			invalidFileFormat: "Invalid PPTX file: file is not in valid ZIP or text format",
+			invalidFileFormat:
+				"Invalid PPTX file: file is not in valid ZIP or text format",
 			missingPresentationXml: "Invalid PPTX: missing presentation.xml",
 			defaultDocumentTitle: "Document",
 		},
@@ -596,7 +626,8 @@ const enUS = {
 			title: "Skills",
 			description: "Manage your skills from ~/.opencontext/skills",
 			titleNew: "Skills",
-			descriptionNew: "Provide pre-packaged and reusable best practices and tools for opencontext",
+			descriptionNew:
+				"Provide pre-packaged and reusable best practices and tools for opencontext",
 			searchPlaceholder: "Search skills...",
 			enableSkills: "Enable Skills",
 			addSkill: "Add Skill",
@@ -623,10 +654,12 @@ const enUS = {
 			noSkillsInstalled: "No skills installed yet",
 			noSkillsInMarketplace: "No skills available",
 			addSkillsToDirectory: "Add skills to ~/.opencontext/skills directory",
-			addSkillsHint: 'Click the "Add" button above to install skills from multiple sources',
+			addSkillsHint:
+				'Click the "Add" button above to install skills from multiple sources',
 			deleteDialog: {
 				title: "Delete Skill",
-				description: "To delete this skill, please remove its folder from the skills directory.",
+				description:
+					"To delete this skill, please remove its folder from the skills directory.",
 			},
 			changeAvatar: "Change avatar",
 			clearAvatar: "Clear avatar",
@@ -658,7 +691,8 @@ const enUS = {
 		// Credits top-up
 		creditsTopUp: {
 			topUpTitle: "Top Up Credits",
-			topUpDescription: "Purchase opencontext credits for AI conversations and features",
+			topUpDescription:
+				"Purchase opencontext credits for AI conversations and features",
 			selectAmount: "Select Amount",
 			customAmount: "Custom Amount",
 			creditsLabel: "Credits",
@@ -672,7 +706,8 @@ const enUS = {
 		// Payment
 		payment: {
 			waitingForPayment: "Waiting for Payment",
-			browserOpened: "Payment page opened in browser. Please complete the payment and return.",
+			browserOpened:
+				"Payment page opened in browser. Please complete the payment and return.",
 		},
 		// Credits badges
 		creditsBadge: {
@@ -683,7 +718,10 @@ const enUS = {
 			genericError: {
 				title: "An Error Occurred",
 				description: "There was a problem processing your request.",
-				suggestions: ["Please try again later", "Contact support if the problem persists"],
+				suggestions: [
+					"Please try again later",
+					"Contact support if the problem persists",
+				],
 			},
 			codexCompatibilityError: {
 				title: "Codex setup needs attention",
@@ -713,7 +751,8 @@ const enUS = {
 			title: "Skills",
 			description: "Manage your skills from ~/.opencontext/skills",
 			titleNew: "Skills",
-			descriptionNew: "Provide pre-packaged and reusable best practices and tools for opencontext",
+			descriptionNew:
+				"Provide pre-packaged and reusable best practices and tools for opencontext",
 			searchPlaceholder: "Search skills...",
 			enableSkills: "Enable Skills",
 			addSkill: "Add Skill",
@@ -740,10 +779,12 @@ const enUS = {
 			noSkillsInstalled: "No skills installed yet",
 			noSkillsInMarketplace: "No skills available",
 			addSkillsToDirectory: "Add skills to ~/.opencontext/skills directory",
-			addSkillsHint: 'Click the "Add" button above to install skills from multiple sources',
+			addSkillsHint:
+				'Click the "Add" button above to install skills from multiple sources',
 			deleteDialog: {
 				title: "Delete Skill",
-				description: "To delete this skill, please remove its folder from the skills directory.",
+				description:
+					"To delete this skill, please remove its folder from the skills directory.",
 			},
 			changeAvatar: "Change avatar",
 			clearAvatar: "Clear avatar",
@@ -826,7 +867,8 @@ const enUS = {
 		 * an authorized integration has no Loop mapping. Anchored next to
 		 * the unsupported counter, not on the integration's own row.
 		 */
-		unsupportedSignalsNote: "{{count}} signal dropped — no canonical Loop mapping for its source.",
+		unsupportedSignalsNote:
+			"{{count}} signal dropped — no canonical Loop mapping for its source.",
 		/**
 		 * Setup-action copy surfaced when a connected integration requires a
 		 * custom channel or classifier before it can affect decisions. The
@@ -863,12 +905,18 @@ const enUS = {
 			cli_not_found: "Install it with `npm i -g @composio/cli`, then retry.",
 			cli_unauthorized:
 				"Sign in via Composio, run `claude auth login` for the agent runtime, or open API Settings to configure an Anthropic-compatible provider.",
-			timeout: "Lower the probe interval in `~/.opencontext/loop/preferences.json` or check your network.",
-			transport_error: "The agent service didn't respond. Check your network and try again.",
-			agent_http_error: "The agent responded with a non-OK status. Try again in a few minutes.",
-			empty_response: "The probe finished but produced no output. Retrying may help.",
-			malformed_response: "The agent didn't return a recognizable `connectors` block. Retrying may help.",
-			cli_malformed: "The CLI answered but its JSON couldn't be parsed. Run `composio dev init` then retry.",
+			timeout:
+				"Lower the probe interval in `~/.opencontext/loop/preferences.json` or check your network.",
+			transport_error:
+				"The agent service didn't respond. Check your network and try again.",
+			agent_http_error:
+				"The agent responded with a non-OK status. Try again in a few minutes.",
+			empty_response:
+				"The probe finished but produced no output. Retrying may help.",
+			malformed_response:
+				"The agent didn't return a recognizable `connectors` block. Retrying may help.",
+			cli_malformed:
+				"The CLI answered but its JSON couldn't be parsed. Run `composio dev init` then retry.",
 		},
 		probeKindInstall: "Copy install command",
 		probeKindCopied: "Copied",
@@ -882,7 +930,8 @@ const enUS = {
 		healthError: "Connection error",
 	},
 	integrations: {
-		description: "Manage your connected platforms, RSS feeds, and saved files in one place.",
+		description:
+			"Manage your connected platforms, RSS feeds, and saved files in one place.",
 		feedsSectionTitle: "RSS feeds & subscriptions",
 		feedsSectionDescription:
 			"Pipe curated or custom RSS feeds into opencontext so Web3, finance, technology, AI, design, and hardware news stay in one stream.",
@@ -890,12 +939,15 @@ const enUS = {
 			"Connect your daily messaging tools to unify conversations, get real-time notifications, and manage all chats in one place.",
 		calendarFeedToggle: "Show in feed",
 		calendarFeedToggleSuccess: "Calendar feed preference updated.",
-		telegramReconnectSuccess: "Please send /login command in Telegram to reconnect",
-		calendarFeedToggleDesc: "Push calendar events (Google/Outlook; new + upcoming) into opencontext.",
+		telegramReconnectSuccess:
+			"Please send /login command in Telegram to reconnect",
+		calendarFeedToggleDesc:
+			"Push calendar events (Google/Outlook; new + upcoming) into opencontext.",
 		addPlatform: "Add Platform",
 		addConnector: "Add connector",
 		connectMoreViaComposio: "Connect more via Composio",
-		connectMoreViaComposioDesc: "Ask the agent to link GitHub, Linear, Notion, HubSpot, and hundreds more.",
+		connectMoreViaComposioDesc:
+			"Ask the agent to link GitHub, Linear, Notion, HubSpot, and hundreds more.",
 		composioMoreAppsLabel: "More apps",
 		/**
 		 * Prompt sent verbatim to the chat agent when the user clicks
@@ -932,7 +984,8 @@ const enUS = {
 		importOpmlInvalidType: "Only .opml files are supported.",
 		importOpmlMissingFile: "Select an OPML file before importing.",
 		importOpmlSuccess: "{{imported}} feeds imported. {{skipped}} skipped.",
-		importOpmlNoFeeds: "We couldn't import any feeds from this file. Please double-check and try again.",
+		importOpmlNoFeeds:
+			"We couldn't import any feeds from this file. Please double-check and try again.",
 		importOpmlGenericError: "We couldn't import that OPML file.",
 		addFeedCta: "Add feed",
 		addFeedSuccess: "Feed added.",
@@ -982,11 +1035,14 @@ const enUS = {
 		rssResourceDescription:
 			"Explore these directories to discover new feeds. Copy any RSS URL you like and paste it into opencontext.",
 		rssResource: {
-			feedly: "Search trending business, tech, and finance feeds in Feedly’s public directory.",
+			feedly:
+				"Search trending business, tech, and finance feeds in Feedly’s public directory.",
 			rsshub:
 				"Use RSSHub’s community recipes (and the browser extension) to generate feeds from almost any site.",
-			chainfeeds: "Curated Web3 media, research, and Twitter spaces – most entries expose RSS endpoints.",
-			inoreader: "Browse Inoreader’s catalog for design, community, and remote-work sources.",
+			chainfeeds:
+				"Curated Web3 media, research, and Twitter spaces – most entries expose RSS endpoints.",
+			inoreader:
+				"Browse Inoreader’s catalog for design, community, and remote-work sources.",
 			producthunt:
 				"Almost every Product Hunt topic (AI, Design, DevTools, etc.) exposes an RSS button at the bottom of the page.",
 		},
@@ -1138,10 +1194,13 @@ const enUS = {
 			},
 			reason: {
 				favorited: "Favorited insights are treated as intentionally retained.",
-				deleteDormant: "No recent usage and low value score for more than 90 days.",
+				deleteDormant:
+					"No recent usage and low value score for more than 90 days.",
 				archiveDormant: "Dormant for at least 30 days with low recent value.",
-				archiveFalling: "Usage is falling and value score is below the active threshold.",
-				keepActive: "Usage, freshness, or relevance still supports keeping it active.",
+				archiveFalling:
+					"Usage is falling and value score is below the active threshold.",
+				keepActive:
+					"Usage, freshness, or relevance still supports keeping it active.",
 			},
 		},
 		timelineHistory: {
@@ -1212,7 +1271,8 @@ const enUS = {
 		loadMore: "Load more",
 		showSummaryInStream: "Show Quotes",
 		messageDetails: "Message Details",
-		remoteImagesBlockedNotice: "External images blocked to protect privacy. Load to view full content.",
+		remoteImagesBlockedNotice:
+			"External images blocked to protect privacy. Load to view full content.",
 		remoteImagesLoadAction: "Load Images",
 		relationship: "Relationship",
 		opportunitiesAndRisks: "Opportunities & Risks",
@@ -1291,7 +1351,8 @@ const enUS = {
 		addFailed: "Failed to add note. Please try again",
 		deleteFailed: "Failed to delete. Please try again",
 		deleteTitle: "Confirm Delete",
-		deleteConfirm: "Are you sure you want to delete this note? This action cannot be undone.",
+		deleteConfirm:
+			"Are you sure you want to delete this note? This action cannot be undone.",
 		fetchFailed: "Failed to load notes",
 		expandNotes: "Expand Notes",
 		collapseNotes: "Collapse Notes",
@@ -1312,7 +1373,8 @@ const enUS = {
 		searchNotesPlaceholder: "Search notes...",
 		empty: "No notes or files yet",
 		emptyNotes: "No notes yet",
-		emptyHint: "Add notes in the input above; upload files using the add button in the footer",
+		emptyHint:
+			"Add notes in the input above; upload files using the add button in the footer",
 		emptyNotesHint: "Add notes directly in the input above",
 		noMatch: "No matching notes or files",
 		noMatchingNotes: "No matching notes",
@@ -1340,7 +1402,8 @@ const enUS = {
 	insightDocument: {
 		title: "Files",
 		empty: "No associated files",
-		emptyHint: "Upload new files or select from knowledge base to associate with this event",
+		emptyHint:
+			"Upload new files or select from knowledge base to associate with this event",
 		addFromFile: "Add from Knowledge Base",
 		moreFiles: "And {{count}} more files",
 		associated: "File associated",
@@ -1452,7 +1515,8 @@ const enUS = {
 			saveToopencontext: "Save to opencontext",
 			saveToGoogleDrive: "Save to Google Drive",
 			saveToNotion: "Save to Notion",
-			connectGoogleDrive: "Connect Google Drive in Integrations to use this option.",
+			connectGoogleDrive:
+				"Connect Google Drive in Integrations to use this option.",
 			connectNotion: "Connect Notion in Integrations to use this option.",
 			openIntegrations: "Open integrations",
 			missingBlob: "We couldn't locate this file in opencontext storage.",
@@ -1477,9 +1541,11 @@ const enUS = {
 		fetchingHistory: "Aggregating historical data: ",
 		refreshingSummary: {
 			default: "{{name}} Understanding new information...",
-			firstLanding: "{{name}} is understanding information and identifying key insights...",
+			firstLanding:
+				"{{name}} is understanding information and identifying key insights...",
 		},
-		firstLandingSummary: "{{name}} is understanding information and identifying key insights...",
+		firstLandingSummary:
+			"{{name}} is understanding information and identifying key insights...",
 		firstLandingWaiting: "Please be patient...",
 		refresh: "Refresh",
 		doRefresh: "Refresh",
@@ -1514,10 +1580,12 @@ const enUS = {
 			line1: "{{name}} will keep an eye out for new updates.",
 			line2: "You can also chat with {{name}} to get fresh perspectives.",
 			noPlatformsConnectedLine1: "No platforms connected yet.",
-			noPlatformsConnectedLine2: "{{name}} cannot bring you new insights for now.",
+			noPlatformsConnectedLine2:
+				"{{name}} cannot bring you new insights for now.",
 			goToIntegrations: "Connect Platforms",
 		},
-		refreshingWait: "Refreshing, please wait patiently. This will take approximately 1-2 minutes.",
+		refreshingWait:
+			"Refreshing, please wait patiently. This will take approximately 1-2 minutes.",
 		refreshingFetchMessage: {
 			default: "{{name}} is checking your channels for updates...",
 			firstLanding: "{{name}} is connecting to your channels...",
@@ -1529,8 +1597,10 @@ const enUS = {
 			default: "Updating Insight events · {{progress}}%",
 			firstLanding: {
 				waiting: "Please be patient...",
-				fetching: "First-time data sync, this may take some time · {{progress}}%",
-				summarizing: "Converting to Insight events, please wait · {{progress}}%",
+				fetching:
+					"First-time data sync, this may take some time · {{progress}}%",
+				summarizing:
+					"Converting to Insight events, please wait · {{progress}}%",
 				default: "Preparing event view · {{progress}}%",
 			},
 		},
@@ -1553,8 +1623,10 @@ const enUS = {
 			selectPerson: "Select person",
 			selectImportance: "Select importance",
 			selectUrgency: "Select urgency",
-			mentionsDesc: "Auto-match messages that @mention you or DMs, no setup needed",
-			mentionsMeHint: "Auto-match messages that @mention you or DMs, no setup needed",
+			mentionsDesc:
+				"Auto-match messages that @mention you or DMs, no setup needed",
+			mentionsMeHint:
+				"Auto-match messages that @mention you or DMs, no setup needed",
 			myTasks: "My tasks",
 			waitingForMe: "Waiting for me",
 			waitingForOthers: "Waiting for others",
@@ -1598,13 +1670,15 @@ const enUS = {
 		multipleChannelsFailed: "{{count}} channel(s) refresh failed",
 		reconnectTelegram: "Please reconnect Telegram in settings",
 		openAuthDialog: "Open authorization",
-		muteConfirmTitle: "This event has incomplete action items. Complete them and mute?",
+		muteConfirmTitle:
+			"This event has incomplete action items. Complete them and mute?",
 		muteConfirmDescription:
 			"After muting, these {{count}} action item(s) will be marked as completed. You can unmute anytime.",
 		muteConfirmComplete: "Complete and mute",
 		muteConfirmCancel: "Cancel",
 		muteSuccess: "Muted",
-		muteWithTasksSuccess: "Muted. {{count}} associated action item(s) marked as completed.",
+		muteWithTasksSuccess:
+			"Muted. {{count}} associated action item(s) marked as completed.",
 		unmuteSuccess: "Unmuted",
 		muteError: "Failed to mute. Please try again.",
 		confirmDeleteTitle: "Confirm Delete",
@@ -1649,7 +1723,8 @@ const enUS = {
 			deleteError: "Delete failed, please try again",
 			editGroup: "Edit group",
 			deleteConfirmTitle: "Confirm delete group",
-			deleteConfirmDescription: 'Are you sure you want to delete group "{{name}}"?',
+			deleteConfirmDescription:
+				'Are you sure you want to delete group "{{name}}"?',
 			preset: {
 				templateTag: "Template",
 				canModify: "Preset Group (partially modifiable)",
@@ -1658,12 +1733,16 @@ const enUS = {
 				focusDesc:
 					"Urgent and important items, including tasks requiring attention and direct mentions to you",
 				importantPeople: "VIP",
-				importantPeopleDesc: "Filter messages from important people, you can customize the list",
+				importantPeopleDesc:
+					"Filter messages from important people, you can customize the list",
 				mentions: "@me",
-				mentionsDesc: "Auto-match messages that @mention you or DMs, no setup needed",
+				mentionsDesc:
+					"Auto-match messages that @mention you or DMs, no setup needed",
 				important: "Important",
-				importantDesc: "Filter messages marked as important, including various language markers",
-				vipNotConfiguredHint: "Click the button on the right to auto-analyze and set VIP rules",
+				importantDesc:
+					"Filter messages marked as important, including various language markers",
+				vipNotConfiguredHint:
+					"Click the button on the right to auto-analyze and set VIP rules",
 				notConfigured: "Not configured",
 				keywordNotModifiable: "Preset group keywords cannot be modified",
 			},
@@ -1690,7 +1769,8 @@ const enUS = {
 				},
 				focusTips: {
 					title: "Focus Tips",
-					content: "Card view is for understanding context. Table view is for quickly clearing tasks.",
+					content:
+						"Card view is for understanding context. Table view is for quickly clearing tasks.",
 				},
 				favorite: {
 					title: "Favorites",
@@ -1719,7 +1799,8 @@ const enUS = {
 		send: "Send",
 		unpin: "Unpin",
 		unpinConfirmTitle: "Remove this event from Today's Focus?",
-		unpinConfirmDescription: "It will no longer appear in Today's Focus. You can pin it again anytime.",
+		unpinConfirmDescription:
+			"It will no longer appear in Today's Focus. You can pin it again anytime.",
 		unfavorite: "Unfavorite",
 		pinned: "Pinned to Today's Focus",
 		pinFailed: "Failed to pin. Please try again.",
@@ -1739,7 +1820,8 @@ const enUS = {
 		skip: "Skip",
 		open: "Open welcome guide",
 		summariesTitle: "Let opencontext surface the understandings for you",
-		summariesBody: "Your latest highlights are ready. Tap “Show understandings” anytime to reopen this pane.",
+		summariesBody:
+			"Your latest highlights are ready. Tap “Show understandings” anytime to reopen this pane.",
 		summariesEmpty:
 			"Once opencontext ingests your inboxes, understandings land here. You can keep working while we gather context.",
 		summariesCta: "View understandings",
@@ -1786,7 +1868,8 @@ const enUS = {
 	},
 	auth: {
 		signInTitle: "Your proactive AI workspace",
-		signInSubtitle: "Use your opencontext credentials or continue with Google to get back to your inbox.",
+		signInSubtitle:
+			"Use your opencontext credentials or continue with Google to get back to your inbox.",
 		signInWithGoogle: "Log in with Google",
 		signInWithGithub: "Log in with GitHub",
 		googleOAuthBrowserPrompt:
@@ -1815,10 +1898,12 @@ const enUS = {
 		resetRequestSuccessHeading: "Reset link on its way",
 		resetRequestSuccessBody:
 			"Check your inbox for a link to create a new password. The link will expire in one hour.",
-		resetRequestFailed: "Something went wrong while sending the reset email. Please try again in a moment.",
+		resetRequestFailed:
+			"Something went wrong while sending the reset email. Please try again in a moment.",
 		resetRequestUnavailable:
 			"Password reset emails are temporarily unavailable. Please try again later or contact support.",
-		resetRequestRateLimited: "You’ve requested too many reset links. Please wait a bit before trying again.",
+		resetRequestRateLimited:
+			"You’ve requested too many reset links. Please wait a bit before trying again.",
 		shadowUserNotFound:
 			"No account found for this email. Please use an account that has been logged in on this device.",
 		rememberPassword: "Remembered your password?",
@@ -1832,17 +1917,22 @@ const enUS = {
 		passwordRuleComposition: "At least 1 number and 1 letter",
 		passwordInvalid: "Please choose a password that meets all requirements.",
 		passwordsDoNotMatch: "Your passwords need to match before we can continue.",
-		resetInvalidLink: "This reset link is invalid or missing. Request a new one to continue.",
-		resetTokenExpired: "This reset link has expired. Request a new link to try again.",
-		resetFailed: "We couldn't reset your password just now. Please request a new link and try again.",
+		resetInvalidLink:
+			"This reset link is invalid or missing. Request a new one to continue.",
+		resetTokenExpired:
+			"This reset link has expired. Request a new link to try again.",
+		resetFailed:
+			"We couldn't reset your password just now. Please request a new link and try again.",
 		resetPasswordTitle: "Choose a new password",
-		resetPasswordSubtitle: "We recommend a strong password that you haven't used elsewhere.",
+		resetPasswordSubtitle:
+			"We recommend a strong password that you haven't used elsewhere.",
 		confirmPasswordLabel: "Confirm password",
 		confirmPasswordPlaceholder: "Re-enter your password",
 		resetSubmitCta: "Save new password",
 		resetSubmitting: "Saving…",
 		resetSuccessHeading: "Password updated",
-		resetSuccessBody: "You can now sign in to opencontext with your new password.",
+		resetSuccessBody:
+			"You can now sign in to opencontext with your new password.",
 		resetBackToLogin: "Return to Log In",
 		requestAnotherLink: "Request another reset link",
 		toastSignInSuccess: "Signed in successfully!",
@@ -1852,7 +1942,8 @@ const enUS = {
 			"Invalid email or password. Password must be 8-20 characters with at least 1 letter and 1 number.",
 		toastRegisterSuccess: "Account created successfully!",
 		toastRegisterExists: "An account with that email already exists.",
-		toastRegisterFailed: "We couldn't create your account. Please try again later.",
+		toastRegisterFailed:
+			"We couldn't create your account. Please try again later.",
 		// Auth error codes
 		errorInvalidCredentials: "Invalid email or password.",
 		errorUserExists: "An account with that email already exists.",
@@ -1862,7 +1953,8 @@ const enUS = {
 		errorInvalidEmail: "Invalid email format.",
 		errorInvalidPassword: "Password must be at least 6 characters.",
 		errorLoginFailed: "Login failed. Please try again.",
-		errorRegisterFailed: "We couldn't create your account. Please try again later.",
+		errorRegisterFailed:
+			"We couldn't create your account. Please try again later.",
 		// Google Auth error codes
 		GOOGLE_AUTH_NETWORK_ERROR:
 			"Unable to connect to Gmail server. Please check if your network or firewall allows access to imap.gmail.com:993, and try again later.",
@@ -1876,7 +1968,8 @@ const enUS = {
 		haveAccount: "Have an account already?",
 		signInLink: "Log In",
 		heroTitle: "opencontext is your conversation avatar",
-		heroSubtitle: "Redefining communication through privacy, understanding, memory, and intelligence.",
+		heroSubtitle:
+			"Redefining communication through privacy, understanding, memory, and intelligence.",
 		illustrationPlaceholder: "Hero illustration coming soon",
 		slackDes:
 			"Authorize us to access your Slack workspace, receive and send messages, and view channel and member details.",
@@ -1891,7 +1984,8 @@ const enUS = {
 		discordGuildSelectLabel: "Discord server",
 		discordGuildPlaceholder: "Select a server",
 		discordGuildLoading: "Loading your Discord servers…",
-		discordGuildFetchError: "We couldn't fetch your Discord servers. Please try again.",
+		discordGuildFetchError:
+			"We couldn't fetch your Discord servers. Please try again.",
 		discordSelectGuildError: "Choose a Discord server before continuing.",
 		discordNoManageableGuilds:
 			"We couldn't find any Discord servers you manage. Invite opencontext to your workspace and try again.",
@@ -1900,7 +1994,8 @@ const enUS = {
 		discordInviteCta: "Invite opencontext Bot",
 		discordCreateBotCta: "Connect Discord Server",
 		discordGuildOwnerSuffix: "Owner",
-		qrErrorRetry: "Failed to generate QR code. Please click the refresh button to try again.",
+		qrErrorRetry:
+			"Failed to generate QR code. Please click the refresh button to try again.",
 		telegramDes:
 			"Authorize us to access your Telegram account, send and receive messages, and view channel and member details.",
 		teamsDes:
@@ -1919,15 +2014,18 @@ const enUS = {
 			"Authorize us to access your Instagram DMs so opencontext can summarize and help you reply.",
 		googleCalendarDes:
 			"Authorize us to access your Google Calendar so opencontext can surface new and upcoming events and help you take action quickly.",
-		googleDriveDes: "Connect Google Drive so opencontext can save files straight to your personal storage.",
-		googleDocsDes: "Connect Google Docs so opencontext can watch document changes and draft updates for you.",
+		googleDriveDes:
+			"Connect Google Drive so opencontext can save files straight to your personal storage.",
+		googleDocsDes:
+			"Connect Google Docs so opencontext can watch document changes and draft updates for you.",
 		notionDes:
 			"Connect Notion to save files into your workspace and let opencontext learn from selected pages or databases.",
 		messengerDes:
 			"Connect a Facebook Page so opencontext can read and reply to Messenger conversations using your page access token.",
 		whatsappDes:
 			"Authorize us to access your WhatsApp messages so opencontext can summarize conversations and help you reply on time.",
-		githubDes: "Connect GitHub to read repositories, create issues, and assign tasks to collaborators.",
+		githubDes:
+			"Connect GitHub to read repositories, create issues, and assign tasks to collaborators.",
 		githubCreateIssue: "Create Issue",
 		githubCreateIssueTitle: "Issue Title",
 		githubCreateIssueBody: "Issue Description",
@@ -1940,17 +2038,22 @@ const enUS = {
 		githubAddAssignees: "Add Assignees",
 		githubAddAssigneesSuccess: "Assignees added successfully!",
 		githubAddAssigneesFailed: "Failed to add assignees.",
-		hubspotDes: "Connect HubSpot to monitor deal changes and update pipeline stages from opencontext.",
-		asanaDes: "Connect Asana to manage tasks, track projects, and update work items.",
-		jiraDes: "Connect Jira to track issues, manage projects, and collaborate with your team.",
-		linearDes: "Connect Linear to manage issues, track projects, and streamline your workflow.",
+		hubspotDes:
+			"Connect HubSpot to monitor deal changes and update pipeline stages from opencontext.",
+		asanaDes:
+			"Connect Asana to manage tasks, track projects, and update work items.",
+		jiraDes:
+			"Connect Jira to track issues, manage projects, and collaborate with your team.",
+		linearDes:
+			"Connect Linear to manage issues, track projects, and streamline your workflow.",
 		messengerConnectTitle: "Connect Facebook Messenger",
 		messengerConnectDescription:
 			"Use a Facebook Page access token with messaging permissions. You can optionally keep your app details for webhook verification.",
 		messengerPageId: "Page ID",
 		messengerPageIdPlaceholder: "Enter your Facebook Page ID",
 		messengerPageAccessToken: "Page access token",
-		messengerPageAccessTokenPlaceholder: "EAAG... token with pages_messaging scope",
+		messengerPageAccessTokenPlaceholder:
+			"EAAG... token with pages_messaging scope",
 		messengerPageName: "Display name (optional)",
 		messengerAppId: "App ID (optional)",
 		messengerAppSecret: "App secret (optional)",
@@ -1958,8 +2061,10 @@ const enUS = {
 		messengerSubmit: "Save and connect",
 		messengerMissingToken: "Please enter both Page ID and Page access token.",
 		messengerSuccess: "Messenger account connected successfully!",
-		imessageDes: "Connect iMessage to read and send messages from your Mac (macOS only).",
-		feishuDes: "Connect Lark/Feishu with App ID and App Secret to chat with opencontext via WebSocket.",
+		imessageDes:
+			"Connect iMessage to read and send messages from your Mac (macOS only).",
+		feishuDes:
+			"Connect Lark/Feishu with App ID and App Secret to chat with opencontext via WebSocket.",
 		feishuTitle: "Connect Lark/Feishu",
 		feishuDescription:
 			'Create an app in Lark/Feishu Open Platform with bot capability, choose "Use long connection to receive events" and subscribe to im.message.receive_v1, then enter your credentials below to chat with opencontext.',
@@ -1978,7 +2083,8 @@ const enUS = {
 			"Refresh this page so the Lark/Feishu listener and integration state can take full effect",
 		feishuConnectRestartConfirm: "OK",
 		feishuAppIdSecretRequired: "Please enter App ID and App Secret",
-		feishuScanDescription: "Scan the QR code with Lark/Feishu on your phone and confirm the prompt.",
+		feishuScanDescription:
+			"Scan the QR code with Lark/Feishu on your phone and confirm the prompt.",
 		feishuScanPreparing: "Requesting QR code from Lark/Feishu…",
 		feishuScanWaiting: "Waiting for confirmation in Lark/Feishu…",
 		feishuScanDenied: "Authorization was denied in Lark/Feishu.",
@@ -1996,11 +2102,15 @@ const enUS = {
 		feishuSteps1Link: "Lark/Feishu Open Platform",
 		feishuSteps1After: " and create an enterprise app",
 		feishuSteps2: 'Get App ID and App Secret under "Credentials & Basic Info"',
-		feishuSteps3: 'Enter the App ID and App Secret above in the form and click "Connect Lark/Feishu"',
+		feishuSteps3:
+			'Enter the App ID and App Secret above in the form and click "Connect Lark/Feishu"',
 		feishuSteps4: "Restart opencontext",
-		feishuSteps5: 'Go back to Lark/Feishu Open Platform, enable "Bot" under "Capabilities"',
-		feishuSteps6: 'Under "Permissions", use "Batch import/export", paste the JSON below',
-		feishuStepsNote: "Note: If long connection is not shown here, try restarting opencontext",
+		feishuSteps5:
+			'Go back to Lark/Feishu Open Platform, enable "Bot" under "Capabilities"',
+		feishuSteps6:
+			'Under "Permissions", use "Batch import/export", paste the JSON below',
+		feishuStepsNote:
+			"Note: If long connection is not shown here, try restarting opencontext",
 		feishuSteps7:
 			'Under "Events & Callbacks", open "Event configuration", choose "Use long connection to receive events"',
 		feishuSteps8:
@@ -2010,7 +2120,8 @@ const enUS = {
 		feishuStepsSection2Title: "2. Add the bot to your favorites",
 		feishuStepsAddFav1: "On the workspace, click Add to favorites",
 		feishuStepsAddFav2: "Search for your bot name and add it",
-		feishuStepsAddFav3: "The bot will appear in favorites; double-click to open the chat",
+		feishuStepsAddFav3:
+			"The bot will appear in favorites; double-click to open the chat",
 		dingtalkDes:
 			"Connect DingTalk with Client ID and Client Secret via Stream mode to chat with opencontext.",
 		dingtalkTitle: "Connect DingTalk",
@@ -2035,10 +2146,14 @@ const enUS = {
 		dingtalkSteps1Link: "DingTalk Open Platform · Stream bot",
 		dingtalkSteps1After:
 			" , create an enterprise app and copy Client ID and Client Secret (AppKey / AppSecret).",
-		dingtalkSteps2: 'Add the "Bot" capability and choose Stream mode (long connection).',
-		dingtalkSteps3: "After publishing, enter Client ID and Client Secret in opencontext and connect.",
-		dingtalkSteps4: "Server deployments auto-start Stream; on desktop, restart the app after connecting.",
-		qqbotDes: "Connect QQ with App ID and App Secret to chat with opencontext via WebSocket.",
+		dingtalkSteps2:
+			'Add the "Bot" capability and choose Stream mode (long connection).',
+		dingtalkSteps3:
+			"After publishing, enter Client ID and Client Secret in opencontext and connect.",
+		dingtalkSteps4:
+			"Server deployments auto-start Stream; on desktop, restart the app after connecting.",
+		qqbotDes:
+			"Connect QQ with App ID and App Secret to chat with opencontext via WebSocket.",
 		qqbotTitle: "Connect QQ",
 		qqbotDescription:
 			"Create a bot on QQ Open Platform, then enter your App ID and App Secret below to chat with opencontext.",
@@ -2056,7 +2171,8 @@ const enUS = {
 		qqbotSteps1After: " and log in",
 		qqbotSteps2: 'Click "Create Bot"',
 		qqbotSteps3: "Get your App ID and App Secret",
-		qqbotSteps4: 'Enter App ID and App Secret in the form below and click "Connect QQ"',
+		qqbotSteps4:
+			'Enter App ID and App Secret in the form below and click "Connect QQ"',
 		qqbotAppIdSecretRequired: "Please enter App ID and App Secret",
 		qqbotBotDescription: "Chat with opencontext via QQ",
 		weixinLabel: "Weixin",
@@ -2069,23 +2185,29 @@ const enUS = {
 		weixinQrRefreshed: "QR code refreshed — scan again",
 		weixinQrHint: "Scan the QR code below with Weixin to authorize",
 		weixinDisplayName: "Display name",
-		weixinDisplayNamePlaceholder: "Optional — helps you recognize this account in the list",
+		weixinDisplayNamePlaceholder:
+			"Optional — helps you recognize this account in the list",
 		weixinQrLoading: "Fetching QR code…",
-		weixinQrLoadFailed: "Could not load the QR code. Check the help below and try again.",
+		weixinQrLoadFailed:
+			"Could not load the QR code. Check the help below and try again.",
 		weixinQrRefresh: "Refresh QR code",
 		weixinQrAlt: "Weixin login QR code",
 		weixinStepsTitle: "Help & FAQ",
 		weixinStepsIntroV3:
 			"After you open Connect Weixin, the page loads a login QR code automatically. Scan it with Weixin to authorize — no extra tools required on your computer.",
-		weixinSteps1V2: "Optionally enter a display name to recognize this account in your list.",
-		weixinSteps2V2: "When the QR code appears, scan it with Weixin and confirm login on your phone.",
-		weixinSteps3: "After connecting, we save your credentials and start message listening automatically.",
+		weixinSteps1V2:
+			"Optionally enter a display name to recognize this account in your list.",
+		weixinSteps2V2:
+			"When the QR code appears, scan it with Weixin and confirm login on your phone.",
+		weixinSteps3:
+			"After connecting, we save your credentials and start message listening automatically.",
 		weixinStepsFaq:
 			"If the QR code expires or cannot be read, tap Refresh QR code and scan again. If it still fails, close the dialog and retry, or check your network and open again.",
 		weixinErrorNoQr: "Could not get QR code",
 		weixinErrorLoginFailed: "Login failed",
 		imessageConnectTitle: "Connect iMessage",
-		imessageConnectDescription: "Connect your Mac iMessage to read and send messages from opencontext.",
+		imessageConnectDescription:
+			"Connect your Mac iMessage to read and send messages from opencontext.",
 		imessageMacOnly: "macOS only",
 		imessageMacOnlyDesc:
 			"iMessage integration is only available on macOS. Please use this feature on a Mac computer.",
@@ -2095,8 +2217,10 @@ const enUS = {
 			"Failed to initialize iMessage client. Please ensure @photon-ai/imessage-kit is installed and running on macOS with Full Disk Access permission granted.",
 		imessageErrorUnknownChat: "Unknown chat",
 		imessageErrorUnknownSender: "Unknown sender",
-		imessageErrorDownloadFailed: "Failed to download file: {{status}} {{statusText}}",
-		imessageErrorLocalFileOnly: "Local file storage is only available in Tauri mode",
+		imessageErrorDownloadFailed:
+			"Failed to download file: {{status}} {{statusText}}",
+		imessageErrorLocalFileOnly:
+			"Local file storage is only available in Tauri mode",
 		imessageErrorFileNotFound: "Local file not found: {{path}}",
 		imessageErrorPermission:
 			"Full Disk Access permission is required to read iMessage database. Please add the current running application process (such as Terminal, Node, or opencontext) in System Settings > Privacy & Security > Full Disk Access, then restart the app and try again.",
@@ -2108,12 +2232,14 @@ const enUS = {
 		imessagePermission2: "Automation permission - to send messages",
 		displayName: "Display Name",
 		imessageDisplayNamePlaceholder: "My iMessage",
-		imessageDisplayNameHint: "This name will be used to identify your iMessage account in opencontext",
+		imessageDisplayNameHint:
+			"This name will be used to identify your iMessage account in opencontext",
 		imessageDataNote:
 			"Your message data stays on your local device. opencontext only reads recent messages when you use it to generate insights.",
 		imessageConnecting: "Connecting iMessage...",
 		imessageConnected: "iMessage Connected",
-		imessageConnectedDesc: "You can now access your iMessage messages through opencontext.",
+		imessageConnectedDesc:
+			"You can now access your iMessage messages through opencontext.",
 		imessageError: "Connection Failed",
 		imessageConnect: "Connect iMessage",
 		displayNameRequired: "Please enter a display name",
@@ -2122,11 +2248,14 @@ const enUS = {
 			"Use an Outlook/Exchange app password with IMAP/SMTP enabled. We store it encrypted and only use it to fetch and send your emails.",
 		outlookAppPasswordPlaceholder: "16-character app password",
 		outlookSuccess: "Outlook mailbox connected successfully!",
-		outlookFailed: "Outlook authorization failed. Please check your app password.",
+		outlookFailed:
+			"Outlook authorization failed. Please check your app password.",
 		outlookLogin: "Outlook account connected successfully!",
 		outlookLogout: "Successfully disconnected Outlook",
-		googleCalendarSuccess: "Google Calendar connected. Events will start showing up soon.",
-		googleCalendarFailed: "Google Calendar authorization failed. Please try again.",
+		googleCalendarSuccess:
+			"Google Calendar connected. Events will start showing up soon.",
+		googleCalendarFailed:
+			"Google Calendar authorization failed. Please try again.",
 		linkedinSuccess: "LinkedIn connected successfully!",
 		linkedinFailed: "LinkedIn authorization failed. Please try again.",
 		instagramSuccess: "Instagram connected successfully!",
@@ -2134,7 +2263,8 @@ const enUS = {
 		info: "Permissions",
 		infoItem0:
 			"We only request necessary permissions to provide our service (including reading and sending messages). You can revoke these permissions anytime in your settings.",
-		infoItem1: "We will never share your personal information with third parties.",
+		infoItem1:
+			"We will never share your personal information with third parties.",
 		infoItem2: "All messages are encrypted.",
 		infoItem3: "You can disconnect from any integration anytime.",
 		infoItem4: "By completing authorization, you agree to our ",
@@ -2145,22 +2275,27 @@ const enUS = {
 		note: "Note: ",
 		authorize: "Go to Authorize",
 		unauthenticatedError: "Please log in first before authorizing.",
-		authenticatedButTokenMissingError: "Authorization data not found. Please re-authorize.",
+		authenticatedButTokenMissingError:
+			"Authorization data not found. Please re-authorize.",
 		telegramTokenPlaceholder:
 			"Enter your Telegram Bot Token to complete authorization. In the future, we'll support direct login to your Telegram account via the app.",
 		sendFailedAndTryAgain: "Failed to send. Please try again.",
-		inputPhoneNumber: "Enter a phone number in international format (including country code, e.g., +86)",
-		invalidPhoneNumber: "Please enter a valid international phone number (e.g., +8613800138000)",
+		inputPhoneNumber:
+			"Enter a phone number in international format (including country code, e.g., +86)",
+		invalidPhoneNumber:
+			"Please enter a valid international phone number (e.g., +8613800138000)",
 		invalidSubmitCode: "Please enter a 4–6 digit verification code",
 		wrongSubmitCode: "Incorrect verification code. Please try again.",
 		submitError: "Submission failed. Please try again.",
 		telegramLogout: "Successfully logged out of Telegram",
 		disconnectSuccess: "Disconnected successfully.",
 		telegramLogin: "Telegram account logged in successfully!",
-		telegramLoginHint: "Now send a message to your Telegram Saved Messages to start chatting with AI",
+		telegramLoginHint:
+			"Now send a message to your Telegram Saved Messages to start chatting with AI",
 		whatsappLogout: "Successfully disconnected WhatsApp",
 		whatsappLogin: "WhatsApp account connected successfully!",
-		whatsappLoginHint: "Now send a message to your WhatsApp Note to Self to start chatting with AI",
+		whatsappLoginHint:
+			"Now send a message to your WhatsApp Note to Self to start chatting with AI",
 		telegramDuplicateError:
 			"Telegram authorization failed due to a duplicate session. Please log out and re-authenticate to continue.",
 		desktopSessionExpired:
@@ -2174,14 +2309,16 @@ const enUS = {
 		seeInTelegramApp:
 			"Please open the Telegram app to check it and complete the verification as soon as possible.",
 		codeHintTitle: "Verification code sent - check Telegram",
-		codeHintDesc: 'Open the Telegram app and look for the message from "Telegram" to find your login code.',
+		codeHintDesc:
+			'Open the Telegram app and look for the message from "Telegram" to find your login code.',
 		codeHintAlt: "Illustration showing where the Telegram login code appears",
 		resendAfter: "Resend in {{countdown}}s",
 		resend: "Resend",
 		finishLogin: "Complete Login",
 		twoStepVerification: "Two-Step Verification",
 		enterPassword: "Enter Your Password",
-		passwordRequiredDesc: "This account uses two-step verification. Please enter your Telegram password.",
+		passwordRequiredDesc:
+			"This account uses two-step verification. Please enter your Telegram password.",
 		backToCode: "Return to Verification Code",
 		submitPassword: "Submit Password",
 		passwordError: "Please enter your password",
@@ -2189,17 +2326,20 @@ const enUS = {
 		wrongPassword: "Incorrect password. Please try again.",
 		passwordSubmitFailed: "Failed to submit password. Please try again.",
 		whatsappConnectTitle: "Connect WhatsApp",
-		whatsappConnectDescription: "Link your WhatsApp account to enable messaging features",
+		whatsappConnectDescription:
+			"Link your WhatsApp account to enable messaging features",
 		whatsappInitializing: "Initializing WhatsApp connection...",
 		whatsappGeneratingQr: "Generating QR code, please wait...",
-		whatsappScanInstruction: "Scan this QR code with your WhatsApp mobile app to connect",
+		whatsappScanInstruction:
+			"Scan this QR code with your WhatsApp mobile app to connect",
 		whatsappSuccess: "Successfully connected to WhatsApp!",
 		whatsappErrorGeneric: "An error occurred. Please try again.",
 		whatsappMissingSession: "Missing WhatsApp session payload",
 		whatsappSavingSession: "Saving session...",
 		whatsappPleaseWait: "Please don't close this window...",
 		whatsappPreparing: "Preparing connection to WhatsApp...",
-		whatsappScanSteps: "Open WhatsApp > Settings > Linked Devices > Link a Device",
+		whatsappScanSteps:
+			"Open WhatsApp > Settings > Linked Devices > Link a Device",
 		whatsappConnected: "Successfully connected!",
 		whatsappRedirecting: "You will be redirected shortly...",
 		whatsappError: "Something went wrong",
@@ -2212,24 +2352,28 @@ const enUS = {
 			linked: 'Tap "Link a device".',
 			scan: "Use your phone to scan this QR code.",
 		},
-		authUserCancel: "The authentication process was canceled. Please resend code and try again.",
+		authUserCancel:
+			"The authentication process was canceled. Please resend code and try again.",
 		passwordTimeout: "Password entry timed out",
 		passwordAttemptsExceeded: "Too many failed attempts. Please start over.",
 		processFirst:
 			"Great job completing the first step! Next, I'll retrieve your historical messages from authorized integrations and create your personalized communication profile...",
 		processBar: "Retrieval Progress",
 		processHistory: "• Retrieving historical communication messages...",
-		processItem: "• Identifying key channels, topics, and people you care about...",
+		processItem:
+			"• Identifying key channels, topics, and people you care about...",
 		processPerson: "• Creating your personal communication profile...",
 		phoneLogin: "Phone Login",
 		quickLogin: "Quick Login",
 		qrLogin: "QR Code",
 		phoneNumber: "Phone Number",
-		whatsappPhoneHint: "Enter your phone number with country code (e.g., +8613800138000)",
+		whatsappPhoneHint:
+			"Enter your phone number with country code (e.g., +8613800138000)",
 		getPairingCode: "Get Pairing Code",
 		whatsappGeneratingCode: "Generating pairing code...",
 		whatsappEnterCodeTitle: "Enter this code on your phone",
-		whatsappEnterCodeSteps: "Open WhatsApp > Settings > Linked Devices > Link with phone number instead",
+		whatsappEnterCodeSteps:
+			"Open WhatsApp > Settings > Linked Devices > Link with phone number instead",
 		scanQrTitle: "Scan QR Code to Login",
 		scanQrDesc: "Use your Telegram app to scan this QR code",
 		noQrCode: "No QR code available",
@@ -2247,12 +2391,14 @@ const enUS = {
 		quickLoginTitle: "One-Click Authorization",
 		quickLoginDesc:
 			"If you have Telegram Desktop installed locally, you can use your existing session to login without phone number or verification code",
-		quickLoginHint: "Your Telegram account will be automatically linked after login",
+		quickLoginHint:
+			"Your Telegram account will be automatically linked after login",
 		telegramLoginQr: "Telegram login QR code",
 		securityAndInfo: "Security Information",
 		privacyCommitment: "Privacy Commitment",
 		googleAppPasswordTitle: "Connect Gmail with App Password",
-		googleAppPasswordDesc: "Use your Google App Password to connect your Gmail account",
+		googleAppPasswordDesc:
+			"Use your Google App Password to connect your Gmail account",
 		googleAppPasswordDescOnly: "Connect your Gmail account using App Password",
 		appPassword: "App Password",
 		getAppPassword: "Get App Password",
@@ -2261,12 +2407,14 @@ const enUS = {
 		googleFailed: "Failed to connect to Gmail",
 		oauthMethod: "OAuth",
 		appPasswordMethod: "App Password",
-		oauthMethodDesc: "Connect using Google OAuth. Recommended method for better security.",
+		oauthMethodDesc:
+			"Connect using Google OAuth. Recommended method for better security.",
 		connectWithOAuth: "Connect with OAuth",
 		appPasswordNote:
 			"App Password is a 16-character code for secure third-party access to your Google account",
 		appPasswordDocLink: "How to set up an App Password (Google Support)",
-		googleNote1: "Note: You need to enable 2-Step Verification for your Google account first",
+		googleNote1:
+			"Note: You need to enable 2-Step Verification for your Google account first",
 		googleNote2: "App Password is different from your Google account password",
 		emailRequired: "Email is required",
 		invalidEmail: "Please enter a valid email address",
@@ -2300,7 +2448,8 @@ const enUS = {
 					"Try again later",
 					"If the problem persists, the server may be overloaded",
 				],
-				retrying: "Stream connection interrupted, automatically retrying ({{current}}/{{max}})...",
+				retrying:
+					"Stream connection interrupted, automatically retrying ({{current}}/{{max}})...",
 				maxRetriesReached:
 					"Stream connection error, maximum retries ({{max}}) reached, please try again later",
 				retryPrompt: "Please continue the previous task:",
@@ -2309,7 +2458,8 @@ const enUS = {
 			},
 			apiError: {
 				title: "API Call Failed",
-				description: "The backend service encountered an issue and could not complete the request.",
+				description:
+					"The backend service encountered an issue and could not complete the request.",
 				suggestions: [
 					"Check if the backend service is running",
 					"View server logs for detailed error information",
@@ -2318,7 +2468,8 @@ const enUS = {
 			},
 			rateLimitError: {
 				title: "Too Many Requests",
-				description: "Your request frequency exceeds the limit. Please try again later.",
+				description:
+					"Your request frequency exceeds the limit. Please try again later.",
 				suggestions: [
 					"Wait a few seconds and retry",
 					"Reduce request frequency",
@@ -2327,7 +2478,8 @@ const enUS = {
 			},
 			networkError: {
 				title: "Network Connection Error",
-				description: "Unable to connect to the server. Please check your network connection.",
+				description:
+					"Unable to connect to the server. Please check your network connection.",
 				suggestions: [
 					"Check your network connection",
 					"Try again later",
@@ -2354,8 +2506,13 @@ const enUS = {
 			},
 			timeoutError: {
 				title: "Operation Timeout",
-				description: "The operation took too long and has been stopped automatically.",
-				suggestions: ["Reduce file size", "Check network connection", "Try again later"],
+				description:
+					"The operation took too long and has been stopped automatically.",
+				suggestions: [
+					"Reduce file size",
+					"Check network connection",
+					"Try again later",
+				],
 			},
 			processCrashError: {
 				title: "Agent Process Crash",
@@ -2369,7 +2526,8 @@ const enUS = {
 			},
 			agentTimeoutError: {
 				title: "Agent Execution Timeout",
-				description: "The task execution took too long and timed out. The system will automatically retry.",
+				description:
+					"The task execution took too long and timed out. The system will automatically retry.",
 				suggestions: [
 					"The system will automatically retry",
 					"Try simplifying the task or breaking it into smaller tasks",
@@ -2379,17 +2537,22 @@ const enUS = {
 				// a long-running run is killed mid-tool-call. The wording here is
 				// intentionally different from the legacy timeout description above:
 				// there is no auto-retry in this case, so we do not promise one.
-				completedArtifacts: "{{count}} file(s) from the previous run are preserved and can be reused.",
+				completedArtifacts:
+					"{{count}} file(s) from the previous run are preserved and can be reused.",
 				continueAction: "Continue this task",
 			},
 			genericError: {
 				title: "An Error Occurred",
 				description: "There was a problem processing your request.",
-				suggestions: ["Try again later", "If the problem persists, please contact support"],
+				suggestions: [
+					"Try again later",
+					"If the problem persists, please contact support",
+				],
 			},
 			requestTooLargeError: {
 				title: "File Too Large",
-				description: "The requested file exceeds the 20MB limit. Please use a smaller file.",
+				description:
+					"The requested file exceeds the 20MB limit. Please use a smaller file.",
 				suggestions: [
 					"Compress the file and try again",
 					"Split into multiple smaller files",
@@ -2398,12 +2561,17 @@ const enUS = {
 			},
 			insufficientCreditsError: {
 				title: "Insufficient Credits",
-				description: "Your credit balance is insufficient. Please upgrade your plan to continue.",
-				suggestions: ["Go to subscription page to upgrade your plan", "Contact support for assistance"],
+				description:
+					"Your credit balance is insufficient. Please upgrade your plan to continue.",
+				suggestions: [
+					"Go to subscription page to upgrade your plan",
+					"Contact support for assistance",
+				],
 			},
 			customApiError: {
 				title: "API Configuration Error",
-				description: "The API call failed. Please check your configuration and try again.",
+				description:
+					"The API call failed. Please check your configuration and try again.",
 				suggestions: [
 					"Check API configuration",
 					"Try again",
@@ -2437,7 +2605,8 @@ const enUS = {
 		step1: {
 			q1: {
 				title: "1. Which industry do you work in?",
-				description: "This helps us better understand the needs of different users.",
+				description:
+					"This helps us better understand the needs of different users.",
 				options: {
 					it: "IT / Technology",
 					finance: "Finance / Investment",
@@ -2458,7 +2627,8 @@ const enUS = {
 			},
 			q2: {
 				title: "2. What is your role in your company/organization?",
-				description: "This allows us to better tailor features for your work context.",
+				description:
+					"This allows us to better tailor features for your work context.",
 				options: {
 					executive: "Executive / Decision Maker",
 					pm: "Project / Product Manager",
@@ -2490,7 +2660,8 @@ const enUS = {
 			},
 			q3: {
 				title: "3. What is the approximate size of your company?",
-				description: "Understanding company size helps us match features to your needs.",
+				description:
+					"Understanding company size helps us match features to your needs.",
 				options: {
 					smallTeam: "1-10 people (Small team)",
 					smallCompany: "11-50 people (Small company)",
@@ -2502,7 +2673,8 @@ const enUS = {
 		},
 		step2: {
 			q4: {
-				title: "4. Which communication tools do you typically use? (Select all that apply)",
+				title:
+					"4. Which communication tools do you typically use? (Select all that apply)",
 				description: "This helps us understand where your messages come from.",
 				options: {
 					telegram: "Telegram",
@@ -2515,7 +2687,8 @@ const enUS = {
 			},
 			q5: {
 				title: "5. Approximately how many messages do you receive per day?",
-				description: "Knowing your daily message volume helps us optimize features.",
+				description:
+					"Knowing your daily message volume helps us optimize features.",
 				options: {
 					range0_50: "0–50 messages",
 					range50_200: "50–200 messages",
@@ -2528,7 +2701,8 @@ const enUS = {
 					"6. What challenges do you usually face in cross-integration message management? (Select all that apply)",
 				description: "We want to address the most common pain points.",
 				options: {
-					scattered: "Messages scattered across integrations, frequent switching required",
+					scattered:
+						"Messages scattered across integrations, frequent switching required",
 					lost: "Important messages get lost or overlooked",
 					efficiency: "Low reply efficiency",
 					translation: "Language or translation issues",
@@ -2621,7 +2795,8 @@ const enUS = {
 			zh: "Simplified Chinese",
 		},
 		refreshLabel: "Refresh Frequency",
-		refreshDescription: "Update frequency for event tracking — faster costs more credits.",
+		refreshDescription:
+			"Update frequency for event tracking — faster costs more credits.",
 		refreshPlaceholder: "Choose how often to refresh",
 		refreshOption: "{{minutes}} minutes",
 		preferencesTab: {
@@ -2632,7 +2807,8 @@ const enUS = {
 			heading: "Industry & work context",
 			description:
 				"Grounded in your onboarding responses so opencontext can stay aligned with your day-to-day tone and focus.",
-			introDescription: "The more you share, the better opencontext understands what truly matters to you.",
+			introDescription:
+				"The more you share, the better opencontext understands what truly matters to you.",
 			industryHeading: "Industry signals",
 			industryEmpty:
 				"We haven’t detected industries yet. Complete the onboarding survey to unlock industry-aware understandings.",
@@ -2683,15 +2859,18 @@ const enUS = {
 		roleOptions: {
 			sales_bizdev: {
 				name: "Global Sales / BizDev",
-				description: "Track intent, stakeholders, and next steps so revenue conversations keep moving.",
+				description:
+					"Track intent, stakeholders, and next steps so revenue conversations keep moving.",
 			},
 			customer_success: {
 				name: "Customer Success & Support",
-				description: "Surface escalations, sentiment, and suggested fixes when customers need help.",
+				description:
+					"Surface escalations, sentiment, and suggested fixes when customers need help.",
 			},
 			community_manager: {
 				name: "Community Manager",
-				description: "Highlight trending topics, top voices, and moderation flags across your communities.",
+				description:
+					"Highlight trending topics, top voices, and moderation flags across your communities.",
 			},
 			remote_worker: {
 				name: "Remote Operator",
@@ -2700,47 +2879,58 @@ const enUS = {
 			},
 			indie_maker: {
 				name: "Indie Maker",
-				description: "Spot GTM experiments, traction signals, and blockers across a solo stack.",
+				description:
+					"Spot GTM experiments, traction signals, and blockers across a solo stack.",
 			},
 			founder: {
 				name: "Founder",
-				description: "Spot GTM experiments, traction signals, and blockers across a solo stack.",
+				description:
+					"Spot GTM experiments, traction signals, and blockers across a solo stack.",
 			},
 			indie_founder: {
 				name: "Indie Founder",
-				description: "Spot GTM experiments, traction signals, and blockers across a solo stack.",
+				description:
+					"Spot GTM experiments, traction signals, and blockers across a solo stack.",
 			},
 			executive: {
 				name: "Executive / Leadership",
-				description: "Generate executive summaries with owners, risks, and next actions.",
+				description:
+					"Generate executive summaries with owners, risks, and next actions.",
 			},
 			analyst: {
 				name: "Analyst / Researcher",
-				description: "Capture verifiable trends, sources, and high-frequency entities from research chatter.",
+				description:
+					"Capture verifiable trends, sources, and high-frequency entities from research chatter.",
 			},
 			journalist: {
 				name: "Journalist / Media",
-				description: "Capture verifiable trends, sources, and high-frequency entities from research chatter.",
+				description:
+					"Capture verifiable trends, sources, and high-frequency entities from research chatter.",
 			},
 			analyst_journalist: {
 				name: "Analyst / Journalist",
-				description: "Capture verifiable trends, sources, and high-frequency entities from research chatter.",
+				description:
+					"Capture verifiable trends, sources, and high-frequency entities from research chatter.",
 			},
 			freelancer: {
 				name: "Freelancer / Consultant",
-				description: "Keep client asks, deliverables, and follow-ups organised across gigs.",
+				description:
+					"Keep client asks, deliverables, and follow-ups organised across gigs.",
 			},
 			investor: {
 				name: "Investor",
-				description: "Track portfolio updates, diligence threads, and actionable intro opportunities.",
+				description:
+					"Track portfolio updates, diligence threads, and actionable intro opportunities.",
 			},
 			investor_advisor: {
 				name: "Investor / Advisor",
-				description: "Track portfolio updates, diligence threads, and actionable intro opportunities.",
+				description:
+					"Track portfolio updates, diligence threads, and actionable intro opportunities.",
 			},
 			advisor: {
 				name: "Advisor",
-				description: "Track portfolio updates, diligence threads, and actionable intro opportunities.",
+				description:
+					"Track portfolio updates, diligence threads, and actionable intro opportunities.",
 			},
 			product_manager: {
 				name: "Product Manager",
@@ -2784,7 +2974,8 @@ const enUS = {
 			},
 		},
 		focusPeopleLabel: "People I follow",
-		focusPeopleDescription: "opencontext will use it as a reference when prioritizing",
+		focusPeopleDescription:
+			"opencontext will use it as a reference when prioritizing",
 		focusPeopleExampleIntro: " (e.g. ",
 		focusPeopleExampleOutro: ")",
 		focusPeopleExamplePhrase1: "Jess in finance",
@@ -2792,9 +2983,12 @@ const enUS = {
 		focusTopicsLabel: "Topics I Follow",
 		focusTopicsDescription:
 			"List the keywords or prompts you care about and we'll surface understandings that match them.",
-		focusPlaceholder: "Enter their account, nickname, or whatever you usually call them",
-		focusTopicsPlaceholder: "Enter a keyword, project name, or a short description",
-		focusExampleHint: "Need inspiration? Click any example to add it instantly.",
+		focusPlaceholder:
+			"Enter their account, nickname, or whatever you usually call them",
+		focusTopicsPlaceholder:
+			"Enter a keyword, project name, or a short description",
+		focusExampleHint:
+			"Need inspiration? Click any example to add it instantly.",
 		focusPeopleExamples: [
 			"Only flag updates from Jess in finance",
 			"Prioritize anything sent from @founders channel",
@@ -2806,8 +3000,10 @@ const enUS = {
 		autoSaveHint: "Changes are saved once you press save.",
 		lastUpdatedLabel: "Last updated",
 		lastUpdated: "Last updated {{time}}",
-		templatesTitle: "Not sure what to write? Pick a template, fill it in, then refine it.",
-		templatesSubtitle: "Not sure where to start? Click an example to add it instantly",
+		templatesTitle:
+			"Not sure what to write? Pick a template, fill it in, then refine it.",
+		templatesSubtitle:
+			"Not sure where to start? Click an example to add it instantly",
 		expandTemplates: "Expand",
 		collapseTemplates: "Collapse",
 		templateAdded: "Template added",
@@ -2824,9 +3020,11 @@ const enUS = {
 		syncToMemory: "Sync to Strategic Memory",
 		syncToMemoryDescription:
 			"Sync your focused items to strategic memory so AI can better understand your priorities",
-		syncPeopleSuccess: "Successfully synced {{count}} people to Strategic Memory",
+		syncPeopleSuccess:
+			"Successfully synced {{count}} people to Strategic Memory",
 		syncPeopleFailed: "Failed to sync to Strategic Memory",
-		syncTopicsSuccess: "Successfully synced {{count}} topics to Strategic Memory",
+		syncTopicsSuccess:
+			"Successfully synced {{count}} topics to Strategic Memory",
 		syncTopicsFailed: "Failed to sync to Strategic Memory",
 	},
 	passwordInput: {
@@ -2858,7 +3056,8 @@ const enUS = {
 		},
 		principles: {
 			leastAccess: "Principle of Least Access",
-			leastAccessDesc: "Only access the minimum data necessary to complete tasks.",
+			leastAccessDesc:
+				"Only access the minimum data necessary to complete tasks.",
 			localFirst: "Local First",
 			localFirstDesc:
 				"Original chat records and emails exist only on your device and are not uploaded to our cloud.",
@@ -2866,11 +3065,13 @@ const enUS = {
 			encryptedStorageDesc:
 				"Auth, understanding and configuration data use industry-standard encryption (AES-256 / TLS 1.2+).",
 			accessControl: "Access Control",
-			accessControlDesc: "All system operations have permission verification and audit logs.",
+			accessControlDesc:
+				"All system operations have permission verification and audit logs.",
 		},
 		learnMore: "Learn More: opencontext Privacy Policy →",
 		stepsTitle: "Steps to Authorize Access",
-		stepsDesc: "Before authorizing, please make sure you understand how opencontext protects your data.",
+		stepsDesc:
+			"Before authorizing, please make sure you understand how opencontext protects your data.",
 		step1: 'Click the "Connect" button below',
 		step2: "You will be redirected to Telegram",
 		step3: "Log in to your Telegram account",
@@ -2889,12 +3090,15 @@ const enUS = {
 		title: "Connect Telegram Bot",
 		pendingMessage: "Binding your opencontext account…",
 		success: {
-			message: "Binding successful! You can now return to Telegram to use the opencontext bot.",
+			message:
+				"Binding successful! You can now return to Telegram to use the opencontext bot.",
 		},
 		error: {
-			missingToken: "Login token is missing, please send /login in Telegram again.",
+			missingToken:
+				"Login token is missing, please send /login in Telegram again.",
 			default: "Binding failed",
-			linkFailed: "Binding failed, please return to Telegram and send /login again.",
+			linkFailed:
+				"Binding failed, please return to Telegram and send /login again.",
 		},
 		linkSuccess: {
 			title: "Link Successful",
@@ -2917,7 +3121,8 @@ const enUS = {
 			binding: "Binding…",
 		},
 		loginTitle: "Link Telegram Account",
-		loginDescription: "Choose a method to link your Telegram account to receive messages",
+		loginDescription:
+			"Choose a method to link your Telegram account to receive messages",
 		loginMethods: {
 			phone: "Phone Login",
 			qr: "QR Code",
@@ -2950,8 +3155,10 @@ const enUS = {
 				"Please ensure it's downloaded from the official website (not Microsoft Store or App Store), otherwise please use phone login or QR code login.",
 			officialWebsite: "official website",
 			orSwitchMethod: "Or switch to another login method",
-			needDesktop: "Quick login requires Telegram Desktop to be installed locally",
-			downloadFromOfficial: "Please download from official website (not Microsoft Store or App Store)",
+			needDesktop:
+				"Quick login requires Telegram Desktop to be installed locally",
+			downloadFromOfficial:
+				"Please download from official website (not Microsoft Store or App Store)",
 			specifyCustomPath: "Or specify custom client path",
 			pathLabel: "Telegram Desktop path:",
 			pathPlaceholder: "/path/to/TelegramDesktop",
@@ -2965,7 +3172,8 @@ const enUS = {
 			macPathHint:
 				"You can select /Applications/Telegram Desktop.app, the system will auto-locate the data directory",
 			useLocalSession: "Login with local Telegram Desktop session",
-			openFailed: "Cannot open Telegram Desktop, please manually open the app and complete login in the Bot",
+			openFailed:
+				"Cannot open Telegram Desktop, please manually open the app and complete login in the Bot",
 			sessionNotImplemented:
 				"Quick login feature is under development, please use phone login or QR code login for now",
 			tauriOnly: "Quick login feature is only supported in desktop app",
@@ -2980,12 +3188,15 @@ const enUS = {
 		title: "Connect WhatsApp Bot",
 		pendingMessage: "Binding your opencontext account…",
 		success: {
-			message: "Binding successful! You can now return to WhatsApp to use the opencontext bot.",
+			message:
+				"Binding successful! You can now return to WhatsApp to use the opencontext bot.",
 		},
 		error: {
-			missingToken: "Login token is missing, please send /login in WhatsApp again.",
+			missingToken:
+				"Login token is missing, please send /login in WhatsApp again.",
 			default: "Binding failed",
-			linkFailed: "Binding failed, please return to WhatsApp and send /login again.",
+			linkFailed:
+				"Binding failed, please return to WhatsApp and send /login again.",
 		},
 		actions: {
 			backToConsole: "Back to opencontext Console",
@@ -2997,13 +3208,16 @@ const enUS = {
 	},
 	discord: {
 		missingTokenTitle: "Missing Login Token",
-		missingTokenDesc: "Please return to Discord and re-send the /login command.",
+		missingTokenDesc:
+			"Please return to Discord and re-send the /login command.",
 		title: "Connect Discord Bot",
 		pendingMessage: "Binding your opencontext account…",
 		missingTokenError: "Missing login token, please re-send /login in Discord.",
 		defaultLinkError: "Binding failed",
-		successMessage: "Binding successful! You can now return to Discord to use the opencontext bot.",
-		defaultRetryError: "Binding failed, please return to Discord and re-send /login.",
+		successMessage:
+			"Binding successful! You can now return to Discord to use the opencontext bot.",
+		defaultRetryError:
+			"Binding failed, please return to Discord and re-send /login.",
 		backToConsoleBtn: "Return to opencontext Console",
 		retryBtn: "Try Again",
 		contactSupportBtn: "Contact Support Team",
@@ -3043,7 +3257,8 @@ const enUS = {
 		title: "What deadlines or follow-ups came up in the last {{days}} days?",
 	},
 	insightActionPrefix: 'For "{{title}}", ',
-	insightActionAndMessagePrefix: 'For platform "{{platform}}", "{{title}}" and message "{{message}}", ',
+	insightActionAndMessagePrefix:
+		'For platform "{{platform}}", "{{title}}" and message "{{message}}", ',
 	summarySuggestedAction1st: {
 		title: "Quick Reply",
 		action: "help me generate a chat reply",
@@ -3125,10 +3340,12 @@ const enUS = {
 			"Unsupported file types: {{files}}. Supported types: Images (JPEG, PNG, WebP, GIF), Documents (PDF, DOC, PPT, XLS, TXT, Markdown), and Audio (WAV, MP3, FLAC, AAC, OGG, M4A)",
 		dropFilesHere: "Drop files here",
 		fileDropArea: "File drop area",
-		supportedFileTypes: "Images, documents (PDF, DOC, PPT, TXT, Markdown), and audio",
+		supportedFileTypes:
+			"Images, documents (PDF, DOC, PPT, TXT, Markdown), and audio",
 		uploadingInProgress: "Please wait for file upload to complete",
 		alreadyRunning: "Please wait for the current response to complete.",
-		documentUploaded: "Document '{{name}}' has been added to your knowledge bases",
+		documentUploaded:
+			"Document '{{name}}' has been added to your knowledge bases",
 		documentReady: "You can now ask questions about '{{name}}'",
 		imageUploadSuccess: "{{count}} images uploaded",
 		audioUploadSuccess: "{{count}} audio files uploaded",
@@ -3137,7 +3354,8 @@ const enUS = {
 		emptyFile: "File is empty",
 		fileTooLarge: "File too large: {{fileName}}. Max size is {{maxSize}}MB",
 		uploadFailed: "Upload failed",
-		maxAttachmentsReached: "Maximum {{max}} attachments allowed. You currently have {{current}} attachments.",
+		maxAttachmentsReached:
+			"Maximum {{max}} attachments allowed. You currently have {{current}} attachments.",
 		attachments: {
 			download: "Download",
 			save: "Save",
@@ -3149,7 +3367,8 @@ const enUS = {
 			saveFailed: "Failed to save file.",
 			downloadFailed: "Unable to download this file.",
 			missingBlob: "We couldn't locate this file in opencontext storage.",
-			storageWarning: "You're using {{percent}}% of your storage. Consider cleaning up or upgrading.",
+			storageWarning:
+				"You're using {{percent}}% of your storage. Consider cleaning up or upgrading.",
 			unsupportedSource: "Saving not available for this file.",
 			viaSource: "via {{source}}",
 			sources: {
@@ -3174,12 +3393,14 @@ const enUS = {
 		audioStopRecord: "Click to stop recording",
 		audioTranscribing: "Transcribing audio...",
 		audioRecordFailed: "Audio recording failed, please retry",
-		audioPermissionDenied: "Microphone permission denied, please enable and retry",
+		audioPermissionDenied:
+			"Microphone permission denied, please enable and retry",
 		audioNotSupported: "Current environment does not support audio recording",
 		audioTranscriptionFailed: "Audio transcription failed, please retry",
 		audioTranscriptionEmpty: "No speech detected, please try again",
 		audioEmpty: "No audio captured, please retry",
-		audioTooShort: "Recording is too short or the upload was incomplete. Speak a bit longer and try again.",
+		audioTooShort:
+			"Recording is too short or the upload was incomplete. Speak a bit longer and try again.",
 		audioPayloadRejected:
 			"The transcription service did not receive usable audio. Please retry or check your connection and sign-in.",
 		workspaceFiles: "Select file from workspace",
@@ -3188,7 +3409,8 @@ const enUS = {
 		addPeople: "Add People",
 		addChannel: "Add Channel",
 		addReference: "Add Reference (@)",
-		addReferenceHint: "Add tracking event / file upload, or type @ for fuzzy search",
+		addReferenceHint:
+			"Add tracking event / file upload, or type @ for fuzzy search",
 		addFile: "Add file",
 		addFileHint: "Add from workspace or upload from local",
 		addFileFromWorkspace: "Add from workspace",
@@ -3230,7 +3452,8 @@ const enUS = {
 		subtitle:
 			"Download, preview, and delete the files you've saved from conversations(Saving a file uses 2 credits per operation).",
 		uploadTitle: "Upload files",
-		uploadDescription: "Add files from your device to store them in opencontext for later analysis.",
+		uploadDescription:
+			"Add files from your device to store them in opencontext for later analysis.",
 		uploadButton: "Upload files",
 		uploading: "Uploading...",
 		uploadSuccess: "File uploaded successfully.",
@@ -3240,18 +3463,22 @@ const enUS = {
 		uploadCostHint: "Each save operation costs 2 credits.",
 		uploadInfoLabel: "Upload requirements",
 		uploadProgress: "Uploading file {{current}} of {{total}}...",
-		unsupportedTypeError: "Some files aren't supported. Upload images, video, or documents.",
+		unsupportedTypeError:
+			"Some files aren't supported. Upload images, video, or documents.",
 		oversizedError: "Files must be {{size}}MB or smaller.",
 		uploadFailedSome: "Some files failed to upload. Try again.",
-		uploadMissingRecord: "Upload succeeded but the file could not be saved. Please try again.",
+		uploadMissingRecord:
+			"Upload succeeded but the file could not be saved. Please try again.",
 		operationCost: "Saving a file uses {{cost}} credits per operation.",
 		storageUsage: "Storage usage",
-		upgradeWarning: "You're close to your storage limit. Upgrade to unlock more space.",
+		upgradeWarning:
+			"You're close to your storage limit. Upgrade to unlock more space.",
 		viewPlans: "View plans",
 		loadFailed: "We couldn't load your saved files right now.",
 		savedItems: "Saved items",
 		loading: "Loading your files...",
-		empty: "You haven't saved any files yet. Save attachments from your chats to see them here.",
+		empty:
+			"You haven't saved any files yet. Save attachments from your chats to see them here.",
 		savedAt: "Saved at {{date}}",
 		loginCTA: "Sign in",
 		noStorage: "Upgrade to unlock cloud storage for saved files.",
@@ -3270,14 +3497,17 @@ const enUS = {
 	},
 	rewards: {
 		sectionTitle: "Unlock bonus credits",
-		sectionDescription: "Complete to earn {{credits}} credits you can spend immediately.",
+		sectionDescription:
+			"Complete to earn {{credits}} credits you can spend immediately.",
 		firstIntegration: {
 			title: "Connect your first platform",
-			description: "Link Slack, Telegram, Gmail, or WhatsApp to centralize conversations.",
+			description:
+				"Link Slack, Telegram, Gmail, or WhatsApp to centralize conversations.",
 		},
 		firstReply: {
 			title: "Send your first reply",
-			description: "Use opencontext to respond once and unlock automation controls.",
+			description:
+				"Use opencontext to respond once and unlock automation controls.",
 		},
 		integrationProgress: "Connected {{count}} account(s)",
 		replyProgress: "Sent {{count}} replies",
@@ -3287,7 +3517,8 @@ const enUS = {
 			reply: "Start chatting",
 		},
 		bannerTitle: "Earn bonus credits",
-		bannerDescription: "Complete onboarding tasks to unlock {{credits}} credits.",
+		bannerDescription:
+			"Complete onboarding tasks to unlock {{credits}} credits.",
 		bannerCta: "View tasks",
 		sidebarHint: "Earn {{credits}} bonus credits",
 		menuHint: "Bonus {{credits}} credits available",
@@ -3367,7 +3598,8 @@ const enUS = {
 			dialogTitle: "Newcomer guide",
 			heading: "Meet opencontext",
 			subheading: "Finish the remaining tasks to complete your setup.",
-			resumeHint: "Click here to explore everything opencontext can do for you.",
+			resumeHint:
+				"Click here to explore everything opencontext can do for you.",
 			resumeHintImageAlt: "Onboarding hint",
 			openMandatoryDebug: "Open new onboarding modal",
 			collectInfo: {
@@ -3384,11 +3616,16 @@ const enUS = {
 				tooltip: {
 					iconLabel: "Task details",
 					openDocButton: "learn more",
-					connectTelegram: "Connect Telegram so you can chat with opencontext directly in Telegram.",
-					connectWhatsApp: "Connect WhatsApp so you can chat with opencontext directly in WhatsApp.",
-					connectIMessage: "Connect iMessage so you can chat with opencontext directly in iMessage.",
-					connectQQ: "Connect QQ so you can chat with opencontext directly in QQ.",
-					connectFeishu: "Connect Lark/Feishu so you can chat with opencontext directly in Lark/Feishu.",
+					connectTelegram:
+						"Connect Telegram so you can chat with opencontext directly in Telegram.",
+					connectWhatsApp:
+						"Connect WhatsApp so you can chat with opencontext directly in WhatsApp.",
+					connectIMessage:
+						"Connect iMessage so you can chat with opencontext directly in iMessage.",
+					connectQQ:
+						"Connect QQ so you can chat with opencontext directly in QQ.",
+					connectFeishu:
+						"Connect Lark/Feishu so you can chat with opencontext directly in Lark/Feishu.",
 					linkPlatform:
 						"Connect Slack, Gmail, Telegram and more. opencontext reads your conversations and surfaces what needs follow-up — before you have to ask.",
 					addSubscription:
@@ -3439,7 +3676,8 @@ const enUS = {
 		boundInsight: "Bound Insight",
 		monitoredSources: "Sources",
 		insightTimeline: "Insight Timeline",
-		noTimelineEvents: "No timeline events yet. Execute the character to generate insight updates.",
+		noTimelineEvents:
+			"No timeline events yet. Execute the character to generate insight updates.",
 		noFilesYet: "No output yet.",
 		noFilesHint: "Output will appear here after character runs.",
 		noExecutionsYet: "No executions yet.",
@@ -3478,7 +3716,8 @@ const enUS = {
 		executing: "Executing...",
 		currentlyExecuting: "Currently executing",
 		previousResult: "Previous result",
-		confirmDelete: "Are you sure you want to remove this mate from your squad? This cannot be undone.",
+		confirmDelete:
+			"Are you sure you want to remove this mate from your squad? This cannot be undone.",
 		errorNameRequired: "Name is required",
 		errorDescriptionRequired: "Description is required",
 		errorInsightTitleRequired: "Insight title is required",
@@ -3486,12 +3725,15 @@ const enUS = {
 		placeholderWhatDoesItDo: "What does this character do?",
 		placeholderDailyReporter: "You are a diligent daily reporter agent...",
 		placeholderBriefDescription: "Brief description of the insight topic",
-		placeholderBriefDescriptionChar: "Brief description of what this character does",
+		placeholderBriefDescriptionChar:
+			"Brief description of what this character does",
 		placeholderSelectDays: "Select days...",
 		promptSourceName: "Source name:",
-		emptyState: "No characters yet. Create your first character to get started.",
+		emptyState:
+			"No characters yet. Create your first character to get started.",
 		executedAt: "Executed",
-		resultFilesHint: "Output is generated during execution. View all output in the Output tab.",
+		resultFilesHint:
+			"Output is generated during execution. View all output in the Output tab.",
 		noOutputYetHint: "No output yet. Run the character to see results.",
 		executionHistory: "Execution History",
 		fixToSidebar: "Fix to sidebar",
@@ -3523,13 +3765,16 @@ const enUS = {
 		moreConfig: "More Options",
 		tooltips: {
 			selectModel: "Choose a model",
-			selectSkill: "Loading different skills gives your mate more specialized capabilities",
+			selectSkill:
+				"Loading different skills gives your mate more specialized capabilities",
 			addFile: "Uploading different files gives your mate more task background",
-			addMessageChannel: "Connecting different channels gives your mate a more precise message scope",
+			addMessageChannel:
+				"Connecting different channels gives your mate a more precise message scope",
 		},
 		emptyStateAddFirstAssistant: "Add your first assistant",
 		emptyStateCreateManuallyTitle: "Create manually",
-		emptyStateCreateManuallyDescription: "Start from scratch and configure your assistant",
+		emptyStateCreateManuallyDescription:
+			"Start from scratch and configure your assistant",
 		addFromMarketplace: "Add from Marketplace",
 		sources: {
 			bindFolder: "Bind Folder",
@@ -3542,7 +3787,8 @@ const enUS = {
 			file: "file",
 			channel: "channel",
 			tauriRequired: "Folder binding requires Tauri app",
-			folderDragRequiresTauri: "Please use 'Bind Folder' button to bind folders",
+			folderDragRequiresTauri:
+				"Please use 'Bind Folder' button to bind folders",
 			folderAlreadyBound: "Folder already bound",
 			folderBound: "Folder bound successfully",
 			uploadFailed: "Upload failed",
@@ -3584,7 +3830,8 @@ const enUS = {
 		noTasks: "No tasks yet",
 		event: "Event",
 		topics: "Topics",
-		topicsDescription: "Select categories to focus character execution on specific subject areas.",
+		topicsDescription:
+			"Select categories to focus character execution on specific subject areas.",
 		topicsPlaceholder: "Select topics...",
 		topicsSearchPlaceholder: "Search topics...",
 		topicsCustomPlaceholder: "Press Enter to add custom topic",
@@ -3608,7 +3855,8 @@ const enUS = {
 		notificationChannels: "Notification Channels",
 		selectChannels: "Select notification channels...",
 		systemNotification: "System Notification",
-		systemNotificationDescription: "Show desktop notifications when tasks complete",
+		systemNotificationDescription:
+			"Show desktop notifications when tasks complete",
 		dailyFocus: "Daily Focus",
 		dailyFocusLoading: "Loading...",
 		dailyFocusEmpty: "No focus data yet",
@@ -3616,13 +3864,16 @@ const enUS = {
 		dailyFocusNoData: "No data",
 		dailyFocusAnalysisComplete: "Daily focus analysis complete",
 		dailyFocusItemsAnalyzed: "{{count}} items analyzed",
-		dailyFocusV1Summary: "{{urgent}} urgent, {{important}} important, {{monitor}} monitoring",
+		dailyFocusV1Summary:
+			"{{urgent}} urgent, {{important}} important, {{monitor}} monitoring",
 		dailyFocusReasoningChain: "Reasoning Chain ({{count}})",
 		dailyFocusRawContent: "Raw Content",
 		dailyFocusActionPrefix: "Action: {{label}}",
-		dailyFocusSendMessageInstruction: "Help me send a message to {{recipients}}{{platformText}}: {{message}}",
+		dailyFocusSendMessageInstruction:
+			"Help me send a message to {{recipients}}{{platformText}}: {{message}}",
 		dailyFocusSendMessagePlatformText: " via {{platform}}",
-		dailyFocusReplyEmailInstruction: "Help me reply to {{recipients}}{{subjectText}}: {{message}}",
+		dailyFocusReplyEmailInstruction:
+			"Help me reply to {{recipients}}{{subjectText}}: {{message}}",
 		dailyFocusReplyEmailSubjectText: ", subject: {{subject}}",
 		dailyFocusTodayBadge: "Today",
 		dailyFocusDeadline: "Due {{deadline}}",
@@ -3665,7 +3916,8 @@ const enUS = {
 		taskListShowAll: "Show all",
 		taskListOnlyWithResults: "Only show items with results",
 		taskListOnlyFilesEmpty: "No tasks with file output yet",
-		taskListRecentNoResultToast: "No results updated for the last {{count}} executions",
+		taskListRecentNoResultToast:
+			"No results updated for the last {{count}} executions",
 		addMessageChannel: "Add message channel",
 		marketplaceGroupAll: "All",
 		marketplaceGroup: {
@@ -3712,7 +3964,8 @@ const enUS = {
 			description:
 				'You are an X/Twitter growth assistant aiming for steady monthly follower and engagement gains. Execute on the configured schedule: 1) Use web search to study peer accounts\' recent themes and draft 1 main post fitting the persona (cutting-edge AI tech, products, user guides, technical takes); when given long content, automatically rewrite it into a publish-ready X thread (each tweet ≤ 280 chars, strong opening hook, clear CTA at the end). 2) Pull latest mentions, replies, and DMs via the X integration, classify them into "high engagement potential / normal / ignore", and draft a brief reply for the first two tiers. 3) Stay strictly on-topic — AI and tech only; no politics, violence, or adult content. 4) Everything is delivered as a "pending approval" draft to the configured channel; never post without explicit approval. 5) Output a performance review and next-step suggestions for the current run.',
 			insightTitle: "X Account Growth Assistant",
-			insightDescription: "Periodic post drafts, engagement suggestions, and daily reviews",
+			insightDescription:
+				"Periodic post drafts, engagement suggestions, and daily reviews",
 		},
 		pdDailySync: {
 			name: "Product & Dev Daily Sync",
@@ -3726,7 +3979,8 @@ const enUS = {
 			description:
 				'You are a sales pipeline automation assistant. Execute on the configured schedule:\n\n1) Use web search to identify new target companies and contacts that match the user-provided ICP, and dedupe against the HubSpot deal pipeline.\n2) Score each lead 0–100 (company size / industry fit / trigger signal / decision-making role), with the reasoning for each component spelled out.\n3) For leads scoring ≥ 70: draft a personalized first-touch email in Gmail (kept as a draft, never auto-sent) and push the "high-priority list + one-line rec" to the configured Slack/Lark/Feishu sales channel.\n4) Move lower-scoring leads into a long-term nurture list and tag the stage in HubSpot.\n5) Log data sources and judgment for every step, and surface errors or missing data clearly for human review.',
 			insightTitle: "Sales Pipeline Automation",
-			insightDescription: "Lead scoring, email drafts, and high-priority lead alerts",
+			insightDescription:
+				"Lead scoring, email drafts, and high-priority lead alerts",
 		},
 		contractRiskEvaluator: {
 			name: "Contract Risk Evaluator",
@@ -3789,7 +4043,8 @@ const enUS = {
 			description:
 				'You are a compliance review assistant. Execute on the configured schedule: 1) Track regulatory updates, official notices, and industry codes relevant to the user\'s business via web search + RSS (in both English and Chinese). 2) Diff the latest texts against compliance handbooks and SOPs uploaded to the knowledge base. 3) Identify newly emerging risks and grade them "Fix now / Track / Watch". 4) For each risk, list the impacted department, a draft remediation plan, and the source citation. 5) Write the report as local Markdown first, then push the summary to Slack/Lark/Feishu and sync to Google Docs only when needed. ⚠️ Assists identification and bookkeeping only — does not constitute legal advice.',
 			insightTitle: "Compliance Risk Daily",
-			insightDescription: "Regulatory tracking, risk scanning, and remediation tips",
+			insightDescription:
+				"Regulatory tracking, risk scanning, and remediation tips",
 		},
 		techFieldMonitor: {
 			name: "Tech Field Sentinel",
@@ -3859,7 +4114,8 @@ const enUS = {
 			description:
 				"You are a YouTube topic researcher. When the user shares the channel positioning and a topic: 1) Confirm the audience and the channel's past hits. 2) Web-search existing videos on the topic to do a pattern analysis (does NOT depend on live YouTube data) — common title formulas, recurring structures, neglected angles. 3) Output 5 title candidates + 3 opening hooks + a full script outline (hook / setup / payoff / CTA with timing). 4) Provide 3 thumbnail briefs (subject, expression, copy, palette). 5) Mark assumptions and uncertainties so the user can decide. Save the topic pack as local Markdown first, then sync to cloud docs when needed.",
 			insightTitle: "YouTube Topic Pack",
-			insightDescription: "Titles, hooks, script outlines, and thumbnail briefs",
+			insightDescription:
+				"Titles, hooks, script outlines, and thumbnail briefs",
 		},
 		contentRepurposer: {
 			name: "Multi-Channel Content Repurposer",
@@ -3873,7 +4129,8 @@ const enUS = {
 			description:
 				"You are an IM knowledge-base support agent. Execute on the configured schedule: 1) Listen to the configured Slack / Discord / Telegram / Lark/Feishu channels (one or many). 2) Match new questions against the RAG knowledge base (product FAQ, SOPs, past Q&A). 3) When confidence ≥ 80%, answer directly and cite the source paragraph and document name; when confidence is low, do not guess — @ the configured escalation owner with the question, retrieval trace, and your tentative read. 4) Always escalate to a human for actions involving accounts, orders, contracts, or refunds. 5) Log every interaction so the knowledge base can be improved over time. Keep logs in local Markdown first and sync to cloud docs only when required.",
 			insightTitle: "IM Support Log",
-			insightDescription: "Knowledge-base auto-replies and escalations across IM channels",
+			insightDescription:
+				"Knowledge-base auto-replies and escalations across IM channels",
 		},
 	},
 	configuration: {
@@ -3964,8 +4221,10 @@ const enUS = {
 		storageCleanCache: "Clean cache",
 		storageCleanAgentBrowser: "Clean agent browser data",
 		storageConfirmDelete: "Are you sure you want to delete this?",
-		storageConfirmDeleteAll: "Are you sure you want to delete all sessions data? This cannot be undone.",
-		storageConfirmClean: "Are you sure you want to clean this? This cannot be undone.",
+		storageConfirmDeleteAll:
+			"Are you sure you want to delete all sessions data? This cannot be undone.",
+		storageConfirmClean:
+			"Are you sure you want to clean this? This cannot be undone.",
 		storageCleanBrowserTemp: "Clear cache",
 		storageConfirmBrowserTemp:
 			"Are you sure you want to clean all browser temporary files from sessions? This cannot be undone.",
@@ -4013,7 +4272,8 @@ const enUS = {
 		strikethrough: "Strikethrough",
 		unstrikethrough: "Unstrikethrough",
 		sorting: "Analyzing event dependencies...",
-		sortingHint: "Using AI to extract relationships between events, this may take a few seconds",
+		sortingHint:
+			"Using AI to extract relationships between events, this may take a few seconds",
 		categoryUpdated: "Category updated, system will remember your choice",
 		categoryUpdateError: "Update failed, please try again",
 		stats: {
@@ -4080,7 +4340,8 @@ const enUS = {
 				loadFailed: "Failed to load items",
 				empty: "No items yet",
 				emptyWithoutCompleted: "No open items",
-				hiddenCompletedHint: 'Completed items are hidden. Turn on "Show Completed" to view them.',
+				hiddenCompletedHint:
+					'Completed items are hidden. Turn on "Show Completed" to view them.',
 				markedCompleted: "Task status updated",
 				updateFailed: "Failed to update task status, please retry.",
 				bulkCompleted: "Selected tasks marked as done",
@@ -4218,7 +4479,8 @@ const enUS = {
 				placeholder: "All information sources",
 				showNonMessagePlatforms: "Show information sources",
 				empty: "No messages found",
-				noUnread: "No unread messages. Click the circle icon to show all messages.",
+				noUnread:
+					"No unread messages. Click the circle icon to show all messages.",
 				total: "messages",
 				platforms: "platforms",
 				unread: "unread",
@@ -4238,7 +4500,8 @@ const enUS = {
 				searchPlaceholder: "Search messages...",
 				authorizePlatform: "Authorize Platform",
 				filterPlatforms: "Filter Platforms",
-				filterPlatformsDesc: "Select platforms to display, unselected platforms will be hidden",
+				filterPlatformsDesc:
+					"Select platforms to display, unselected platforms will be hidden",
 				notConnected: "Not Connected",
 				contextError: "Messages panel must be used within the correct context",
 				referencedCount: "{{count}} referenced",
@@ -4271,7 +4534,8 @@ const enUS = {
 				uploadFirst: "Upload your first file",
 				deleteTitle: "Delete File",
 				deleteConfirm: "Are you sure you want to delete this file?",
-				deleteConfirmFull: 'Are you sure you want to delete "{{fileName}}"? This action cannot be undone.',
+				deleteConfirmFull:
+					'Are you sure you want to delete "{{fileName}}"? This action cannot be undone.',
 				deleteSuccess: 'File "{{fileName}}" deleted',
 				deleteFailed: "Failed to delete file",
 				cancel: "Cancel",
@@ -4287,9 +4551,11 @@ const enUS = {
 				storageUsageDescription: "View file storage usage",
 				viewStorageUsage: "View storage usage",
 				loading: "Loading...",
-				upgradeToUnlockStorage: "Upgrade your plan to unlock cloud storage for saved files.",
+				upgradeToUnlockStorage:
+					"Upgrade your plan to unlock cloud storage for saved files.",
 				dropFilesHere: "Drop files here to upload",
-				supportedFormats: "PDF, Word, Excel, PowerPoint, Text, Markdown, Images, Audio",
+				supportedFormats:
+					"PDF, Word, Excel, PowerPoint, Text, Markdown, Images, Audio",
 				fileDropArea: "File drop area",
 			},
 			workspacePanel: {
@@ -4374,7 +4640,8 @@ const enUS = {
 				custom: "Custom",
 				agent: "Agent",
 				insight_refresh: "Insight Refresh",
-				cronFormatHint: 'Format: minute hour day month weekday (e.g., "0 * * * *" = every hour)',
+				cronFormatHint:
+					'Format: minute hour day month weekday (e.g., "0 * * * *" = every hour)',
 				scheduleDate: "Schedule Date",
 				scheduleTime: "Schedule Time",
 				webhookUrl: "Webhook URL",
@@ -4423,7 +4690,8 @@ const enUS = {
 				completed: "Completed",
 				error: "Error",
 				noHistory: "No execution history",
-				tauriOnly: "Scheduled jobs are only available in the opencontext desktop app.",
+				tauriOnly:
+					"Scheduled jobs are only available in the opencontext desktop app.",
 				viewChat: "View Chat",
 				output: "Output",
 				task: "Task Instruction",
@@ -4488,7 +4756,8 @@ const enUS = {
 				deleteSuccess: "Agent deleted successfully",
 				deleteError: "Failed to delete agent",
 				deleteConfirmTitle: "Delete Agent",
-				deleteConfirmMessage: "Are you sure you want to delete this agent? This action cannot be undone.",
+				deleteConfirmMessage:
+					"Are you sure you want to delete this agent? This action cannot be undone.",
 				emptyTitle: "No agents yet",
 				emptyMessage: "Tell me how to help you create an agent?",
 				manageTitle: "Manage your agents",
@@ -4521,7 +4790,8 @@ const enUS = {
 				streamConnectionRetry: "Stream connection error - will retry",
 				apiKeyError: "API key error - please check your configuration",
 				typeError: "Type error - please check the console for details",
-				serviceUnavailable: "Service unavailable - please make sure the service is running",
+				serviceUnavailable:
+					"Service unavailable - please make sure the service is running",
 				corsError: "Request blocked - please check service configuration",
 				unknownRetry: "Unknown error - will retry",
 				retrying: "Retrying...",
@@ -4685,7 +4955,8 @@ const enUS = {
 				messageUnderstanding: "Enhanced AI message understanding",
 				messageReplies: "Message replies included",
 				customization: "Custom settings included",
-				integrations: "Priority access to new integrations (WhatsApp, Email, more)",
+				integrations:
+					"Priority access to new integrations (WhatsApp, Email, more)",
 				storage: "5 TB encrypted storage for saved files",
 				autoLearning: "Auto-learning with daily updates",
 				topUps: "Top-ups available: $1 = 30,000 credits",
@@ -4747,37 +5018,44 @@ const enUS = {
 			failed: "Failed",
 		},
 		balanceTitle: "Commission balance",
-		balanceSubtitle: "Commissions move from pending to payable after the refund window closes.",
+		balanceSubtitle:
+			"Commissions move from pending to payable after the refund window closes.",
 		balancePending: "Pending",
 		balanceConfirmed: "Confirmed",
 		balancePayable: "Payable",
 		balancePaid: "Paid out",
-		nextPayoutHint: "Confirmed earnings become payable once the chargeback window has passed.",
+		nextPayoutHint:
+			"Confirmed earnings become payable once the chargeback window has passed.",
 		shareTitle: "Share your link",
 		codeLabel: "Referral code",
 		codeCopied: "Referral code copied.",
 		linkLabel: "Referral link",
 		linkCopied: "Referral link copied.",
-		shareHint: "Add ?ref={{code}} to any opencontext URL to set the referral cookie automatically.",
+		shareHint:
+			"Add ?ref={{code}} to any opencontext URL to set the referral cookie automatically.",
 		requestPayout: "Request payout",
 		transactionsTitle: "Recent transactions",
 		stepsTitle: "Get started in 3 steps",
 		stepsApplyTitle: "Apply",
-		stepsApplyDescription: "Share a quick snapshot of your audience and the channels you plan to promote on.",
+		stepsApplyDescription:
+			"Share a quick snapshot of your audience and the channels you plan to promote on.",
 		stepsShareTitle: "Get your link",
 		stepsShareDescription:
 			"We review applications within 2 business days and send your referral dashboard plus promo assets.",
 		stepsEarnTitle: "Earn commissions",
-		stepsEarnDescription: "Earn up to 30% recurring commission on every paid subscriber you refer.",
+		stepsEarnDescription:
+			"Earn up to 30% recurring commission on every paid subscriber you refer.",
 		faqTitle: "Frequently asked",
 		faq: {
 			earnings: {
 				question: "How much can I earn?",
-				answer: "You'll receive 30% recurring commission for every paid subscriber you refer.",
+				answer:
+					"You'll receive 30% recurring commission for every paid subscriber you refer.",
 			},
 			payout: {
 				question: "When will I get paid?",
-				answer: "Commissions are processed monthly and paid out via Stripe once they move to payable status.",
+				answer:
+					"Commissions are processed monthly and paid out via Stripe once they move to payable status.",
 			},
 			audience: {
 				question: "Who can join?",
@@ -4802,19 +5080,24 @@ const enUS = {
 		payoutsTitle: "Payout history",
 		emptyPayouts: "You haven't requested any payouts yet.",
 		applyTitle: "Join the opencontext Partner Network",
-		applySubtitle: "Answer a few quick questions so we can tailor your referral dashboard.",
+		applySubtitle:
+			"Answer a few quick questions so we can tailor your referral dashboard.",
 		applyCustomCode: "Custom code (optional)",
 		applyCodePlaceholder: "Your unique referral tag, e.g. ETHANAI",
-		applyCodeHint: "Keep it short and memorable. Leave it blank to let us generate one automatically.",
+		applyCodeHint:
+			"Keep it short and memorable. Leave it blank to let us generate one automatically.",
 		applyCustomSlug: "Public slug (optional)",
 		applySlugPlaceholder: "Optional (future co-branded page)",
-		applySlugHint: "We'll use this to power co-branded landing pages soon, so it's fine to skip for now.",
+		applySlugHint:
+			"We'll use this to power co-branded landing pages soon, so it's fine to skip for now.",
 		applyNotes: "Tell us about your audience",
 		applyNotesPlaceholder:
 			"Where you'll share opencontext (e.g. Twitter, YouTube, newsletters, community groups).",
 		applyCta: "Apply & start earning",
-		applyDisclaimer: "We review every application within 2 business days and email your approval status.",
-		applyDisclaimerSecondary: "Most partners hear back fast so you can start sharing right away.",
+		applyDisclaimer:
+			"We review every application within 2 business days and email your approval status.",
+		applyDisclaimerSecondary:
+			"Most partners hear back fast so you can start sharing right away.",
 		applySuccess: "Application submitted successfully.",
 		applyError: "Unable to submit application. Please try again.",
 		applyUpdateNothing: "Update at least one field before resubmitting.",
@@ -4829,9 +5112,11 @@ const enUS = {
 		payoutMethodLabel: "Payout method",
 		payoutMethodPlaceholder: "Stripe account details",
 		payoutDestinationLabel: "Destination details",
-		payoutDetailsPlaceholder: "Include the Stripe email or payout instructions.",
+		payoutDetailsPlaceholder:
+			"Include the Stripe email or payout instructions.",
 		payoutSubmit: "Submit request",
-		requestPayoutIntro: "Choose a payout method and the amount you'd like to withdraw.",
+		requestPayoutIntro:
+			"Choose a payout method and the amount you'd like to withdraw.",
 		rateLabel: "Commission rate",
 		ratePrompt: "Set commission rate (%)",
 		rateInvalid: "Enter a valid percentage.",
@@ -4840,10 +5125,12 @@ const enUS = {
 		disable: "Disable",
 		adminSectionTitle: "Affiliate admin",
 		adminAffiliates: "Pending applications",
-		adminAffiliatesHint: "Review new affiliates and adjust commission rates before approval.",
+		adminAffiliatesHint:
+			"Review new affiliates and adjust commission rates before approval.",
 		adminAffiliatesEmpty: "No pending affiliates right now.",
 		adminApprovedAffiliates: "Active affiliates",
-		adminApprovedAffiliatesHint: "Manage approved partners and tune their commission tiers.",
+		adminApprovedAffiliatesHint:
+			"Manage approved partners and tune their commission tiers.",
 		adminApprovedAffiliatesEmpty: "No approved affiliates yet.",
 		adminPayouts: "Payout approvals",
 		adminPayoutsHint: "Approve or mark payouts as paid once you process them.",
@@ -4859,8 +5146,10 @@ const enUS = {
 		creditDepletedTitle: "You're out of credits",
 		creditDepletedDescription:
 			"We couldn't send your last request because your current plan doesn't have enough credits.{{detail}}",
-		creditDepletedStepReview: "Open the Subscriptions view to compare plans and top up your credits.",
-		creditDepletedStepSupport: "Need guidance? Contact our team for help choosing the right plan.",
+		creditDepletedStepReview:
+			"Open the Subscriptions view to compare plans and top up your credits.",
+		creditDepletedStepSupport:
+			"Need guidance? Contact our team for help choosing the right plan.",
 		creditDepletedPrimary: "Go to Subscriptions",
 		creditDepletedSecondary: "Talk to support",
 		dismiss: "Dismiss guidance",
@@ -4887,7 +5176,8 @@ const enUS = {
 		couponPlaceholder: "Enter coupon code",
 		couponApply: "Apply coupon",
 		couponRemove: "Remove",
-		couponHelp: "Coupons are single-use and must be activated before their expiration date.",
+		couponHelp:
+			"Coupons are single-use and must be activated before their expiration date.",
 		couponApplied: "Coupon {{code}} applied",
 		couponInvalid: "We couldn’t verify that coupon",
 		couponSummaryLabel: "Savings: {{summary}}",
@@ -4927,19 +5217,23 @@ const enUS = {
 		enterValidExpiry: "Please enter a valid expiry date (MM/YY)",
 		enterValidCVC: "Please enter a valid CVC (3-4 digits)",
 		successTitle: "Subscription confirmed",
-		successDescription: "You're now subscribed to {{plan}}. We'll email you a receipt shortly.",
+		successDescription:
+			"You're now subscribed to {{plan}}. We'll email you a receipt shortly.",
 		whatsNext: "What's next",
 		activationNote:
 			"Your benefits will appear in opencontext within a few moments. We'll let you know if we need anything else.",
-		successChecklist1: "Access your new quota and integration automations right away.",
-		successChecklist2: "Manage billing or change plans any time from the subscription center.",
+		successChecklist1:
+			"Access your new quota and integration automations right away.",
+		successChecklist2:
+			"Manage billing or change plans any time from the subscription center.",
 		returnToDashboard: "Back to dashboard",
 		manageSubscription: "Manage subscription",
 		waitingForPayment: "Waiting for payment to complete...",
 		browserOpened:
 			"Payment page opened in browser. This page will automatically update after payment is completed.",
 		success: "Payment successful! Subscription activated.",
-		timeout: "Payment status check timed out. Please manually refresh the page to check subscription status.",
+		timeout:
+			"Payment status check timed out. Please manually refresh the page to check subscription status.",
 	},
 	coupons: {
 		title: "Coupon Manager",
@@ -4970,13 +5264,15 @@ const enUS = {
 			emailsPlaceholder: "one-address@example.com",
 			emailsHint: "One email per line. We'll generate one coupon per address.",
 			customCodesLabel: "Custom codes (optional)",
-			customCodesHint: "Override automatic numbering by entering one code per line.",
+			customCodesHint:
+				"Override automatic numbering by entering one code per line.",
 			submitting: "Creating...",
 			submit: "Create coupons",
 			reset: "Reset",
 			missingBaseCode: "Enter a base code prefix or specify custom codes.",
 			invalidDuration: "Duration must be at least one month.",
-			codesEmailsMismatch: "Provide the same number of custom codes as email addresses.",
+			codesEmailsMismatch:
+				"Provide the same number of custom codes as email addresses.",
 			success: "Coupons created successfully.",
 			error: "Unable to create coupons. Please try again.",
 		},
@@ -5007,7 +5303,8 @@ const enUS = {
 		feedbackPlaceholder: "Please enter your feedback or suggestions...",
 		wordCount: "{{count}}/{{max}} characters",
 		emptyError: "Please enter feedback content",
-		submitSuccess: "Feedback submitted successfully, thank you for your suggestion!",
+		submitSuccess:
+			"Feedback submitted successfully, thank you for your suggestion!",
 		submitError: "Submission failed, please try again later",
 		submitting: "Submitting...",
 		submit: "Submit Feedback",
@@ -5036,15 +5333,18 @@ const enUS = {
 		profileSoulPageTitle: "Personalization",
 		profileSoulNavTitle: "Personalization",
 		skillsNavTitle: "Skills",
-		profileDescription: "Update how your name and avatar appear across opencontext",
+		profileDescription:
+			"Update how your name and avatar appear across opencontext",
 		accountOverviewTitle: "Account overview",
-		accountOverviewDescription: "Stay on top of your identity, credit usage, and activity.",
+		accountOverviewDescription:
+			"Stay on top of your identity, credit usage, and activity.",
 		profileFormTitle: "Profile",
 		profileFormDescription: "Control your display name and avatar.",
 		displayNameLabel: "Nickname",
 		displayNameHint: "2–64 characters.",
 		avatarUrlLabel: "Avatar URL",
-		avatarHelper: "Use a square image link (SVG/PNG/JPG). Leave empty for the default gradient.",
+		avatarHelper:
+			"Use a square image link (SVG/PNG/JPG). Leave empty for the default gradient.",
 		profileSaveCta: "Save profile",
 		profileSaved: "Profile updated",
 		profileSaveError: "Failed to update profile. Please try again.",
@@ -5053,7 +5353,8 @@ const enUS = {
 		profilePreviewTitle: "How others see you",
 		profilePreviewDescription:
 			"Your display name and avatar appear in opencontext notifications and sharing surfaces.",
-		profileGuestTip: "Guest sessions use a temporary identity. Sign in to keep edits in sync.",
+		profileGuestTip:
+			"Guest sessions use a temporary identity. Sign in to keep edits in sync.",
 		profileSyncTip: "Changes sync to your sessions instantly.",
 		accountFullNameLabel: "Full name",
 		accountUsernameLabel: "Username",
@@ -5066,16 +5367,20 @@ const enUS = {
 		accountModalUsernameTitle: "Change username",
 		accountAvatarSelectLabel: "Select image",
 		accountAvatarUploadCta: "Upload avatar",
-		accountAvatarUploadHint: "Upload a local image as your avatar (PNG/JPG/WebP/GIF).",
+		accountAvatarUploadHint:
+			"Upload a local image as your avatar (PNG/JPG/WebP/GIF).",
 		accountAvatarFileRules: "PNG/JPG/WebP/GIF up to 5MB.",
-		accountAvatarFileTooLarge: "Image is too large. Please choose a file under 5MB.",
-		accountAvatarFileTypeInvalid: "Unsupported file type. Please select an image.",
+		accountAvatarFileTooLarge:
+			"Image is too large. Please choose a file under 5MB.",
+		accountAvatarFileTypeInvalid:
+			"Unsupported file type. Please select an image.",
 		accountAvatarUploadFailed: "Failed to upload avatar. Please try again.",
 		accountUsernameReadOnlyHint:
 			"Your username matches the part of your email before @. To change it, contact support@melandlabs.ai about updating your login email.",
 		accountUsernameGotIt: "Got it",
 		passwordTitle: "Password",
-		passwordDescription: "Set or change the password for email sign-in. OAuth logins still work.",
+		passwordDescription:
+			"Set or change the password for email sign-in. OAuth logins still work.",
 		currentPasswordLabel: "Current password",
 		newPasswordLabel: "New password",
 		confirmPasswordLabel: "Confirm password",
@@ -5084,14 +5389,16 @@ const enUS = {
 		passwordSaveCta: "Update password",
 		passwordSaved: "Password updated",
 		passwordSaveError: "Failed to update password. Please try again.",
-		passwordSavedAllDevices: "Password updated. You have been signed out of all other devices for security.",
+		passwordSavedAllDevices:
+			"Password updated. You have been signed out of all other devices for security.",
 		passwordErrorMismatch: "New passwords do not match.",
 		passwordErrorCurrentRequired: "Please enter your current password.",
 		passwordErrorCurrentInvalid: "Current password is incorrect.",
 		lastLoginAt: "Last active",
 		profileLastUpdated: "Profile updated",
 		securityHeadline: "Security",
-		securityDescription: "We only use this info to personalize your experience and keep your workspace safe.",
+		securityDescription:
+			"We only use this info to personalize your experience and keep your workspace safe.",
 		experimentalFeatures: "Experimental features",
 		subscriptionDescription: "Manage your subscription plan and credits usage",
 		personalizationDescription:
@@ -5126,13 +5433,15 @@ const enUS = {
 		deleteCategory: "Delete Context",
 		createCategory: "Create Context",
 		categoryNameRequired: "Context name is required",
-		categoryNameDuplicate: "Context name already exists, please use a different name",
+		categoryNameDuplicate:
+			"Context name already exists, please use a different name",
 		categoryNamePlaceholder: "e.g., News, Meetings",
 		/** Default context templates i18n: shown in sidebar and "Add from Template" */
 		contextTemplates: {
 			News: {
 				name: "News",
-				description: "Industry news, political news, company updates. Stay on top of what matters.",
+				description:
+					"Industry news, political news, company updates. Stay on top of what matters.",
 			},
 			Meetings: {
 				name: "Meetings",
@@ -5141,7 +5450,8 @@ const enUS = {
 			},
 			Funding: {
 				name: "Funding",
-				description: "Funding rounds, investments, fundraising updates. Track key progress on financing.",
+				description:
+					"Funding rounds, investments, fundraising updates. Track key progress on financing.",
 			},
 			"R&D": {
 				name: "R&D",
@@ -5160,7 +5470,8 @@ const enUS = {
 			},
 			Branding: {
 				name: "Branding",
-				description: "Brand engagement, campaigns, PR. Important feedback and interaction around brand.",
+				description:
+					"Brand engagement, campaigns, PR. Important feedback and interaction around brand.",
 			},
 			Marketing: {
 				name: "Marketing",
@@ -5169,11 +5480,13 @@ const enUS = {
 			},
 			HR: {
 				name: "HR",
-				description: "Staff changes, team expansion, talent acquisition. Keep an eye on team and talent.",
+				description:
+					"Staff changes, team expansion, talent acquisition. Keep an eye on team and talent.",
 			},
 			Recruiting: {
 				name: "Recruiting",
-				description: "Hiring, talent acquisition, team expansion. Keep an eye on recruiting activity.",
+				description:
+					"Hiring, talent acquisition, team expansion. Keep an eye on recruiting activity.",
 			},
 			P: {
 				name: "P",
@@ -5182,11 +5495,13 @@ const enUS = {
 			},
 			"L & M": {
 				name: "L & M",
-				description: "Leadership and management updates, organizational changes, strategy, and decisions.",
+				description:
+					"Leadership and management updates, organizational changes, strategy, and decisions.",
 			},
 			AI: {
 				name: "AI",
-				description: "AI-related technology, tools, model updates, and applications. Track the latest in AI.",
+				description:
+					"AI-related technology, tools, model updates, and applications. Track the latest in AI.",
 			},
 		},
 		confirmDeleteCategory: "Are you sure you want to delete context {{name}}?",
@@ -5201,14 +5516,16 @@ const enUS = {
 		enableCategory: "Enable Context",
 		disableCategory: "Disable Context",
 		dragToReorder: "Drag to reorder",
-		topicsDescription: "opencontext will use it as a reference when prioritizing",
+		topicsDescription:
+			"opencontext will use it as a reference when prioritizing",
 		preferencesLandingDescription:
 			"Assistant setup now lives in focused tabs. Use the sidebar to hop between avatar, language, roles, people, and topics.",
 		preferencesLandingHint:
 			"Need to edit priority contacts or topics? Head to “People I Follow” or “Topics I Follow”. Role overlays live under “My Description”.",
 		assistantNameLabel: "Assistant name",
 		assistantNameEdit: "Edit assistant name",
-		avatarStateDescription: "opencontext' appearance automatically changes based on different states",
+		avatarStateDescription:
+			"opencontext' appearance automatically changes based on different states",
 		currentTokenBalance: "Current credits balance",
 		creditsRemaining: "Credits remaining",
 		currentBalance: "Current balance",
@@ -5216,7 +5533,8 @@ const enUS = {
 		usedCredits: "Used credits",
 		cloudStorageUsage: "Cloud storage usage",
 		storageUsed: "Storage used",
-		noStorageQuota: "Your current plan does not include storage quota. Upgrade to unlock cloud storage.",
+		noStorageQuota:
+			"Your current plan does not include storage quota. Upgrade to unlock cloud storage.",
 		managePlans: "Manage plans",
 		getPoints: "Get Credits",
 		renewalDate: "Renewal date",
@@ -5234,7 +5552,8 @@ const enUS = {
 		confirmCancel: "Confirm cancellation",
 		subscriptionCancelled:
 			"Subscription cancelled. It will take effect at the end of the current billing period.",
-		cancelSubscriptionFailed: "Failed to cancel subscription. Please try again later.",
+		cancelSubscriptionFailed:
+			"Failed to cancel subscription. Please try again later.",
 		subscriptionWillCancel: "Will cancel at period end",
 		upgradeToPro: "Upgrade to Pro",
 		upgrading: "Upgrading...",
@@ -5273,7 +5592,8 @@ const enUS = {
 			rechargeAmount: "Top-up Amount",
 			creditsReceived: "Credits Received",
 			creditsCredited: "Credits Credited",
-			creditedDescription: "You can check your latest credits balance in the subscription management page",
+			creditedDescription:
+				"You can check your latest credits balance in the subscription management page",
 			viewAccountDetails: "View Account Details",
 			backToHome: "Back to Home",
 			supportHint: "If you have any questions, please contact customer support",
@@ -5336,7 +5656,8 @@ const enUS = {
 				title: "Recruit your first AI Mate",
 				description:
 					"Based on what you shared, we've pre-selected a few Mates to get you started. Feel free to adjust.",
-				marketplaceHint: "We've pre-selected 3 Mates for you. You can freely adjust your selection.",
+				marketplaceHint:
+					"We've pre-selected 3 Mates for you. You can freely adjust your selection.",
 				checking: "Checking Mate...",
 				exists: "You already have at least one Mate.",
 				notExists: "No Mate found yet. Create one first.",
@@ -5351,18 +5672,21 @@ const enUS = {
 			workDescriptionPrefix: ", I mainly work on",
 			workDescriptionPlaceholder: "Work description",
 			workDescriptionTitle: "Describe your daily work (optional)",
-			workDescriptionSubtitle: "Help us better understand your work content and needs",
+			workDescriptionSubtitle:
+				"Help us better understand your work content and needs",
 			workDescriptionTextareaPlaceholder:
 				"Please describe your main daily work, e.g., handling customer inquiries, managing order fulfillment, coordinating with suppliers...",
 			instruction: "Let's get to know you",
 			description:
 				"Tell opencontext a bit about your role and what you focus on.\nThis helps your assistant understand how you think and work.",
-			selectorHint: "Pick everything that fits you; tap again or remove a tag to deselect.",
+			selectorHint:
+				"Pick everything that fits you; tap again or remove a tag to deselect.",
 			doneButton: "Finish",
 		},
 		userInfo: {
 			title: "Tell us a bit about yourself",
-			subtitle: "This will help us create a more personalized experience for you",
+			subtitle:
+				"This will help us create a more personalized experience for you",
 			submitButton: "Continue",
 		},
 		industry: {
@@ -5384,15 +5708,19 @@ const enUS = {
 			subtitle:
 				"Select the focus contexts that matter. opencontext will automatically categorize events to help you easily switch focus modes.",
 			configuredTitle: "Configured focus rules",
-			configuredSubtitle: "Review, remove, or keep adding rules whenever you need",
-			configuredEmpty: "No focus rules yet—pick a template below to create your first one.",
+			configuredSubtitle:
+				"Review, remove, or keep adding rules whenever you need",
+			configuredEmpty:
+				"No focus rules yet—pick a template below to create your first one.",
 			templatesTitle: "Start with a guided template",
 			templatesSubtitle:
 				"Click an option and fill in the blanks so opencontext captures the exact signal you need",
-			templatesHint: "Not sure what to write? Pick a template, fill it in, then refine it.",
+			templatesHint:
+				"Not sure what to write? Pick a template, fill it in, then refine it.",
 			customLabel: "Use a fully custom rule",
 			customSubtitle: "Describe any context the templates above do not cover",
-			customPlaceholder: "For example: Pull every nightly customer bug report summary...",
+			customPlaceholder:
+				"For example: Pull every nightly customer bug report summary...",
 			nextButton: "Next",
 			generating: "Generating...",
 			createNewContext: "Add New Context",
@@ -5419,7 +5747,8 @@ const enUS = {
 					pendingTasks: {
 						title: "Capture pending actions",
 						template: "Capture items I need to handle in [Group/Channel]",
-						example: "e.g., Capture action items from the product discussion group",
+						example:
+							"e.g., Capture action items from the product discussion group",
 					},
 					hotTopics: {
 						title: "Follow trending topics",
@@ -5444,14 +5773,17 @@ const enUS = {
 					teamAchievements: {
 						title: "Capture achievements",
 						template: "Capture milestones and wins for [Team/Project]",
-						example: "e.g., Capture opencontext launch highlights and user milestones",
+						example:
+							"e.g., Capture opencontext launch highlights and user milestones",
 					},
 				},
 				executiveUpdates: {
 					title: "Executive or key clients",
 					description: "Any movement from important stakeholders",
-					helper: "Tell us who matters most and which angle opencontext should watch.",
-					preview: "Notify me when {{people}} share anything related to {{context}}.",
+					helper:
+						"Tell us who matters most and which angle opencontext should watch.",
+					preview:
+						"Notify me when {{people}} share anything related to {{context}}.",
 					fields: {
 						people: {
 							label: "People to watch",
@@ -5467,7 +5799,8 @@ const enUS = {
 					title: "Project progress & updates",
 					description: "New activity in projects I participate in",
 					helper: "Specify the project and the milestone that matters.",
-					preview: "Alert me when the {{project}} project has updates about {{milestone}}.",
+					preview:
+						"Alert me when the {{project}} project has updates about {{milestone}}.",
 					fields: {
 						project: {
 							label: "Project / product",
@@ -5483,7 +5816,8 @@ const enUS = {
 					title: "Team @ mentions",
 					description: "When someone tags or calls me out",
 					helper: "Let us know which space and what kind of action you expect.",
-					preview: "Ping me when there is an @ mention in {{channel}} that needs me to {{action}}.",
+					preview:
+						"Ping me when there is an @ mention in {{channel}} that needs me to {{action}}.",
 					fields: {
 						channel: {
 							label: "Channel / group",
@@ -5498,8 +5832,10 @@ const enUS = {
 				industryNews: {
 					title: "Industry news & trends",
 					description: "Updates from industries I follow",
-					helper: "Share the industry plus the angle (funding, launches, etc.).",
-					preview: "Surface news from the {{industry}} space when it touches {{angle}}.",
+					helper:
+						"Share the industry plus the angle (funding, launches, etc.).",
+					preview:
+						"Surface news from the {{industry}} space when it touches {{angle}}.",
 					fields: {
 						industry: {
 							label: "Industry / space",
@@ -5514,8 +5850,10 @@ const enUS = {
 				keywordWatch: {
 					title: "Specific keywords or topics",
 					description: "Product launches, funding, competitors…",
-					helper: "Tell opencontext the keyword and the scope it should apply to.",
-					preview: "Flag any conversation mentioning {{keyword}} that relates to {{context}}.",
+					helper:
+						"Tell opencontext the keyword and the scope it should apply to.",
+					preview:
+						"Flag any conversation mentioning {{keyword}} that relates to {{context}}.",
 					fields: {
 						keyword: {
 							label: "Keyword / phrase",
@@ -5530,8 +5868,10 @@ const enUS = {
 				channelMonitor: {
 					title: "Priority channels or groups",
 					description: "Core project rooms, customer chats, etc.",
-					helper: "Name the channel and why it matters so opencontext stays vigilant.",
-					preview: "Continuously monitor {{channel}} for conversations about {{reason}}.",
+					helper:
+						"Name the channel and why it matters so opencontext stays vigilant.",
+					preview:
+						"Continuously monitor {{channel}} for conversations about {{reason}}.",
 					fields: {
 						channel: {
 							label: "Channel / group name",
@@ -5546,8 +5886,10 @@ const enUS = {
 				pendingReplies: {
 					title: "Messages waiting on me",
 					description: "Someone expects my response",
-					helper: "Who usually pings you and what deadline should opencontext enforce?",
-					preview: "Remind me when {{audience}} send items I must handle before {{deadline}}.",
+					helper:
+						"Who usually pings you and what deadline should opencontext enforce?",
+					preview:
+						"Remind me when {{audience}} send items I must handle before {{deadline}}.",
 					fields: {
 						audience: {
 							label: "Sender or team",
@@ -5563,7 +5905,8 @@ const enUS = {
 					title: "Urgent & time-sensitive info",
 					description: "Deadlines, incidents, emergencies",
 					helper: "Describe the trigger and how fast you need to react.",
-					preview: "Mark it urgent when {{trigger}} happens and I must respond within {{timeframe}}.",
+					preview:
+						"Mark it urgent when {{trigger}} happens and I must respond within {{timeframe}}.",
 					fields: {
 						trigger: {
 							label: "Trigger",
@@ -5656,16 +5999,21 @@ const enUS = {
 					title: "Create your first tracking",
 					desc: "Add or sync an update so opencontext can start organizing for you",
 					guideTitle: "Create your first tracking",
-					bullet1: "Sync messages from connected platforms or add a tracking manually",
-					bullet2: "Trackings are auto-categorized by context for easier review",
-					bullet3: "Once you have trackings, you can ask opencontext to analyze or suggest",
+					bullet1:
+						"Sync messages from connected platforms or add a tracking manually",
+					bullet2:
+						"Trackings are auto-categorized by context for easier review",
+					bullet3:
+						"Once you have trackings, you can ask opencontext to analyze or suggest",
 					popoverHint: "Choose how to create your first tracking",
-					popoverSubtitle: "Tell opencontext what to track — it'll monitor updates and surface what matters.",
+					popoverSubtitle:
+						"Tell opencontext what to track — it'll monitor updates and surface what matters.",
 					actionAuthorizePlatform: "Auto Track",
 					actionAuthorizePlatformDesc:
 						"Connect your accounts — opencontext finds what's worth tracking, automatically",
 					actionChatWithAI: "Chat with opencontext",
-					actionChatWithAIDesc: "Chat or upload a file, and opencontext will turn it into a Tracking",
+					actionChatWithAIDesc:
+						"Chat or upload a file, and opencontext will turn it into a Tracking",
 					createTrackingPrompt:
 						"Use the opencontext-event-creator skill to create a tracking that reminds me to drink water every hour",
 				},
@@ -5673,10 +6021,14 @@ const enUS = {
 					title: "Let opencontext do your first task",
 					desc: "Ask about an event or give a task to experience opencontext's help",
 					guideTitle: "Let opencontext do your first task",
-					bullet1: 'Click "Ask opencontext" on an event card and enter your question',
-					bullet2: "Ask opencontext to summarize, draft a reply, or suggest next steps",
-					bullet3: "Replies are based on full context of that event, not generic answers",
-					popoverSubtitle: "Tell opencontext what to do — it'll help you get things done.",
+					bullet1:
+						'Click "Ask opencontext" on an event card and enter your question',
+					bullet2:
+						"Ask opencontext to summarize, draft a reply, or suggest next steps",
+					bullet3:
+						"Replies are based on full context of that event, not generic answers",
+					popoverSubtitle:
+						"Tell opencontext what to do — it'll help you get things done.",
 					tryIt: "Try it",
 					action1Title: "Draft a Message",
 					action1Desc:
@@ -5711,7 +6063,8 @@ const enUS = {
 					action7Title: "AI News Brief",
 					action7Desc:
 						"The AI space moves fast. opencontext filters the noise and surfaces only the signals worth your attention.",
-					action7Prompt: "What's worth knowing in AI today? Give me a quick briefing.",
+					action7Prompt:
+						"What's worth knowing in AI today? Give me a quick briefing.",
 					action8Title: "What Can opencontext Do?",
 					action8Desc:
 						"Not sure how to use opencontext? This is your starting point — explore what she can do and find the workflow that fits you best.",
@@ -5722,7 +6075,8 @@ const enUS = {
 					title: "Update your events",
 					desc: "Archive, save, or mark events to keep your list clear",
 					guideTitle: "Update your events",
-					bullet1: "Archive: move handled events out of the list to stay focused",
+					bullet1:
+						"Archive: move handled events out of the list to stay focused",
 					bullet2: "Save: mark important events for later lookup",
 					bullet3: "Status syncs to your workspace for review and management",
 				},
@@ -5731,10 +6085,14 @@ const enUS = {
 					desc: "Not just in the app —\nchat with opencontext directly via Telegram, QQ, Lark/Feishu, iMessage, WhatsApp.\nAsk questions, track updates, get things done anywhere.",
 					guideTitle: "Chat with opencontext via messaging apps",
 					learnMoreLink: "Learn how to connect →",
-					bullet1: "Send messages to opencontext in your connected messaging app",
-					bullet2: "Ask about today's updates, assign tasks, or get suggestions",
-					bullet3: "Conversations sync with the web app for a seamless experience",
-					bullet4: "Note: Requires computer to stay on and app to remain open — all data stored locally",
+					bullet1:
+						"Send messages to opencontext in your connected messaging app",
+					bullet2:
+						"Ask about today's updates, assign tasks, or get suggestions",
+					bullet3:
+						"Conversations sync with the web app for a seamless experience",
+					bullet4:
+						"Note: Requires computer to stay on and app to remain open — all data stored locally",
 				},
 				exploreAgents: {
 					title: "Learn about Agents",
@@ -5748,10 +6106,13 @@ const enUS = {
 					guideTitle: "Learn about Agents",
 					next: "Next",
 					previous: "Previous",
-					bullet1: "Agents can run scheduled tasks, monitor signals, and notify you",
-					bullet2: "Great for repetitive info organization, daily digests, and more",
+					bullet1:
+						"Agents can run scheduled tasks, monitor signals, and notify you",
+					bullet2:
+						"Great for repetitive info organization, daily digests, and more",
 					bullet3: "Create and manage Agents in Scheduled tasks",
-					bullet4: "Requires computer to stay on and app to remain open — all data stored locally",
+					bullet4:
+						"Requires computer to stay on and app to remain open — all data stored locally",
 				},
 				exploreLibrary: {
 					title: "Learn about Library",
@@ -5778,7 +6139,8 @@ const enUS = {
 			finishAlertDescription:
 				"You're ready to enter opencontext — or keep going if you'd like.\nWant to come back later? The \"Onboarding Guide\" at the bottom of the menu is always here.",
 			startHereFirstTitle: "Start here first",
-			startHereFirstDescription: "Takes 2 minutes — and opencontext will actually know who you are.",
+			startHereFirstDescription:
+				"Takes 2 minutes — and opencontext will actually know who you are.",
 			finishError: "Failed to finish onboarding, please try again",
 			finishing: "Finishing...",
 			debugReset: "reset(dev)",
@@ -5898,8 +6260,10 @@ const enUS = {
 	update: {
 		titleNewVersion: "New Version Available",
 		titleUpdateComplete: "Update Complete",
-		description: "A new version of opencontext is available. Update now for the latest features and fixes.",
-		descriptionRestarting: "Update installed. The app will restart automatically...",
+		description:
+			"A new version of opencontext is available. Update now for the latest features and fixes.",
+		descriptionRestarting:
+			"Update installed. The app will restart automatically...",
 		currentVersion: "Current Version",
 		latestVersion: "Latest Version",
 		downloading: "Downloading update...",
@@ -5910,7 +6274,8 @@ const enUS = {
 		btnOk: "OK",
 		manualInstallFallback: "Please complete the installation manually",
 		updateFailed: "Update failed: {{error}}",
-		downloadDone: "Download complete. The installer has been opened. Please install and restart the app.",
+		downloadDone:
+			"Download complete. The installer has been opened. Please install and restart the app.",
 		alreadyUpToDate: "You're already on the latest version!",
 		manualDownloadHint:
 			"If you encounter issues during the update, you can manually download from the official website",
@@ -5932,7 +6297,8 @@ const enUS = {
 		theme: {
 			customDirHelp: "Drop PNGs into ~/.opencontext/pet-custom/<name>/",
 			overrideHelp: "Edit ~/.opencontext/pet-config.json",
-			statePrefixHelp: "Filenames must contain a state name, e.g. idle.png, thinking.png",
+			statePrefixHelp:
+				"Filenames must contain a state name, e.g. idle.png, thinking.png",
 			noCustomThemes: "No custom themes found yet",
 			loadedToast: "Theme {{name}} loaded",
 			loadFailedToast: "Failed to load theme: {{reason}}",
@@ -5991,7 +6357,8 @@ function deriveUnderstandingCopy(input: unknown): unknown {
 	commandExecLabel: "Command Exec",
 	loading: "Loading…",
 	empty: "No audit logs",
-	emptyHint: "File reads and command executions outside the project will appear here",
+	emptyHint:
+		"File reads and command executions outside the project will appear here",
 	firstPage: "First Page",
 	prevPage: "Previous",
 	nextPage: "Next",
@@ -6000,7 +6367,8 @@ function deriveUnderstandingCopy(input: unknown): unknown {
 	goToPage: "Go",
 };
 
-const tourNode = (enUS as Record<string, unknown>).tour as Record<string, unknown> | undefined;
+const tourNode = (enUS as Record<string, unknown>).tour as
+	Record<string, unknown> | undefined;
 (enUS as Record<string, unknown>).tour = {
 	...(tourNode ?? {}),
 	insight: deriveUnderstandingCopy((tourNode?.summary as unknown) ?? {}),

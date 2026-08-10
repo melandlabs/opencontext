@@ -31,7 +31,9 @@ export interface MemoryForgettingPolicyOverrides {
 	scoreThresholds?: Partial<MemoryForgettingPolicy["scoreThresholds"]>;
 	groupWindowMs?: Partial<MemoryForgettingPolicy["groupWindowMs"]>;
 	minRecordsPerGroup?: number;
-	maxCandidatesPerTierPerRun?: Partial<MemoryForgettingPolicy["maxCandidatesPerTierPerRun"]>;
+	maxCandidatesPerTierPerRun?: Partial<
+		MemoryForgettingPolicy["maxCandidatesPerTierPerRun"]
+	>;
 	lock?: Partial<MemoryForgettingPolicy["lock"]>;
 	groupByDimensionKeys?: string[];
 }
@@ -66,19 +68,29 @@ export function resolveMemoryForgettingPolicy(
 		return DEFAULT_MEMORY_FORGETTING_POLICY;
 	}
 	return {
-		shortMaxAgeMs: overrides.shortMaxAgeMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.shortMaxAgeMs,
-		midMaxAgeMs: overrides.midMaxAgeMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.midMaxAgeMs,
+		shortMaxAgeMs:
+			overrides.shortMaxAgeMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.shortMaxAgeMs,
+		midMaxAgeMs:
+			overrides.midMaxAgeMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.midMaxAgeMs,
 		scoreThresholds: {
 			shortToMid:
-				overrides.scoreThresholds?.shortToMid ?? DEFAULT_MEMORY_FORGETTING_POLICY.scoreThresholds.shortToMid,
+				overrides.scoreThresholds?.shortToMid ??
+				DEFAULT_MEMORY_FORGETTING_POLICY.scoreThresholds.shortToMid,
 			midToLong:
-				overrides.scoreThresholds?.midToLong ?? DEFAULT_MEMORY_FORGETTING_POLICY.scoreThresholds.midToLong,
+				overrides.scoreThresholds?.midToLong ??
+				DEFAULT_MEMORY_FORGETTING_POLICY.scoreThresholds.midToLong,
 		},
 		groupWindowMs: {
-			short: overrides.groupWindowMs?.short ?? DEFAULT_MEMORY_FORGETTING_POLICY.groupWindowMs.short,
-			mid: overrides.groupWindowMs?.mid ?? DEFAULT_MEMORY_FORGETTING_POLICY.groupWindowMs.mid,
+			short:
+				overrides.groupWindowMs?.short ??
+				DEFAULT_MEMORY_FORGETTING_POLICY.groupWindowMs.short,
+			mid:
+				overrides.groupWindowMs?.mid ??
+				DEFAULT_MEMORY_FORGETTING_POLICY.groupWindowMs.mid,
 		},
-		minRecordsPerGroup: overrides.minRecordsPerGroup ?? DEFAULT_MEMORY_FORGETTING_POLICY.minRecordsPerGroup,
+		minRecordsPerGroup:
+			overrides.minRecordsPerGroup ??
+			DEFAULT_MEMORY_FORGETTING_POLICY.minRecordsPerGroup,
 		maxCandidatesPerTierPerRun: {
 			short:
 				overrides.maxCandidatesPerTierPerRun?.short ??
@@ -88,15 +100,21 @@ export function resolveMemoryForgettingPolicy(
 				DEFAULT_MEMORY_FORGETTING_POLICY.maxCandidatesPerTierPerRun.mid,
 		},
 		lock: {
-			keyPrefix: overrides.lock?.keyPrefix ?? DEFAULT_MEMORY_FORGETTING_POLICY.lock.keyPrefix,
-			ttlMs: overrides.lock?.ttlMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.lock.ttlMs,
+			keyPrefix:
+				overrides.lock?.keyPrefix ??
+				DEFAULT_MEMORY_FORGETTING_POLICY.lock.keyPrefix,
+			ttlMs:
+				overrides.lock?.ttlMs ?? DEFAULT_MEMORY_FORGETTING_POLICY.lock.ttlMs,
 		},
 		groupByDimensionKeys:
-			overrides.groupByDimensionKeys ?? DEFAULT_MEMORY_FORGETTING_POLICY.groupByDimensionKeys,
+			overrides.groupByDimensionKeys ??
+			DEFAULT_MEMORY_FORGETTING_POLICY.groupByDimensionKeys,
 	};
 }
 
-export function summaryTierForTransition(fromTier: MemoryTier): MemorySummaryTier {
+export function summaryTierForTransition(
+	fromTier: MemoryTier,
+): MemorySummaryTier {
 	if (fromTier === "short") {
 		return "L1";
 	}

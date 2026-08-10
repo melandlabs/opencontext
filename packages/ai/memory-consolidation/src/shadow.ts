@@ -33,9 +33,13 @@ export type MemoryConsolidationShadowReasonCode =
 	| "shadow_log_failed"
 	| (string & {});
 
-export interface BuildMemoryConsolidationShadowReportInput<TRecord = MemoryConsolidationSourceRecord>
-	extends BuildMemoryRelationPipelineDiagnosticsInput<TRecord> {
-	semanticDraftCandidates?: Omit<BuildSemanticMemoryDraftCandidatesInput, "report" | "records">;
+export interface BuildMemoryConsolidationShadowReportInput<
+	TRecord = MemoryConsolidationSourceRecord,
+> extends BuildMemoryRelationPipelineDiagnosticsInput<TRecord> {
+	semanticDraftCandidates?: Omit<
+		BuildSemanticMemoryDraftCandidatesInput,
+		"report" | "records"
+	>;
 	summarizerProvider?: SemanticMemoryDraftSummarizerProviderInvoke;
 	summarizerContext?: SemanticMemoryDraftSummarizerContext;
 	minConfidence?: number;
@@ -68,8 +72,12 @@ export interface MemoryConsolidationShadowReport {
 	mutatesRetrieval: false;
 }
 
-export interface RunMemoryConsolidationShadowDiagnosticsInput<TRecord = MemoryConsolidationSourceRecord>
-	extends Omit<BuildMemoryConsolidationShadowReportInput<TRecord>, "records" | "now"> {
+export interface RunMemoryConsolidationShadowDiagnosticsInput<
+	TRecord = MemoryConsolidationSourceRecord,
+> extends Omit<
+	BuildMemoryConsolidationShadowReportInput<TRecord>,
+	"records" | "now"
+> {
 	enabled?: boolean;
 	dryRun?: boolean;
 	now?: number;
@@ -130,26 +138,32 @@ export async function buildMemoryConsolidationShadowReport<TRecord>(
 		report,
 		records: diagnostics.records,
 	});
-	const reasonCodes = new Set<MemoryConsolidationShadowReasonCode>(["shadow_report_only"]);
-	let providerBatchReport: SemanticMemoryDraftSummarizerProviderBatchReport | undefined;
-	let persistencePreparationReport: SemanticMemoryDraftPersistencePreparationReport | undefined;
+	const reasonCodes = new Set<MemoryConsolidationShadowReasonCode>([
+		"shadow_report_only",
+	]);
+	let providerBatchReport:
+		SemanticMemoryDraftSummarizerProviderBatchReport | undefined;
+	let persistencePreparationReport:
+		SemanticMemoryDraftPersistencePreparationReport | undefined;
 
 	if (input.summarizerProvider) {
-		providerBatchReport = await invokeSemanticMemoryDraftSummarizerProviderBatch({
-			candidates: semanticDraftCandidates,
-			records: diagnostics.records,
-			context: input.summarizerContext,
-			minConfidence: input.minConfidence,
-			invoke: input.summarizerProvider,
-		});
+		providerBatchReport =
+			await invokeSemanticMemoryDraftSummarizerProviderBatch({
+				candidates: semanticDraftCandidates,
+				records: diagnostics.records,
+				context: input.summarizerContext,
+				minConfidence: input.minConfidence,
+				invoke: input.summarizerProvider,
+			});
 		reasonCodes.add("provider_batch_attached");
 		for (const reasonCode of providerBatchReport.reasonCodes) {
 			reasonCodes.add(reasonCode);
 		}
 
-		persistencePreparationReport = buildSemanticMemoryDraftPersistencePreparationReport({
-			providerBatchReport,
-		});
+		persistencePreparationReport =
+			buildSemanticMemoryDraftPersistencePreparationReport({
+				providerBatchReport,
+			});
 		reasonCodes.add("persistence_preparation_attached");
 		for (const reasonCode of persistencePreparationReport.reasonCodes) {
 			reasonCodes.add(reasonCode);
@@ -167,8 +181,10 @@ export async function buildMemoryConsolidationShadowReport<TRecord>(
 			providerResultCount: providerBatchReport?.results.length ?? 0,
 			summarizedCount: providerBatchReport?.summary.summarizedCount ?? 0,
 			failedProviderCount: providerBatchReport?.summary.failedCount ?? 0,
-			persistenceItemCount: persistencePreparationReport?.summary.persistenceItemCount ?? 0,
-			skippedPersistenceResultCount: persistencePreparationReport?.summary.skippedResultCount ?? 0,
+			persistenceItemCount:
+				persistencePreparationReport?.summary.persistenceItemCount ?? 0,
+			skippedPersistenceResultCount:
+				persistencePreparationReport?.summary.skippedResultCount ?? 0,
 		},
 		diagnostics,
 		report,
@@ -244,7 +260,9 @@ export async function runMemoryConsolidationShadowDiagnostics<TRecord>(
 		};
 	}
 
-	const reasonCodes = new Set<MemoryConsolidationShadowReasonCode>([...report.reasonCodes]);
+	const reasonCodes = new Set<MemoryConsolidationShadowReasonCode>([
+		...report.reasonCodes,
+	]);
 	let log: MemoryConsolidationShadowLogResult = { status: "disabled" };
 
 	if (input.logReport) {

@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Google Meet](https://developers.google.com/meet) integration for OpenContext.
 Uses Composio under the hood to drive meeting scheduling, attendee
 management, and recording retrieval.

@@ -51,7 +51,13 @@ class QQBotConversationStore {
 		}
 
 		const today = new Date().toISOString().slice(0, 10);
-		const msgs = loadChannelDay(this.memoryDir, PLATFORM, today, userKey, accountId) as ConversationMessage[];
+		const msgs = loadChannelDay(
+			this.memoryDir,
+			PLATFORM,
+			today,
+			userKey,
+			accountId,
+		) as ConversationMessage[];
 		this.cache.get(userKey)?.set(accountId, msgs);
 		this.loadedPairs.add(pk);
 	}
@@ -68,7 +74,12 @@ class QQBotConversationStore {
 		}));
 	}
 
-	addMessage(senderId: string, accountId: string, role: "user" | "assistant", content: string): void {
+	addMessage(
+		senderId: string,
+		accountId: string,
+		role: "user" | "assistant",
+		content: string,
+	): void {
 		const userKey = this.getUserKey(senderId);
 		this.ensureLoaded(userKey, accountId);
 
@@ -92,9 +103,16 @@ class QQBotConversationStore {
 
 		this.cache.get(userKey)?.get(accountId)?.splice(0);
 		this.loadedPairs.delete(pk);
-		clearChannelConversationFromAllDays(this.memoryDir, PLATFORM, userKey, accountId);
+		clearChannelConversationFromAllDays(
+			this.memoryDir,
+			PLATFORM,
+			userKey,
+			accountId,
+		);
 
-		console.log(`[QQBotConversationStore] Cleared conversation for sender ${senderId}, account ${accountId}`);
+		console.log(
+			`[QQBotConversationStore] Cleared conversation for sender ${senderId}, account ${accountId}`,
+		);
 	}
 
 	clearAllConversations(senderId: string): void {
@@ -108,7 +126,9 @@ class QQBotConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, PLATFORM, userKey);
 
-		console.log(`[QQBotConversationStore] Cleared all conversations for sender ${senderId}`);
+		console.log(
+			`[QQBotConversationStore] Cleared all conversations for sender ${senderId}`,
+		);
 	}
 
 	private getUserKey(senderId: string): string {

@@ -20,7 +20,9 @@ type NonTelegramContactMeta = {
 
 export type ContactMeta = TelegramContactMeta | NonTelegramContactMeta;
 
-export function isTelegramContactMeta(meta: ContactMeta | null | undefined): meta is TelegramContactMeta {
+export function isTelegramContactMeta(
+	meta: ContactMeta | null | undefined,
+): meta is TelegramContactMeta {
 	return (
 		Boolean(meta) &&
 		(meta as TelegramContactMeta).platform === "telegram" &&

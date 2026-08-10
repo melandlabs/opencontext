@@ -8,7 +8,10 @@
  */
 
 import * as memoryConsolidation from "@melandlabs/memory-consolidation";
-import { createMemoryStore, createUnifiedSearch } from "@melandlabs/memory-store";
+import {
+	createMemoryStore,
+	createUnifiedSearch,
+} from "@melandlabs/memory-store";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testMemory() {
@@ -18,7 +21,10 @@ export default async function testMemory() {
 		check("createMemoryStore returns an object", typeof store === "object");
 		check("memory-store exposes .raw", typeof store.raw === "object");
 		check("memory-store exposes .search", typeof store.search === "object");
-		check("memory-store exposes searchUnifiedMemory", typeof store.searchUnifiedMemory === "function");
+		check(
+			"memory-store exposes searchUnifiedMemory",
+			typeof store.searchUnifiedMemory === "function",
+		);
 
 		const us = createUnifiedSearch({});
 		check(
@@ -29,7 +35,9 @@ export default async function testMemory() {
 
 	await runSection("@melandlabs/memory-consolidation", async () => {
 		const check = makeCheck("memory-consolidation");
-		const names = Object.keys(memoryConsolidation).filter((k) => !k.startsWith("_"));
+		const names = Object.keys(memoryConsolidation).filter(
+			(k) => !k.startsWith("_"),
+		);
 		check("module exports at least one symbol", names.length > 0);
 	});
 }

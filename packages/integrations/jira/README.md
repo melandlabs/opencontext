@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Jira](https://www.atlassian.com/software/jira) integration for OpenContext.
 Reads, creates, and updates Jira issues through Atlassian's REST API.
 

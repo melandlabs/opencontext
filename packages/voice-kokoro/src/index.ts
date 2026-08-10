@@ -9,9 +9,21 @@ const MIN_SPEECH_CHUNK_BREAK_LENGTH = 80;
 const MIN_FINAL_SPEECH_CHUNK_LENGTH = 40;
 const HARD_SPEECH_BOUNDARIES = new Set(["。", "！", "？", "!", "?", "；", ";"]);
 const SOFT_SPEECH_BOUNDARIES = new Set(["，", ",", "、", "：", ":", ")", "）"]);
-const CLOSING_BOUNDARY_CHARACTERS = new Set(['"', "'", ")", "]", "}", "”", "’", "）", "】", "》"]);
+const CLOSING_BOUNDARY_CHARACTERS = new Set([
+	'"',
+	"'",
+	")",
+	"]",
+	"}",
+	"”",
+	"’",
+	"）",
+	"】",
+	"》",
+]);
 
-type SpeechFetchResult = { ok: true; audioBlob: Blob } | { ok: false; error: unknown };
+type SpeechFetchResult =
+	{ ok: true; audioBlob: Blob } | { ok: false; error: unknown };
 
 function getNowMs(): number {
 	if (typeof performance !== "undefined") {
@@ -49,13 +61,20 @@ function isSentencePeriod(text: string, index: number): boolean {
 
 function isHardSpeechBoundary(text: string, index: number): boolean {
 	const character = text[index];
-	return HARD_SPEECH_BOUNDARIES.has(character) || (character === "." && isSentencePeriod(text, index));
+	return (
+		HARD_SPEECH_BOUNDARIES.has(character) ||
+		(character === "." && isSentencePeriod(text, index))
+	);
 }
 
 function isSoftSpeechBoundary(text: string, index: number): boolean {
 	const character = text[index];
 	if (!SOFT_SPEECH_BOUNDARIES.has(character)) return false;
-	if (character === "," && isDigit(text[index - 1]) && isDigit(text[index + 1])) {
+	if (
+		character === "," &&
+		isDigit(text[index - 1]) &&
+		isDigit(text[index + 1])
+	) {
 		return false;
 	}
 	if (character === ":" && text[index + 1] === "/") {
@@ -123,15 +142,32 @@ function findWhitespaceBoundary(
 	return null;
 }
 
-function findSpeechBreakIndex(text: string, targetLength: number, maxLength: number): number {
-	const minBreakLength = Math.min(MIN_SPEECH_CHUNK_BREAK_LENGTH, Math.max(1, targetLength - 1));
+function findSpeechBreakIndex(
+	text: string,
+	targetLength: number,
+	maxLength: number,
+): number {
+	const minBreakLength = Math.min(
+		MIN_SPEECH_CHUNK_BREAK_LENGTH,
+		Math.max(1, targetLength - 1),
+	);
 	const beforeTarget = Math.min(targetLength, text.length - 1);
 	const beforeMax = Math.min(maxLength, text.length - 1);
 
 	return (
-		findLastBoundary(text, minBreakLength, beforeTarget, isHardSpeechBoundary) ??
+		findLastBoundary(
+			text,
+			minBreakLength,
+			beforeTarget,
+			isHardSpeechBoundary,
+		) ??
 		findFirstBoundary(text, targetLength, beforeMax, isHardSpeechBoundary) ??
-		findLastBoundary(text, minBreakLength, beforeTarget, isSoftSpeechBoundary) ??
+		findLastBoundary(
+			text,
+			minBreakLength,
+			beforeTarget,
+			isSoftSpeechBoundary,
+		) ??
 		findFirstBoundary(text, targetLength, beforeMax, isSoftSpeechBoundary) ??
 		findWhitespaceBoundary(text, minBreakLength, beforeTarget, "last") ??
 		findWhitespaceBoundary(text, targetLength, beforeMax, "first") ??
@@ -162,15 +198,23 @@ function splitSpeechText(text: string): string[] {
 
 	while (remainingText) {
 		const isFirstChunk = chunks.length === 0;
-		const targetLength = isFirstChunk ? FIRST_SPEECH_CHUNK_TARGET_LENGTH : SPEECH_CHUNK_TARGET_LENGTH;
-		const maxLength = isFirstChunk ? FIRST_SPEECH_CHUNK_MAX_LENGTH : SPEECH_CHUNK_MAX_LENGTH;
+		const targetLength = isFirstChunk
+			? FIRST_SPEECH_CHUNK_TARGET_LENGTH
+			: SPEECH_CHUNK_TARGET_LENGTH;
+		const maxLength = isFirstChunk
+			? FIRST_SPEECH_CHUNK_MAX_LENGTH
+			: SPEECH_CHUNK_MAX_LENGTH;
 
 		if (remainingText.length <= maxLength) {
 			chunks.push(remainingText);
 			break;
 		}
 
-		const breakIndex = findSpeechBreakIndex(remainingText, targetLength, maxLength);
+		const breakIndex = findSpeechBreakIndex(
+			remainingText,
+			targetLength,
+			maxLength,
+		);
 		const chunk = remainingText.slice(0, breakIndex).trim();
 		if (chunk) {
 			chunks.push(chunk);
@@ -383,7 +427,8 @@ export class KokoroPlugin {
 				throw new DOMException("Kokoro TTS request was aborted.", "AbortError");
 			}
 
-			const currentFetchPromise = nextFetchPromise ?? this.prefetchSpeechBlob(chunks[index], runId);
+			const currentFetchPromise =
+				nextFetchPromise ?? this.prefetchSpeechBlob(chunks[index], runId);
 			nextFetchPromise = null;
 
 			const result = await currentFetchPromise;
@@ -424,13 +469,19 @@ export class KokoroPlugin {
 		});
 	}
 
-	private prefetchSpeechBlob(text: string, runId: number): Promise<SpeechFetchResult> {
+	private prefetchSpeechBlob(
+		text: string,
+		runId: number,
+	): Promise<SpeechFetchResult> {
 		return this.fetchSpeechBlobForPlayback(text, runId)
 			.then((audioBlob) => ({ ok: true as const, audioBlob }))
 			.catch((error) => ({ ok: false as const, error }));
 	}
 
-	private async fetchSpeechBlobForPlayback(text: string, runId: number): Promise<Blob> {
+	private async fetchSpeechBlobForPlayback(
+		text: string,
+		runId: number,
+	): Promise<Blob> {
 		const controller = new AbortController();
 		this.currentRequestController = controller;
 
@@ -471,7 +522,10 @@ export class KokoroPlugin {
 		}
 	}
 
-	private async fetchSpeechBlob(text: string, signal: AbortSignal): Promise<Blob> {
+	private async fetchSpeechBlob(
+		text: string,
+		signal: AbortSignal,
+	): Promise<Blob> {
 		if (typeof fetch !== "function") {
 			throw new Error("Fetch is not available for Kokoro TTS.");
 		}
@@ -500,7 +554,10 @@ export class KokoroPlugin {
 		return audioBlob;
 	}
 
-	private async playAudioBlob(audioBlob: Blob, onPlaybackStart?: () => void): Promise<void> {
+	private async playAudioBlob(
+		audioBlob: Blob,
+		onPlaybackStart?: () => void,
+	): Promise<void> {
 		if (typeof Audio === "undefined") {
 			throw new Error("Browser audio playback is not available.");
 		}
@@ -543,11 +600,14 @@ export class KokoroPlugin {
 				audio.pause();
 				audio.removeAttribute("src");
 				audio.load();
-				settle(new DOMException("Kokoro TTS playback was aborted.", "AbortError"));
+				settle(
+					new DOMException("Kokoro TTS playback was aborted.", "AbortError"),
+				);
 			};
 
 			audio.onended = () => settle();
-			audio.onerror = () => settle(new Error("Kokoro TTS audio playback failed."));
+			audio.onerror = () =>
+				settle(new Error("Kokoro TTS audio playback failed."));
 
 			this.currentAudio = audio;
 			this.currentObjectUrl = objectUrl;

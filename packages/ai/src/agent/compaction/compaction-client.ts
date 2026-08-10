@@ -42,7 +42,9 @@ export interface CompactionOptions {
 	authToken: string;
 }
 
-function normalizeCompactionRole(role: string): "user" | "assistant" | "system" {
+function normalizeCompactionRole(
+	role: string,
+): "user" | "assistant" | "system" {
 	// Older call sites may still pass tool/system-ish roles as plain strings.
 	if (role === "user" || role === "system") {
 		return role;
@@ -57,7 +59,9 @@ function normalizeCompactionRole(role: string): "user" | "assistant" | "system" 
  * @param options - Compaction options
  * @returns CompactionResponse | null - Summary result or null on failure
  */
-export async function triggerCompaction(options: CompactionOptions): Promise<CompactionResponse | null> {
+export async function triggerCompaction(
+	options: CompactionOptions,
+): Promise<CompactionResponse | null> {
 	const { messages, level, platform, authToken } = options;
 
 	if (!messages || messages.length === 0) {

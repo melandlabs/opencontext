@@ -17,10 +17,18 @@ function matchesPlatform(value: unknown, platform: string): boolean {
 	}
 
 	const normalizedPlatform = platform.trim().toLowerCase();
-	const candidates = [value.platform, value.id, value.name, value.key, value.source];
+	const candidates = [
+		value.platform,
+		value.id,
+		value.name,
+		value.key,
+		value.source,
+	];
 
 	return candidates.some(
-		(candidate) => typeof candidate === "string" && candidate.trim().toLowerCase() === normalizedPlatform,
+		(candidate) =>
+			typeof candidate === "string" &&
+			candidate.trim().toLowerCase() === normalizedPlatform,
 	);
 }
 
@@ -46,19 +54,27 @@ function filterByStatus<T>(items: T[], status?: string): T[] {
 	});
 }
 
-export function registerConnectorTools(server: McpServer, context: OpenContextToolContext): void {
+export function registerConnectorTools(
+	server: McpServer,
+	context: OpenContextToolContext,
+): void {
 	server.registerTool(
 		"opencontext_connectors_list_accounts",
 		{
 			title: "OpenContext Connected Accounts",
-			description: "List native OpenContext integration accounts for the authenticated local user.",
+			description:
+				"List native OpenContext integration accounts for the authenticated local user.",
 			inputSchema: {
 				platform: z
 					.string()
 					.min(1)
 					.optional()
 					.describe("Optional platform filter, such as gmail, slack, weixin."),
-				status: z.string().min(1).optional().describe("Optional account status filter, such as active."),
+				status: z
+					.string()
+					.min(1)
+					.optional()
+					.describe("Optional account status filter, such as active."),
 			},
 			annotations: {
 				readOnlyHint: true,
@@ -68,26 +84,33 @@ export function registerConnectorTools(server: McpServer, context: OpenContextTo
 			},
 		},
 		async (args) =>
-			withReadyOpenContextClient(context, "OpenContext connected account listing failed", async (client) => {
-				const result = await client.getJson("/api/integrations/accounts", {
-					timeoutMs: CONNECTOR_READ_TIMEOUT_MS,
-				});
-				const accounts =
-					isRecord(result) && Array.isArray(result.accounts)
-						? filterByStatus(filterByPlatform(result.accounts, args.platform), args.status)
-						: [];
-				const filtered = {
-					...(isRecord(result) ? result : { result }),
-					accounts,
-					count: accounts.length,
-					filters: {
-						platform: args.platform ?? null,
-						status: args.status ?? null,
-					},
-				};
+			withReadyOpenContextClient(
+				context,
+				"OpenContext connected account listing failed",
+				async (client) => {
+					const result = await client.getJson("/api/integrations/accounts", {
+						timeoutMs: CONNECTOR_READ_TIMEOUT_MS,
+					});
+					const accounts =
+						isRecord(result) && Array.isArray(result.accounts)
+							? filterByStatus(
+									filterByPlatform(result.accounts, args.platform),
+									args.status,
+								)
+							: [];
+					const filtered = {
+						...(isRecord(result) ? result : { result }),
+						accounts,
+						count: accounts.length,
+						filters: {
+							platform: args.platform ?? null,
+							status: args.status ?? null,
+						},
+					};
 
-				return jsonToolResult("OpenContext connected accounts", filtered);
-			}),
+					return jsonToolResult("OpenContext connected accounts", filtered);
+				},
+			),
 	);
 
 	server.registerTool(
@@ -111,30 +134,37 @@ export function registerConnectorTools(server: McpServer, context: OpenContextTo
 			},
 		},
 		async (args) =>
-			withReadyOpenContextClient(context, "OpenContext connector status failed", async (client) => {
-				const result = await client.getJson("/api/loop/connectors?refresh=1", {
-					timeoutMs: CONNECTOR_REFRESH_TIMEOUT_MS,
-				});
-				const items =
-					isRecord(result) && Array.isArray(result.items)
-						? filterByPlatform(result.items, args.platform)
-						: [];
-				const nativeAccounts =
-					isRecord(result) && Array.isArray(result.nativeAccounts)
-						? filterByPlatform(result.nativeAccounts, args.platform)
-						: undefined;
-				const filtered = {
-					...(isRecord(result) ? result : { result }),
-					items,
-					nativeAccounts,
-					count: items.length,
-					filters: {
-						platform: args.platform ?? null,
-						mode: "live",
-					},
-				};
+			withReadyOpenContextClient(
+				context,
+				"OpenContext connector status failed",
+				async (client) => {
+					const result = await client.getJson(
+						"/api/loop/connectors?refresh=1",
+						{
+							timeoutMs: CONNECTOR_REFRESH_TIMEOUT_MS,
+						},
+					);
+					const items =
+						isRecord(result) && Array.isArray(result.items)
+							? filterByPlatform(result.items, args.platform)
+							: [];
+					const nativeAccounts =
+						isRecord(result) && Array.isArray(result.nativeAccounts)
+							? filterByPlatform(result.nativeAccounts, args.platform)
+							: undefined;
+					const filtered = {
+						...(isRecord(result) ? result : { result }),
+						items,
+						nativeAccounts,
+						count: items.length,
+						filters: {
+							platform: args.platform ?? null,
+							mode: "live",
+						},
+					};
 
-				return jsonToolResult("OpenContext connector status", filtered);
-			}),
+					return jsonToolResult("OpenContext connector status", filtered);
+				},
+			),
 	);
 }

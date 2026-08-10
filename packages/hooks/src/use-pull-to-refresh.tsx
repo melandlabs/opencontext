@@ -70,7 +70,9 @@ export function usePullToRefresh({
 	const resolveScrollElement = useCallback((): HTMLElement | null => {
 		const root = containerRef.current;
 		if (!root) return null;
-		const viewport = root.querySelector("[data-radix-scroll-area-viewport]") as HTMLElement | null;
+		const viewport = root.querySelector(
+			"[data-radix-scroll-area-viewport]",
+		) as HTMLElement | null;
 		return viewport ?? (root as HTMLElement);
 	}, []);
 

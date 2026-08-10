@@ -1,7 +1,20 @@
-import type { DeliveryState, GoalRunStatus, GoalStatus, RuntimeSessionState } from "./types";
+import type {
+	DeliveryState,
+	GoalRunStatus,
+	GoalStatus,
+	RuntimeSessionState,
+} from "./types";
 
 const GOAL_TRANSITIONS: Readonly<Record<GoalStatus, readonly GoalStatus[]>> = {
-	active: ["paused", "blocked", "completed", "cancelled", "expired", "budget_limited", "failed"],
+	active: [
+		"paused",
+		"blocked",
+		"completed",
+		"cancelled",
+		"expired",
+		"budget_limited",
+		"failed",
+	],
 	paused: ["active", "cancelled", "expired", "failed"],
 	blocked: ["active", "cancelled", "expired", "failed"],
 	completed: [],
@@ -11,7 +24,9 @@ const GOAL_TRANSITIONS: Readonly<Record<GoalStatus, readonly GoalStatus[]>> = {
 	failed: [],
 };
 
-const RUN_TRANSITIONS: Readonly<Record<GoalRunStatus, readonly GoalRunStatus[]>> = {
+const RUN_TRANSITIONS: Readonly<
+	Record<GoalRunStatus, readonly GoalRunStatus[]>
+> = {
 	queued: ["running", "evaluating", "paused", "cancelled", "failed"],
 	running: [
 		"evaluating",
@@ -33,7 +48,15 @@ const RUN_TRANSITIONS: Readonly<Record<GoalRunStatus, readonly GoalRunStatus[]>>
 		"budget_limited",
 		"failed",
 	],
-	continuing: ["running", "evaluating", "paused", "blocked", "cancelled", "budget_limited", "failed"],
+	continuing: [
+		"running",
+		"evaluating",
+		"paused",
+		"blocked",
+		"cancelled",
+		"budget_limited",
+		"failed",
+	],
 	paused: ["running", "cancelled", "failed"],
 	blocked: ["running", "cancelled", "failed"],
 	completed: [],
@@ -42,7 +65,9 @@ const RUN_TRANSITIONS: Readonly<Record<GoalRunStatus, readonly GoalRunStatus[]>>
 	failed: [],
 };
 
-const SESSION_TRANSITIONS: Readonly<Record<RuntimeSessionState, readonly RuntimeSessionState[]>> = {
+const SESSION_TRANSITIONS: Readonly<
+	Record<RuntimeSessionState, readonly RuntimeSessionState[]>
+> = {
 	starting: ["idle", "running", "closed", "failed"],
 	idle: ["running", "closed", "failed"],
 	running: ["idle", "evaluating", "interrupted", "closed", "failed"],
@@ -52,10 +77,19 @@ const SESSION_TRANSITIONS: Readonly<Record<RuntimeSessionState, readonly Runtime
 	failed: [],
 };
 
-const DELIVERY_TRANSITIONS: Readonly<Record<DeliveryState, readonly DeliveryState[]>> = {
+const DELIVERY_TRANSITIONS: Readonly<
+	Record<DeliveryState, readonly DeliveryState[]>
+> = {
 	pending: ["leased", "expired", "superseded", "cancelled", "failed"],
 	leased: ["pending", "queued", "expired", "superseded", "cancelled", "failed"],
-	queued: ["written_to_sdk", "rejected", "expired", "superseded", "cancelled", "failed"],
+	queued: [
+		"written_to_sdk",
+		"rejected",
+		"expired",
+		"superseded",
+		"cancelled",
+		"failed",
+	],
 	written_to_sdk: ["observed", "rejected", "failed"],
 	observed: ["applied", "rejected", "failed"],
 	applied: ["completed", "failed"],
@@ -85,11 +119,17 @@ function assertTransition<T extends string>(
 	}
 }
 
-export function assertGoalStatusTransition(current: GoalStatus, next: GoalStatus): void {
+export function assertGoalStatusTransition(
+	current: GoalStatus,
+	next: GoalStatus,
+): void {
 	assertTransition("Goal", GOAL_TRANSITIONS, current, next);
 }
 
-export function assertGoalRunStatusTransition(current: GoalRunStatus, next: GoalRunStatus): void {
+export function assertGoalRunStatusTransition(
+	current: GoalRunStatus,
+	next: GoalRunStatus,
+): void {
 	assertTransition("Goal Run", RUN_TRANSITIONS, current, next);
 }
 
@@ -100,6 +140,9 @@ export function assertRuntimeSessionStateTransition(
 	assertTransition("Runtime Session", SESSION_TRANSITIONS, current, next);
 }
 
-export function assertDeliveryStateTransition(current: DeliveryState, next: DeliveryState): void {
+export function assertDeliveryStateTransition(
+	current: DeliveryState,
+	next: DeliveryState,
+): void {
 	assertTransition("Instruction Delivery", DELIVERY_TRANSITIONS, current, next);
 }

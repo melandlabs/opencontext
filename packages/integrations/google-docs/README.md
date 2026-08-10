@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Google Docs](https://developers.google.com/docs) integration for OpenContext.
 Built on the official `googleapis` SDK with OAuth credential management.
 

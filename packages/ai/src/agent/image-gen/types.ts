@@ -1,6 +1,7 @@
 export type ImageGenerationProviderName = "openai" | "nano-banana" | string;
 
-export type ImageGenerationQuality = "auto" | "low" | "medium" | "high" | "standard" | "hd";
+export type ImageGenerationQuality =
+	"auto" | "low" | "medium" | "high" | "standard" | "hd";
 
 export type ImageGenerationOutputFormat = "png" | "jpeg" | "webp";
 

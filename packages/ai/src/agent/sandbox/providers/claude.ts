@@ -11,7 +11,11 @@ import { platform } from "node:os";
 import { join } from "node:path";
 import { extname } from "node:path";
 
-import type { SandboxExecOptions, SandboxExecResult, ScriptOptions } from "../types";
+import type {
+	SandboxExecOptions,
+	SandboxExecResult,
+	ScriptOptions,
+} from "../types";
 
 import {
 	BaseSandboxProvider,
@@ -64,9 +68,17 @@ export class ClaudeProvider extends BaseSandboxProvider {
 
 		const commonPaths =
 			os === "darwin"
-				? ["/usr/local/bin/srt", join(homeDir || "", ".local/bin/srt"), "/opt/homebrew/bin/srt"]
+				? [
+						"/usr/local/bin/srt",
+						join(homeDir || "", ".local/bin/srt"),
+						"/opt/homebrew/bin/srt",
+					]
 				: os === "linux"
-					? ["/usr/bin/srt", "/usr/local/bin/srt", join(homeDir || "", ".local/bin/srt")]
+					? [
+							"/usr/bin/srt",
+							"/usr/local/bin/srt",
+							join(homeDir || "", ".local/bin/srt"),
+						]
 					: os === "win32"
 						? [
 								join(process.env.APPDATA || "", "npm", "srt.cmd"),
@@ -115,7 +127,8 @@ export class ClaudeProvider extends BaseSandboxProvider {
 		const startTime = Date.now();
 		const { command, args = [], cwd, env, timeout } = options;
 
-		const execTimeout = timeout || (this.config.defaultTimeout as number) || 120000;
+		const execTimeout =
+			timeout || (this.config.defaultTimeout as number) || 120000;
 		const workDir = cwd || process.cwd();
 		const srtPath = this.srtPath;
 
@@ -175,7 +188,11 @@ export class ClaudeProvider extends BaseSandboxProvider {
 		});
 	}
 
-	async runScript(filePath: string, workDir: string, options?: ScriptOptions): Promise<SandboxExecResult> {
+	async runScript(
+		filePath: string,
+		workDir: string,
+		options?: ScriptOptions,
+	): Promise<SandboxExecResult> {
 		const { runtime } = detectRuntime(filePath);
 		const ext = extname(filePath).toLowerCase();
 
@@ -221,7 +238,10 @@ export class ClaudeProvider extends BaseSandboxProvider {
 		});
 	}
 
-	private async installPackages(filePath: string, packages: string[]): Promise<void> {
+	private async installPackages(
+		filePath: string,
+		packages: string[],
+	): Promise<void> {
 		const ext = extname(filePath).toLowerCase();
 
 		let installCommand: string;
@@ -261,7 +281,8 @@ export class ClaudeProvider extends BaseSandboxProvider {
 const CLAUDE_METADATA: SandboxProviderMetadata = {
 	type: "claude",
 	name: "Claude Sandbox",
-	description: "Uses Anthropic's sandbox-runtime (srt) for process-isolated code execution.",
+	description:
+		"Uses Anthropic's sandbox-runtime (srt) for process-isolated code execution.",
 	version: "1.0.0",
 	priority: 100,
 	builtin: true,

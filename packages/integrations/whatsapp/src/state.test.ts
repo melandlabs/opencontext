@@ -82,7 +82,9 @@ describe("parseQrCodeState", () => {
 // ---------------------------------------------------------------------------
 
 describe("isOwnMessage", () => {
-	const createMessage = (overrides: Partial<ExtractedMessageInfo> = {}): ExtractedMessageInfo => ({
+	const createMessage = (
+		overrides: Partial<ExtractedMessageInfo> = {},
+	): ExtractedMessageInfo => ({
 		id: "msg-1",
 		chatType: "private",
 		chatName: "Test",

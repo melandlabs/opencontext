@@ -64,7 +64,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 	/**
 	 * Execute a database operation with automatic retry on connection failure
 	 */
-	private async withRetry<T>(operation: () => Promise<T>, maxRetries = 1): Promise<T> {
+	private async withRetry<T>(
+		operation: () => Promise<T>,
+		maxRetries = 1,
+	): Promise<T> {
 		try {
 			return await operation();
 		} catch (error) {
@@ -104,20 +107,27 @@ class IndexedDBManager implements RawMessageStorageManager {
 			request.onerror = () => {
 				// Handle version mismatch (e.g., user has version 2 but code expects version 1)
 				if (request.error?.name === "VersionError") {
-					console.warn("[IndexedDB] Database version mismatch. Deleting and recreating database...");
+					console.warn(
+						"[IndexedDB] Database version mismatch. Deleting and recreating database...",
+					);
 					const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
 					deleteRequest.onsuccess = () => {
 						console.log("[IndexedDB] Deleted old database. Reopening...");
 						const reopenRequest = indexedDB.open(DB_NAME, DB_VERSION);
 						reopenRequest.onerror = () =>
-							reject(new Error(`Failed to recreate IndexedDB: ${reopenRequest.error}`));
+							reject(
+								new Error(
+									`Failed to recreate IndexedDB: ${reopenRequest.error}`,
+								),
+							);
 						reopenRequest.onsuccess = () => {
 							this.db = reopenRequest.result;
 							resolve();
 						};
 						reopenRequest.onupgradeneeded = (event) => {
 							const db = (event.target as IDBOpenDBRequest).result;
-							const transaction = (event.target as IDBOpenDBRequest).transaction;
+							const transaction = (event.target as IDBOpenDBRequest)
+								.transaction;
 							this.createObjectStore(db, transaction);
 						};
 					};
@@ -143,8 +153,13 @@ class IndexedDBManager implements RawMessageStorageManager {
 	/**
 	 * Create the object store and indexes
 	 */
-	private createObjectStore(db: IDBDatabase, transaction?: IDBTransaction | null): void {
-		const tx = transaction ?? (db as IDBDatabase & { transaction?: IDBTransaction | null }).transaction;
+	private createObjectStore(
+		db: IDBDatabase,
+		transaction?: IDBTransaction | null,
+	): void {
+		const tx =
+			transaction ??
+			(db as IDBDatabase & { transaction?: IDBTransaction | null }).transaction;
 		if (!tx) {
 			console.error("[IndexedDB] No transaction available for upgrade");
 			return;
@@ -195,7 +210,12 @@ class IndexedDBManager implements RawMessageStorageManager {
 		// Compound indexes used by memory lifecycle:
 		// - userId+memoryStage for stage-specific candidate scans
 		// - userId+timestamp for bounded time window queries
-		ensureIndex(rawStore, "userId_memoryStage", ["userId", "memoryStage"], false);
+		ensureIndex(
+			rawStore,
+			"userId_memoryStage",
+			["userId", "memoryStage"],
+			false,
+		);
 		ensureIndex(rawStore, "userId_timestamp", ["userId", "timestamp"], false);
 
 		let summaryStore: IDBObjectStore;
@@ -210,8 +230,18 @@ class IndexedDBManager implements RawMessageStorageManager {
 		ensureIndex(summaryStore, "summaryId", "summaryId", true);
 		ensureIndex(summaryStore, "userId", "userId", false);
 		ensureIndex(summaryStore, "summaryTier", "summaryTier", false);
-		ensureIndex(summaryStore, "userId_summaryTier", ["userId", "summaryTier"], false);
-		ensureIndex(summaryStore, "userId_endTimestamp", ["userId", "endTimestamp"], false);
+		ensureIndex(
+			summaryStore,
+			"userId_summaryTier",
+			["userId", "summaryTier"],
+			false,
+		);
+		ensureIndex(
+			summaryStore,
+			"userId_endTimestamp",
+			["userId", "endTimestamp"],
+			false,
+		);
 		// Keep a simple text index for keyword contains filtering (inverted index can be added later).
 		ensureIndex(summaryStore, "keywords", "keywordsText", false);
 		ensureIndex(summaryStore, "keywordsText", "keywordsText", false);
@@ -245,7 +275,9 @@ class IndexedDBManager implements RawMessageStorageManager {
 						reject(new Error("raw_message_scope_conflict"));
 						return;
 					}
-					const messageToStore = existing ? mergeStoredChatMemoryEvidence(existing, message) : message;
+					const messageToStore = existing
+						? mergeStoredChatMemoryEvidence(existing, message)
+						: message;
 					const normalizedMessage: RawMessage = {
 						...messageToStore,
 						memoryStage: messageToStore.memoryStage ?? "short",
@@ -262,7 +294,8 @@ class IndexedDBManager implements RawMessageStorageManager {
 							...existing,
 							...normalizedMessage,
 						});
-						updateRequest.onsuccess = () => resolve(updateRequest.result as number);
+						updateRequest.onsuccess = () =>
+							resolve(updateRequest.result as number);
 						updateRequest.onerror = () => reject(updateRequest.error);
 					} else {
 						normalizedMessage.createdAt = Date.now();
@@ -316,7 +349,11 @@ class IndexedDBManager implements RawMessageStorageManager {
 				let matchedCount = 0;
 
 				// Determine if we need fuzzy matching (channel/person with "includes")
-				const needsFuzzyMatch = !!(query.channel || query.person || query.keywords);
+				const needsFuzzyMatch = !!(
+					query.channel ||
+					query.person ||
+					query.keywords
+				);
 
 				// Smart index selection:
 				// - Priority 1: Always use userId index if available (most important for user isolation)
@@ -340,24 +377,47 @@ class IndexedDBManager implements RawMessageStorageManager {
 						IDBKeyRange.only([query.userId, query.memoryStages[0]]),
 						reverse ? "prev" : "next",
 					);
-				} else if (query.userId && objectStore.indexNames.contains("userId_timestamp")) {
+				} else if (
+					query.userId &&
+					objectStore.indexNames.contains("userId_timestamp")
+				) {
 					// Default path for user-scoped queries with time windows.
 					const index = objectStore.index("userId_timestamp");
-					const lower = [query.userId, query.startTime ?? Number.MIN_SAFE_INTEGER];
-					const upper = [query.userId, query.endTime ?? Number.MAX_SAFE_INTEGER];
-					const range = IDBKeyRange.bound(lower, upper, false, query.endTime !== undefined);
+					const lower = [
+						query.userId,
+						query.startTime ?? Number.MIN_SAFE_INTEGER,
+					];
+					const upper = [
+						query.userId,
+						query.endTime ?? Number.MAX_SAFE_INTEGER,
+					];
+					const range = IDBKeyRange.bound(
+						lower,
+						upper,
+						false,
+						query.endTime !== undefined,
+					);
 					request = index.openCursor(range, reverse ? "prev" : "next");
 				} else if (query.userId) {
 					const index = objectStore.index("userId");
-					request = index.openCursor(IDBKeyRange.only(query.userId), reverse ? "prev" : "next");
+					request = index.openCursor(
+						IDBKeyRange.only(query.userId),
+						reverse ? "prev" : "next",
+					);
 				} else if (!needsFuzzyMatch && query.botId) {
 					// Use botId index only when NOT doing fuzzy matching on channel/person
 					const index = objectStore.index("botId");
-					request = index.openCursor(IDBKeyRange.only(query.botId), reverse ? "prev" : "next");
+					request = index.openCursor(
+						IDBKeyRange.only(query.botId),
+						reverse ? "prev" : "next",
+					);
 				} else if (query.platform && !needsFuzzyMatch) {
 					// Use platform index only when NOT doing fuzzy matching
 					const index = objectStore.index("platform");
-					request = index.openCursor(IDBKeyRange.only(query.platform), reverse ? "prev" : "next");
+					request = index.openCursor(
+						IDBKeyRange.only(query.platform),
+						reverse ? "prev" : "next",
+					);
 				} else {
 					// Full table scan for fuzzy matching (channel/person/keywords)
 					request = objectStore.openCursor(null, reverse ? "prev" : "next");
@@ -387,25 +447,43 @@ class IndexedDBManager implements RawMessageStorageManager {
 						}
 
 						if (query.channel) {
-							if (!message.channel || !message.channel.toLowerCase().includes(query.channel.toLowerCase())) {
+							if (
+								!message.channel ||
+								!message.channel
+									.toLowerCase()
+									.includes(query.channel.toLowerCase())
+							) {
 								cursor.continue();
 								return;
 							}
 						}
 
 						if (query.person) {
-							if (!message.person || !message.person.toLowerCase().includes(query.person.toLowerCase())) {
+							if (
+								!message.person ||
+								!message.person
+									.toLowerCase()
+									.includes(query.person.toLowerCase())
+							) {
 								cursor.continue();
 								return;
 							}
 						}
 
-						if (query.startTime !== undefined && message.timestamp && message.timestamp < query.startTime) {
+						if (
+							query.startTime !== undefined &&
+							message.timestamp &&
+							message.timestamp < query.startTime
+						) {
 							cursor.continue();
 							return;
 						}
 
-						if (query.endTime !== undefined && message.timestamp && message.timestamp >= query.endTime) {
+						if (
+							query.endTime !== undefined &&
+							message.timestamp &&
+							message.timestamp >= query.endTime
+						) {
 							cursor.continue();
 							return;
 						}
@@ -474,12 +552,16 @@ class IndexedDBManager implements RawMessageStorageManager {
 		});
 	}
 
-	private normalizeSummaryRecord(summary: MemorySummaryRecord): MemorySummaryRecord {
+	private normalizeSummaryRecord(
+		summary: MemorySummaryRecord,
+	): MemorySummaryRecord {
 		const keywords = summary.keywords ?? [];
 		return {
 			...summary,
 			keywords,
-			keywordsText: summary.keywordsText ?? keywords.map((keyword) => keyword.trim()).join(" "),
+			keywordsText:
+				summary.keywordsText ??
+				keywords.map((keyword) => keyword.trim()).join(" "),
 			keyPoints: summary.keyPoints ?? [],
 			sourceRecordIds: summary.sourceRecordIds ?? [],
 			createdAt: summary.createdAt ?? Date.now(),
@@ -515,7 +597,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 					return;
 				}
 
-				const transaction = this.db.transaction([SUMMARY_STORE_NAME], "readwrite");
+				const transaction = this.db.transaction(
+					[SUMMARY_STORE_NAME],
+					"readwrite",
+				);
 				const objectStore = transaction.objectStore(SUMMARY_STORE_NAME);
 				let abortError: Error | undefined;
 
@@ -528,7 +613,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 							transaction.abort();
 							return;
 						}
-						if (existing && hasMemorySummaryPublicationRevisionConflict(existing, summary)) {
+						if (
+							existing &&
+							hasMemorySummaryPublicationRevisionConflict(existing, summary)
+						) {
 							abortError = new Error(MEMORY_SUMMARY_WRITE_CONFLICT);
 							transaction.abort();
 							return;
@@ -541,21 +629,33 @@ class IndexedDBManager implements RawMessageStorageManager {
 							return;
 						}
 						objectStore.put(
-							this.normalizeSummaryRecord(withoutMemorySummaryPublicationExpectedRevision(summary)),
+							this.normalizeSummaryRecord(
+								withoutMemorySummaryPublicationExpectedRevision(summary),
+							),
 						);
 					};
 				}
 
 				transaction.oncomplete = () => resolve();
 				transaction.onerror = () =>
-					reject(abortError ?? transaction.error ?? new Error("Summary write failed"));
+					reject(
+						abortError ??
+							transaction.error ??
+							new Error("Summary write failed"),
+					);
 				transaction.onabort = () =>
-					reject(abortError ?? transaction.error ?? new Error("Summary write aborted"));
+					reject(
+						abortError ??
+							transaction.error ??
+							new Error("Summary write aborted"),
+					);
 			});
 		});
 	}
 
-	async querySummaries(query: MemorySummaryQuery): Promise<MemorySummaryRecord[]> {
+	async querySummaries(
+		query: MemorySummaryQuery,
+	): Promise<MemorySummaryRecord[]> {
 		return this.withRetry(async () => {
 			await this.ensureConnection();
 
@@ -565,7 +665,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 					return;
 				}
 
-				const transaction = this.db.transaction([SUMMARY_STORE_NAME], "readonly");
+				const transaction = this.db.transaction(
+					[SUMMARY_STORE_NAME],
+					"readonly",
+				);
 				const objectStore = transaction.objectStore(SUMMARY_STORE_NAME);
 				const pageSize = query.pageSize ?? query.limit ?? 50;
 				const offset = query.offset ?? 0;
@@ -576,13 +679,27 @@ class IndexedDBManager implements RawMessageStorageManager {
 				let request: IDBRequest;
 				if (objectStore.indexNames.contains("userId_endTimestamp")) {
 					const index = objectStore.index("userId_endTimestamp");
-					const lower = [query.userId, query.startTime ?? Number.MIN_SAFE_INTEGER];
-					const upper = [query.userId, query.endTime ?? Number.MAX_SAFE_INTEGER];
-					const range = IDBKeyRange.bound(lower, upper, false, query.endTime !== undefined);
+					const lower = [
+						query.userId,
+						query.startTime ?? Number.MIN_SAFE_INTEGER,
+					];
+					const upper = [
+						query.userId,
+						query.endTime ?? Number.MAX_SAFE_INTEGER,
+					];
+					const range = IDBKeyRange.bound(
+						lower,
+						upper,
+						false,
+						query.endTime !== undefined,
+					);
 					request = index.openCursor(range, reverse ? "prev" : "next");
 				} else {
 					const index = objectStore.index("userId");
-					request = index.openCursor(IDBKeyRange.only(query.userId), reverse ? "prev" : "next");
+					request = index.openCursor(
+						IDBKeyRange.only(query.userId),
+						reverse ? "prev" : "next",
+					);
 				}
 
 				request.onsuccess = (event) => {
@@ -592,7 +709,9 @@ class IndexedDBManager implements RawMessageStorageManager {
 						return;
 					}
 
-					const summary = this.normalizeSummaryRecord(cursor.value as MemorySummaryRecord);
+					const summary = this.normalizeSummaryRecord(
+						cursor.value as MemorySummaryRecord,
+					);
 
 					if (summary.userId !== query.userId) {
 						cursor.continue();
@@ -617,12 +736,18 @@ class IndexedDBManager implements RawMessageStorageManager {
 						return;
 					}
 
-					if (query.startTime !== undefined && summary.endTimestamp < query.startTime) {
+					if (
+						query.startTime !== undefined &&
+						summary.endTimestamp < query.startTime
+					) {
 						cursor.continue();
 						return;
 					}
 
-					if (query.endTime !== undefined && summary.startTimestamp >= query.endTime) {
+					if (
+						query.endTime !== undefined &&
+						summary.startTimestamp >= query.endTime
+					) {
 						cursor.continue();
 						return;
 					}
@@ -632,7 +757,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 						const summaryText = (summary.summaryText ?? "").toLowerCase();
 						const matches = query.keywords.some((keyword) => {
 							const lowerKeyword = keyword.toLowerCase();
-							return text.includes(lowerKeyword) || summaryText.includes(lowerKeyword);
+							return (
+								text.includes(lowerKeyword) ||
+								summaryText.includes(lowerKeyword)
+							);
 						});
 						if (!matches) {
 							cursor.continue();
@@ -642,12 +770,14 @@ class IndexedDBManager implements RawMessageStorageManager {
 
 					if (query.dimensions) {
 						const summaryDimensions = summary.dimensions ?? {};
-						const matchesDimensions = Object.entries(query.dimensions).every(([key, value]) => {
-							if (value === undefined) {
-								return true;
-							}
-							return summaryDimensions[key] === value;
-						});
+						const matchesDimensions = Object.entries(query.dimensions).every(
+							([key, value]) => {
+								if (value === undefined) {
+									return true;
+								}
+								return summaryDimensions[key] === value;
+							},
+						);
 						if (!matchesDimensions) {
 							cursor.continue();
 							return;
@@ -727,7 +857,11 @@ class IndexedDBManager implements RawMessageStorageManager {
 		});
 	}
 
-	async markMessagesAccessed(messageIds: string[], at = Date.now(), userId?: string): Promise<number> {
+	async markMessagesAccessed(
+		messageIds: string[],
+		at = Date.now(),
+		userId?: string,
+	): Promise<number> {
 		return this.updateMessagesByMessageIds(
 			messageIds,
 			(message) => ({
@@ -764,7 +898,11 @@ class IndexedDBManager implements RawMessageStorageManager {
 		);
 	}
 
-	async archiveMessages(messageIds: string[], archivedAt = Date.now(), userId?: string): Promise<number> {
+	async archiveMessages(
+		messageIds: string[],
+		archivedAt = Date.now(),
+		userId?: string,
+	): Promise<number> {
 		return this.updateMessagesByMessageIds(
 			messageIds,
 			(message) => ({
@@ -783,7 +921,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 			messageIds,
 			(message) => {
 				if (message.deprecatedAt === undefined) return undefined;
-				if (input.supersededBySummaryId && message.supersededBySummaryId !== input.supersededBySummaryId) {
+				if (
+					input.supersededBySummaryId &&
+					message.supersededBySummaryId !== input.supersededBySummaryId
+				) {
 					return undefined;
 				}
 				const restored = { ...message };
@@ -796,7 +937,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 		);
 	}
 
-	async updateMessageEmbeddings(updates: RawMessageEmbeddingUpdate[], userId?: string): Promise<number> {
+	async updateMessageEmbeddings(
+		updates: RawMessageEmbeddingUpdate[],
+		userId?: string,
+	): Promise<number> {
 		const updatesById = new Map(
 			updates
 				.filter((update) => update.messageId && update.embedding.length > 0)
@@ -815,7 +959,8 @@ class IndexedDBManager implements RawMessageStorageManager {
 					embedding: update.embedding,
 					embeddingModel: update.embeddingModel,
 					embeddingContentHash: update.embeddingContentHash,
-					embeddingDimensions: update.embeddingDimensions ?? update.embedding.length,
+					embeddingDimensions:
+						update.embeddingDimensions ?? update.embedding.length,
 					embeddingUpdatedAt: update.embeddingUpdatedAt ?? Date.now(),
 				};
 			},
@@ -823,7 +968,10 @@ class IndexedDBManager implements RawMessageStorageManager {
 		);
 	}
 
-	async hardDeleteArchived(olderThan: number, userId?: string): Promise<number> {
+	async hardDeleteArchived(
+		olderThan: number,
+		userId?: string,
+	): Promise<number> {
 		return this.withRetry(async () => {
 			await this.ensureConnection();
 
@@ -849,7 +997,9 @@ class IndexedDBManager implements RawMessageStorageManager {
 					}
 
 					const message = cursor.value as RawMessage;
-					const shouldDelete = message.archivedAt !== undefined && (!userId || message.userId === userId);
+					const shouldDelete =
+						message.archivedAt !== undefined &&
+						(!userId || message.userId === userId);
 
 					if (shouldDelete) {
 						cursor.delete();
@@ -959,9 +1109,14 @@ class IndexedDBManager implements RawMessageStorageManager {
 					reject(new Error("Database not initialized"));
 					return;
 				}
-				const transaction = this.db.transaction([STORE_NAME, SUMMARY_STORE_NAME], "readwrite");
+				const transaction = this.db.transaction(
+					[STORE_NAME, SUMMARY_STORE_NAME],
+					"readwrite",
+				);
 				const rawRequest = transaction.objectStore(STORE_NAME).clear();
-				const summaryRequest = transaction.objectStore(SUMMARY_STORE_NAME).clear();
+				const summaryRequest = transaction
+					.objectStore(SUMMARY_STORE_NAME)
+					.clear();
 
 				let completed = 0;
 				const complete = () => {
@@ -983,7 +1138,9 @@ class IndexedDBManager implements RawMessageStorageManager {
 	 * Query messages with grouping by time period (day, week, month)
 	 * Returns grouped messages with formatted date keys for user's local timezone
 	 */
-	async queryMessagesGrouped(query: RawMessageQuery): Promise<Record<string, RawMessage[]>> {
+	async queryMessagesGrouped(
+		query: RawMessageQuery,
+	): Promise<Record<string, RawMessage[]>> {
 		// Query all matching messages first (with higher limit for grouping)
 		const groupQuery = {
 			...query,
@@ -1002,12 +1159,19 @@ class IndexedDBManager implements RawMessageStorageManager {
 		yesterday.setDate(yesterday.getDate() - 1);
 
 		// Helper to get local date string from timestamp
-		const getLocalDateKey = (timestamp: number, groupBy: GroupByType): string => {
+		const getLocalDateKey = (
+			timestamp: number,
+			groupBy: GroupByType,
+		): string => {
 			const date = new Date(timestamp * 1000);
 
 			if (groupBy === "day") {
 				// Group by local day with friendly labels
-				const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+				const dateOnly = new Date(
+					date.getFullYear(),
+					date.getMonth(),
+					date.getDate(),
+				);
 				if (dateOnly.getTime() === today.getTime()) {
 					return "Today";
 				}
@@ -1102,13 +1266,20 @@ class IndexedDBManager implements RawMessageStorageManager {
 							(stats.messagesByPlatform[message.platform] || 0) + 1;
 
 						// Count by bot
-						stats.messagesByBot[message.botId] = (stats.messagesByBot[message.botId] || 0) + 1;
+						stats.messagesByBot[message.botId] =
+							(stats.messagesByBot[message.botId] || 0) + 1;
 
 						// Track timestamps
-						if (!stats.oldestMessage || message.timestamp < stats.oldestMessage) {
+						if (
+							!stats.oldestMessage ||
+							message.timestamp < stats.oldestMessage
+						) {
 							stats.oldestMessage = message.timestamp;
 						}
-						if (!stats.newestMessage || message.timestamp > stats.newestMessage) {
+						if (
+							!stats.newestMessage ||
+							message.timestamp > stats.newestMessage
+						) {
 							stats.newestMessage = message.timestamp;
 						}
 

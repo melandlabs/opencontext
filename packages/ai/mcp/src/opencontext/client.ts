@@ -60,14 +60,19 @@ export class OpenContextClient {
 
 	constructor(options: OpenContextClientOptions = {}) {
 		this.baseUrl = normalizeBaseUrl(
-			options.baseUrl ?? process.env.OPENCONTEXT_API_URL ?? DEFAULT_OPENCONTEXT_BASE_URLS[0],
+			options.baseUrl ??
+				process.env.OPENCONTEXT_API_URL ??
+				DEFAULT_OPENCONTEXT_BASE_URLS[0],
 		);
 		this.token = options.token;
 		this.timeoutMs = options.timeoutMs ?? 5000;
 		this.fetchImpl = options.fetchImpl ?? fetch;
 	}
 
-	async request<T = unknown>(path: string, options: OpenContextRequestOptions = {}): Promise<T> {
+	async request<T = unknown>(
+		path: string,
+		options: OpenContextRequestOptions = {},
+	): Promise<T> {
 		const headers = new Headers(options.headers);
 		const token = options.token === undefined ? this.token : options.token;
 
@@ -78,13 +83,18 @@ export class OpenContextClient {
 		const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
 			...options,
 			headers,
-			signal: options.signal ?? createAbortSignal(options.timeoutMs ?? this.timeoutMs),
+			signal:
+				options.signal ??
+				createAbortSignal(options.timeoutMs ?? this.timeoutMs),
 		});
 
 		const body = await parseResponseBody(response);
 		if (!response.ok) {
 			const message =
-				typeof body === "object" && body !== null && "error" in body && typeof body.error === "string"
+				typeof body === "object" &&
+				body !== null &&
+				"error" in body &&
+				typeof body.error === "string"
 					? body.error
 					: `OpenContext API request failed with status ${response.status}`;
 			throw new OpenContextApiError(message, response.status, body);
@@ -93,7 +103,10 @@ export class OpenContextClient {
 		return body as T;
 	}
 
-	getJson<T = unknown>(path: string, options: Omit<OpenContextRequestOptions, "method"> = {}): Promise<T> {
+	getJson<T = unknown>(
+		path: string,
+		options: Omit<OpenContextRequestOptions, "method"> = {},
+	): Promise<T> {
 		return this.request<T>(path, { ...options, method: "GET" });
 	}
 

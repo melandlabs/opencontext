@@ -1,9 +1,17 @@
-import type { RawMessageSemanticSearchInput, RunRawMessageEmbeddingDreamInput } from "./embedding";
+import type {
+	RawMessageSemanticSearchInput,
+	RunRawMessageEmbeddingDreamInput,
+} from "./embedding";
 import type {
 	RunMemoryForgettingCycleResult,
 	RunMemoryForgettingCycleSerializableShadowDiagnosticsOptions,
 } from "./forgetting";
-import type { MemorySummaryRecord, RawMessage, RawMessageEmbeddingUpdate, RawMessageQuery } from "./manager";
+import type {
+	MemorySummaryRecord,
+	RawMessage,
+	RawMessageEmbeddingUpdate,
+	RawMessageQuery,
+} from "./manager";
 import type {
 	MemoryGraphEvolutionRunResult,
 	RawMessageGraphEvolutionOptions,
@@ -18,7 +26,8 @@ const SQLITE_RAW_MESSAGES_API = "/api/memory/raw-messages";
 const SQLITE_RAW_MESSAGES_MIGRATION_VERSION = 1;
 const SQLITE_RAW_MESSAGES_MIGRATION_STALE_MS = 10 * 60 * 1000;
 
-export type RawMessagesSQLiteMigrationStatus = "not_started" | "running" | "completed" | "failed";
+export type RawMessagesSQLiteMigrationStatus =
+	"not_started" | "running" | "completed" | "failed";
 
 export interface RawMessagesSQLiteMigrationState {
 	version: number;
@@ -73,7 +82,10 @@ export type RawMessagesSQLiteMigrationResult =
 			state: RawMessagesSQLiteMigrationState;
 	  };
 
-const migrationPromises = new Map<string, Promise<RawMessagesSQLiteMigrationResult>>();
+const migrationPromises = new Map<
+	string,
+	Promise<RawMessagesSQLiteMigrationResult>
+>();
 
 function hasTauriGlobal(): boolean {
 	return typeof window !== "undefined" && "__TAURI__" in window;
@@ -91,7 +103,8 @@ export function shouldUseSQLiteRawMessageStorage(): boolean {
 		return true;
 	}
 	return (
-		typeof process !== "undefined" && (process.env.TAURI_MODE === "tauri" || process.env.IS_TAURI === "true")
+		typeof process !== "undefined" &&
+		(process.env.TAURI_MODE === "tauri" || process.env.IS_TAURI === "true")
 	);
 }
 
@@ -99,7 +112,9 @@ export function shouldUseRawMessageApiStorage(): boolean {
 	return typeof window !== "undefined";
 }
 
-export function getRawMessagesSQLiteMigrationStorageKey(userId: string): string {
+export function getRawMessagesSQLiteMigrationStorageKey(
+	userId: string,
+): string {
 	return `opencontext:raw-messages-sqlite-migration:v${SQLITE_RAW_MESSAGES_MIGRATION_VERSION}:${userId}`;
 }
 
@@ -115,14 +130,18 @@ function getMigrationStorage(): Storage | null {
 	}
 }
 
-export function getRawMessagesSQLiteMigrationState(userId: string): RawMessagesSQLiteMigrationState | null {
+export function getRawMessagesSQLiteMigrationState(
+	userId: string,
+): RawMessagesSQLiteMigrationState | null {
 	const storage = getMigrationStorage();
 	if (!storage) {
 		return null;
 	}
 
 	try {
-		const raw = storage.getItem(getRawMessagesSQLiteMigrationStorageKey(userId));
+		const raw = storage.getItem(
+			getRawMessagesSQLiteMigrationStorageKey(userId),
+		);
 		if (!raw) {
 			return null;
 		}
@@ -142,9 +161,12 @@ export function getRawMessagesSQLiteMigrationState(userId: string): RawMessagesS
 			status: parsed.status as RawMessagesSQLiteMigrationStatus,
 			migratedMessages: Number(parsed.migratedMessages ?? 0),
 			migratedSummaries: Number(parsed.migratedSummaries ?? 0),
-			startedAt: typeof parsed.startedAt === "number" ? parsed.startedAt : undefined,
-			completedAt: typeof parsed.completedAt === "number" ? parsed.completedAt : undefined,
-			updatedAt: typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
+			startedAt:
+				typeof parsed.startedAt === "number" ? parsed.startedAt : undefined,
+			completedAt:
+				typeof parsed.completedAt === "number" ? parsed.completedAt : undefined,
+			updatedAt:
+				typeof parsed.updatedAt === "number" ? parsed.updatedAt : Date.now(),
 			error: typeof parsed.error === "string" ? parsed.error : undefined,
 		};
 	} catch {
@@ -152,14 +174,19 @@ export function getRawMessagesSQLiteMigrationState(userId: string): RawMessagesS
 	}
 }
 
-function setRawMessagesSQLiteMigrationState(state: RawMessagesSQLiteMigrationState): void {
+function setRawMessagesSQLiteMigrationState(
+	state: RawMessagesSQLiteMigrationState,
+): void {
 	const storage = getMigrationStorage();
 	if (!storage) {
 		return;
 	}
 
 	try {
-		storage.setItem(getRawMessagesSQLiteMigrationStorageKey(state.userId), JSON.stringify(state));
+		storage.setItem(
+			getRawMessagesSQLiteMigrationStorageKey(state.userId),
+			JSON.stringify(state),
+		);
 	} catch {
 		// Migration status is an optimization; storage failures should not block use.
 	}
@@ -178,8 +205,13 @@ export function clearRawMessagesSQLiteMigrationState(userId: string): void {
 	}
 }
 
-function isFreshRunningMigration(state: RawMessagesSQLiteMigrationState | null): boolean {
-	return state?.status === "running" && Date.now() - state.updatedAt < SQLITE_RAW_MESSAGES_MIGRATION_STALE_MS;
+function isFreshRunningMigration(
+	state: RawMessagesSQLiteMigrationState | null,
+): boolean {
+	return (
+		state?.status === "running" &&
+		Date.now() - state.updatedAt < SQLITE_RAW_MESSAGES_MIGRATION_STALE_MS
+	);
 }
 
 async function requestSQLiteRawMessages<T>(
@@ -200,7 +232,9 @@ async function requestSQLiteRawMessages<T>(
 	const data = await response.json().catch(() => ({}));
 	if (!response.ok || data?.success === false) {
 		throw new Error(
-			typeof data?.message === "string" ? data.message : `Raw message API failed: ${response.status}`,
+			typeof data?.message === "string"
+				? data.message
+				: `Raw message API failed: ${response.status}`,
 		);
 	}
 	return data as T;
@@ -330,10 +364,16 @@ export async function sqliteRunMemoryForgettingCycleForUser(
 class SQLiteApiRawMessageManager {
 	async queryMessages(query: RawMessageQuery): Promise<RawMessage[]> {
 		const items = await sqliteQueryRawMessages(query);
-		return items.filter((item): item is RawMessage & { sourceType: "raw" } => item.sourceType === "raw");
+		return items.filter(
+			(item): item is RawMessage & { sourceType: "raw" } =>
+				item.sourceType === "raw",
+		);
 	}
 
-	async updateMessageEmbeddings(updates: RawMessageEmbeddingUpdate[], userId?: string): Promise<number> {
+	async updateMessageEmbeddings(
+		updates: RawMessageEmbeddingUpdate[],
+		userId?: string,
+	): Promise<number> {
 		const response = await requestSQLiteRawMessages<{
 			success: boolean;
 			updated: number;

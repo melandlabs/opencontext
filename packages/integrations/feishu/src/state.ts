@@ -53,7 +53,9 @@ export function pruneDedupCache(
 	// Second sweep: if still over maxSize, remove oldest 50% by timestamp
 	if (cache.size > maxSize) {
 		const entries = [...cache.entries()].sort((a, b) => a[1] - b[1]);
-		const toRemove = entries.slice(0, Math.floor(entries.length / 2)).map((e) => e[0]);
+		const toRemove = entries
+			.slice(0, Math.floor(entries.length / 2))
+			.map((e) => e[0]);
 		for (const k of toRemove) {
 			cache.delete(k);
 		}

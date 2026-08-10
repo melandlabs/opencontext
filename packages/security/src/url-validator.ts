@@ -27,7 +27,12 @@ const PRIVATE_IP_RANGES = [
  */
 function ipToInt(ip: string): number {
 	const parts = ip.split(".").map(Number);
-	return ((parts[0] ?? 0) << 24) | ((parts[1] ?? 0) << 16) | ((parts[2] ?? 0) << 8) | (parts[3] ?? 0);
+	return (
+		((parts[0] ?? 0) << 24) |
+		((parts[1] ?? 0) << 16) |
+		((parts[2] ?? 0) << 8) |
+		(parts[3] ?? 0)
+	);
 }
 
 /**
@@ -140,7 +145,10 @@ function isAllowedDomain(hostname: string): boolean {
 	for (const pattern of ALLOWED_STORAGE_DOMAINS) {
 		if (pattern.startsWith("*.")) {
 			const baseDomain = pattern.slice(2);
-			if (lowerHostname === baseDomain || lowerHostname.endsWith(`.${baseDomain}`)) {
+			if (
+				lowerHostname === baseDomain ||
+				lowerHostname.endsWith(`.${baseDomain}`)
+			) {
 				return true;
 			}
 		} else if (lowerHostname === pattern) {
@@ -169,7 +177,11 @@ export async function validateUrlForSSRF(
 		allowedDomains?: string[];
 	} = {},
 ): Promise<URL> {
-	const { requireHttps = true, strictWhitelist = true, allowedDomains = [] } = options;
+	const {
+		requireHttps = true,
+		strictWhitelist = true,
+		allowedDomains = [],
+	} = options;
 
 	// Parse URL
 	let parsed: URL;
@@ -191,7 +203,9 @@ export async function validateUrlForSSRF(
 
 	// Check for private IP addresses in hostname
 	if (await isPrivateHostname(parsed.hostname)) {
-		throw new SSRFValidationError("Access to private IP addresses or local resources is not allowed");
+		throw new SSRFValidationError(
+			"Access to private IP addresses or local resources is not allowed",
+		);
 	}
 
 	// If strict whitelist mode is enabled, check against allowed domains
@@ -203,7 +217,10 @@ export async function validateUrlForSSRF(
 			const lowerHostname = parsed.hostname.toLowerCase();
 			if (pattern.startsWith("*.")) {
 				const baseDomain = pattern.slice(2);
-				if (lowerHostname === baseDomain || lowerHostname.endsWith(`.${baseDomain}`)) {
+				if (
+					lowerHostname === baseDomain ||
+					lowerHostname.endsWith(`.${baseDomain}`)
+				) {
 					isAllowed = true;
 					break;
 				}
@@ -214,7 +231,9 @@ export async function validateUrlForSSRF(
 		}
 
 		if (!isAllowed) {
-			throw new SSRFValidationError(`Domain ${parsed.hostname} is not in the allowed list`);
+			throw new SSRFValidationError(
+				`Domain ${parsed.hostname} is not in the allowed list`,
+			);
 		}
 	}
 
@@ -265,7 +284,10 @@ export async function fetchWithSSRFProtection(
 		});
 
 		// If not a redirect, return the response
-		if (response.status === 0 || (response.status >= 200 && response.status < 300)) {
+		if (
+			response.status === 0 ||
+			(response.status >= 200 && response.status < 300)
+		) {
 			return response;
 		}
 
@@ -282,7 +304,9 @@ export async function fetchWithSSRFProtection(
 			}
 
 			// Handle relative redirects
-			currentUrl = location.startsWith("http") ? location : new URL(location, validatedUrl).toString();
+			currentUrl = location.startsWith("http")
+				? location
+				: new URL(location, validatedUrl).toString();
 
 			redirectCount++;
 

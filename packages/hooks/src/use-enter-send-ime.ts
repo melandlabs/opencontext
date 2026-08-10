@@ -9,7 +9,9 @@ import { useCallback, useEffect, useRef } from "react";
  */
 export function useEnterSendWithIme() {
 	const isComposingOrJustEndedRef = useRef(false);
-	const compositionEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const compositionEndTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+		null,
+	);
 
 	const handleCompositionStart = useCallback(() => {
 		if (compositionEndTimerRef.current) {

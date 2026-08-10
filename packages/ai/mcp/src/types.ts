@@ -17,4 +17,5 @@ export interface McpSSEServerConfig {
 	headers?: Record<string, string>;
 }
 
-export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
+export type McpServerConfig =
+	McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;

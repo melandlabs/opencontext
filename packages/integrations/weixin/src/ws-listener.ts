@@ -10,7 +10,10 @@
  * - credentialStore: CredentialStore interface for account data
  */
 
-import type { CredentialStore, InboundMessageHandler } from "@melandlabs/integrations/core";
+import type {
+	CredentialStore,
+	InboundMessageHandler,
+} from "@melandlabs/integrations/core";
 import {
 	CDN_BASE_URL,
 	MessageType as MSG_TYPE,
@@ -59,8 +62,12 @@ function pruneProcessedIds(): void {
 	}
 	// Enforce max size to prevent unbounded memory growth
 	if (processedMessageIds.size > DEDUP_MAX_SIZE) {
-		const entries = [...processedMessageIds.entries()].sort((a, b) => a[1] - b[1]);
-		const toRemove = entries.slice(0, Math.floor(entries.length / 2)).map((e) => e[0]);
+		const entries = [...processedMessageIds.entries()].sort(
+			(a, b) => a[1] - b[1],
+		);
+		const toRemove = entries
+			.slice(0, Math.floor(entries.length / 2))
+			.map((e) => e[0]);
 		for (const k of toRemove) {
 			processedMessageIds.delete(k);
 		}
@@ -162,7 +169,9 @@ function extractContent(msg: WeixinMessage): {
 				if (voiceText) {
 					text = voiceText;
 					if (durationSec > 0) {
-						mediaHints.push(`[Voice message, duration ${durationSec}s, below is the transcribed content]`);
+						mediaHints.push(
+							`[Voice message, duration ${durationSec}s, below is the transcribed content]`,
+						);
 					}
 				} else {
 					mediaHints.push(
@@ -198,7 +207,9 @@ function extractContent(msg: WeixinMessage): {
 							? `${(fileSizeBytes / 1024 / 1024).toFixed(1)} MB`
 							: `${Math.round(fileSizeBytes / 1024)} KB`
 						: "Unknown size";
-				mediaHints.push(`[User sent a file: ${fileName}, size: ${fileSizeStr}]`);
+				mediaHints.push(
+					`[User sent a file: ${fileName}, size: ${fileSizeStr}]`,
+				);
 
 				const fileEncryptQueryParam = it.file_item?.media?.encrypt_query_param;
 				const fileAesKeyBase64 = it.file_item?.media?.aes_key;
@@ -216,7 +227,11 @@ function extractContent(msg: WeixinMessage): {
 
 			case VIDEO_ITEM_TYPE: {
 				const videoSec = Math.round((it.video_item?.play_length ?? 0) / 1000);
-				mediaHints.push(videoSec > 0 ? `[User sent a ${videoSec} second video]` : "[User sent a video]");
+				mediaHints.push(
+					videoSec > 0
+						? `[User sent a ${videoSec} second video]`
+						: "[User sent a video]",
+				);
 				break;
 			}
 
@@ -271,14 +286,25 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 					}
 					const fromId = raw.from_user_id?.trim();
 					if (!fromId) continue;
-					const { text, mediaHints, imageDownloadTasks, fileDownloadTasks } = extractContent(raw);
+					const { text, mediaHints, imageDownloadTasks, fileDownloadTasks } =
+						extractContent(raw);
 					// Skip if both text and media hints are empty
-					if (!text && mediaHints.length === 0 && imageDownloadTasks.length === 0) continue;
-					const messageId = String(raw.message_id ?? raw.seq ?? `${fromId}-${raw.create_time_ms}`);
+					if (
+						!text &&
+						mediaHints.length === 0 &&
+						imageDownloadTasks.length === 0
+					)
+						continue;
+					const messageId = String(
+						raw.message_id ?? raw.seq ?? `${fromId}-${raw.create_time_ms}`,
+					);
 					const contextToken = raw.context_token?.trim() ?? "";
 					if (!contextToken) {
 						if (DEBUG)
-							console.warn("[Weixin] Message has no context_token, skipping messageId=%s", messageId);
+							console.warn(
+								"[Weixin] Message has no context_token, skipping messageId=%s",
+								messageId,
+							);
 						continue;
 					}
 
@@ -288,14 +314,17 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 					pruneProcessedIds();
 
 					// Download images (CDN AES-128-ECB decryption)
-					const downloadedImages: Array<{ data: string; mimeType: string }> = [];
+					const downloadedImages: Array<{ data: string; mimeType: string }> =
+						[];
 					const downloadedFiles: Array<{
 						name: string;
 						data: string;
 						mimeType: string;
 					}> = [];
 					if (imageDownloadTasks.length > 0) {
-						const cdnBase = conn.credentials.baseUrl?.trim() ? CDN_BASE_URL : CDN_BASE_URL;
+						const cdnBase = conn.credentials.baseUrl?.trim()
+							? CDN_BASE_URL
+							: CDN_BASE_URL;
 						for (const task of imageDownloadTasks) {
 							try {
 								const buf = await downloadAndDecryptBuffer(
@@ -315,7 +344,10 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 									);
 								}
 							} catch (err) {
-								console.error("[Weixin] Image CDN download/decryption failed:", err);
+								console.error(
+									"[Weixin] Image CDN download/decryption failed:",
+									err,
+								);
 								mediaHints.push("[User sent an image (download failed)]");
 							}
 						}
@@ -347,14 +379,21 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 									mediaHints.push(task.hintOnSuccess);
 								}
 							} catch (err) {
-								console.error("[Weixin] File/voice CDN download or decryption failed:", err);
-								mediaHints.push(`[Attachment ${task.fileName} download failed]`);
+								console.error(
+									"[Weixin] File/voice CDN download or decryption failed:",
+									err,
+								);
+								mediaHints.push(
+									`[Attachment ${task.fileName} download failed]`,
+								);
 							}
 						}
 					}
 
 					const mediaDesc =
-						mediaHints.length > 0 || downloadedImages.length > 0 || downloadedFiles.length > 0
+						mediaHints.length > 0 ||
+						downloadedImages.length > 0 ||
+						downloadedFiles.length > 0
 							? ` [with media: ${[
 									...mediaHints,
 									...downloadedImages.map((_, i) => `Image ${i + 1}`),
@@ -391,7 +430,11 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 				}
 			} catch (e) {
 				if (conn.stopped) return;
-				console.error("[Weixin] getUpdates error accountId=%s", conn.accountId, e);
+				console.error(
+					"[Weixin] getUpdates error accountId=%s",
+					conn.accountId,
+					e,
+				);
 				await new Promise((r) => setTimeout(r, 3000));
 			}
 		}
@@ -430,7 +473,8 @@ export async function startWeixinConnection(
 			loopPromise: null,
 		};
 		connections.set(accountId, conn);
-		if (DEBUG) console.log("[Weixin] Starting long polling accountId=%s", accountId);
+		if (DEBUG)
+			console.log("[Weixin] Starting long polling accountId=%s", accountId);
 		runPollLoop(conn, onMessage);
 	})();
 
@@ -464,7 +508,12 @@ export async function startWeixinListenersForUser(
 		// Get credentials from account
 		const credentials = extractWeixinCredentials(account);
 		if (credentials) {
-			await startWeixinConnection(account.id, account.userId, credentials, onMessage);
+			await startWeixinConnection(
+				account.id,
+				account.userId,
+				credentials,
+				onMessage,
+			);
 		}
 	}
 }

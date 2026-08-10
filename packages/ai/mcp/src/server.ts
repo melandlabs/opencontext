@@ -1,8 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
-import { OpenContextClient, type OpenContextClientOptions } from "./opencontext/client";
-import { type OpenContextAuthToken, readOpenContextAuthToken } from "./opencontext/token";
+import {
+	OpenContextClient,
+	type OpenContextClientOptions,
+} from "./opencontext/client";
+import {
+	type OpenContextAuthToken,
+	readOpenContextAuthToken,
+} from "./opencontext/token";
 import { registerOpenContextTools } from "./tools";
 
 const DEFAULT_SERVER_NAME = "@melandlabs/mcp";

@@ -75,15 +75,19 @@ function isOwnerScopeValue(value: unknown): value is OwnerScope {
 	return (
 		isRecord(value) &&
 		typeof value.userId === "string" &&
-		(value.workspaceId === undefined || typeof value.workspaceId === "string") &&
+		(value.workspaceId === undefined ||
+			typeof value.workspaceId === "string") &&
 		(value.tenantId === undefined || typeof value.tenantId === "string")
 	);
 }
 
-export function parseRawMessageGraphEvolutionOptions(value: unknown): RawMessageGraphEvolutionOptions {
+export function parseRawMessageGraphEvolutionOptions(
+	value: unknown,
+): RawMessageGraphEvolutionOptions {
 	if (!isRecord(value)) return {};
 	const candidateLimit =
-		typeof value.candidateLimit === "number" && Number.isFinite(value.candidateLimit)
+		typeof value.candidateLimit === "number" &&
+		Number.isFinite(value.candidateLimit)
 			? Math.max(1, Math.min(500, Math.floor(value.candidateLimit)))
 			: undefined;
 	return {
@@ -106,11 +110,16 @@ function assertNoReservedGraphPayload(messages: RawMessage[]): void {
 			message.metadata?.[LEDGER_METADATA_KEY] !== undefined,
 	);
 	if (reserved) {
-		throw new Error("Raw messages cannot use the internal memory graph namespace");
+		throw new Error(
+			"Raw messages cannot use the internal memory graph namespace",
+		);
 	}
 }
 
-function emptySnapshot(ownerScope: OwnerScope, now: number): MemoryGraphSnapshot {
+function emptySnapshot(
+	ownerScope: OwnerScope,
+	now: number,
+): MemoryGraphSnapshot {
 	return {
 		ownerScope: { ...ownerScope },
 		nodes: [],
@@ -144,7 +153,9 @@ function cloneSnapshot(snapshot: MemoryGraphSnapshot): MemoryGraphSnapshot {
 			ownerScope: { ...cluster.ownerScope },
 			nodeIds: [...cluster.nodeIds],
 			reasonCodes: [...cluster.reasonCodes],
-			applicability: cluster.applicability ? { ...cluster.applicability } : undefined,
+			applicability: cluster.applicability
+				? { ...cluster.applicability }
+				: undefined,
 			metadata: cluster.metadata ? { ...cluster.metadata } : undefined,
 		})),
 	};
@@ -178,7 +189,12 @@ function parseLedger(
 	) {
 		throw new Error("Invalid owner-scoped memory graph ledger payload");
 	}
-	const graphObjects = [...snapshot.nodes, ...snapshot.edges, ...snapshot.clusters, ...appliedOperations];
+	const graphObjects = [
+		...snapshot.nodes,
+		...snapshot.edges,
+		...snapshot.clusters,
+		...appliedOperations,
+	];
 	if (
 		!isOwnerScopeValue(snapshot.ownerScope) ||
 		!sameOwnerScope(snapshot.ownerScope, ownerScope) ||
@@ -255,7 +271,9 @@ function filterSnapshot(
 		edges: snapshot.edges.filter(
 			(edge) =>
 				sameOwnerScope(edge.ownerScope, query.ownerScope) &&
-				(!nodeIds || nodeIds.has(edge.fromNodeId) || nodeIds.has(edge.toNodeId)),
+				(!nodeIds ||
+					nodeIds.has(edge.fromNodeId) ||
+					nodeIds.has(edge.toNodeId)),
 		),
 		clusters: snapshot.clusters.filter(
 			(cluster) =>
@@ -267,7 +285,10 @@ function filterSnapshot(
 
 const ownerGraphLocks = new Map<string, Promise<void>>();
 
-async function withOwnerGraphLock<T>(key: string, operation: () => Promise<T>): Promise<T> {
+async function withOwnerGraphLock<T>(
+	key: string,
+	operation: () => Promise<T>,
+): Promise<T> {
 	const previous = ownerGraphLocks.get(key) ?? Promise.resolve();
 	let release = () => {};
 	const current = new Promise<void>((resolve) => {
@@ -293,7 +314,8 @@ export function createRawMessageMemoryGraphStore(input: {
 	const clock = input.now ?? Date.now;
 	const readLedgerMessage = async () =>
 		input.storage.getMessageById(memoryGraphLedgerMessageId(input.ownerScope));
-	const parseLedgerMessage = (message: RawMessage | null) => parseLedger(message, input.ownerScope, clock());
+	const parseLedgerMessage = (message: RawMessage | null) =>
+		parseLedger(message, input.ownerScope, clock());
 	const readLedger = async () => parseLedgerMessage(await readLedgerMessage());
 
 	return {
@@ -318,13 +340,17 @@ export function createRawMessageMemoryGraphStore(input: {
 				}
 				const compareAndSwap = input.storage.compareAndSwapGraphLedger;
 				if (typeof compareAndSwap !== "function") {
-					return noMutationResult(plan, ["memory_graph_atomic_persistence_unavailable"]);
+					return noMutationResult(plan, [
+						"memory_graph_atomic_persistence_unavailable",
+					]);
 				}
 
 				const ledgerMessage = await readLedgerMessage();
 				const ledger = parseLedgerMessage(ledgerMessage);
 				const currentVersion = ledger.snapshot.version ?? "0";
-				const appliedIds = new Set(ledger.appliedOperations.map((operation) => operation.operationId));
+				const appliedIds = new Set(
+					ledger.appliedOperations.map((operation) => operation.operationId),
+				);
 				const pendingOperations = plan.operations.filter(
 					(operation) => !appliedIds.has(operation.operationId),
 				);
@@ -334,7 +360,10 @@ export function createRawMessageMemoryGraphStore(input: {
 						version: currentVersion,
 					});
 				}
-				if (plan.expectedVersion !== undefined && plan.expectedVersion !== currentVersion) {
+				if (
+					plan.expectedVersion !== undefined &&
+					plan.expectedVersion !== currentVersion
+				) {
 					return noMutationResult(plan, ["memory_graph_version_conflict"], {
 						conflict: true,
 						version: currentVersion,
@@ -344,14 +373,18 @@ export function createRawMessageMemoryGraphStore(input: {
 				const snapshot = cloneSnapshot(ledger.snapshot);
 				const nodes = new Map(snapshot.nodes.map((node) => [node.id, node]));
 				const edges = new Map(snapshot.edges.map((edge) => [edge.id, edge]));
-				const clusters = new Map(snapshot.clusters.map((cluster) => [cluster.clusterId, cluster]));
+				const clusters = new Map(
+					snapshot.clusters.map((cluster) => [cluster.clusterId, cluster]),
+				);
 				for (const node of plan.candidateNodes) nodes.set(node.id, node);
 				for (const edge of plan.candidateEdges) edges.set(edge.id, edge);
 				for (const candidate of plan.candidateClusters ?? []) {
 					const candidateNodes = new Set(candidate.nodeIds);
 					for (const [clusterId, cluster] of clusters) {
 						if (clusterId === candidate.clusterId) continue;
-						const remainingNodeIds = cluster.nodeIds.filter((nodeId) => !candidateNodes.has(nodeId));
+						const remainingNodeIds = cluster.nodeIds.filter(
+							(nodeId) => !candidateNodes.has(nodeId),
+						);
 						if (remainingNodeIds.length === 0) clusters.delete(clusterId);
 						else if (remainingNodeIds.length !== cluster.nodeIds.length) {
 							clusters.set(clusterId, {
@@ -377,7 +410,10 @@ export function createRawMessageMemoryGraphStore(input: {
 					schemaVersion: 1,
 					ownerScope: { ...input.ownerScope },
 					snapshot: updatedSnapshot,
-					appliedOperations: [...ledger.appliedOperations, ...pendingOperations],
+					appliedOperations: [
+						...ledger.appliedOperations,
+						...pendingOperations,
+					],
 				};
 				const ledgerUpdate: RawMessage = {
 					messageId: memoryGraphLedgerMessageId(input.ownerScope),
@@ -402,9 +438,15 @@ export function createRawMessageMemoryGraphStore(input: {
 					const latestLedger = await readLedger();
 					const latestVersion = latestLedger.snapshot.version ?? "0";
 					const latestAppliedIds = new Set(
-						latestLedger.appliedOperations.map((operation) => operation.operationId),
+						latestLedger.appliedOperations.map(
+							(operation) => operation.operationId,
+						),
 					);
-					if (plan.operations.every((operation) => latestAppliedIds.has(operation.operationId))) {
+					if (
+						plan.operations.every((operation) =>
+							latestAppliedIds.has(operation.operationId),
+						)
+					) {
 						return noMutationResult(plan, ["memory_graph_operation_replayed"], {
 							replayed: true,
 							version: latestVersion,
@@ -444,7 +486,9 @@ export function createRawMessageMemoryGraphStore(input: {
 					reasonCodes: ["memory_graph_scope_mismatch"],
 				};
 			}
-			const nodesById = new Map(ledger.snapshot.nodes.map((node) => [node.id, node]));
+			const nodesById = new Map(
+				ledger.snapshot.nodes.map((node) => [node.id, node]),
+			);
 			const root = nodesById.get(query.nodeId);
 			const visited = new Set<string>();
 			const queue = root ? [root.id] : [];
@@ -454,13 +498,21 @@ export function createRawMessageMemoryGraphStore(input: {
 				visited.add(nodeId);
 				const node = nodesById.get(nodeId);
 				const metadataSourceIds = Array.isArray(node?.metadata?.sourceNodeIds)
-					? node.metadata.sourceNodeIds.filter((value): value is string => typeof value === "string")
+					? node.metadata.sourceNodeIds.filter(
+							(value): value is string => typeof value === "string",
+						)
 					: [];
 				const adjacentSourceIds = ledger.snapshot.edges
 					.filter(
-						(edge) => edge.kind === "supersede" && (edge.toNodeId === nodeId || edge.fromNodeId === nodeId),
+						(edge) =>
+							edge.kind === "supersede" &&
+							(edge.toNodeId === nodeId || edge.fromNodeId === nodeId),
 					)
-					.flatMap((edge) => [edge.fromNodeId, edge.toNodeId, ...edge.evidenceNodeIds]);
+					.flatMap((edge) => [
+						edge.fromNodeId,
+						edge.toNodeId,
+						...edge.evidenceNodeIds,
+					]);
 				const linkedNodeIds = ledger.snapshot.nodes
 					.filter(
 						(candidate) =>
@@ -486,17 +538,21 @@ export function createRawMessageMemoryGraphStore(input: {
 			const operations = ledger.appliedOperations.filter(
 				(operation) =>
 					operation.nodeIds.some((nodeId) => visited.has(nodeId)) ||
-					(operation.supersededByNodeId !== undefined && visited.has(operation.supersededByNodeId)),
+					(operation.supersededByNodeId !== undefined &&
+						visited.has(operation.supersededByNodeId)),
 			);
 			return {
 				ownerScope: { ...input.ownerScope },
 				nodeId: query.nodeId,
 				sourceNodeIds: [...visited].filter(
-					(nodeId) => nodeId !== query.nodeId && nodesById.get(nodeId)?.type === "raw",
+					(nodeId) =>
+						nodeId !== query.nodeId && nodesById.get(nodeId)?.type === "raw",
 				),
 				edgeIds: edges.map((edge) => edge.id),
 				operationIds: operations.map((operation) => operation.operationId),
-				reasonCodes: root ? ["memory_graph_audit_trail_available"] : ["memory_graph_node_not_found"],
+				reasonCodes: root
+					? ["memory_graph_audit_trail_available"]
+					: ["memory_graph_node_not_found"],
 				metadata: {
 					traversalDepth: visited.size,
 					includeDeprecated: query.includeDeprecated === true,
@@ -538,16 +594,29 @@ export function ownerScopeFromMessage(message: RawMessage): OwnerScope {
 	return { userId: message.userId };
 }
 
-export function applicabilityFromMessage(message: RawMessage): MemoryApplicabilityContext {
+export function applicabilityFromMessage(
+	message: RawMessage,
+): MemoryApplicabilityContext {
 	const stored = message.metadata?.memoryApplicability;
 	if (isRecord(stored) && typeof stored.scope === "string") {
 		const scope = stored.scope;
-		if (["global", "task", "conversation", "channel", "project", "custom"].includes(scope)) {
+		if (
+			[
+				"global",
+				"task",
+				"conversation",
+				"channel",
+				"project",
+				"custom",
+			].includes(scope)
+		) {
 			return {
 				scope: scope as MemoryApplicabilityContext["scope"],
 				key: optionalString(stored.key),
-				validFrom: typeof stored.validFrom === "number" ? stored.validFrom : undefined,
-				validUntil: typeof stored.validUntil === "number" ? stored.validUntil : undefined,
+				validFrom:
+					typeof stored.validFrom === "number" ? stored.validFrom : undefined,
+				validUntil:
+					typeof stored.validUntil === "number" ? stored.validUntil : undefined,
 			};
 		}
 	}
@@ -557,7 +626,9 @@ export function applicabilityFromMessage(message: RawMessage): MemoryApplicabili
 }
 
 function stringArray(value: unknown): string[] {
-	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+	return Array.isArray(value)
+		? value.filter((item): item is string => typeof item === "string")
+		: [];
 }
 
 function messageToEvidence(message: RawMessage): MemoryGraphEvolutionEvidence {
@@ -565,7 +636,8 @@ function messageToEvidence(message: RawMessage): MemoryGraphEvolutionEvidence {
 	return {
 		id: message.messageId,
 		ownerScope: ownerScopeFromMessage(message),
-		timestamp: message.timestamp < 1e11 ? message.timestamp * 1000 : message.timestamp,
+		timestamp:
+			message.timestamp < 1e11 ? message.timestamp * 1000 : message.timestamp,
 		text: message.content,
 		relationGroup:
 			optionalString(message.metadata?.relationGroup) ??
@@ -573,16 +645,22 @@ function messageToEvidence(message: RawMessage): MemoryGraphEvolutionEvidence {
 		relationValue:
 			optionalString(message.metadata?.relationValue) ??
 			(isRecord(relation) ? optionalString(relation.value) : undefined),
-		topicKeys: stringArray(message.metadata?.memoryTopicKeys ?? message.metadata?.topicKeys),
+		topicKeys: stringArray(
+			message.metadata?.memoryTopicKeys ?? message.metadata?.topicKeys,
+		),
 		applicability: applicabilityFromMessage(message),
-		sourceIdentity: optionalString(message.metadata?.sourceIdentity) ?? message.messageId,
+		sourceIdentity:
+			optionalString(message.metadata?.sourceIdentity) ?? message.messageId,
 		accessCount: message.accessCount,
 		importanceScore: message.importanceScore,
 		metadata: message.metadata,
 	};
 }
 
-function withGraphMetadata(message: RawMessage, ownerScope: OwnerScope): RawMessage {
+function withGraphMetadata(
+	message: RawMessage,
+	ownerScope: OwnerScope,
+): RawMessage {
 	const applicability = applicabilityFromMessage(message);
 	return {
 		...message,
@@ -617,7 +695,9 @@ export async function storeRawMessagesWithGraphEvolution(
 		workspaceId: options.workspaceId,
 		tenantId: options.tenantId,
 	};
-	const mixedOwnerBatch = input.messages.some((message) => message.userId !== ownerScope.userId);
+	const mixedOwnerBatch = input.messages.some(
+		(message) => message.userId !== ownerScope.userId,
+	);
 	const scopedMessages = input.messages.map((message) =>
 		withGraphMetadata(message, {
 			userId: message.userId,
@@ -635,7 +715,9 @@ export async function storeRawMessagesWithGraphEvolution(
 
 	if (
 		mixedOwnerBatch ||
-		scopedMessages.some((message) => !sameOwnerScope(ownerScopeFromMessage(message), ownerScope))
+		scopedMessages.some(
+			(message) => !sameOwnerScope(ownerScopeFromMessage(message), ownerScope),
+		)
 	) {
 		return {
 			ids,

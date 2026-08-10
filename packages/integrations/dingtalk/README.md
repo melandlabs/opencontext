@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [DingTalk](https://www.dingtalk.com/) (钉钉) chat adapter for OpenContext.
 Implements the common channel interface and lets bots send / receive
 messages over DingTalk's Open Platform.

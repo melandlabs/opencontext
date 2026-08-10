@@ -26,7 +26,10 @@ const DEFAULT_OPTIONS: Required<ChunkOptions> = {
 /**
  * Split text into chunks with overlap
  */
-export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[] {
+export function chunkText(
+	text: string,
+	options: ChunkOptions = {},
+): TextChunk[] {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const chunks: TextChunk[] = [];
 
@@ -51,12 +54,17 @@ export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[]
 		const trimmedParagraph = paragraph.trim();
 
 		if (
-			currentChunk.length + trimmedParagraph.length + opts.separator.length > opts.maxChunkSize &&
+			currentChunk.length + trimmedParagraph.length + opts.separator.length >
+				opts.maxChunkSize &&
 			currentChunk.length > 0
 		) {
 			processedChunks.push(currentChunk.trim());
 
-			const overlapText = getOverlapText(currentChunk, opts.chunkOverlap, opts.separator);
+			const overlapText = getOverlapText(
+				currentChunk,
+				opts.chunkOverlap,
+				opts.separator,
+			);
 			currentChunk = overlapText + opts.separator + trimmedParagraph;
 		} else {
 			if (currentChunk.length > 0) {
@@ -82,7 +90,11 @@ export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[]
 					if (sentenceChunk.length > 0) {
 						finalChunks.push(sentenceChunk.trim());
 					}
-					const overlapText = getOverlapText(sentenceChunk, opts.chunkOverlap, " ");
+					const overlapText = getOverlapText(
+						sentenceChunk,
+						opts.chunkOverlap,
+						" ",
+					);
 					sentenceChunk = `${overlapText} ${sentence}`;
 				} else {
 					sentenceChunk += sentence;
@@ -110,7 +122,11 @@ export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[]
 	});
 }
 
-function getOverlapText(text: string, overlapSize: number, separator: string): string {
+function getOverlapText(
+	text: string,
+	overlapSize: number,
+	separator: string,
+): string {
 	if (overlapSize >= text.length) {
 		return text;
 	}
@@ -152,7 +168,10 @@ export function getOptimalChunkSize(textLength: number): number {
 /**
  * Estimate number of chunks for a text
  */
-export function estimateChunkCount(textLength: number, options?: ChunkOptions): number {
+export function estimateChunkCount(
+	textLength: number,
+	options?: ChunkOptions,
+): number {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const effectiveChunkSize = opts.maxChunkSize - opts.chunkOverlap;
 	return Math.ceil(textLength / effectiveChunkSize);

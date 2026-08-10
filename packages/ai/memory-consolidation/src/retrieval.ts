@@ -1,15 +1,13 @@
 import type { MemorySemanticDraftSuggestedType } from "./semantic-draft";
 
-export type MemorySemanticRetrievalCandidateStatus = "eligible" | "suppressed" | "fallback";
+export type MemorySemanticRetrievalCandidateStatus =
+	"eligible" | "suppressed" | "fallback";
 
-export type MemorySemanticRetrievalResultKind = "source-trace" | "semantic-draft";
+export type MemorySemanticRetrievalResultKind =
+	"source-trace" | "semantic-draft";
 
 export type MemorySemanticRetrievalDraftStatus =
-	| "active"
-	| "contested"
-	| "deprecated"
-	| "unknown"
-	| (string & {});
+	"active" | "contested" | "deprecated" | "unknown" | (string & {});
 
 export type MemorySemanticRetrievalReasonCode =
 	| "semantic_draft_candidate"
@@ -108,7 +106,9 @@ export interface MemorySemanticRetrievalPlanningInput {
 	minConfidence?: number;
 	allowContested?: boolean;
 	maxCandidates?: number;
-	getDraftRelevance?(context: MemorySemanticRetrievalRelevanceContext): number | undefined;
+	getDraftRelevance?(
+		context: MemorySemanticRetrievalRelevanceContext,
+	): number | undefined;
 }
 
 export interface MemorySemanticRetrievalPlanningResult {
@@ -237,8 +237,12 @@ function clamp01(value: number | undefined): number {
 	return Math.max(0, Math.min(1, value));
 }
 
-function retrievalReasonCodes(queryRelevance: number): MemorySemanticRetrievalReasonCode[] {
-	return queryRelevance > 0 ? ["semantic_draft_candidate", "query_relevance"] : ["semantic_draft_candidate"];
+function retrievalReasonCodes(
+	queryRelevance: number,
+): MemorySemanticRetrievalReasonCode[] {
+	return queryRelevance > 0
+		? ["semantic_draft_candidate", "query_relevance"]
+		: ["semantic_draft_candidate"];
 }
 
 function resolveMaxCandidates(value: number | undefined): number {
@@ -249,7 +253,9 @@ function resolveMaxCandidates(value: number | undefined): number {
 	return Math.max(0, Math.floor(value));
 }
 
-function resolveOptionalMaxCandidates(value: number | undefined): number | undefined {
+function resolveOptionalMaxCandidates(
+	value: number | undefined,
+): number | undefined {
 	if (value === undefined || !Number.isFinite(value)) {
 		return undefined;
 	}
@@ -263,14 +269,21 @@ function uniqueReasonCodes(
 	return [...new Set(reasonCodes)];
 }
 
-function missingIds(actual: string[], expected: string[] | undefined): string[] {
+function missingIds(
+	actual: string[],
+	expected: string[] | undefined,
+): string[] {
 	const actualSet = new Set(actual);
 
 	return (expected ?? []).filter((id) => !actualSet.has(id));
 }
 
-function resultRecordIds(results: MemorySemanticRetrievalMergedResult[]): string[] {
-	return results.flatMap((result) => (result.recordId ? [result.recordId] : result.sourceRecordIds));
+function resultRecordIds(
+	results: MemorySemanticRetrievalMergedResult[],
+): string[] {
+	return results.flatMap((result) =>
+		result.recordId ? [result.recordId] : result.sourceRecordIds,
+	);
 }
 
 export function resolveMemorySemanticRetrievalConfig(
@@ -327,7 +340,10 @@ function toSemanticMergedResult(
 		sourceRecordIds: [...candidate.sourceRecordIds],
 		confidence: candidate.confidence,
 		queryRelevance: candidate.queryRelevance,
-		reasonCodes: uniqueReasonCodes([...candidate.reasonCodes, ...config.reasonCodes]),
+		reasonCodes: uniqueReasonCodes([
+			...candidate.reasonCodes,
+			...config.reasonCodes,
+		]),
 		metadata: candidate.metadata ? { ...candidate.metadata } : undefined,
 	};
 }
@@ -340,7 +356,10 @@ function suppressSemanticCandidateForConfig(
 		...candidate,
 		sourceRecordIds: [...candidate.sourceRecordIds],
 		status: "suppressed",
-		reasonCodes: uniqueReasonCodes([...candidate.reasonCodes, ...config.reasonCodes]),
+		reasonCodes: uniqueReasonCodes([
+			...candidate.reasonCodes,
+			...config.reasonCodes,
+		]),
 		metadata: candidate.metadata ? { ...candidate.metadata } : undefined,
 	};
 }
@@ -389,7 +408,10 @@ function applyRetrievalFilters(
 			suppressed = true;
 		}
 
-		if (input.allowContested !== true && candidate.draftStatus === "contested") {
+		if (
+			input.allowContested !== true &&
+			candidate.draftStatus === "contested"
+		) {
 			reasonCodes.push("contested_memory");
 			suppressed = true;
 		}
@@ -437,22 +459,32 @@ export function buildMemorySemanticRetrievalMergedResults(
 ): MemorySemanticRetrievalMergedResultSet {
 	const config = resolveMemorySemanticRetrievalConfig(input.config);
 	const sourceResults = (
-		input.sourceResults ?? input.plan.fallbackRecordIds.map((recordId) => ({ recordId }))
+		input.sourceResults ??
+		input.plan.fallbackRecordIds.map((recordId) => ({ recordId }))
 	).map((source) => toSourceMergedResult(source, config));
 	const semanticCandidates = config.enabled
-		? input.plan.candidates.filter((candidate) => candidate.status === "eligible")
+		? input.plan.candidates.filter(
+				(candidate) => candidate.status === "eligible",
+			)
 		: [];
-	const semanticResults = semanticCandidates.map((candidate) => toSemanticMergedResult(candidate, config));
+	const semanticResults = semanticCandidates.map((candidate) =>
+		toSemanticMergedResult(candidate, config),
+	);
 	const suppressedDrafts = config.enabled
 		? input.plan.candidates
 				.filter((candidate) => candidate.status !== "eligible")
 				.map((candidate) => ({
 					...candidate,
 					sourceRecordIds: [...candidate.sourceRecordIds],
-					reasonCodes: uniqueReasonCodes([...candidate.reasonCodes, ...config.reasonCodes]),
+					reasonCodes: uniqueReasonCodes([
+						...candidate.reasonCodes,
+						...config.reasonCodes,
+					]),
 					metadata: candidate.metadata ? { ...candidate.metadata } : undefined,
 				}))
-		: input.plan.candidates.map((candidate) => suppressSemanticCandidateForConfig(candidate, config));
+		: input.plan.candidates.map((candidate) =>
+				suppressSemanticCandidateForConfig(candidate, config),
+			);
 	const results = [...sourceResults, ...semanticResults];
 
 	return {
@@ -477,13 +509,24 @@ export function buildMemorySemanticRetrievalEvalScenarioReport(
 	const selectedDraftIds = input.merged.semanticResults.flatMap((result) =>
 		result.draftId ? [result.draftId] : [],
 	);
-	const suppressedDraftIds = input.merged.suppressedDrafts.map((candidate) => candidate.draftId);
+	const suppressedDraftIds = input.merged.suppressedDrafts.map(
+		(candidate) => candidate.draftId,
+	);
 	const fallbackRecordIds = input.merged.sourceResults.flatMap((result) =>
 		result.recordId ? [result.recordId] : result.sourceRecordIds,
 	);
-	const missingSelectedDraftIds = missingIds(selectedDraftIds, input.expectations?.selectedDraftIds);
-	const missingSuppressedDraftIds = missingIds(suppressedDraftIds, input.expectations?.suppressedDraftIds);
-	const missingFallbackRecordIds = missingIds(fallbackRecordIds, input.expectations?.fallbackRecordIds);
+	const missingSelectedDraftIds = missingIds(
+		selectedDraftIds,
+		input.expectations?.selectedDraftIds,
+	);
+	const missingSuppressedDraftIds = missingIds(
+		suppressedDraftIds,
+		input.expectations?.suppressedDraftIds,
+	);
+	const missingFallbackRecordIds = missingIds(
+		fallbackRecordIds,
+		input.expectations?.fallbackRecordIds,
+	);
 	const selectedPassed = missingSelectedDraftIds.length === 0;
 	const suppressedPassed = missingSuppressedDraftIds.length === 0;
 	const fallbackPassed = missingFallbackRecordIds.length === 0;
@@ -510,27 +553,40 @@ export function buildMemorySemanticRetrievalEvalScenarioReport(
 export function buildMemorySemanticRetrievalComparisonReport(
 	input: BuildMemorySemanticRetrievalComparisonReportInput,
 ): MemorySemanticRetrievalComparisonReport {
-	const baselineResultIds = input.baseline.results.map((result) => result.resultId);
-	const candidateResultIds = input.candidate.results.map((result) => result.resultId);
-	const baselineFallbackRecordIds = new Set(resultRecordIds(input.baseline.sourceResults));
-	const retainedFallbackRecordIds = resultRecordIds(input.candidate.sourceResults).filter((recordId) =>
-		baselineFallbackRecordIds.has(recordId),
+	const baselineResultIds = input.baseline.results.map(
+		(result) => result.resultId,
 	);
+	const candidateResultIds = input.candidate.results.map(
+		(result) => result.resultId,
+	);
+	const baselineFallbackRecordIds = new Set(
+		resultRecordIds(input.baseline.sourceResults),
+	);
+	const retainedFallbackRecordIds = resultRecordIds(
+		input.candidate.sourceResults,
+	).filter((recordId) => baselineFallbackRecordIds.has(recordId));
 	const baselineSemanticDraftIds = new Set(
-		input.baseline.semanticResults.flatMap((result) => (result.draftId ? [result.draftId] : [])),
+		input.baseline.semanticResults.flatMap((result) =>
+			result.draftId ? [result.draftId] : [],
+		),
 	);
 	const addedSemanticDrafts = input.candidate.semanticResults
-		.filter((result) => result.draftId && !baselineSemanticDraftIds.has(result.draftId))
+		.filter(
+			(result) =>
+				result.draftId && !baselineSemanticDraftIds.has(result.draftId),
+		)
 		.map((result) => ({
 			draftId: result.draftId as string,
 			sourceRecordIds: [...result.sourceRecordIds],
 			reasonCodes: [...result.reasonCodes],
 		}));
-	const suppressedDrafts = input.candidate.suppressedDrafts.map((candidate) => ({
-		draftId: candidate.draftId,
-		sourceRecordIds: [...candidate.sourceRecordIds],
-		reasonCodes: [...candidate.reasonCodes],
-	}));
+	const suppressedDrafts = input.candidate.suppressedDrafts.map(
+		(candidate) => ({
+			draftId: candidate.draftId,
+			sourceRecordIds: [...candidate.sourceRecordIds],
+			reasonCodes: [...candidate.reasonCodes],
+		}),
+	);
 	const reasonCodes = uniqueReasonCodes([
 		"semantic_retrieval_comparison",
 		"semantic_retrieval_log_only",
@@ -556,20 +612,29 @@ export function buildMemorySemanticRetrievalComparisonReport(
 		addedSemanticDrafts,
 		suppressedDrafts,
 		reasonCodes,
-		metadata: input.metadata ?? input.candidate.metadata ?? input.baseline.metadata,
+		metadata:
+			input.metadata ?? input.candidate.metadata ?? input.baseline.metadata,
 	};
 }
 
 export function buildMemorySemanticRetrievalDryRunReport(
 	input: BuildMemorySemanticRetrievalDryRunReportInput,
 ): MemorySemanticRetrievalDryRunReport {
-	const existingRecordIds = [...(input.existingRecordIds ?? input.plan.fallbackRecordIds)];
-	const addedDrafts = input.plan.candidates.filter((candidate) => candidate.status === "eligible");
-	const suppressedDrafts = input.plan.candidates.filter((candidate) => candidate.status === "suppressed");
+	const existingRecordIds = [
+		...(input.existingRecordIds ?? input.plan.fallbackRecordIds),
+	];
+	const addedDrafts = input.plan.candidates.filter(
+		(candidate) => candidate.status === "eligible",
+	);
+	const suppressedDrafts = input.plan.candidates.filter(
+		(candidate) => candidate.status === "suppressed",
+	);
 	const reasonCodes = [
 		...new Set([
 			...input.plan.candidates.flatMap((candidate) => candidate.reasonCodes),
-			...(input.plan.fallbackRecordIds.length > 0 ? (["source_trace_fallback"] as const) : []),
+			...(input.plan.fallbackRecordIds.length > 0
+				? (["source_trace_fallback"] as const)
+				: []),
 		]),
 	];
 	const metadata = input.metadata ?? input.plan.metadata;
@@ -585,7 +650,9 @@ export function buildMemorySemanticRetrievalDryRunReport(
 		},
 		query: input.plan.query,
 		existingRecordIds,
-		draftCandidateIds: input.plan.candidates.map((candidate) => candidate.draftId),
+		draftCandidateIds: input.plan.candidates.map(
+			(candidate) => candidate.draftId,
+		),
 		addedDrafts,
 		suppressedDrafts,
 		fallbackRecordIds: [...input.plan.fallbackRecordIds],

@@ -3,7 +3,8 @@ export const DEFAULT_AGENT_OUTPUT_REPLAY_CAPACITY = 256;
 
 const MAX_OUTPUT_CAPACITY = 10_000;
 
-export type AgentOutputEventBusErrorCode = "aborted" | "closed" | "invalid_capacity";
+export type AgentOutputEventBusErrorCode =
+	"aborted" | "closed" | "invalid_capacity";
 
 export class AgentOutputEventBusError extends Error {
 	constructor(
@@ -84,7 +85,10 @@ export class AgentOutputEventBus<T> {
 	subscribe(options: AgentOutputSubscriptionOptions = {}): AsyncIterable<T> {
 		const subscriber: Subscriber<T> = {
 			id: this.nextSubscriberId++,
-			pending: options.replay === false ? [] : this.replay.slice(-this.subscriberCapacity),
+			pending:
+				options.replay === false
+					? []
+					: this.replay.slice(-this.subscriberCapacity),
 			waiters: [],
 			capacityWaiters: [],
 			active: true,
@@ -120,7 +124,11 @@ export class AgentOutputEventBus<T> {
 	abort(cause: unknown): void {
 		if (this.state !== "open") return;
 		this.state = "aborted";
-		this.abortError = new AgentOutputEventBusError("aborted", "Agent output event bus aborted", cause);
+		this.abortError = new AgentOutputEventBusError(
+			"aborted",
+			"Agent output event bus aborted",
+			cause,
+		);
 		this.releaseAllCapacityWaiters();
 		for (const subscriber of this.subscribers.values()) {
 			subscriber.active = false;
@@ -134,9 +142,13 @@ export class AgentOutputEventBus<T> {
 
 	private async publishOne(event: T): Promise<void> {
 		this.assertPublishable();
-		const subscribers = [...this.subscribers.values()].filter((subscriber) => subscriber.active);
+		const subscribers = [...this.subscribers.values()].filter(
+			(subscriber) => subscriber.active,
+		);
 
-		await Promise.all(subscribers.map((subscriber) => this.waitForCapacity(subscriber)));
+		await Promise.all(
+			subscribers.map((subscriber) => this.waitForCapacity(subscriber)),
+		);
 		this.assertPublishable();
 
 		this.replay.push(event);
@@ -239,14 +251,25 @@ export class AgentOutputEventBus<T> {
 	private assertPublishable(): void {
 		if (this.state === "aborted") throw this.abortError;
 		if (this.state === "closed") {
-			throw new AgentOutputEventBusError("closed", "Cannot publish to a closed agent output event bus");
+			throw new AgentOutputEventBusError(
+				"closed",
+				"Cannot publish to a closed agent output event bus",
+			);
 		}
 	}
 }
 
-function validateCapacity(name: string, value: number, allowZero: boolean): number {
+function validateCapacity(
+	name: string,
+	value: number,
+	allowZero: boolean,
+): number {
 	const minimum = allowZero ? 0 : 1;
-	if (!Number.isInteger(value) || value < minimum || value > MAX_OUTPUT_CAPACITY) {
+	if (
+		!Number.isInteger(value) ||
+		value < minimum ||
+		value > MAX_OUTPUT_CAPACITY
+	) {
 		throw new AgentOutputEventBusError(
 			"invalid_capacity",
 			`${name} must be an integer between ${minimum} and ${MAX_OUTPUT_CAPACITY}`,

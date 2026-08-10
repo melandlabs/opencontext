@@ -12,7 +12,8 @@ import type { AgentConfig, AgentFactory, AgentProvider, IAgent } from "./types";
 // Agent Instance State
 // ============================================================================
 
-type AgentState = "uninitialized" | "initializing" | "ready" | "error" | "stopped";
+type AgentState =
+	"uninitialized" | "initializing" | "ready" | "error" | "stopped";
 
 interface AgentInstance {
 	agent: IAgent;
@@ -43,7 +44,10 @@ export class AgentRegistry {
 	 * Register a provider plugin (new interface)
 	 */
 	register(plugin: AgentPlugin): void;
-	register(providerOrPlugin: AgentProvider | AgentPlugin, factory?: AgentFactory): void {
+	register(
+		providerOrPlugin: AgentProvider | AgentPlugin,
+		factory?: AgentFactory,
+	): void {
 		if (typeof providerOrPlugin === "string") {
 			// Legacy registration with provider name and factory
 			const legacyPlugin: AgentPlugin = {
@@ -59,7 +63,9 @@ export class AgentRegistry {
 				factory: (config: AgentConfig) => {
 					const agent = factory?.(config);
 					if (!agent) {
-						throw new Error(`Failed to create agent for provider: ${providerOrPlugin}`);
+						throw new Error(
+							`Failed to create agent for provider: ${providerOrPlugin}`,
+						);
 					}
 					return agent;
 				},
@@ -131,7 +137,9 @@ export class AgentRegistry {
 						`Available: ${this.getRegistered().join(", ")}`,
 				);
 			}
-			return plugin.factory(config || { provider: configOrProvider as AgentProvider });
+			return plugin.factory(
+				config || { provider: configOrProvider as AgentProvider },
+			);
 		}
 		const plugin = this.plugins.get(configOrProvider.provider);
 		if (!plugin) {
@@ -295,7 +303,10 @@ export function getAgentRegistry(): AgentRegistry {
 /**
  * Register an agent provider factory (legacy)
  */
-export function registerAgentProvider(provider: AgentProvider, factory: AgentFactory): void {
+export function registerAgentProvider(
+	provider: AgentProvider,
+	factory: AgentFactory,
+): void {
 	getAgentRegistry().register(provider, factory);
 }
 
@@ -316,7 +327,10 @@ export function createAgentFromConfig(config: AgentConfig): IAgent {
 /**
  * Get or create a singleton agent instance
  */
-export async function getAgentInstance(provider: AgentProvider, config?: AgentConfig): Promise<IAgent> {
+export async function getAgentInstance(
+	provider: AgentProvider,
+	config?: AgentConfig,
+): Promise<IAgent> {
 	return getAgentRegistry().getInstance(provider, config);
 }
 

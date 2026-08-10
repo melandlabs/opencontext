@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [LinkedIn](https://www.linkedin.com/) messaging adapter for OpenContext.
 Authenticates with LinkedIn OAuth 2.0 and exchanges direct messages on
 behalf of the connected user.

@@ -61,7 +61,8 @@ type HubspotRefreshResponse = {
 };
 
 const HUBSPOT_TOKEN_URL = "https://api.hubapi.com/oauth/v1/token";
-const HUBSPOT_DEAL_SEARCH_URL = "https://api.hubapi.com/crm/v3/objects/deals/search";
+const HUBSPOT_DEAL_SEARCH_URL =
+	"https://api.hubapi.com/crm/v3/objects/deals/search";
 const HUBSPOT_PIPELINES_URL = "https://api.hubapi.com/crm/v3/pipelines/deals";
 
 export type PersistCredentialsOptions = {
@@ -85,7 +86,9 @@ export class HubspotClient {
 	private credentials: HubspotCredentials;
 	private readonly userId: string;
 	private readonly platformAccountId: string | null;
-	private readonly onPersistCredentials?: (opts: PersistCredentialsOptions) => Promise<void>;
+	private readonly onPersistCredentials?: (
+		opts: PersistCredentialsOptions,
+	) => Promise<void>;
 	private stageCache: Map<string, HubspotPipelineStage> | null = null;
 
 	constructor(options: ClientOptions) {
@@ -115,7 +118,14 @@ export class HubspotClient {
 		maxPages?: number;
 	}): Promise<HubspotDeal[]> {
 		const results: HubspotDeal[] = [];
-		const properties = ["dealname", "dealstage", "pipeline", "amount", "closedate", "hs_lastmodifieddate"];
+		const properties = [
+			"dealname",
+			"dealstage",
+			"pipeline",
+			"amount",
+			"closedate",
+			"hs_lastmodifieddate",
+		];
 
 		let after: string | undefined;
 		let page = 0;
@@ -150,10 +160,13 @@ export class HubspotClient {
 				payload.after = after;
 			}
 
-			const data = await this.fetchJson<HubspotSearchResponse>(HUBSPOT_DEAL_SEARCH_URL, {
-				method: "POST",
-				body: JSON.stringify(payload),
-			});
+			const data = await this.fetchJson<HubspotSearchResponse>(
+				HUBSPOT_DEAL_SEARCH_URL,
+				{
+					method: "POST",
+					body: JSON.stringify(payload),
+				},
+			);
 
 			const pageResults = data.results ?? [];
 			results.push(...pageResults);
@@ -169,7 +182,10 @@ export class HubspotClient {
 			return this.stageCache;
 		}
 
-		const pipelines = await this.fetchJson<HubspotPipelineResponse>(HUBSPOT_PIPELINES_URL, { method: "GET" });
+		const pipelines = await this.fetchJson<HubspotPipelineResponse>(
+			HUBSPOT_PIPELINES_URL,
+			{ method: "GET" },
+		);
 
 		const map = new Map<string, HubspotPipelineStage>();
 		for (const pipeline of pipelines.results ?? []) {
@@ -223,13 +239,19 @@ export class HubspotClient {
 	private async refreshAccessToken() {
 		const refreshToken = this.credentials.refreshToken;
 		if (!refreshToken) {
-			throw new AppError("unauthorized:api", "HubSpot refresh token missing. Please reconnect HubSpot.");
+			throw new AppError(
+				"unauthorized:api",
+				"HubSpot refresh token missing. Please reconnect HubSpot.",
+			);
 		}
 
 		const clientId = process.env.HUBSPOT_CLIENT_ID;
 		const clientSecret = process.env.HUBSPOT_CLIENT_SECRET;
 		if (!clientId || !clientSecret) {
-			throw new AppError("bad_request:api", "HubSpot OAuth is not configured on the server.");
+			throw new AppError(
+				"bad_request:api",
+				"HubSpot OAuth is not configured on the server.",
+			);
 		}
 
 		const params = new URLSearchParams({
@@ -247,15 +269,23 @@ export class HubspotClient {
 			body: params.toString(),
 		});
 
-		const body = (await response.json().catch(() => ({}))) as HubspotRefreshResponse;
+		const body = (await response
+			.json()
+			.catch(() => ({}))) as HubspotRefreshResponse;
 
 		if (!response.ok || !body.access_token) {
-			throw new AppError("unauthorized:api", body?.error ?? "Failed to refresh HubSpot token");
+			throw new AppError(
+				"unauthorized:api",
+				body?.error ?? "Failed to refresh HubSpot token",
+			);
 		}
 
 		this.credentials.accessToken = body.access_token;
-		this.credentials.refreshToken = body.refresh_token ?? this.credentials.refreshToken ?? null;
-		this.credentials.expiresAt = body.expires_in ? Date.now() + body.expires_in * 1000 : null;
+		this.credentials.refreshToken =
+			body.refresh_token ?? this.credentials.refreshToken ?? null;
+		this.credentials.expiresAt = body.expires_in
+			? Date.now() + body.expires_in * 1000
+			: null;
 		this.credentials.tokenType = body.token_type ?? this.credentials.tokenType;
 		this.credentials.scope = body.scope ?? this.credentials.scope ?? null;
 		this.credentials.hubId = body.hub_id ?? this.credentials.hubId ?? null;

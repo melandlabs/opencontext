@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Facebook Messenger](https://developers.facebook.com/docs/messenger-platform/)
 adapter for OpenContext. Sends and receives page messages through the Meta
 Messenger Platform.

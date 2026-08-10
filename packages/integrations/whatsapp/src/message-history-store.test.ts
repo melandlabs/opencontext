@@ -6,13 +6,23 @@
  * of protobuf artifacts (Long timestamps, binary payloads).
  */
 
-import { existsSync, mkdtempSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdtempSync,
+	readdirSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { proto } from "@whiskeysockets/baileys";
 import type { WAMessage } from "@whiskeysockets/baileys";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { WhatsAppMessageHistoryStore, sanitizeMessageForPersistence } from "./message-history-store";
+import {
+	WhatsAppMessageHistoryStore,
+	sanitizeMessageForPersistence,
+} from "./message-history-store";
 
 const aliceJid = "2000@s.whatsapp.net";
 
@@ -40,7 +50,10 @@ describe("WhatsAppMessageHistoryStore", () => {
 			accountId: "acc-1",
 			baseDir,
 		});
-		store.addMessages([makeMessage("m1", 1700000000, "hello"), makeMessage("m2", 1700000100, "world")]);
+		store.addMessages([
+			makeMessage("m1", 1700000000, "hello"),
+			makeMessage("m2", 1700000100, "world"),
+		]);
 		store.flush();
 
 		const reloaded = new WhatsAppMessageHistoryStore({
@@ -103,7 +116,9 @@ describe("WhatsAppMessageHistoryStore", () => {
 			accountId: "acc-5",
 			baseDir,
 		});
-		const batch = Array.from({ length: 510 }, (_, i) => makeMessage(`m${i}`, 1700000000 + i, `msg ${i}`));
+		const batch = Array.from({ length: 510 }, (_, i) =>
+			makeMessage(`m${i}`, 1700000000 + i, `msg ${i}`),
+		);
 		store.addMessages(batch);
 
 		const messages = await store.loadMessages(aliceJid, 600, {});
@@ -205,7 +220,9 @@ describe("WhatsAppMessageHistoryStore", () => {
 				baseDir,
 			});
 			// Dirty data is pending (debounce not elapsed) when the purge happens.
-			store.addMessages([makeMessage("pending", 1700000000, "not yet flushed")]);
+			store.addMessages([
+				makeMessage("pending", 1700000000, "not yet flushed"),
+			]);
 
 			WhatsAppMessageHistoryStore.purgeAccountData("acc-live-purge", baseDir);
 
@@ -281,7 +298,9 @@ describe("WhatsAppMessageHistoryStore", () => {
 		const dirMode = statSync(join(baseDir, "acc-perms", "messages")).mode;
 		expect(dirMode & 0o077).toBe(0);
 		const [file] = readdirSync(join(baseDir, "acc-perms", "messages"));
-		const fileMode = statSync(join(baseDir, "acc-perms", "messages", file)).mode;
+		const fileMode = statSync(
+			join(baseDir, "acc-perms", "messages", file),
+		).mode;
 		expect(fileMode & 0o077).toBe(0);
 	});
 

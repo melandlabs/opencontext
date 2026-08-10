@@ -48,7 +48,9 @@ describe("UserLocale behavior", () => {
 	});
 
 	it("promptLabel is stable English", () => {
-		expect(UserLocale.fromString("zh-Hans")?.promptLabel()).toBe("Simplified Chinese");
+		expect(UserLocale.fromString("zh-Hans")?.promptLabel()).toBe(
+			"Simplified Chinese",
+		);
 		expect(UserLocale.fromString("en")?.promptLabel()).toBe("English");
 	});
 

@@ -17,7 +17,13 @@
  * into the new location, never deleting the originals.
  */
 
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -126,7 +132,9 @@ export function migrate(): MigratedMarker | null {
 	ensureDirs();
 	if (existsSync(LOOP_PATHS.migrated)) {
 		try {
-			return JSON.parse(readFileSync(LOOP_PATHS.migrated, "utf8")) as MigratedMarker;
+			return JSON.parse(
+				readFileSync(LOOP_PATHS.migrated, "utf8"),
+			) as MigratedMarker;
 		} catch {
 			// corrupted marker — re-migrate
 		}

@@ -13,7 +13,9 @@ export interface AgentRuntimeRequest {
 	options?: AgentOptions;
 }
 
-type AgentPermissionRequest = Parameters<NonNullable<AgentOptions["onPermissionRequest"]>>[0];
+type AgentPermissionRequest = Parameters<
+	NonNullable<AgentOptions["onPermissionRequest"]>
+>[0];
 
 export type AgentRuntimePermissionRequest = AgentPermissionRequest & {
 	/** Opaque OpenContext request id exposed to clients instead of provider ids. */
@@ -77,7 +79,10 @@ export async function runAgentRuntimeRequest(
 	const agent = runtimeContext.registry.create(request.config);
 	const agentOptions = request.options ?? {};
 	const runtimeEventQueue = new RuntimeEventQueue();
-	const pendingSudoCommands = new Map<string, { command: string; cwd?: string }>();
+	const pendingSudoCommands = new Map<
+		string,
+		{ command: string; cwd?: string }
+	>();
 
 	let selectedGenerator: AsyncGenerator<AgentMessage>;
 
@@ -85,14 +90,20 @@ export async function runAgentRuntimeRequest(
 		selectedGenerator = agent.plan(request.prompt, {
 			...agentOptions,
 			onPermissionRequest: async (permissionRequest) => {
-				runtimeContext.logger.log("[AgentRuntime] Permission request (plan mode):", permissionRequest);
+				runtimeContext.logger.log(
+					"[AgentRuntime] Permission request (plan mode):",
+					permissionRequest,
+				);
 				// Planning should describe actions, not perform protected tool calls.
 				return { behavior: "allow" };
 			},
 		});
 	} else if (request.phase === "execute") {
 		if (!request.planId) {
-			throw new AgentRuntimeRequestError("planId is required for execute phase", 400);
+			throw new AgentRuntimeRequestError(
+				"planId is required for execute phase",
+				400,
+			);
 		}
 
 		const plan = agent.getPlan(request.planId);
@@ -137,11 +148,16 @@ function validateAgentRuntimeRequest(request: AgentRuntimeRequest) {
 	}
 
 	if (typeof request.prompt !== "string" || request.prompt.trim() === "") {
-		throw new AgentRuntimeRequestError("prompt must be a non-empty string", 400);
+		throw new AgentRuntimeRequestError(
+			"prompt must be a non-empty string",
+			400,
+		);
 	}
 }
 
-function resolveRuntimeContext(context: AgentRuntimeContext): ResolvedAgentRuntimeContext {
+function resolveRuntimeContext(
+	context: AgentRuntimeContext,
+): ResolvedAgentRuntimeContext {
 	return {
 		registry: context.registry ?? getAgentRegistry(),
 		permissionHandler: context.permissionHandler,
@@ -178,7 +194,10 @@ function createExecuteGenerator({
 				});
 			},
 			onPermissionRequest: async (permissionRequest) => {
-				runtimeContext.logger.log("[AgentRuntime] Permission request (execute mode):", permissionRequest);
+				runtimeContext.logger.log(
+					"[AgentRuntime] Permission request (execute mode):",
+					permissionRequest,
+				);
 				return resolvePermissionRequest({
 					permissionRequest,
 					agentOptions,
@@ -217,7 +236,10 @@ function createRunGenerator({
 				});
 			},
 			onPermissionRequest: async (permissionRequest) => {
-				runtimeContext.logger.log("[AgentRuntime] Permission request (run mode):", permissionRequest);
+				runtimeContext.logger.log(
+					"[AgentRuntime] Permission request (run mode):",
+					permissionRequest,
+				);
 
 				rememberSudoCommand(permissionRequest, pendingSudoCommands);
 
@@ -230,35 +252,39 @@ function createRunGenerator({
 			},
 		});
 
-		yield* multiplexAgentMessages(innerGenerator, runtimeEventQueue, (message) => {
-			if (
-				message.type === "tool_result" &&
-				message.output &&
-				message.toolUseId &&
-				runtimeContext.detectPasswordPrompt?.(message.output)
-			) {
-				const pendingCommand = pendingSudoCommands.get(message.toolUseId);
-				if (pendingCommand) {
-					runtimeContext.logger.log(
-						"[AgentRuntime] Detected sudo password prompt for toolUseID:",
-						message.toolUseId,
-					);
-					return [
-						{
-							type: "password_input",
-							toolUseId: message.toolUseId,
-							passwordInput: {
-								toolUseID: message.toolUseId,
-								originalCommand: pendingCommand.command,
+		yield* multiplexAgentMessages(
+			innerGenerator,
+			runtimeEventQueue,
+			(message) => {
+				if (
+					message.type === "tool_result" &&
+					message.output &&
+					message.toolUseId &&
+					runtimeContext.detectPasswordPrompt?.(message.output)
+				) {
+					const pendingCommand = pendingSudoCommands.get(message.toolUseId);
+					if (pendingCommand) {
+						runtimeContext.logger.log(
+							"[AgentRuntime] Detected sudo password prompt for toolUseID:",
+							message.toolUseId,
+						);
+						return [
+							{
+								type: "password_input",
+								toolUseId: message.toolUseId,
+								passwordInput: {
+									toolUseID: message.toolUseId,
+									originalCommand: pendingCommand.command,
+								},
 							},
-						},
-						message,
-					];
+							message,
+						];
+					}
 				}
-			}
 
-			return [message];
-		});
+				return [message];
+			},
+		);
 	})();
 }
 
@@ -274,7 +300,10 @@ function rememberSudoCommand(
 	if (typeof command === "string" && /\bsudo\b/.test(command)) {
 		pendingSudoCommands.set(permissionRequest.toolUseID, {
 			command,
-			cwd: typeof permissionRequest.toolInput?.cwd === "string" ? permissionRequest.toolInput.cwd : undefined,
+			cwd:
+				typeof permissionRequest.toolInput?.cwd === "string"
+					? permissionRequest.toolInput.cwd
+					: undefined,
 		});
 	}
 }
@@ -323,7 +352,9 @@ function resolvePermissionRequest({
 async function* multiplexAgentMessages(
 	innerGenerator: AsyncGenerator<AgentMessage>,
 	runtimeEventQueue: RuntimeEventQueue,
-	transformMessage: (message: AgentMessage) => AgentMessage[] = (message) => [message],
+	transformMessage: (message: AgentMessage) => AgentMessage[] = (message) => [
+		message,
+	],
 ): AsyncGenerator<AgentMessage> {
 	let finished = false;
 	let pendingNext = innerGenerator.next();

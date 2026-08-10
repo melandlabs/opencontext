@@ -47,12 +47,17 @@ export type Platform =
 	| "dingtalk"
 	| "qqbot";
 
-const isEmptyAttachments = (attachments?: unknown[] | null | undefined) => !attachments?.length;
+const isEmptyAttachments = (attachments?: unknown[] | null | undefined) =>
+	!attachments?.length;
 const isEmptyQuoted = (quoted: unknown | null | undefined) => quoted == null;
 
 export function isEmptyMessage(msg: ExtractedMessageInfo | null): boolean {
 	if (msg === null) return true;
-	return msg.text === "" && isEmptyAttachments(msg.attachments) && isEmptyQuoted(msg.quoted);
+	return (
+		msg.text === "" &&
+		isEmptyAttachments(msg.attachments) &&
+		isEmptyQuoted(msg.quoted)
+	);
 }
 
 export function getTgUserNameString(userInfo: TgUserInfo): string {

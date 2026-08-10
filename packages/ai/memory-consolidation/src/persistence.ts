@@ -59,11 +59,7 @@ export interface PersistedSemanticMemoryDraft {
 }
 
 export type SemanticMemoryArtifactStatus =
-	| "draft"
-	| "consolidated"
-	| "deprecated"
-	| "conflicted"
-	| (string & {});
+	"draft" | "consolidated" | "deprecated" | "conflicted" | (string & {});
 
 export interface SemanticMemoryArtifactRollbackMetadata {
 	sourceArtifactId?: string;
@@ -137,7 +133,8 @@ export interface DeserializeSemanticMemoryArtifactStorageRecordResult {
 	reasonCodes: SemanticMemoryArtifactDeserializationReasonCode[];
 }
 
-export type SemanticMemoryArtifactStorageDryRunReportStatus = "disabled" | "dry-run" | "write-ready";
+export type SemanticMemoryArtifactStorageDryRunReportStatus =
+	"disabled" | "dry-run" | "write-ready";
 
 export type SemanticMemoryArtifactStorageDryRunReportReasonCode =
 	| "artifact_storage_candidate"
@@ -214,7 +211,9 @@ function clamp01(value: number): number {
 	return Math.max(0, Math.min(1, value));
 }
 
-function copyRecord(record: SemanticMemoryArtifactStorageRecord): SemanticMemoryArtifactStorageRecord {
+function copyRecord(
+	record: SemanticMemoryArtifactStorageRecord,
+): SemanticMemoryArtifactStorageRecord {
 	return {
 		...record,
 		confidence: clamp01(record.confidence),
@@ -222,7 +221,9 @@ function copyRecord(record: SemanticMemoryArtifactStorageRecord): SemanticMemory
 		reasonCodes: [...record.reasonCodes],
 		rollback: {
 			...record.rollback,
-			metadata: record.rollback.metadata ? { ...record.rollback.metadata } : undefined,
+			metadata: record.rollback.metadata
+				? { ...record.rollback.metadata }
+				: undefined,
 		},
 		metadata: record.metadata ? { ...record.metadata } : undefined,
 	};
@@ -256,7 +257,9 @@ function buildPersistedDraft(
 	};
 }
 
-function candidateDraftId(result: SemanticMemoryDraftSummarizerProviderAdapterResult): string {
+function candidateDraftId(
+	result: SemanticMemoryDraftSummarizerProviderAdapterResult,
+): string {
 	return result.candidate.draftId;
 }
 
@@ -278,8 +281,10 @@ export function buildSemanticMemoryDraftPersistencePreparationReport(
 	input: BuildSemanticMemoryDraftPersistencePreparationReportInput,
 ): SemanticMemoryDraftPersistencePreparationReport {
 	const items: SemanticMemoryDraftPersistenceItem[] = [];
-	const skippedResults: SemanticMemoryDraftPersistenceSkippedProviderResult[] = [];
-	const reasonCodes = new Set<SemanticMemoryDraftPersistencePreparationReasonCode>();
+	const skippedResults: SemanticMemoryDraftPersistenceSkippedProviderResult[] =
+		[];
+	const reasonCodes =
+		new Set<SemanticMemoryDraftPersistencePreparationReasonCode>();
 	let responseIssueCount = 0;
 
 	for (const result of input.providerBatchReport.results) {
@@ -376,7 +381,8 @@ export function deserializeSemanticMemoryArtifactStorageRecord(
 		};
 	}
 
-	const artifact = value.artifact as unknown as SemanticMemoryArtifactStorageRecord;
+	const artifact =
+		value.artifact as unknown as SemanticMemoryArtifactStorageRecord;
 	const reasonCodes: SemanticMemoryArtifactDeserializationReasonCode[] = [];
 
 	if (!hasText(artifact.artifactId)) {
@@ -419,7 +425,10 @@ export function deserializeSemanticMemoryArtifactStorageRecord(
 		reasonCodes.push("missing_competition_key");
 	}
 
-	if (!Number.isFinite(artifact.createdAt) || !Number.isFinite(artifact.updatedAt)) {
+	if (
+		!Number.isFinite(artifact.createdAt) ||
+		!Number.isFinite(artifact.updatedAt)
+	) {
 		reasonCodes.push("missing_timestamps");
 	}
 
@@ -484,7 +493,9 @@ export async function persistSemanticMemoryDrafts(
 	input: PersistSemanticMemoryDraftsInput,
 ): Promise<PersistSemanticMemoryDraftsResult> {
 	const now = input.now ?? Date.now();
-	const plannedDrafts = input.items.map((item) => buildPersistedDraft(item, now));
+	const plannedDrafts = input.items.map((item) =>
+		buildPersistedDraft(item, now),
+	);
 
 	if (input.enabled !== true) {
 		return {

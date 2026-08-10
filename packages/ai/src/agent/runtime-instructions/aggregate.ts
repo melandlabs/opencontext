@@ -1,10 +1,20 @@
 import { z } from "zod";
 
-import { AgentGoalSchema, AgentGoalUpdateSchema, CreateAgentGoalInputSchema } from "./schema";
+import {
+	AgentGoalSchema,
+	AgentGoalUpdateSchema,
+	CreateAgentGoalInputSchema,
+} from "./schema";
 import { assertGoalStatusTransition } from "./state-machine";
-import type { AgentGoal, AgentGoalUpdate, CreateAgentGoalInput, GoalStatus } from "./types";
+import type {
+	AgentGoal,
+	AgentGoalUpdate,
+	CreateAgentGoalInput,
+	GoalStatus,
+} from "./types";
 
-export type AgentGoalDomainErrorCode = "invalid_goal" | "revision_conflict" | "invalid_transition";
+export type AgentGoalDomainErrorCode =
+	"invalid_goal" | "revision_conflict" | "invalid_transition";
 
 export class AgentGoalDomainError extends Error {
 	constructor(
@@ -54,7 +64,11 @@ export function reviseAgentGoal(params: {
 			deadline: optionalUpdate(update, "deadline", params.current.deadline),
 			maxTurns: optionalUpdate(update, "maxTurns", params.current.maxTurns),
 			maxTokens: optionalUpdate(update, "maxTokens", params.current.maxTokens),
-			maxDurationSeconds: optionalUpdate(update, "maxDurationSeconds", params.current.maxDurationSeconds),
+			maxDurationSeconds: optionalUpdate(
+				update,
+				"maxDurationSeconds",
+				params.current.maxDurationSeconds,
+			),
 			revision: params.current.revision + 1,
 			updatedAt: params.now.toISOString(),
 		});
@@ -94,7 +108,10 @@ export function transitionAgentGoal(params: {
 	}
 }
 
-function assertExpectedRevision(goal: AgentGoal, expectedRevision: number): void {
+function assertExpectedRevision(
+	goal: AgentGoal,
+	expectedRevision: number,
+): void {
 	if (goal.revision !== expectedRevision) {
 		throw new AgentGoalDomainError(
 			"revision_conflict",
@@ -118,14 +135,19 @@ function definedFields(update: AgentGoalUpdate): Record<string, unknown> {
 			([key, value]) =>
 				value !== undefined &&
 				value !== null &&
-				!["deadline", "maxTurns", "maxTokens", "maxDurationSeconds"].includes(key),
+				!["deadline", "maxTurns", "maxTokens", "maxDurationSeconds"].includes(
+					key,
+				),
 		),
 	);
 }
 
 function optionalUpdate<T>(
 	update: AgentGoalUpdate,
-	key: keyof Pick<AgentGoalUpdate, "deadline" | "maxTurns" | "maxTokens" | "maxDurationSeconds">,
+	key: keyof Pick<
+		AgentGoalUpdate,
+		"deadline" | "maxTurns" | "maxTokens" | "maxDurationSeconds"
+	>,
 	current: T | undefined,
 ): T | undefined {
 	if (!Object.hasOwn(update, key)) return current;
@@ -134,6 +156,7 @@ function optionalUpdate<T>(
 }
 
 function invalidGoal(message: string, cause: unknown): AgentGoalDomainError {
-	const detail = cause instanceof z.ZodError ? `: ${cause.issues[0]?.message}` : "";
+	const detail =
+		cause instanceof z.ZodError ? `: ${cause.issues[0]?.message}` : "";
 	return new AgentGoalDomainError("invalid_goal", `${message}${detail}`, cause);
 }

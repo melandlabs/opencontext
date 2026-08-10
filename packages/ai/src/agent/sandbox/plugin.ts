@@ -49,7 +49,10 @@ export function detectRuntime(filePath: string): {
 /**
  * Get the script path to use inside container/sandbox
  */
-export function getContainerScriptPath(filePath: string, workDir: string): string {
+export function getContainerScriptPath(
+	filePath: string,
+	workDir: string,
+): string {
 	if (filePath.startsWith(workDir)) {
 		return filePath.substring(workDir.length);
 	}
@@ -62,7 +65,8 @@ export function getContainerScriptPath(filePath: string, workDir: string): strin
 export function isCommandAvailable(command: string): boolean {
 	try {
 		const platform = process.platform;
-		const shellCommand = platform === "win32" ? `where ${command}` : `which ${command}`;
+		const shellCommand =
+			platform === "win32" ? `where ${command}` : `which ${command}`;
 
 		execSync(shellCommand, { stdio: "ignore" });
 		return true;
@@ -95,7 +99,11 @@ export abstract class BaseSandboxProvider implements ISandboxProvider {
 
 	abstract isAvailable(): Promise<boolean>;
 	abstract exec(options: SandboxExecOptions): Promise<SandboxExecResult>;
-	abstract runScript(filePath: string, workDir: string, options?: ScriptOptions): Promise<SandboxExecResult>;
+	abstract runScript(
+		filePath: string,
+		workDir: string,
+		options?: ScriptOptions,
+	): Promise<SandboxExecResult>;
 	abstract getCapabilities(): SandboxCapabilities;
 
 	async stop(): Promise<void> {

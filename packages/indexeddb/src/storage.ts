@@ -52,7 +52,10 @@ export interface RawMessage {
 
 export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
 
-export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: RawMessage): RawMessage {
+export function mergeStoredChatMemoryEvidence(
+	existing: RawMessage,
+	incoming: RawMessage,
+): RawMessage {
 	if (!incoming.messageId.startsWith(CHAT_MEMORY_EVIDENCE_ID_PREFIX)) {
 		return incoming;
 	}
@@ -69,9 +72,12 @@ export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: Ra
 		attachments: existing.attachments ?? incoming.attachments,
 		embedding: existing.embedding ?? incoming.embedding,
 		embeddingModel: existing.embeddingModel ?? incoming.embeddingModel,
-		embeddingContentHash: existing.embeddingContentHash ?? incoming.embeddingContentHash,
-		embeddingDimensions: existing.embeddingDimensions ?? incoming.embeddingDimensions,
-		embeddingUpdatedAt: existing.embeddingUpdatedAt ?? incoming.embeddingUpdatedAt,
+		embeddingContentHash:
+			existing.embeddingContentHash ?? incoming.embeddingContentHash,
+		embeddingDimensions:
+			existing.embeddingDimensions ?? incoming.embeddingDimensions,
+		embeddingUpdatedAt:
+			existing.embeddingUpdatedAt ?? incoming.embeddingUpdatedAt,
 		metadata: {
 			...(existing.metadata ?? {}),
 			...(incoming.metadata ?? {}),
@@ -86,7 +92,8 @@ export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: Ra
 		summaryRefId: existing.summaryRefId ?? incoming.summaryRefId,
 		deprecatedAt: existing.deprecatedAt ?? incoming.deprecatedAt,
 		deprecationReason: existing.deprecationReason ?? incoming.deprecationReason,
-		supersededBySummaryId: existing.supersededBySummaryId ?? incoming.supersededBySummaryId,
+		supersededBySummaryId:
+			existing.supersededBySummaryId ?? incoming.supersededBySummaryId,
 	};
 }
 
@@ -136,31 +143,44 @@ export interface MemorySummaryRecord {
 	updatedAt: number;
 }
 
-export const MEMORY_SUMMARY_OWNER_SCOPE_CONFLICT = "memory_summary_owner_scope_conflict";
+export const MEMORY_SUMMARY_OWNER_SCOPE_CONFLICT =
+	"memory_summary_owner_scope_conflict";
 export const MEMORY_SUMMARY_WRITE_CONFLICT = "memory_summary_write_conflict";
-export const MEMORY_SUMMARY_PUBLICATION_DIMENSION = "__opencontextMemoryPublication";
-export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION = "__opencontextMemoryPublicationRevision";
+export const MEMORY_SUMMARY_PUBLICATION_DIMENSION =
+	"__opencontextMemoryPublication";
+export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION =
+	"__opencontextMemoryPublicationRevision";
 export const MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION =
 	"__opencontextMemoryPublicationExpectedRevision";
 
 export function isMemorySummaryPublicationPendingRecord(summary: {
 	dimensions?: MemorySummaryRecord["dimensions"] | null;
 }): boolean {
-	return summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_DIMENSION] === "pending";
+	return (
+		summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_DIMENSION] === "pending"
+	);
 }
 
 export function memorySummaryPublicationRevisionRecord(summary: {
 	dimensions?: MemorySummaryRecord["dimensions"] | null;
 }): string | undefined {
-	const revision = summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION];
-	return typeof revision === "string" && revision.length > 0 ? revision : undefined;
+	const revision =
+		summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION];
+	return typeof revision === "string" && revision.length > 0
+		? revision
+		: undefined;
 }
 
 function memorySummaryPublicationExpectedRevisionRecord(summary: {
 	dimensions?: MemorySummaryRecord["dimensions"] | null;
 }): string | undefined {
-	const revision = summary.dimensions?.[MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION];
-	return typeof revision === "string" && revision.length > 0 ? revision : undefined;
+	const revision =
+		summary.dimensions?.[
+			MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION
+		];
+	return typeof revision === "string" && revision.length > 0
+		? revision
+		: undefined;
 }
 
 export function withoutMemorySummaryPublicationExpectedRevision<
@@ -181,7 +201,8 @@ export function hasMemorySummaryPublicationRevisionConflict(
 	if (isMemorySummaryPublicationPendingRecord(incoming)) return false;
 	const existingRevision = memorySummaryPublicationRevisionRecord(existing);
 	if (!existingRevision) return false;
-	const expectedRevision = memorySummaryPublicationExpectedRevisionRecord(incoming);
+	const expectedRevision =
+		memorySummaryPublicationExpectedRevisionRecord(incoming);
 	if (expectedRevision) return existingRevision !== expectedRevision;
 	return memorySummaryPublicationRevisionRecord(incoming) !== existingRevision;
 }
@@ -221,7 +242,9 @@ export interface RawMessageStorage {
 	storeMessage(message: RawMessage): Promise<number>;
 	storeMessages(messages: RawMessage[]): Promise<number[]>;
 	queryMessages(query: RawMessageQuery): Promise<RawMessage[]>;
-	queryMessagesGrouped(query: RawMessageQuery): Promise<Record<string, RawMessage[]>>;
+	queryMessagesGrouped(
+		query: RawMessageQuery,
+	): Promise<Record<string, RawMessage[]>>;
 	getStats(): Promise<RawMessageStats>;
 	getMessageById(messageId: string): Promise<RawMessage | null>;
 	deleteOldMessages(olderThan: number, userId?: string): Promise<number>;
@@ -231,7 +254,11 @@ export interface RawMessageStorage {
 	upsertSummaries(summaries: MemorySummaryRecord[]): Promise<void>;
 	querySummaries(query: MemorySummaryQuery): Promise<MemorySummaryRecord[]>;
 
-	markMessagesAccessed(messageIds: string[], at?: number, userId?: string): Promise<number>;
+	markMessagesAccessed(
+		messageIds: string[],
+		at?: number,
+		userId?: string,
+	): Promise<number>;
 	promoteMessagesToStage(
 		messageIds: string[],
 		stage: MemoryStage,
@@ -241,7 +268,11 @@ export interface RawMessageStorage {
 			promotedAt?: number;
 		},
 	): Promise<number>;
-	archiveMessages(messageIds: string[], archivedAt?: number, userId?: string): Promise<number>;
+	archiveMessages(
+		messageIds: string[],
+		archivedAt?: number,
+		userId?: string,
+	): Promise<number>;
 	/**
 	 * Soft-deprecate messages: write `deprecatedAt` (+ optional reason /
 	 * supersededBySummaryId) without deleting the rows. Returns the number of
@@ -268,7 +299,10 @@ export interface RawMessageStorage {
 		},
 	): Promise<number>;
 	hardDeleteArchived(olderThan: number, userId?: string): Promise<number>;
-	updateMessageEmbeddings(updates: RawMessageEmbeddingUpdate[], userId?: string): Promise<number>;
+	updateMessageEmbeddings(
+		updates: RawMessageEmbeddingUpdate[],
+		userId?: string,
+	): Promise<number>;
 }
 
 export interface RawMessageStorageManager extends RawMessageStorage {

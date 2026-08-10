@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Asana](https://asana.com/) integration for OpenContext. Provides a typed
 client and React UI primitives for working with Asana tasks, projects, and
 workspaces.

@@ -11,7 +11,10 @@ import type {
 	MemoryGraphUpdateResult,
 	OwnerScope,
 } from "./graph-contracts";
-import { buildMemoryRelationCandidates, judgeMemoryRelationCandidates } from "./pipeline";
+import {
+	buildMemoryRelationCandidates,
+	judgeMemoryRelationCandidates,
+} from "./pipeline";
 
 /**
  * Three rather than two: two agreeing contexts is thin evidence that a
@@ -51,12 +54,7 @@ export interface BuildMemoryGraphEvolutionPlanInput {
 }
 
 export type MemoryGraphEvolutionRunStatus =
-	| "disabled"
-	| "planned"
-	| "applied"
-	| "no-op"
-	| "conflict"
-	| "failed";
+	"disabled" | "planned" | "applied" | "no-op" | "conflict" | "failed";
 
 export interface MemoryGraphEvolutionRunResult {
 	status: MemoryGraphEvolutionRunStatus;
@@ -88,27 +86,41 @@ function stablePart(value: string): string {
 
 export function ownerScopeKey(scope: OwnerScope): string {
 	return encodeURIComponent(
-		JSON.stringify([scope.tenantId ?? null, scope.workspaceId ?? null, scope.userId]),
+		JSON.stringify([
+			scope.tenantId ?? null,
+			scope.workspaceId ?? null,
+			scope.userId,
+		]),
 	);
 }
 
 export function sameOwnerScope(left: OwnerScope, right: OwnerScope): boolean {
 	return (
-		left.userId === right.userId && left.workspaceId === right.workspaceId && left.tenantId === right.tenantId
+		left.userId === right.userId &&
+		left.workspaceId === right.workspaceId &&
+		left.tenantId === right.tenantId
 	);
 }
 
-function applicabilityKey(applicability: MemoryApplicabilityContext | undefined): string {
+function applicabilityKey(
+	applicability: MemoryApplicabilityContext | undefined,
+): string {
 	if (!applicability || applicability.scope === "global") return "global";
 	return `${applicability.scope}:${applicability.key ?? ""}`;
 }
 
-function applicabilityActive(applicability: MemoryApplicabilityContext | undefined, now: number): boolean {
+function applicabilityActive(
+	applicability: MemoryApplicabilityContext | undefined,
+	now: number,
+): boolean {
 	if (!applicability) return true;
 	if (applicability.validFrom !== undefined && now < applicability.validFrom) {
 		return false;
 	}
-	if (applicability.validUntil !== undefined && now > applicability.validUntil) {
+	if (
+		applicability.validUntil !== undefined &&
+		now > applicability.validUntil
+	) {
 		return false;
 	}
 	return true;
@@ -148,7 +160,9 @@ export function buildMemoryGraphCompetitionComponents(input: {
 	clusters: MemoryGraphClusterSnapshot[];
 	edges: MemoryGraphEdge[];
 }): MemoryGraphCompetitionComponent[] {
-	const clustersById = new Map(input.clusters.map((cluster) => [cluster.clusterId, cluster]));
+	const clustersById = new Map(
+		input.clusters.map((cluster) => [cluster.clusterId, cluster]),
+	);
 	const clusterIdByNodeId = new Map<string, string>();
 	for (const cluster of input.clusters) {
 		for (const nodeId of cluster.nodeIds) {
@@ -171,7 +185,11 @@ export function buildMemoryGraphCompetitionComponents(input: {
 		if (!leftId || !rightId || leftId === rightId) continue;
 		const left = clustersById.get(leftId);
 		const right = clustersById.get(rightId);
-		if (!left || !right || !applicabilityEquivalent(left.applicability, right.applicability)) {
+		if (
+			!left ||
+			!right ||
+			!applicabilityEquivalent(left.applicability, right.applicability)
+		) {
 			continue;
 		}
 		const leftPeers = adjacency.get(leftId) ?? new Set<string>();
@@ -199,7 +217,9 @@ export function buildMemoryGraphCompetitionComponents(input: {
 		}
 		const clusters = componentIds
 			.map((id) => clustersById.get(id))
-			.filter((cluster): cluster is MemoryGraphClusterSnapshot => Boolean(cluster));
+			.filter((cluster): cluster is MemoryGraphClusterSnapshot =>
+				Boolean(cluster),
+			);
 		if (clusters.length < 2) continue;
 		components.push({
 			componentKey: `competition-component:${componentIds.sort().map(stablePart).join(":")}`,
@@ -209,7 +229,9 @@ export function buildMemoryGraphCompetitionComponents(input: {
 	return components;
 }
 
-function evidenceToRecord(evidence: MemoryGraphEvolutionEvidence): MemoryEvidenceRecord {
+function evidenceToRecord(
+	evidence: MemoryGraphEvolutionEvidence,
+): MemoryEvidenceRecord {
 	return {
 		id: evidence.id,
 		userId: evidence.ownerScope.userId,
@@ -230,7 +252,9 @@ function evidenceToRecord(evidence: MemoryGraphEvolutionEvidence): MemoryEvidenc
 function candidateKeys(record: MemoryEvidenceRecord): string[] {
 	const relationGroup = record.metadata?.relationGroup;
 	const topicKeys = Array.isArray(record.metadata?.topicKeys)
-		? record.metadata.topicKeys.filter((value): value is string => typeof value === "string")
+		? record.metadata.topicKeys.filter(
+				(value): value is string => typeof value === "string",
+			)
 		: [];
 	return unique([
 		...(typeof relationGroup === "string" ? [`relation:${relationGroup}`] : []),
@@ -261,7 +285,10 @@ function edgeId(kind: string, left: string, right: string): string {
 	return `edge:${kind}:${[left, right].sort().map(stablePart).join(":")}`;
 }
 
-function singletonCluster(node: MemoryGraphNode, now: number): MemoryGraphClusterSnapshot {
+function singletonCluster(
+	node: MemoryGraphNode,
+	now: number,
+): MemoryGraphClusterSnapshot {
 	return {
 		clusterId: `cluster:${stablePart(node.id)}`,
 		ownerScope: node.ownerScope,
@@ -274,13 +301,17 @@ function singletonCluster(node: MemoryGraphNode, now: number): MemoryGraphCluste
 	};
 }
 
-function cloneCluster(cluster: MemoryGraphClusterSnapshot): MemoryGraphClusterSnapshot {
+function cloneCluster(
+	cluster: MemoryGraphClusterSnapshot,
+): MemoryGraphClusterSnapshot {
 	return {
 		...cluster,
 		ownerScope: { ...cluster.ownerScope },
 		nodeIds: [...cluster.nodeIds],
 		reasonCodes: [...cluster.reasonCodes],
-		applicability: cluster.applicability ? { ...cluster.applicability } : undefined,
+		applicability: cluster.applicability
+			? { ...cluster.applicability }
+			: undefined,
 		metadata: cluster.metadata ? { ...cluster.metadata } : undefined,
 	};
 }
@@ -304,8 +335,13 @@ export function buildMemoryGraphEvolutionPlan(
 	input: BuildMemoryGraphEvolutionPlanInput,
 ): MemoryGraphUpdatePlan {
 	const existingNodeIds = new Set(input.snapshot.nodes.map((node) => node.id));
-	const existingSourceIdentities = new Set(input.snapshot.nodes.map((node) => node.sourceId ?? node.id));
-	const candidateBySourceIdentity = new Map<string, MemoryGraphEvolutionEvidence>();
+	const existingSourceIdentities = new Set(
+		input.snapshot.nodes.map((node) => node.sourceId ?? node.id),
+	);
+	const candidateBySourceIdentity = new Map<
+		string,
+		MemoryGraphEvolutionEvidence
+	>();
 	for (const evidence of input.candidateEvidence) {
 		if (!sameOwnerScope(evidence.ownerScope, input.ownerScope)) continue;
 		const sourceIdentity = evidence.sourceIdentity ?? evidence.id;
@@ -345,7 +381,10 @@ export function buildMemoryGraphEvolutionPlan(
 	const candidates = buildMemoryRelationCandidates({
 		records,
 		getCandidateKeys: candidateKeys,
-	}).filter((candidate) => newIds.has(candidate.fromRecordId) || newIds.has(candidate.toRecordId));
+	}).filter(
+		(candidate) =>
+			newIds.has(candidate.fromRecordId) || newIds.has(candidate.toRecordId),
+	);
 	const evidenceById = allEvidenceById;
 	const judgments = judgeMemoryRelationCandidates({
 		records,
@@ -377,10 +416,19 @@ export function buildMemoryGraphEvolutionPlan(
 				return {
 					relation: "related",
 					weight: 0.45,
-					reasonCodes: ["candidate_related", "candidate_related_applicability_mismatch"],
+					reasonCodes: [
+						"candidate_related",
+						"candidate_related_applicability_mismatch",
+					],
 				};
 			}
-			if (!applicabilityOverlaps(left.applicability, right.applicability, input.now)) {
+			if (
+				!applicabilityOverlaps(
+					left.applicability,
+					right.applicability,
+					input.now,
+				)
+			) {
 				return {
 					relation: "uncertain",
 					weight: 0,
@@ -391,7 +439,9 @@ export function buildMemoryGraphEvolutionPlan(
 		},
 	}).judgments.filter((judgment) => judgment.relation !== "uncertain");
 
-	const relevantEvidenceIds = new Set(effectiveNewEvidence.map((item) => item.id));
+	const relevantEvidenceIds = new Set(
+		effectiveNewEvidence.map((item) => item.id),
+	);
 	for (const judgment of judgments) {
 		relevantEvidenceIds.add(judgment.candidate.fromRecordId);
 		relevantEvidenceIds.add(judgment.candidate.toRecordId);
@@ -402,7 +452,9 @@ export function buildMemoryGraphEvolutionPlan(
 			const evidence = evidenceById.get(id);
 			return evidence ? [graphNode(evidence)] : [];
 		});
-	const nodesById = new Map(input.snapshot.nodes.map((node) => [node.id, node]));
+	const nodesById = new Map(
+		input.snapshot.nodes.map((node) => [node.id, node]),
+	);
 	for (const node of candidateNodes) nodesById.set(node.id, node);
 
 	const operations: MemoryGraphOperation[] = candidateNodes.map((node) => ({
@@ -412,18 +464,25 @@ export function buildMemoryGraphEvolutionPlan(
 		nodeIds: [node.id],
 		reasonCodes: ["new_evidence_node"],
 	}));
-	const existingEdges = new Map(input.snapshot.edges.map((edge) => [edge.id, edge]));
+	const existingEdges = new Map(
+		input.snapshot.edges.map((edge) => [edge.id, edge]),
+	);
 	const candidateEdges: MemoryGraphEdge[] = [];
 
 	for (const judgment of judgments) {
 		const kind = judgment.relation as "support" | "compete" | "related";
-		const id = edgeId(kind, judgment.candidate.fromRecordId, judgment.candidate.toRecordId);
+		const id = edgeId(
+			kind,
+			judgment.candidate.fromRecordId,
+			judgment.candidate.toRecordId,
+		);
 		const previous = existingEdges.get(id);
 		const evidenceNodeIds = unique([
 			...(previous?.evidenceNodeIds ?? []),
-			...[judgment.candidate.fromRecordId, judgment.candidate.toRecordId].filter((nodeId) =>
-				newIds.has(nodeId),
-			),
+			...[
+				judgment.candidate.fromRecordId,
+				judgment.candidate.toRecordId,
+			].filter((nodeId) => newIds.has(nodeId)),
 		]);
 		const left = evidenceById.get(judgment.candidate.fromRecordId);
 		const right = evidenceById.get(judgment.candidate.toRecordId);
@@ -434,13 +493,21 @@ export function buildMemoryGraphEvolutionPlan(
 			fromNodeId: judgment.candidate.fromRecordId,
 			toNodeId: judgment.candidate.toRecordId,
 			kind,
-			weight: previous ? Math.min(1, previous.weight + judgment.weight * 0.25) : judgment.weight,
+			weight: previous
+				? Math.min(1, previous.weight + judgment.weight * 0.25)
+				: judgment.weight,
 			confidence: judgment.candidate.score,
 			evidenceNodeIds,
-			reasonCodes: unique([...(previous?.reasonCodes ?? []), ...judgment.reasonCodes]),
+			reasonCodes: unique([
+				...(previous?.reasonCodes ?? []),
+				...judgment.reasonCodes,
+			]),
 			createdAt: previous?.createdAt ?? input.now,
 			updatedAt: input.now,
-			applicability: applicabilityEquivalent(left.applicability, right.applicability)
+			applicability: applicabilityEquivalent(
+				left.applicability,
+				right.applicability,
+			)
 				? (left.applicability ?? right.applicability)
 				: undefined,
 			metadata: {
@@ -449,7 +516,11 @@ export function buildMemoryGraphEvolutionPlan(
 		};
 		candidateEdges.push(edge);
 		operations.push({
-			operationId: operationId(planId, previous ? "reinforce-edge" : "create-edge", id),
+			operationId: operationId(
+				planId,
+				previous ? "reinforce-edge" : "create-edge",
+				id,
+			),
 			ownerScope: input.ownerScope,
 			kind: previous ? "reinforce-edge" : "create-edge",
 			nodeIds: [edge.fromNodeId, edge.toNodeId],
@@ -459,11 +530,15 @@ export function buildMemoryGraphEvolutionPlan(
 	}
 
 	const clusters = new Map(
-		input.snapshot.clusters.map((cluster) => [cluster.clusterId, cloneCluster(cluster)]),
+		input.snapshot.clusters.map((cluster) => [
+			cluster.clusterId,
+			cloneCluster(cluster),
+		]),
 	);
 	const clusterByNode = new Map<string, string>();
 	for (const cluster of clusters.values()) {
-		for (const nodeId of cluster.nodeIds) clusterByNode.set(nodeId, cluster.clusterId);
+		for (const nodeId of cluster.nodeIds)
+			clusterByNode.set(nodeId, cluster.clusterId);
 	}
 	const touchedClusterIds = new Set<string>();
 	for (const node of candidateNodes) {
@@ -485,17 +560,29 @@ export function buildMemoryGraphEvolutionPlan(
 		const leftCluster = clusters.get(leftClusterId);
 		const rightCluster = clusters.get(rightClusterId);
 		if (!leftCluster || !rightCluster) continue;
-		if (!applicabilityEquivalent(leftCluster.applicability, rightCluster.applicability)) {
+		if (
+			!applicabilityEquivalent(
+				leftCluster.applicability,
+				rightCluster.applicability,
+			)
+		) {
 			continue;
 		}
-		const target = input.snapshot.clusters.some((cluster) => cluster.clusterId === rightClusterId)
+		const target = input.snapshot.clusters.some(
+			(cluster) => cluster.clusterId === rightClusterId,
+		)
 			? rightCluster
 			: leftCluster;
-		const source = target.clusterId === leftClusterId ? rightCluster : leftCluster;
+		const source =
+			target.clusterId === leftClusterId ? rightCluster : leftCluster;
 		target.nodeIds = unique([...target.nodeIds, ...source.nodeIds]);
 		target.updatedAt = input.now;
-		target.reasonCodes = unique([...target.reasonCodes, "support_cluster_join"]);
-		for (const nodeId of source.nodeIds) clusterByNode.set(nodeId, target.clusterId);
+		target.reasonCodes = unique([
+			...target.reasonCodes,
+			"support_cluster_join",
+		]);
+		for (const nodeId of source.nodeIds)
+			clusterByNode.set(nodeId, target.clusterId);
 		clusters.delete(source.clusterId);
 		touchedClusterIds.delete(source.clusterId);
 		touchedClusterIds.add(target.clusterId);
@@ -504,14 +591,18 @@ export function buildMemoryGraphEvolutionPlan(
 	for (const edge of candidateEdges.filter((item) => item.kind === "compete")) {
 		const leftClusterId = clusterByNode.get(edge.fromNodeId);
 		const rightClusterId = clusterByNode.get(edge.toNodeId);
-		if (!leftClusterId || !rightClusterId || leftClusterId === rightClusterId) continue;
+		if (!leftClusterId || !rightClusterId || leftClusterId === rightClusterId)
+			continue;
 		const competitionKey = `competition:${[leftClusterId, rightClusterId].sort().map(stablePart).join(":")}`;
 		for (const clusterId of [leftClusterId, rightClusterId]) {
 			const cluster = clusters.get(clusterId);
 			if (!cluster) continue;
 			cluster.competitionKey = competitionKey;
 			cluster.updatedAt = input.now;
-			cluster.reasonCodes = unique([...cluster.reasonCodes, "competition_preserved_before_supersession"]);
+			cluster.reasonCodes = unique([
+				...cluster.reasonCodes,
+				"competition_preserved_before_supersession",
+			]);
 			touchedClusterIds.add(clusterId);
 		}
 	}
@@ -532,7 +623,8 @@ export function buildMemoryGraphEvolutionPlan(
 	const minIndependentContexts = Math.max(
 		2,
 		Math.floor(
-			input.applicabilityBroadening?.minIndependentContexts ?? DEFAULT_BROADEN_MIN_INDEPENDENT_CONTEXTS,
+			input.applicabilityBroadening?.minIndependentContexts ??
+				DEFAULT_BROADEN_MIN_INDEPENDENT_CONTEXTS,
 		),
 	);
 	const broadeningNodesById = new Map(
@@ -540,7 +632,10 @@ export function buildMemoryGraphEvolutionPlan(
 	);
 	const broadeningPeers = new Map<string, Set<string>>();
 	for (const edge of allEdges.values()) {
-		if (edge.kind !== "related" || !edge.reasonCodes.includes("candidate_related_applicability_mismatch")) {
+		if (
+			edge.kind !== "related" ||
+			!edge.reasonCodes.includes("candidate_related_applicability_mismatch")
+		) {
 			continue;
 		}
 		const leftId = clusterByNode.get(edge.fromNodeId);
@@ -601,7 +696,9 @@ export function buildMemoryGraphEvolutionPlan(
 			}
 		}
 		const independentContextKeys = [...contextSources.entries()]
-			.filter(([, sources]) => [...sources].some((source) => contextsPerSource.get(source) === 1))
+			.filter(([, sources]) =>
+				[...sources].some((source) => contextsPerSource.get(source) === 1),
+			)
 			.map(([key]) => key)
 			.sort();
 		if (independentContextKeys.length < minIndependentContexts) continue;
@@ -613,10 +710,17 @@ export function buildMemoryGraphEvolutionPlan(
 			if (key === "global" || !independentContextKeys.includes(key)) continue;
 			cluster.applicability = { scope: "global" };
 			cluster.updatedAt = input.now;
-			cluster.reasonCodes = unique([...cluster.reasonCodes, "applicability_broadened_across_contexts"]);
+			cluster.reasonCodes = unique([
+				...cluster.reasonCodes,
+				"applicability_broadened_across_contexts",
+			]);
 			touchedClusterIds.add(clusterId);
 			operations.push({
-				operationId: operationId(planId, "broaden-cluster-applicability", clusterId),
+				operationId: operationId(
+					planId,
+					"broaden-cluster-applicability",
+					clusterId,
+				),
 				ownerScope: input.ownerScope,
 				kind: "broaden-cluster-applicability",
 				nodeIds: [...cluster.nodeIds],
@@ -632,16 +736,22 @@ export function buildMemoryGraphEvolutionPlan(
 		if (!cluster) continue;
 		const nodeIds = new Set(cluster.nodeIds);
 		const supportEdges = [...allEdges.values()].filter(
-			(edge) => edge.kind === "support" && nodeIds.has(edge.fromNodeId) && nodeIds.has(edge.toNodeId),
+			(edge) =>
+				edge.kind === "support" &&
+				nodeIds.has(edge.fromNodeId) &&
+				nodeIds.has(edge.toNodeId),
 		);
 		cluster.supportScore = supportEdges.length
-			? supportEdges.reduce((sum, edge) => sum + edge.weight, 0) / supportEdges.length
+			? supportEdges.reduce((sum, edge) => sum + edge.weight, 0) /
+				supportEdges.length
 			: (cluster.supportScore ?? 0);
 	}
 
 	const candidateClusters = [...touchedClusterIds]
 		.map((clusterId) => clusters.get(clusterId))
-		.filter((cluster): cluster is MemoryGraphClusterSnapshot => Boolean(cluster));
+		.filter((cluster): cluster is MemoryGraphClusterSnapshot =>
+			Boolean(cluster),
+		);
 	for (const cluster of candidateClusters) {
 		operations.push({
 			operationId: operationId(planId, "upsert-cluster", cluster.clusterId),
@@ -664,7 +774,9 @@ export function buildMemoryGraphEvolutionPlan(
 		persistence: input.persistence,
 		reasonCodes: unique([
 			"incremental_graph_evolution",
-			...(candidateEdges.some((edge) => edge.kind === "support") ? ["support_evidence_applied"] : []),
+			...(candidateEdges.some((edge) => edge.kind === "support")
+				? ["support_evidence_applied"]
+				: []),
 			...(candidateEdges.some((edge) => edge.kind === "compete")
 				? ["competition_preserved_before_supersession"]
 				: []),
@@ -672,7 +784,10 @@ export function buildMemoryGraphEvolutionPlan(
 		]),
 		metadata: {
 			consideredCandidateIds: unique(
-				judgments.flatMap((judgment) => [judgment.candidate.fromRecordId, judgment.candidate.toRecordId]),
+				judgments.flatMap((judgment) => [
+					judgment.candidate.fromRecordId,
+					judgment.candidate.toRecordId,
+				]),
 			),
 			newEvidenceIds: input.newEvidence.map((evidence) => evidence.id),
 		},
@@ -708,8 +823,12 @@ export async function runMemoryGraphEvolution(
 				enabled: !input.dryRun,
 			},
 		});
-		const consideredCandidateIds = Array.isArray(plan.metadata?.consideredCandidateIds)
-			? plan.metadata.consideredCandidateIds.filter((value): value is string => typeof value === "string")
+		const consideredCandidateIds = Array.isArray(
+			plan.metadata?.consideredCandidateIds,
+		)
+			? plan.metadata.consideredCandidateIds.filter(
+					(value): value is string => typeof value === "string",
+				)
 			: [];
 
 		if (input.dryRun) {
@@ -734,7 +853,10 @@ export async function runMemoryGraphEvolution(
 			plan,
 			persistenceResult,
 			consideredCandidateIds,
-			reasonCodes: unique([...plan.reasonCodes, ...persistenceResult.diagnostics]),
+			reasonCodes: unique([
+				...plan.reasonCodes,
+				...persistenceResult.diagnostics,
+			]),
 		};
 	} catch (error) {
 		return {

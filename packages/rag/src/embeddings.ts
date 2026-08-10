@@ -35,7 +35,8 @@ async function getOpenAIClient(): Promise<OpenAI> {
 		apiKey: OPENROUTER_API_KEY,
 		baseURL: EMBEDDING_BASE_URL,
 		defaultHeaders: {
-			"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai",
+			"HTTP-Referer":
+				process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai",
 			"X-Title": "opencontext AI",
 		},
 	});
@@ -52,7 +53,9 @@ export interface EmbeddingResult {
 /**
  * Generate embedding for a single text with billing info
  */
-export async function generateEmbedding(text: string): Promise<EmbeddingResult> {
+export async function generateEmbedding(
+	text: string,
+): Promise<EmbeddingResult> {
 	try {
 		const openai = await getOpenAIClient();
 
@@ -110,7 +113,10 @@ export async function generateEmbeddings(texts: string[]): Promise<{
 
 			const actualTokens = response.usage?.total_tokens || estimatedTokens;
 			const tokensPerEmbedding = Math.ceil(actualTokens / batch.length);
-			const creditCostPerEmbedding = calculateCreditCost(response.model, tokensPerEmbedding);
+			const creditCostPerEmbedding = calculateCreditCost(
+				response.model,
+				tokensPerEmbedding,
+			);
 
 			const batchResults = response.data.map((item) => ({
 				embedding: item.embedding,
@@ -123,8 +129,14 @@ export async function generateEmbeddings(texts: string[]): Promise<{
 			allResults.push(...batchResults);
 		}
 
-		const totalTokensUsed = allResults.reduce((sum, r) => sum + r.tokensUsed, 0);
-		const totalCreditCost = allResults.reduce((sum, r) => sum + r.creditCost, 0);
+		const totalTokensUsed = allResults.reduce(
+			(sum, r) => sum + r.tokensUsed,
+			0,
+		);
+		const totalCreditCost = allResults.reduce(
+			(sum, r) => sum + r.creditCost,
+			0,
+		);
 
 		return {
 			results: allResults,

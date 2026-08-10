@@ -5,7 +5,15 @@
  * Used to persist merged API history + local turns; context is trimmed by character budget for the model.
  */
 
-import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import {
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	renameSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -88,16 +96,28 @@ class FeishuConversationStore {
 	private readonly sessionsDir: string;
 	private readonly sessionScope: string;
 
-	constructor(userId: string, domain: FeishuDomain = "feishu", memoryDir?: string, sessionScope?: string) {
+	constructor(
+		userId: string,
+		domain: FeishuDomain = "feishu",
+		memoryDir?: string,
+		sessionScope?: string,
+	) {
 		this.domain = domain;
 		this.memoryDir = memoryDir ?? getAppMemoryDir(userId);
 		this.sessionsDir = join(this.memoryDir, "channels", this.domain);
-		this.sessionScope = sessionScope && sessionScope.trim().length > 0 ? sessionScope.trim() : "default";
+		this.sessionScope =
+			sessionScope && sessionScope.trim().length > 0
+				? sessionScope.trim()
+				: "default";
 		this.ensureSessionsDir();
 	}
 
 	/** Latest timestamp (in seconds) of locally stored messages, null if none */
-	getLatestStoredTimestampSec(userId: string, chatId: string, chatType: ChatType): number | null {
+	getLatestStoredTimestampSec(
+		userId: string,
+		chatId: string,
+		chatType: ChatType,
+	): number | null {
 		const session = this.readSession(userId, chatType, chatId);
 		if (!session?.messages.length) return null;
 		let maxSec = 0;
@@ -132,8 +152,14 @@ class FeishuConversationStore {
 			async () => {
 				const session =
 					this.readSession(params.userId, params.chatType, params.chatId) ??
-					this.createEmptySession(params.userId, params.chatId, params.chatType);
-				const seen = new Set(session.messages.map((m) => m.messageId).filter(Boolean) as string[]);
+					this.createEmptySession(
+						params.userId,
+						params.chatId,
+						params.chatType,
+					);
+				const seen = new Set(
+					session.messages.map((m) => m.messageId).filter(Boolean) as string[],
+				);
 				for (const it of params.items) {
 					if (seen.has(it.messageId)) continue;
 					seen.add(it.messageId);
@@ -152,7 +178,11 @@ class FeishuConversationStore {
 				this.pruneSession(session, params.retainNotBeforeMs);
 				session.updatedAt = Date.now();
 				this.writeSessionAtomically(
-					this.getSessionFilePath(params.userId, params.chatType, params.chatId),
+					this.getSessionFilePath(
+						params.userId,
+						params.chatType,
+						params.chatId,
+					),
 					session,
 				);
 			},
@@ -173,12 +203,10 @@ class FeishuConversationStore {
 				if (!m.messageId || !options?.excludeMessageIds) return true;
 				return !options.excludeMessageIds.has(m.messageId);
 			})
-			.map(
-				(m): RuntimeConversationMessage => ({
-					role: m.role,
-					content: m.content,
-				}),
-			);
+			.map((m): RuntimeConversationMessage => ({
+				role: m.role,
+				content: m.content,
+			}));
 		return trimHistoryByCharBudget(raw, maxChars);
 	}
 
@@ -255,7 +283,12 @@ class FeishuConversationStore {
 		return this.getHistoryForContext(userId, accountId, "p2p", 20_000);
 	}
 
-	addMessage(userId: string, accountId: string, role: "user" | "assistant", content: string): void {
+	addMessage(
+		userId: string,
+		accountId: string,
+		role: "user" | "assistant",
+		content: string,
+	): void {
 		void this.appendTurn({
 			userId,
 			chatId: accountId,
@@ -279,7 +312,11 @@ class FeishuConversationStore {
 			async () => {
 				const session =
 					this.readSession(params.userId, params.chatType, params.chatId) ??
-					this.createEmptySession(params.userId, params.chatId, params.chatType);
+					this.createEmptySession(
+						params.userId,
+						params.chatId,
+						params.chatType,
+					);
 				const mid = params.message.messageId;
 				if (mid) {
 					const existing = session.messages.find((m) => m.messageId === mid);
@@ -307,12 +344,19 @@ class FeishuConversationStore {
 						) {
 							existing.imageKeys = params.message.imageKeys;
 						}
-						if (typeof existing.timestamp !== "number" || !Number.isFinite(existing.timestamp)) {
+						if (
+							typeof existing.timestamp !== "number" ||
+							!Number.isFinite(existing.timestamp)
+						) {
 							existing.timestamp = params.message.timestamp;
 						}
 						session.updatedAt = Date.now();
 						this.writeSessionAtomically(
-							this.getSessionFilePath(params.userId, params.chatType, params.chatId),
+							this.getSessionFilePath(
+								params.userId,
+								params.chatType,
+								params.chatId,
+							),
 							session,
 						);
 						return;
@@ -332,7 +376,11 @@ class FeishuConversationStore {
 				this.pruneSession(session, floor);
 				session.updatedAt = Date.now();
 				this.writeSessionAtomically(
-					this.getSessionFilePath(params.userId, params.chatType, params.chatId),
+					this.getSessionFilePath(
+						params.userId,
+						params.chatType,
+						params.chatId,
+					),
 					session,
 				);
 			},
@@ -364,9 +412,14 @@ class FeishuConversationStore {
 		}
 	}
 
-	private withWriteLock(filePath: string, task: () => Promise<void> | void): Promise<void> {
+	private withWriteLock(
+		filePath: string,
+		task: () => Promise<void> | void,
+	): Promise<void> {
 		const prev = FeishuConversationStore.writeQueues.get(filePath);
-		const run = (prev ?? Promise.resolve()).catch(() => {}).then(async () => task());
+		const run = (prev ?? Promise.resolve())
+			.catch(() => {})
+			.then(async () => task());
 		FeishuConversationStore.writeQueues.set(filePath, run);
 		return run.finally(() => {
 			if (FeishuConversationStore.writeQueues.get(filePath) === run) {
@@ -386,9 +439,15 @@ class FeishuConversationStore {
 		await this.withWriteLock(
 			this.getSessionFilePath(params.userId, params.chatType, params.chatId),
 			async () => {
-				const session = this.readSession(params.userId, params.chatType, params.chatId);
+				const session = this.readSession(
+					params.userId,
+					params.chatType,
+					params.chatId,
+				);
 				if (!session?.messages?.length) return;
-				const target = session.messages.find((m) => m.messageId === params.messageId);
+				const target = session.messages.find(
+					(m) => m.messageId === params.messageId,
+				);
 				if (!target) return;
 				const merged = new Set<string>(target.imageKeys ?? []);
 				for (const key of params.imageKeys) {
@@ -400,7 +459,11 @@ class FeishuConversationStore {
 				target.imageKeys = nextKeys;
 				session.updatedAt = Date.now();
 				this.writeSessionAtomically(
-					this.getSessionFilePath(params.userId, params.chatType, params.chatId),
+					this.getSessionFilePath(
+						params.userId,
+						params.chatType,
+						params.chatId,
+					),
 					session,
 				);
 			},
@@ -413,7 +476,11 @@ class FeishuConversationStore {
 		}
 	}
 
-	private createEmptySession(userId: string, chatId: string, chatType: ChatType): SessionFile {
+	private createEmptySession(
+		userId: string,
+		chatId: string,
+		chatType: ChatType,
+	): SessionFile {
 		return {
 			version: 1,
 			platform: "feishu",
@@ -426,11 +493,19 @@ class FeishuConversationStore {
 		};
 	}
 
-	private readSession(userId: string, chatType: ChatType, chatId: string): SessionFile | null {
+	private readSession(
+		userId: string,
+		chatType: ChatType,
+		chatId: string,
+	): SessionFile | null {
 		const path = this.getSessionFilePath(userId, chatType, chatId);
 		const legacyPath = this.getLegacySessionFilePath(userId, chatType, chatId);
 		try {
-			const candidate = existsSync(path) ? path : existsSync(legacyPath) ? legacyPath : null;
+			const candidate = existsSync(path)
+				? path
+				: existsSync(legacyPath)
+					? legacyPath
+					: null;
 			if (!candidate) return null;
 			const raw = readFileSync(candidate, "utf-8");
 			const parsed = JSON.parse(raw) as SessionFile;
@@ -455,12 +530,20 @@ class FeishuConversationStore {
 			.slice(-MAX_MESSAGES_PER_SESSION);
 	}
 
-	private getSessionFilePath(userId: string, chatType: ChatType, chatId: string): string {
+	private getSessionFilePath(
+		userId: string,
+		chatType: ChatType,
+		chatId: string,
+	): string {
 		const fileName = `${this.safeFileToken(userId)}__${this.safeFileToken(this.sessionScope)}__${chatType}__${this.safeFileToken(chatId)}.json`;
 		return join(this.sessionsDir, fileName);
 	}
 
-	private getLegacySessionFilePath(userId: string, chatType: ChatType, chatId: string): string {
+	private getLegacySessionFilePath(
+		userId: string,
+		chatType: ChatType,
+		chatId: string,
+	): string {
 		const fileName = `${this.safeFileToken(userId)}__${chatType}__${this.safeFileToken(chatId)}.json`;
 		return join(this.sessionsDir, fileName);
 	}
@@ -470,4 +553,9 @@ class FeishuConversationStore {
 	}
 }
 
-export { FeishuConversationStore, type FeishuDomain, type ChatType, type StoredMessage };
+export {
+	FeishuConversationStore,
+	type FeishuDomain,
+	type ChatType,
+	type StoredMessage,
+};

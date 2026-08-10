@@ -12,7 +12,8 @@
 /**
  * Built-in sandbox provider types
  */
-export type BuiltinSandboxProviderType = "docker" | "native" | "e2b" | "codex" | "claude" | "vercel";
+export type BuiltinSandboxProviderType =
+	"docker" | "native" | "e2b" | "codex" | "claude" | "vercel";
 
 /**
  * Sandbox provider type - string to allow custom extensions
@@ -153,7 +154,11 @@ export interface ISandboxProvider {
 	isAvailable(): Promise<boolean>;
 	init(config?: Record<string, unknown>): Promise<void>;
 	exec(options: SandboxExecOptions): Promise<SandboxExecResult>;
-	runScript(filePath: string, workDir: string, options?: ScriptOptions): Promise<SandboxExecResult>;
+	runScript(
+		filePath: string,
+		workDir: string,
+		options?: ScriptOptions,
+	): Promise<SandboxExecResult>;
 	stop(): Promise<void>;
 	shutdown(): Promise<void>;
 	getCapabilities(): SandboxCapabilities;
@@ -164,7 +169,9 @@ export interface ISandboxProvider {
 // Factory Types
 // ============================================================================
 
-export type SandboxProviderFactory = (config?: SandboxProviderConfig) => ISandboxProvider;
+export type SandboxProviderFactory = (
+	config?: SandboxProviderConfig,
+) => ISandboxProvider;
 
 export interface SandboxProviderRegistry {
 	register(type: SandboxProviderType, factory: SandboxProviderFactory): void;
@@ -262,4 +269,9 @@ export const PROVIDER_PRIORITY: Record<string, number> = {
 	native: 10,
 };
 
-export const PROVIDER_FALLBACK_ORDER: string[] = ["vercel", "claude", "codex", "native"];
+export const PROVIDER_FALLBACK_ORDER: string[] = [
+	"vercel",
+	"claude",
+	"codex",
+	"native",
+];

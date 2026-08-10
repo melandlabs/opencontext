@@ -13,7 +13,10 @@ export interface OpenContextAuthToken {
 }
 
 export function getOpenContextTokenPath(): string {
-	return process.env.OPENCONTEXT_TOKEN_PATH ?? path.join(os.homedir(), ".opencontext", "token");
+	return (
+		process.env.OPENCONTEXT_TOKEN_PATH ??
+		path.join(os.homedir(), ".opencontext", "token")
+	);
 }
 
 function looksLikeJwt(token: string): boolean {

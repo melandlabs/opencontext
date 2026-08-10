@@ -12,7 +12,10 @@ export interface OpenContextToolContext {
 	authToken: OpenContextAuthToken;
 }
 
-export function registerOpenContextTools(server: McpServer, context: OpenContextToolContext): void {
+export function registerOpenContextTools(
+	server: McpServer,
+	context: OpenContextToolContext,
+): void {
 	registerStatusTools(server, context);
 	registerMemoryTools(server, context);
 	registerConnectorTools(server, context);

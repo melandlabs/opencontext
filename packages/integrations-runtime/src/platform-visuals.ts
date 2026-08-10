@@ -42,7 +42,10 @@ const PLATFORM_LOGOS: Partial<Record<IntegrationId, string>> = {
 	weixin: "/images/apps/WeChat.png",
 };
 
-const PLATFORM_DISPLAY_INFO: Record<IntegrationId, Omit<PlatformDisplayInfo, "label"> & { label: string }> = {
+const PLATFORM_DISPLAY_INFO: Record<
+	IntegrationId,
+	Omit<PlatformDisplayInfo, "label"> & { label: string }
+> = {
 	slack: {
 		icon: "slack",
 		label: "Slack",
@@ -136,7 +139,8 @@ const PLATFORM_DISPLAY_INFO: Record<IntegrationId, Omit<PlatformDisplayInfo, "la
 	instagram: {
 		icon: "instagram",
 		label: "Instagram",
-		iconBackground: "bg-gradient-to-r from-[#F58529]/20 via-[#DD2A7B]/20 to-[#8134AF]/20 text-[#DD2A7B]",
+		iconBackground:
+			"bg-gradient-to-r from-[#F58529]/20 via-[#DD2A7B]/20 to-[#8134AF]/20 text-[#DD2A7B]",
 	},
 	asana: {
 		icon: "circle_check",
@@ -180,7 +184,10 @@ const PLATFORM_DISPLAY_INFO: Record<IntegrationId, Omit<PlatformDisplayInfo, "la
 	},
 };
 
-const PLATFORM_CONNECT_CARD_THEMES: Record<IntegrationId, PlatformConnectCardTheme> = {
+const PLATFORM_CONNECT_CARD_THEMES: Record<
+	IntegrationId,
+	PlatformConnectCardTheme
+> = {
 	discord: {
 		cardBackground: "#EEF0FF",
 		buttonBackground: "#5865F2",
@@ -322,7 +329,10 @@ export function resolvePlatformLogo(platformId: IntegrationId): string | null {
 	return PLATFORM_LOGOS[platformId] ?? null;
 }
 
-export function getPlatformDisplayInfo(platformId: IntegrationId, t?: TFunction): PlatformDisplayInfo {
+export function getPlatformDisplayInfo(
+	platformId: IntegrationId,
+	t?: TFunction,
+): PlatformDisplayInfo {
 	const info = PLATFORM_DISPLAY_INFO[platformId];
 	if (!info) {
 		return {
@@ -334,11 +344,16 @@ export function getPlatformDisplayInfo(platformId: IntegrationId, t?: TFunction)
 
 	return {
 		...info,
-		label: platformId === "weixin" ? (t?.("platform.weixin") ?? info.label) : info.label,
+		label:
+			platformId === "weixin"
+				? (t?.("platform.weixin") ?? info.label)
+				: info.label,
 	};
 }
 
-export function getPlatformConnectCardTheme(platformId: IntegrationId): PlatformConnectCardTheme {
+export function getPlatformConnectCardTheme(
+	platformId: IntegrationId,
+): PlatformConnectCardTheme {
 	return (
 		PLATFORM_CONNECT_CARD_THEMES[platformId] ?? {
 			cardBackground: "#EFEFF4",

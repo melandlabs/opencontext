@@ -44,10 +44,16 @@ export interface UnifiedMemorySearchOutput {
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_THRESHOLD = 0.7;
-const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge"];
+const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = [
+	"memory",
+	"insights",
+	"knowledge",
+];
 const SOURCE_SET = new Set<UnifiedMemorySearchSource>(DEFAULT_SOURCES);
 
-export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMemorySearchSource[] {
+export function normalizeUnifiedMemorySearchSources(
+	sources: unknown,
+): UnifiedMemorySearchSource[] {
 	if (!Array.isArray(sources) || sources.length === 0) {
 		return [...DEFAULT_SOURCES];
 	}
@@ -59,11 +65,14 @@ export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMe
 			SOURCE_SET.has(source as UnifiedMemorySearchSource),
 		);
 
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : [...DEFAULT_SOURCES];
+	return normalized.length > 0
+		? Array.from(new Set(normalized))
+		: [...DEFAULT_SOURCES];
 }
 
 export function clampUnifiedMemorySearchLimit(limit: unknown): number {
-	const parsed = typeof limit === "number" ? limit : Number(limit ?? DEFAULT_LIMIT);
+	const parsed =
+		typeof limit === "number" ? limit : Number(limit ?? DEFAULT_LIMIT);
 	if (!Number.isFinite(parsed)) {
 		return DEFAULT_LIMIT;
 	}
@@ -71,7 +80,10 @@ export function clampUnifiedMemorySearchLimit(limit: unknown): number {
 }
 
 export function clampUnifiedMemorySearchThreshold(threshold: unknown): number {
-	const parsed = typeof threshold === "number" ? threshold : Number(threshold ?? DEFAULT_THRESHOLD);
+	const parsed =
+		typeof threshold === "number"
+			? threshold
+			: Number(threshold ?? DEFAULT_THRESHOLD);
 	if (!Number.isFinite(parsed)) {
 		return DEFAULT_THRESHOLD;
 	}

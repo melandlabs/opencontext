@@ -19,7 +19,8 @@ export function resolveMemoryGraphCorrectionPolicy(
 		userId,
 		enabled: environment.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED,
 		killSwitch: environment.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_KILL_SWITCH,
-		allowlist: environment.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_OPERATOR_USER_IDS,
+		allowlist:
+			environment.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_OPERATOR_USER_IDS,
 		reasonCodes: {
 			killed: "memory_graph_correction_kill_switch",
 			disabled: "memory_graph_correction_disabled",

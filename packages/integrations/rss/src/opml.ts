@@ -87,7 +87,10 @@ export function parseOpmlFeeds(
 			skipped.push({
 				title: feed.title,
 				url: feed.sourceUrl,
-				reason: error instanceof Error ? error.message : "Invalid feed URL encountered.",
+				reason:
+					error instanceof Error
+						? error.message
+						: "Invalid feed URL encountered.",
 			});
 		}
 	}
@@ -112,7 +115,9 @@ export function parseOpmlFeeds(
 	};
 }
 
-function getOutlineArray(outline: RawOutline | RawOutline[] | undefined): RawOutline[] {
+function getOutlineArray(
+	outline: RawOutline | RawOutline[] | undefined,
+): RawOutline[] {
 	if (!outline) return [];
 	return Array.isArray(outline) ? outline : [outline];
 }
@@ -140,7 +145,9 @@ function collectFeedsFromOutline(
 	}
 
 	if (nestedOutlines.length > 0) {
-		const nextCategory = node.xmlUrl ? parentCategory : (explicitCategory ?? label ?? parentCategory);
+		const nextCategory = node.xmlUrl
+			? parentCategory
+			: (explicitCategory ?? label ?? parentCategory);
 		for (const child of nestedOutlines) {
 			collectFeedsFromOutline(child, nextCategory ?? null, accumulator);
 		}

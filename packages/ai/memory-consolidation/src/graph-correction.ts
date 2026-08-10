@@ -56,7 +56,10 @@ export interface BuildMemoryGraphRollbackPreparePlanInput extends CommandPlanInp
 }
 
 export interface BuildMemoryGraphRollbackFinalizePlanInput extends BuildMemoryGraphRollbackPreparePlanInput {
-	previousLifecycleByClusterId?: Record<string, MemoryClusterLifecycleStatus | undefined>;
+	previousLifecycleByClusterId?: Record<
+		string,
+		MemoryClusterLifecycleStatus | undefined
+	>;
 }
 
 function sameScope(left: OwnerScope, right: OwnerScope): boolean {
@@ -99,18 +102,25 @@ function copyEdge(edge: MemoryGraphEdge): MemoryGraphEdge {
 	};
 }
 
-function copyCluster(cluster: MemoryGraphClusterSnapshot): MemoryGraphClusterSnapshot {
+function copyCluster(
+	cluster: MemoryGraphClusterSnapshot,
+): MemoryGraphClusterSnapshot {
 	return {
 		...cluster,
 		ownerScope: { ...cluster.ownerScope },
 		nodeIds: [...cluster.nodeIds],
 		reasonCodes: [...cluster.reasonCodes],
-		applicability: cluster.applicability ? { ...cluster.applicability } : undefined,
+		applicability: cluster.applicability
+			? { ...cluster.applicability }
+			: undefined,
 		metadata: cluster.metadata ? { ...cluster.metadata } : undefined,
 	};
 }
 
-function emptyPlan(input: CommandPlanInput, reasonCodes: string[]): MemoryGraphUpdatePlan {
+function emptyPlan(
+	input: CommandPlanInput,
+	reasonCodes: string[],
+): MemoryGraphUpdatePlan {
 	return {
 		planId: `memory-graph-command:${encodeURIComponent(input.commandId)}`,
 		ownerScope: { ...input.ownerScope },
@@ -125,7 +135,10 @@ function emptyPlan(input: CommandPlanInput, reasonCodes: string[]): MemoryGraphU
 	};
 }
 
-function sameApplicability(node: MemoryGraphNode, cluster: MemoryGraphClusterSnapshot): boolean {
+function sameApplicability(
+	node: MemoryGraphNode,
+	cluster: MemoryGraphClusterSnapshot,
+): boolean {
 	return applicabilityEquivalent(node.applicability, cluster.applicability);
 }
 
@@ -167,16 +180,25 @@ function buildRemoveMemberCorrectionPlan(input: {
 	const commandMetadata = metadata(command);
 
 	const node = nodesById.get(action.nodeId);
-	if (!node || !cluster.nodeIds.includes(node.id) || cluster.nodeIds.length <= 1) {
+	if (
+		!node ||
+		!cluster.nodeIds.includes(node.id) ||
+		cluster.nodeIds.length <= 1
+	) {
 		return emptyPlan(command, ["memory_graph_correction_member_not_found"]);
 	}
 	const separatedClusterId =
-		action.separatedClusterId ?? `${cluster.clusterId}:corrected:${encodeURIComponent(node.id)}`;
+		action.separatedClusterId ??
+		`${cluster.clusterId}:corrected:${encodeURIComponent(node.id)}`;
 	if (
 		separatedClusterId === cluster.clusterId ||
-		command.snapshot.clusters.some((candidate) => candidate.clusterId === separatedClusterId)
+		command.snapshot.clusters.some(
+			(candidate) => candidate.clusterId === separatedClusterId,
+		)
 	) {
-		return emptyPlan(command, ["memory_graph_correction_separated_cluster_id_conflict"]);
+		return emptyPlan(command, [
+			"memory_graph_correction_separated_cluster_id_conflict",
+		]);
 	}
 	const representative = cluster.representativeNodeId
 		? nodesById.get(cluster.representativeNodeId)
@@ -215,7 +237,10 @@ function buildRemoveMemberCorrectionPlan(input: {
 					}),
 			)
 		: [];
-	const restoreSourceNodeIds = unique([node.id, ...representativeSourceNodeIds]);
+	const restoreSourceNodeIds = unique([
+		node.id,
+		...representativeSourceNodeIds,
+	]);
 	for (const sourceNodeId of restoreSourceNodeIds) {
 		const source = nodesById.get(sourceNodeId);
 		if (!source || source.type !== "raw") continue;
@@ -231,7 +256,10 @@ function buildRemoveMemberCorrectionPlan(input: {
 			},
 		});
 	}
-	if (representative && (representative.type === "summary" || representative.type === "artifact")) {
+	if (
+		representative &&
+		(representative.type === "summary" || representative.type === "artifact")
+	) {
 		candidateNodes.push({
 			...copyNode(representative),
 			visibility: "audit-only",
@@ -259,15 +287,21 @@ function buildRemoveMemberCorrectionPlan(input: {
 		});
 	}
 	const updatedCluster = copyCluster(cluster);
-	updatedCluster.nodeIds = updatedCluster.nodeIds.filter((nodeId) => nodeId !== node.id);
+	updatedCluster.nodeIds = updatedCluster.nodeIds.filter(
+		(nodeId) => nodeId !== node.id,
+	);
 	updatedCluster.updatedAt = command.now;
-	updatedCluster.reasonCodes = unique([...updatedCluster.reasonCodes, "memory_graph_membership_corrected"]);
+	updatedCluster.reasonCodes = unique([
+		...updatedCluster.reasonCodes,
+		"memory_graph_membership_corrected",
+	]);
 	if (representative) {
 		updatedCluster.representativeNodeId = undefined;
 		const remainingRawCount = updatedCluster.nodeIds.filter(
 			(nodeId) => nodesById.get(nodeId)?.type === "raw",
 		).length;
-		updatedCluster.lifecycleStatus = remainingRawCount >= 2 ? "active" : "forming";
+		updatedCluster.lifecycleStatus =
+			remainingRawCount >= 2 ? "active" : "forming";
 	}
 	const restoredClusters = representative
 		? command.snapshot.clusters
@@ -279,7 +313,9 @@ function buildRemoveMemberCorrectionPlan(input: {
 				)
 				.map((candidate) => {
 					const restored = copyCluster(candidate);
-					const rawCount = restored.nodeIds.filter((nodeId) => nodesById.get(nodeId)?.type === "raw").length;
+					const rawCount = restored.nodeIds.filter(
+						(nodeId) => nodesById.get(nodeId)?.type === "raw",
+					).length;
 					restored.lifecycleStatus = rawCount >= 2 ? "active" : "forming";
 					restored.updatedAt = command.now;
 					restored.reasonCodes = unique([
@@ -311,7 +347,9 @@ function buildRemoveMemberCorrectionPlan(input: {
 	const retiredEdgeIds = new Set<string>();
 	for (const edge of command.snapshot.edges) {
 		const retiresRepresentativeEdge =
-			representative !== undefined && edge.kind === "supersede" && edge.toNodeId === representative.id;
+			representative !== undefined &&
+			edge.kind === "supersede" &&
+			edge.toNodeId === representative.id;
 		const separatesMemberEdge =
 			(edge.kind === "support" || edge.kind === "supersede") &&
 			(edge.fromNodeId === node.id || edge.toNodeId === node.id);
@@ -327,7 +365,10 @@ function buildRemoveMemberCorrectionPlan(input: {
 			...copyEdge(edge),
 			weight: 0,
 			updatedAt: command.now,
-			reasonCodes: unique([...edge.reasonCodes, "memory_graph_membership_corrected"]),
+			reasonCodes: unique([
+				...edge.reasonCodes,
+				"memory_graph_membership_corrected",
+			]),
 			metadata: {
 				...(edge.metadata ?? {}),
 				inactive: true,
@@ -379,10 +420,16 @@ function buildLifecycleCorrectionPlan(input: {
 	const fromStatus = updatedCluster.lifecycleStatus;
 	updatedCluster.lifecycleStatus = action.lifecycleStatus;
 	updatedCluster.updatedAt = command.now;
-	updatedCluster.reasonCodes = unique([...updatedCluster.reasonCodes, "memory_graph_lifecycle_corrected"]);
+	updatedCluster.reasonCodes = unique([
+		...updatedCluster.reasonCodes,
+		"memory_graph_lifecycle_corrected",
+	]);
 	candidateClusters.push(updatedCluster);
 	operations.push({
-		operationId: operationId(command.commandId, `lifecycle:${cluster.clusterId}`),
+		operationId: operationId(
+			command.commandId,
+			`lifecycle:${cluster.clusterId}`,
+		),
 		ownerScope: { ...command.ownerScope },
 		kind: "set-cluster-lifecycle",
 		nodeIds: [...cluster.nodeIds],
@@ -401,7 +448,10 @@ function buildLifecycleCorrectionPlan(input: {
 }
 function buildRepresentativeCorrectionPlan(input: {
 	command: BuildMemoryGraphCorrectionPlanInput;
-	action: Extract<MemoryGraphCorrectionAction, { type: "correct-summary" | "set-representative" }>;
+	action: Extract<
+		MemoryGraphCorrectionAction,
+		{ type: "correct-summary" | "set-representative" }
+	>;
 	cluster: MemoryGraphClusterSnapshot;
 	nodesById: Map<string, MemoryGraphNode>;
 }): MemoryGraphUpdatePlan {
@@ -413,11 +463,19 @@ function buildRepresentativeCorrectionPlan(input: {
 	const commandMetadata = metadata(command);
 
 	const representativeNodeId =
-		action.type === "correct-summary" ? action.correctedSummaryId : action.representativeNodeId;
-	const sourceSummary = action.type === "correct-summary" ? nodesById.get(action.summaryId) : undefined;
+		action.type === "correct-summary"
+			? action.correctedSummaryId
+			: action.representativeNodeId;
+	const sourceSummary =
+		action.type === "correct-summary"
+			? nodesById.get(action.summaryId)
+			: undefined;
 	const correctedSourceNodeIds =
-		action.type === "correct-summary" && Array.isArray(sourceSummary?.metadata?.sourceNodeIds)
-			? sourceSummary.metadata.sourceNodeIds.filter((value): value is string => typeof value === "string")
+		action.type === "correct-summary" &&
+		Array.isArray(sourceSummary?.metadata?.sourceNodeIds)
+			? sourceSummary.metadata.sourceNodeIds.filter(
+					(value): value is string => typeof value === "string",
+				)
 			: [];
 	if (
 		action.type === "correct-summary" &&
@@ -426,17 +484,22 @@ function buildRepresentativeCorrectionPlan(input: {
 			!cluster.nodeIds.includes(sourceSummary.id) ||
 			!sameApplicability(sourceSummary, cluster))
 	) {
-		return emptyPlan(command, ["memory_graph_correction_summary_not_in_cluster"]);
+		return emptyPlan(command, [
+			"memory_graph_correction_summary_not_in_cluster",
+		]);
 	}
 	const existingCorrectedNode = nodesById.get(representativeNodeId);
 	if (
 		action.type === "correct-summary" &&
 		existingCorrectedNode &&
 		(existingCorrectedNode.type !== "summary" ||
-			existingCorrectedNode.metadata?.correctedFromSummaryId !== action.summaryId ||
+			existingCorrectedNode.metadata?.correctedFromSummaryId !==
+				action.summaryId ||
 			!cluster.nodeIds.includes(existingCorrectedNode.id))
 	) {
-		return emptyPlan(command, ["memory_graph_correction_corrected_summary_id_conflict"]);
+		return emptyPlan(command, [
+			"memory_graph_correction_corrected_summary_id_conflict",
+		]);
 	}
 	const representative: MemoryGraphNode | undefined =
 		action.type === "correct-summary"
@@ -448,7 +511,9 @@ function buildRepresentativeCorrectionPlan(input: {
 					createdAt: command.now,
 					updatedAt: command.now,
 					visibility: "default",
-					applicability: cluster.applicability ? { ...cluster.applicability } : undefined,
+					applicability: cluster.applicability
+						? { ...cluster.applicability }
+						: undefined,
 					metadata: {
 						correctedFromSummaryId: action.summaryId,
 						sourceNodeIds: correctedSourceNodeIds,
@@ -463,10 +528,17 @@ function buildRepresentativeCorrectionPlan(input: {
 		!sameApplicability(representative, cluster) ||
 		(representative.type === "raw" && representative.visibility !== "default")
 	) {
-		return emptyPlan(command, ["memory_graph_correction_representative_not_found_or_inapplicable"]);
+		return emptyPlan(command, [
+			"memory_graph_correction_representative_not_found_or_inapplicable",
+		]);
 	}
-	if (action.type === "set-representative" && !cluster.nodeIds.includes(representative.id)) {
-		return emptyPlan(command, ["memory_graph_correction_representative_not_in_cluster"]);
+	if (
+		action.type === "set-representative" &&
+		!cluster.nodeIds.includes(representative.id)
+	) {
+		return emptyPlan(command, [
+			"memory_graph_correction_representative_not_in_cluster",
+		]);
 	}
 	const oldRepresentative = cluster.representativeNodeId
 		? nodesById.get(cluster.representativeNodeId)
@@ -489,7 +561,10 @@ function buildRepresentativeCorrectionPlan(input: {
 		updatedAt: command.now,
 	});
 	const updatedCluster = copyCluster(cluster);
-	updatedCluster.nodeIds = unique([...updatedCluster.nodeIds, representativeNodeId]);
+	updatedCluster.nodeIds = unique([
+		...updatedCluster.nodeIds,
+		representativeNodeId,
+	]);
 	updatedCluster.representativeNodeId = representativeNodeId;
 	updatedCluster.updatedAt = command.now;
 	updatedCluster.reasonCodes = unique([
@@ -498,10 +573,19 @@ function buildRepresentativeCorrectionPlan(input: {
 	]);
 	candidateClusters.push(updatedCluster);
 	operations.push({
-		operationId: operationId(command.commandId, `representative:${representativeNodeId}`),
+		operationId: operationId(
+			command.commandId,
+			`representative:${representativeNodeId}`,
+		),
 		ownerScope: { ...command.ownerScope },
-		kind: action.type === "correct-summary" ? "correct-node" : "set-cluster-representative",
-		nodeIds: unique([representativeNodeId, ...(oldRepresentative ? [oldRepresentative.id] : [])]),
+		kind:
+			action.type === "correct-summary"
+				? "correct-node"
+				: "set-cluster-representative",
+		nodeIds: unique([
+			representativeNodeId,
+			...(oldRepresentative ? [oldRepresentative.id] : []),
+		]),
 		clusterId: cluster.clusterId,
 		supersededByNodeId: representativeNodeId,
 		reasonCodes: ["memory_graph_representative_corrected"],
@@ -525,7 +609,8 @@ export function buildMemoryGraphCorrectionPlan(
 	}
 	const cluster = input.snapshot.clusters.find(
 		(candidate) =>
-			candidate.clusterId === input.action.clusterId && sameScope(candidate.ownerScope, input.ownerScope),
+			candidate.clusterId === input.action.clusterId &&
+			sameScope(candidate.ownerScope, input.ownerScope),
 	);
 	if (!cluster) {
 		return emptyPlan(input, ["memory_graph_correction_cluster_not_found"]);
@@ -583,17 +668,15 @@ export function buildMemoryGraphRollbackPreparePlan(
 				...commandMetadata,
 			},
 		}));
-	const operations = candidateNodes.map(
-		(node): MemoryGraphOperation => ({
-			operationId: operationId(input.commandId, `restore-node:${node.id}`),
-			ownerScope: { ...input.ownerScope },
-			kind: "restore-node",
-			nodeIds: [node.id],
-			supersededByNodeId: input.summaryId,
-			reasonCodes: ["memory_graph_rollback_raw_visibility_prepared"],
-			metadata: commandMetadata,
-		}),
-	);
+	const operations = candidateNodes.map((node): MemoryGraphOperation => ({
+		operationId: operationId(input.commandId, `restore-node:${node.id}`),
+		ownerScope: { ...input.ownerScope },
+		kind: "restore-node",
+		nodeIds: [node.id],
+		supersededByNodeId: input.summaryId,
+		reasonCodes: ["memory_graph_rollback_raw_visibility_prepared"],
+		metadata: commandMetadata,
+	}));
 	return {
 		...emptyPlan(input, ["memory_graph_rollback_prepare_planned"]),
 		planId: `memory-graph-rollback-prepare:${encodeURIComponent(input.commandId)}`,
@@ -607,7 +690,9 @@ export function buildMemoryGraphRollbackFinalizePlan(
 ): MemoryGraphUpdatePlan {
 	const commandMetadata = metadata(input);
 	const summaryNode = input.snapshot.nodes.find(
-		(node) => node.id === input.summaryId && sameScope(node.ownerScope, input.ownerScope),
+		(node) =>
+			node.id === input.summaryId &&
+			sameScope(node.ownerScope, input.ownerScope),
 	);
 	if (!summaryNode) {
 		return emptyPlan(input, ["memory_graph_rollback_summary_not_found"]);
@@ -659,7 +744,10 @@ export function buildMemoryGraphRollbackFinalizePlan(
 			...copyEdge(edge),
 			weight: 0,
 			updatedAt: input.now,
-			reasonCodes: unique([...edge.reasonCodes, "memory_graph_rollback_applied"]),
+			reasonCodes: unique([
+				...edge.reasonCodes,
+				"memory_graph_rollback_applied",
+			]),
 			metadata: {
 				...(edge.metadata ?? {}),
 				inactive: true,
@@ -672,20 +760,25 @@ export function buildMemoryGraphRollbackFinalizePlan(
 		if (!sameScope(cluster.ownerScope, input.ownerScope)) continue;
 		const isRepresentative = cluster.representativeNodeId === input.summaryId;
 		const supersededBySummaryId = cluster.metadata?.supersededBySummaryId;
-		if (!isRepresentative && supersededBySummaryId !== input.summaryId) continue;
+		if (!isRepresentative && supersededBySummaryId !== input.summaryId)
+			continue;
 		const updated = copyCluster(cluster);
 		if (isRepresentative) {
-			updated.representativeNodeId = (input.predecessorSummaryNodeIds ?? []).find((nodeId) =>
-				updated.nodeIds.includes(nodeId),
-			);
+			updated.representativeNodeId = (
+				input.predecessorSummaryNodeIds ?? []
+			).find((nodeId) => updated.nodeIds.includes(nodeId));
 		}
-		const previousStatus = input.previousLifecycleByClusterId?.[cluster.clusterId];
+		const previousStatus =
+			input.previousLifecycleByClusterId?.[cluster.clusterId];
 		if (previousStatus) updated.lifecycleStatus = previousStatus;
 		else if (isRepresentative || updated.lifecycleStatus === "superseded") {
 			updated.lifecycleStatus = "active";
 		}
 		updated.updatedAt = input.now;
-		updated.reasonCodes = unique([...updated.reasonCodes, "memory_graph_rollback_applied"]);
+		updated.reasonCodes = unique([
+			...updated.reasonCodes,
+			"memory_graph_rollback_applied",
+		]);
 		updated.metadata = {
 			...(updated.metadata ?? {}),
 			supersededByClusterId: undefined,
@@ -698,28 +791,36 @@ export function buildMemoryGraphRollbackFinalizePlan(
 	const operations: MemoryGraphOperation[] = [];
 	if (candidateNodes.length > 0 || candidateEdges.length > 0) {
 		operations.push({
-			operationId: operationId(input.commandId, `rollback-summary:${input.summaryId}`),
+			operationId: operationId(
+				input.commandId,
+				`rollback-summary:${input.summaryId}`,
+			),
 			ownerScope: { ...input.ownerScope },
 			kind: "rollback-supersession",
-			nodeIds: unique([input.summaryId, ...input.sourceNodeIds, ...(input.predecessorSummaryNodeIds ?? [])]),
+			nodeIds: unique([
+				input.summaryId,
+				...input.sourceNodeIds,
+				...(input.predecessorSummaryNodeIds ?? []),
+			]),
 			supersededByNodeId: input.summaryId,
 			reasonCodes: ["memory_graph_rollback_applied"],
 			metadata: commandMetadata,
 		});
 	}
 	operations.push(
-		...candidateClusters.map(
-			(cluster): MemoryGraphOperation => ({
-				operationId: operationId(input.commandId, `restore-cluster:${cluster.clusterId}`),
-				ownerScope: { ...input.ownerScope },
-				kind: "set-cluster-lifecycle",
-				nodeIds: [...cluster.nodeIds],
-				clusterId: cluster.clusterId,
-				toStatus: cluster.lifecycleStatus,
-				reasonCodes: ["memory_graph_rollback_applied"],
-				metadata: commandMetadata,
-			}),
-		),
+		...candidateClusters.map((cluster): MemoryGraphOperation => ({
+			operationId: operationId(
+				input.commandId,
+				`restore-cluster:${cluster.clusterId}`,
+			),
+			ownerScope: { ...input.ownerScope },
+			kind: "set-cluster-lifecycle",
+			nodeIds: [...cluster.nodeIds],
+			clusterId: cluster.clusterId,
+			toStatus: cluster.lifecycleStatus,
+			reasonCodes: ["memory_graph_rollback_applied"],
+			metadata: commandMetadata,
+		})),
 	);
 	return {
 		...emptyPlan(input, ["memory_graph_rollback_finalize_planned"]),

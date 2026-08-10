@@ -105,7 +105,9 @@ function inferImportanceFromText(text: string | undefined): number {
 	}
 
 	const lower = text.toLowerCase();
-	const hits = IMPORTANCE_KEYWORDS.filter((keyword) => lower.includes(keyword)).length;
+	const hits = IMPORTANCE_KEYWORDS.filter((keyword) =>
+		lower.includes(keyword),
+	).length;
 	return clamp01(hits / 4);
 }
 
@@ -136,12 +138,19 @@ export class DefaultMemoryEvidenceRecordScorer implements MemoryEvidenceRecordSc
 		const accessScore = clamp01(Math.log1p(accessCount) / Math.log(10));
 		const providedImportance = record.importanceScore ?? 0;
 		const inferredImportance = inferImportanceFromText(record.text);
-		const importanceScore = clamp01(Math.max(providedImportance, inferredImportance));
-		const mediaScore = record.mediaRefs && record.mediaRefs.length > 0 ? 0.7 : 0.25;
+		const importanceScore = clamp01(
+			Math.max(providedImportance, inferredImportance),
+		);
+		const mediaScore =
+			record.mediaRefs && record.mediaRefs.length > 0 ? 0.7 : 0.25;
 		const pinnedBoost = record.isPinned ? 0.3 : 0;
 
 		return clamp01(
-			0.35 * recencyScore + 0.3 * accessScore + 0.25 * importanceScore + 0.1 * mediaScore + pinnedBoost,
+			0.35 * recencyScore +
+				0.3 * accessScore +
+				0.25 * importanceScore +
+				0.1 * mediaScore +
+				pinnedBoost,
 		);
 	}
 }
@@ -151,7 +160,10 @@ export function buildMemoryEvidenceClusters(
 ): MemoryEvidenceCluster[] {
 	const scorer = input.scorer ?? new DefaultMemoryEvidenceRecordScorer();
 	const evidenceNorm = Math.max(1, input.evidenceNorm ?? 4);
-	const recencyWindowMs = Math.max(1, input.recencyWindowMs ?? DEFAULT_RECENCY_WINDOW_MS);
+	const recencyWindowMs = Math.max(
+		1,
+		input.recencyWindowMs ?? DEFAULT_RECENCY_WINDOW_MS,
+	);
 	const weights = resolveWeights(input.weights);
 	const grouped = new Map<string, MemoryEvidenceRecord[]>();
 
@@ -168,13 +180,22 @@ export function buildMemoryEvidenceClusters(
 
 	return [...grouped.entries()]
 		.map(([key, records]) => {
-			const recordScores = records.map((record) => scorer.score(record, { now: input.now }));
-			const accessCount = records.reduce((sum, record) => sum + (record.accessCount ?? 0), 0);
-			const latestTimestamp = Math.max(...records.map((record) => record.timestamp));
+			const recordScores = records.map((record) =>
+				scorer.score(record, { now: input.now }),
+			);
+			const accessCount = records.reduce(
+				(sum, record) => sum + (record.accessCount ?? 0),
+				0,
+			);
+			const latestTimestamp = Math.max(
+				...records.map((record) => record.timestamp),
+			);
 			const evidenceScore = clamp01(records.length / evidenceNorm);
 			const meanRecordScore = mean(recordScores);
 			const activationScore = clamp01(Math.log1p(accessCount) / Math.log(10));
-			const recencyScore = clamp01(1 - Math.max(0, input.now - latestTimestamp) / recencyWindowMs);
+			const recencyScore = clamp01(
+				1 - Math.max(0, input.now - latestTimestamp) / recencyWindowMs,
+			);
 
 			return {
 				key,
@@ -203,7 +224,9 @@ export function analyzeMemoryEvidenceClusters(
 		...input,
 		scorer,
 	});
-	const clusterByKey = new Map(clusters.map((cluster) => [cluster.key, cluster]));
+	const clusterByKey = new Map(
+		clusters.map((cluster) => [cluster.key, cluster]),
+	);
 	const recordSignals: MemoryEvidenceRecordSignal[] = [];
 
 	for (const record of input.records) {
@@ -225,7 +248,8 @@ export function analyzeMemoryEvidenceClusters(
 			clusterScore: cluster.score,
 			clusterEvidenceCount: cluster.evidenceCount,
 			lowRecordScoreHighClusterScore:
-				recordScore <= lowRecordScoreThreshold && cluster.score >= highClusterScoreThreshold,
+				recordScore <= lowRecordScoreThreshold &&
+				cluster.score >= highClusterScoreThreshold,
 		});
 	}
 

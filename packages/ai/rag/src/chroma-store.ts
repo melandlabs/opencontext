@@ -3,7 +3,12 @@
  * Client-server vector search using ChromaDB's TypeScript client.
  */
 
-import { ChromaClient, ChromaNotFoundError, IncludeEnum, type Where } from "chromadb";
+import {
+	ChromaClient,
+	ChromaNotFoundError,
+	IncludeEnum,
+	type Where,
+} from "chromadb";
 import type {
 	DocumentChunk,
 	IVectorStore,
@@ -13,7 +18,9 @@ import type {
 	VectorStoreStats,
 } from "./vector-service";
 
-type ChromaCollection = Awaited<ReturnType<InstanceType<typeof ChromaClient>["getOrCreateCollection"]>>;
+type ChromaCollection = Awaited<
+	ReturnType<InstanceType<typeof ChromaClient>["getOrCreateCollection"]>
+>;
 
 export interface ChromaVectorStoreOptions {
 	url?: string;
@@ -40,7 +47,10 @@ export class ChromaVectorStore implements IVectorStore {
 	constructor(options: ChromaVectorStoreOptions = {}) {
 		const clientOptions = buildClientOptions(options);
 		this.client = new ChromaClient(clientOptions);
-		this.collectionName = options.collectionName || process.env.CHROMA_COLLECTION || DEFAULT_COLLECTION_NAME;
+		this.collectionName =
+			options.collectionName ||
+			process.env.CHROMA_COLLECTION ||
+			DEFAULT_COLLECTION_NAME;
 	}
 
 	async addChunk(chunk: DocumentChunk): Promise<void> {
@@ -78,7 +88,11 @@ export class ChromaVectorStore implements IVectorStore {
 		const collection = await this.getCollection();
 		// Embeddings are comparatively large, so request them only when the caller
 		// explicitly needs to reuse or inspect the returned vectors.
-		const include = [IncludeEnum.documents, IncludeEnum.metadatas, IncludeEnum.distances];
+		const include = [
+			IncludeEnum.documents,
+			IncludeEnum.metadatas,
+			IncludeEnum.distances,
+		];
 		if (options.includeEmbeddings) {
 			include.push(IncludeEnum.embeddings);
 		}
@@ -126,7 +140,10 @@ export class ChromaVectorStore implements IVectorStore {
 		return await collection.count();
 	}
 
-	async deleteOlderThan(timestamp: number, timestampField = "timestamp"): Promise<number> {
+	async deleteOlderThan(
+		timestamp: number,
+		timestampField = "timestamp",
+	): Promise<number> {
 		const collection = await this.getCollection();
 		const where: Where = {
 			[timestampField]: { $lt: timestamp },
@@ -223,7 +240,9 @@ function buildWhereFilter(filter?: VectorSearchFilter): Where | undefined {
 
 let chromaVectorStoreInstance: ChromaVectorStore | null = null;
 
-export function getChromaVectorStore(options: ChromaVectorStoreOptions = {}): ChromaVectorStore {
+export function getChromaVectorStore(
+	options: ChromaVectorStoreOptions = {},
+): ChromaVectorStore {
 	if (!chromaVectorStoreInstance) {
 		chromaVectorStoreInstance = new ChromaVectorStore(options);
 	}
@@ -288,7 +307,10 @@ function normalizeMetadata(metadata: unknown): Record<string, unknown> {
 
 function isChromaMetadataValue(value: unknown): value is ChromaMetadataValue {
 	return (
-		value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean"
+		value === null ||
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean"
 	);
 }
 

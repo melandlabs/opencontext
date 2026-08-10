@@ -131,7 +131,9 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 	}
 }
 
-export function floatArrayToBuffer(values: number[] | undefined): Buffer | null {
+export function floatArrayToBuffer(
+	values: number[] | undefined,
+): Buffer | null {
 	if (!values || values.length === 0) {
 		return null;
 	}
@@ -142,7 +144,9 @@ export function floatArrayToBuffer(values: number[] | undefined): Buffer | null 
 	return buffer;
 }
 
-export function bufferToFloatArray(buffer: Buffer | null): number[] | undefined {
+export function bufferToFloatArray(
+	buffer: Buffer | null,
+): number[] | undefined {
 	if (!buffer || buffer.length === 0) {
 		return undefined;
 	}
@@ -324,13 +328,23 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		await this.init();
 		const compareAndSwap = this.db.transaction(() => {
 			const existing = this.db
-				.prepare("SELECT user_id, metadata FROM raw_messages WHERE message_id = ?")
-				.get(message.messageId) as { user_id: string; metadata: string | null } | undefined;
+				.prepare(
+					"SELECT user_id, metadata FROM raw_messages WHERE message_id = ?",
+				)
+				.get(message.messageId) as
+				{ user_id: string; metadata: string | null } | undefined;
 			if (existing && existing.user_id !== message.userId) return false;
 
-			const metadata = parseJson<Record<string, unknown>>(existing?.metadata, {});
-			const ledger = metadata[input.metadataKey] as { snapshot?: { version?: unknown } } | undefined;
-			const currentVersion = typeof ledger?.snapshot?.version === "string" ? ledger.snapshot.version : "0";
+			const metadata = parseJson<Record<string, unknown>>(
+				existing?.metadata,
+				{},
+			);
+			const ledger = metadata[input.metadataKey] as
+				{ snapshot?: { version?: unknown } } | undefined;
+			const currentVersion =
+				typeof ledger?.snapshot?.version === "string"
+					? ledger.snapshot.version
+					: "0";
 			if (currentVersion !== input.expectedVersion) return false;
 
 			this.storeMessageSync(message);
@@ -394,7 +408,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (query.keywords?.length) {
 			const ftsQuery = buildFtsQuery(query.keywords);
 			if (ftsQuery) {
-				where.push("id IN (SELECT rowid FROM raw_messages_fts WHERE raw_messages_fts MATCH @ftsQuery)");
+				where.push(
+					"id IN (SELECT rowid FROM raw_messages_fts WHERE raw_messages_fts MATCH @ftsQuery)",
+				);
 				params.ftsQuery = ftsQuery;
 			}
 		}
@@ -411,10 +427,14 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
       LIMIT @limit OFFSET @offset
     `;
 
-		return (this.db.prepare(sql).all(params) as RawMessageRow[]).map(toRawMessage);
+		return (this.db.prepare(sql).all(params) as RawMessageRow[]).map(
+			toRawMessage,
+		);
 	}
 
-	async queryMessagesGrouped(query: RawMessageQuery): Promise<Record<string, RawMessage[]>> {
+	async queryMessagesGrouped(
+		query: RawMessageQuery,
+	): Promise<Record<string, RawMessage[]>> {
 		const messages = await this.queryMessages({
 			...query,
 			limit: query.limit ? query.limit * 10 : 1000,
@@ -435,7 +455,11 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			let key = date.toISOString().split("T")[0];
 
 			if (query.groupBy === "day") {
-				const localDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+				const localDate = new Date(
+					date.getFullYear(),
+					date.getMonth(),
+					date.getDate(),
+				);
 				if (localDate.getTime() === today.getTime()) {
 					key = "Today";
 				} else if (localDate.getTime() === yesterday.getTime()) {
@@ -469,21 +493,33 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 
 	async getStats(): Promise<RawMessageStats> {
 		await this.init();
-		const total = this.db.prepare("SELECT COUNT(*) AS count FROM raw_messages").get() as { count: number };
+		const total = this.db
+			.prepare("SELECT COUNT(*) AS count FROM raw_messages")
+			.get() as { count: number };
 		const platforms = this.db
-			.prepare("SELECT platform, COUNT(*) AS count FROM raw_messages GROUP BY platform")
+			.prepare(
+				"SELECT platform, COUNT(*) AS count FROM raw_messages GROUP BY platform",
+			)
 			.all() as Array<{ platform: string; count: number }>;
 		const bots = this.db
-			.prepare("SELECT bot_id, COUNT(*) AS count FROM raw_messages GROUP BY bot_id")
+			.prepare(
+				"SELECT bot_id, COUNT(*) AS count FROM raw_messages GROUP BY bot_id",
+			)
 			.all() as Array<{ bot_id: string; count: number }>;
 		const times = this.db
-			.prepare("SELECT MIN(timestamp) AS oldest, MAX(timestamp) AS newest FROM raw_messages")
+			.prepare(
+				"SELECT MIN(timestamp) AS oldest, MAX(timestamp) AS newest FROM raw_messages",
+			)
 			.get() as { oldest: number | null; newest: number | null };
 
 		return {
 			totalMessages: total.count,
-			messagesByPlatform: Object.fromEntries(platforms.map((row) => [row.platform, row.count])),
-			messagesByBot: Object.fromEntries(bots.map((row) => [row.bot_id, row.count])),
+			messagesByPlatform: Object.fromEntries(
+				platforms.map((row) => [row.platform, row.count]),
+			),
+			messagesByBot: Object.fromEntries(
+				bots.map((row) => [row.bot_id, row.count]),
+			),
 			oldestMessage: times.oldest ?? undefined,
 			newestMessage: times.newest ?? undefined,
 		};
@@ -491,9 +527,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 
 	async getMessageById(messageId: string): Promise<RawMessage | null> {
 		await this.init();
-		const row = this.db.prepare("SELECT * FROM raw_messages WHERE message_id = ?").get(messageId) as
-			| RawMessageRow
-			| undefined;
+		const row = this.db
+			.prepare("SELECT * FROM raw_messages WHERE message_id = ?")
+			.get(messageId) as RawMessageRow | undefined;
 		return row ? toRawMessage(row) : null;
 	}
 
@@ -502,15 +538,23 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const ids = (
 			userId
 				? this.db
-						.prepare("SELECT message_id FROM raw_messages WHERE created_at < ? AND user_id = ?")
+						.prepare(
+							"SELECT message_id FROM raw_messages WHERE created_at < ? AND user_id = ?",
+						)
 						.all(olderThan, userId)
-				: this.db.prepare("SELECT message_id FROM raw_messages WHERE created_at < ?").all(olderThan)
+				: this.db
+						.prepare("SELECT message_id FROM raw_messages WHERE created_at < ?")
+						.all(olderThan)
 		) as Array<{ message_id: string }>;
 		const result = userId
 			? this.db
-					.prepare("DELETE FROM raw_messages WHERE created_at < ? AND user_id = ?")
+					.prepare(
+						"DELETE FROM raw_messages WHERE created_at < ? AND user_id = ?",
+					)
 					.run(olderThan, userId)
-			: this.db.prepare("DELETE FROM raw_messages WHERE created_at < ?").run(olderThan);
+			: this.db
+					.prepare("DELETE FROM raw_messages WHERE created_at < ?")
+					.run(olderThan);
 		for (const row of ids) {
 			this.deleteMessageFromVectorTables(row.message_id);
 		}
@@ -577,8 +621,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				owners.set(summary.summaryId, summary.userId);
 
 				const existing = readExisting.get(summary.summaryId) as
-					| { user_id: string; dimensions: string | null }
-					| undefined;
+					{ user_id: string; dimensions: string | null } | undefined;
 				if (existing && existing.user_id !== summary.userId) {
 					throw new Error(MEMORY_SUMMARY_OWNER_SCOPE_CONFLICT);
 				}
@@ -601,7 +644,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					continue;
 				}
 
-				const persistedSummary = withoutMemorySummaryPublicationExpectedRevision(summary);
+				const persistedSummary =
+					withoutMemorySummaryPublicationExpectedRevision(summary);
 				const result = stmt.run({
 					summaryId: persistedSummary.summaryId,
 					userId: persistedSummary.userId,
@@ -613,7 +657,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					sourceRecordIds: stringifyJson(persistedSummary.sourceRecordIds),
 					keyPoints: stringifyJson(persistedSummary.keyPoints),
 					keywords: stringifyJson(persistedSummary.keywords),
-					keywordsText: persistedSummary.keywordsText ?? persistedSummary.keywords.join(" "),
+					keywordsText:
+						persistedSummary.keywordsText ??
+						persistedSummary.keywords.join(" "),
 					summaryText: persistedSummary.summaryText,
 					dimensions: stringifyJson(persistedSummary.dimensions),
 					qualityScore: persistedSummary.qualityScore ?? null,
@@ -622,8 +668,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				});
 				if (result.changes !== 1) {
 					const current = readExisting.get(summary.summaryId) as
-						| { user_id: string; dimensions: string | null }
-						| undefined;
+						{ user_id: string; dimensions: string | null } | undefined;
 					if (current?.user_id !== summary.userId) {
 						throw new Error(MEMORY_SUMMARY_OWNER_SCOPE_CONFLICT);
 					}
@@ -634,14 +679,18 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		upsertMany.immediate(summaries);
 	}
 
-	async querySummaries(query: MemorySummaryQuery): Promise<MemorySummaryRecord[]> {
+	async querySummaries(
+		query: MemorySummaryQuery,
+	): Promise<MemorySummaryRecord[]> {
 		await this.init();
 
 		const where: string[] = ["user_id = @userId"];
 		const params: Record<string, unknown> = { userId: query.userId };
 
 		if (query.summaryIds?.length) {
-			where.push(`summary_id IN (${query.summaryIds.map((_, index) => `@summaryId${index}`).join(", ")})`);
+			where.push(
+				`summary_id IN (${query.summaryIds.map((_, index) => `@summaryId${index}`).join(", ")})`,
+			);
 			query.summaryIds.forEach((summaryId, index) => {
 				params[`summaryId${index}`] = summaryId;
 			});
@@ -699,7 +748,11 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return summaries.slice(offset, offset + pageSize);
 	}
 
-	async markMessagesAccessed(messageIds: string[], at = Date.now(), userId?: string): Promise<number> {
+	async markMessagesAccessed(
+		messageIds: string[],
+		at = Date.now(),
+		userId?: string,
+	): Promise<number> {
 		await this.init();
 		return this.updateMessagesByMessageIds(
 			messageIds,
@@ -731,7 +784,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			for (const row of rows) {
 				const metadata = {
 					...parseJson<Record<string, unknown>>(row.metadata, {}),
-					...(options?.promotedAt ? { memoryPromotedAt: options.promotedAt } : {}),
+					...(options?.promotedAt
+						? { memoryPromotedAt: options.promotedAt }
+						: {}),
 				};
 				changed += stmt.run({
 					stage,
@@ -745,9 +800,18 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return changed;
 	}
 
-	async archiveMessages(messageIds: string[], archivedAt = Date.now(), userId?: string): Promise<number> {
+	async archiveMessages(
+		messageIds: string[],
+		archivedAt = Date.now(),
+		userId?: string,
+	): Promise<number> {
 		await this.init();
-		return this.updateMessagesByMessageIds(messageIds, "archived_at = @archivedAt", { archivedAt }, userId);
+		return this.updateMessagesByMessageIds(
+			messageIds,
+			"archived_at = @archivedAt",
+			{ archivedAt },
+			userId,
+		);
 	}
 
 	/**
@@ -801,7 +865,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (messageIds.length === 0) return 0;
 		const placeholders = messageIds.map(() => "?").join(",");
 		const userClause = input.userId ? "AND user_id = ?" : "";
-		const summaryClause = input.supersededBySummaryId ? "AND superseded_by_summary_id = ?" : "";
+		const summaryClause = input.supersededBySummaryId
+			? "AND superseded_by_summary_id = ?"
+			: "";
 		const result = this.db
 			.prepare(
 				`UPDATE raw_messages
@@ -821,7 +887,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return result.changes;
 	}
 
-	async hardDeleteArchived(olderThan: number, userId?: string): Promise<number> {
+	async hardDeleteArchived(
+		olderThan: number,
+		userId?: string,
+	): Promise<number> {
 		await this.init();
 		const ids = (
 			userId
@@ -831,7 +900,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 						)
 						.all(olderThan, userId)
 				: this.db
-						.prepare("SELECT message_id FROM raw_messages WHERE archived_at IS NOT NULL AND archived_at < ?")
+						.prepare(
+							"SELECT message_id FROM raw_messages WHERE archived_at IS NOT NULL AND archived_at < ?",
+						)
 						.all(olderThan)
 		) as Array<{ message_id: string }>;
 		const result = userId
@@ -841,7 +912,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					)
 					.run(olderThan, userId)
 			: this.db
-					.prepare("DELETE FROM raw_messages WHERE archived_at IS NOT NULL AND archived_at < ?")
+					.prepare(
+						"DELETE FROM raw_messages WHERE archived_at IS NOT NULL AND archived_at < ?",
+					)
 					.run(olderThan);
 		for (const row of ids) {
 			this.deleteMessageFromVectorTables(row.message_id);
@@ -849,7 +922,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return result.changes;
 	}
 
-	async updateMessageEmbeddings(updates: RawMessageEmbeddingUpdate[], userId?: string): Promise<number> {
+	async updateMessageEmbeddings(
+		updates: RawMessageEmbeddingUpdate[],
+		userId?: string,
+	): Promise<number> {
 		await this.init();
 		const stmt = this.db.prepare(`
       UPDATE raw_messages
@@ -862,20 +938,23 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
       ${userId ? "AND user_id = @userId" : ""}
     `);
 		let changed = 0;
-		const updateMany = this.db.transaction((items: RawMessageEmbeddingUpdate[]) => {
-			for (const update of items) {
-				changed += stmt.run({
-					messageId: update.messageId,
-					embedding: floatArrayToBuffer(update.embedding),
-					embeddingModel: update.embeddingModel,
-					embeddingContentHash: update.embeddingContentHash,
-					embeddingDimensions: update.embeddingDimensions ?? update.embedding.length,
-					embeddingUpdatedAt: update.embeddingUpdatedAt ?? Date.now(),
-					userId,
-				}).changes;
-				this.upsertVectorForMessage(update.messageId, update.embedding);
-			}
-		});
+		const updateMany = this.db.transaction(
+			(items: RawMessageEmbeddingUpdate[]) => {
+				for (const update of items) {
+					changed += stmt.run({
+						messageId: update.messageId,
+						embedding: floatArrayToBuffer(update.embedding),
+						embeddingModel: update.embeddingModel,
+						embeddingContentHash: update.embeddingContentHash,
+						embeddingDimensions:
+							update.embeddingDimensions ?? update.embedding.length,
+						embeddingUpdatedAt: update.embeddingUpdatedAt ?? Date.now(),
+						userId,
+					}).changes;
+					this.upsertVectorForMessage(update.messageId, update.embedding);
+				}
+			},
+		);
 		updateMany(updates.filter((update) => update.messageId));
 		return changed;
 	}
@@ -888,7 +967,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			throw new Error("raw_message_scope_conflict");
 		}
 		const persisted = persistedRow ? toRawMessage(persistedRow) : undefined;
-		const messageToStore = persisted ? mergeStoredChatMemoryEvidence(persisted, message) : message;
+		const messageToStore = persisted
+			? mergeStoredChatMemoryEvidence(persisted, message)
+			: message;
 		const normalized = {
 			...messageToStore,
 			memoryStage: messageToStore.memoryStage ?? "short",
@@ -954,7 +1035,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				embedding: floatArrayToBuffer(normalized.embedding),
 				embeddingModel: normalized.embeddingModel ?? null,
 				embeddingContentHash: normalized.embeddingContentHash ?? null,
-				embeddingDimensions: normalized.embeddingDimensions ?? normalized.embedding?.length ?? null,
+				embeddingDimensions:
+					normalized.embeddingDimensions ??
+					normalized.embedding?.length ??
+					null,
 				embeddingUpdatedAt: normalized.embeddingUpdatedAt ?? null,
 				metadata: stringifyJson(normalized.metadata),
 				createdAt: normalized.createdAt,
@@ -987,7 +1071,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			return [];
 		}
 
-		if (this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length)) {
+		if (
+			this.vectorSearchAvailable &&
+			this.vectorTableExists(input.queryEmbedding.length)
+		) {
 			const results = this.searchMessagesWithVectorTable(input);
 			console.log("[SQLite Raw Messages] Semantic search completed", {
 				backend: "sqlite-vec",
@@ -998,13 +1085,18 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		}
 
 		const results = this.searchMessagesWithStoredEmbeddings(input);
-		console.warn("[SQLite Raw Messages] Semantic search used stored-embedding fallback", {
-			backend: "stored-embedding-fallback",
-			dimensions: input.queryEmbedding.length,
-			count: results.length,
-			vectorSearchAvailable: this.vectorSearchAvailable,
-			vectorTableExists: this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length),
-		});
+		console.warn(
+			"[SQLite Raw Messages] Semantic search used stored-embedding fallback",
+			{
+				backend: "stored-embedding-fallback",
+				dimensions: input.queryEmbedding.length,
+				count: results.length,
+				vectorSearchAvailable: this.vectorSearchAvailable,
+				vectorTableExists:
+					this.vectorSearchAvailable &&
+					this.vectorTableExists(input.queryEmbedding.length),
+			},
+		);
 		return results;
 	}
 
@@ -1023,7 +1115,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		}
 	}
 
-	private upsertVectorForMessage(messageId: string, embedding: number[] | undefined): void {
+	private upsertVectorForMessage(
+		messageId: string,
+		embedding: number[] | undefined,
+	): void {
 		if (!this.vectorSearchAvailable) {
 			return;
 		}
@@ -1135,14 +1230,18 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 	private vectorTableExists(dimensions: number): boolean {
 		return Boolean(
 			this.db
-				.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
+				.prepare(
+					"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+				)
 				.get(this.getVectorTableName(dimensions)),
 		);
 	}
 
 	private getVectorTableName(dimensions: number): string {
 		if (!Number.isInteger(dimensions) || dimensions <= 0) {
-			throw new Error(`Invalid raw message embedding dimensions: ${dimensions}`);
+			throw new Error(
+				`Invalid raw message embedding dimensions: ${dimensions}`,
+			);
 		}
 		return `raw_messages_vec_d${dimensions}`;
 	}
@@ -1154,7 +1253,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 	private listVectorTables(): string[] {
 		return (
 			this.db
-				.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'raw_messages_vec_d%'")
+				.prepare(
+					"SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'raw_messages_vec_d%'",
+				)
 				.all() as Array<{ name: string }>
 		)
 			.map((row) => row.name)
@@ -1175,7 +1276,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 
 	private deleteMessageFromVectorTables(messageId: string): void {
 		for (const tableName of this.listVectorTables()) {
-			this.db.prepare(`DELETE FROM ${tableName} WHERE message_id = ?`).run(messageId);
+			this.db
+				.prepare(`DELETE FROM ${tableName} WHERE message_id = ?`)
+				.run(messageId);
 		}
 	}
 
@@ -1183,7 +1286,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		input: SQLiteRawMessageSemanticSearchInput,
 	): SQLiteRawMessageSemanticSearchResult[] {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
-		const scanLimit = Math.max(limit, Math.floor(input.scanLimit ?? limit * 10));
+		const scanLimit = Math.max(
+			limit,
+			Math.floor(input.scanLimit ?? limit * 10),
+		);
 		const threshold = input.threshold ?? 0.7;
 		let currentScanLimit = scanLimit;
 		while (true) {
@@ -1197,19 +1303,28 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             LIMIT ?
           `,
 				)
-				.all(floatArrayToBuffer(input.queryEmbedding), currentScanLimit) as Array<{
+				.all(
+					floatArrayToBuffer(input.queryEmbedding),
+					currentScanLimit,
+				) as Array<{
 				message_id: string;
 				distance: number;
 			}>;
 
-			const byDistance = new Map(rows.map((row) => [row.message_id, row.distance]));
-			const results = this.getRowsByMessageIds(rows.map((row) => row.message_id))
+			const byDistance = new Map(
+				rows.map((row) => [row.message_id, row.distance]),
+			);
+			const results = this.getRowsByMessageIds(
+				rows.map((row) => row.message_id),
+			)
 				.map(toRawMessage)
 				.filter((message) => this.matchesSemanticFilters(message, input))
 				.map((message) =>
 					this.toSemanticSearchResult(
 						message,
-						sqliteDistanceToScore(byDistance.get(message.messageId) ?? Number.POSITIVE_INFINITY),
+						sqliteDistanceToScore(
+							byDistance.get(message.messageId) ?? Number.POSITIVE_INFINITY,
+						),
 					),
 				)
 				.filter(
@@ -1229,7 +1344,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		input: SQLiteRawMessageSemanticSearchInput,
 	): SQLiteRawMessageSemanticSearchResult[] {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
-		const scanLimit = Math.max(limit, Math.floor(input.scanLimit ?? limit * 10));
+		const scanLimit = Math.max(
+			limit,
+			Math.floor(input.scanLimit ?? limit * 10),
+		);
 		const threshold = input.threshold ?? 0.7;
 
 		return this.queryMessagesSync({
@@ -1256,18 +1374,26 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				) {
 					return null;
 				}
-				const similarity = cosineSimilarity(input.queryEmbedding, message.embedding);
+				const similarity = cosineSimilarity(
+					input.queryEmbedding,
+					message.embedding,
+				);
 				return this.toSemanticSearchResult(message, similarity);
 			})
 			.filter(
 				(result): result is SQLiteRawMessageSemanticSearchResult =>
-					result !== null && Number.isFinite(result.similarity) && result.similarity >= threshold,
+					result !== null &&
+					Number.isFinite(result.similarity) &&
+					result.similarity >= threshold,
 			)
 			.sort((a, b) => b.similarity - a.similarity)
 			.slice(0, limit);
 	}
 
-	private matchesSemanticFilters(message: RawMessage, input: SQLiteRawMessageSemanticSearchInput): boolean {
+	private matchesSemanticFilters(
+		message: RawMessage,
+		input: SQLiteRawMessageSemanticSearchInput,
+	): boolean {
 		if (message.userId !== input.userId) {
 			return false;
 		}
@@ -1277,7 +1403,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (!input.includeDeprecated && message.deprecatedAt !== undefined) {
 			return false;
 		}
-		if (input.embeddingModel && message.embeddingModel !== input.embeddingModel) {
+		if (
+			input.embeddingModel &&
+			message.embeddingModel !== input.embeddingModel
+		) {
 			return false;
 		}
 		if (input.platform && message.platform !== input.platform) {
@@ -1286,10 +1415,16 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (input.botId && message.botId !== input.botId) {
 			return false;
 		}
-		if (input.channel && !message.channel?.toLowerCase().includes(input.channel.toLowerCase())) {
+		if (
+			input.channel &&
+			!message.channel?.toLowerCase().includes(input.channel.toLowerCase())
+		) {
 			return false;
 		}
-		if (input.person && !message.person?.toLowerCase().includes(input.person.toLowerCase())) {
+		if (
+			input.person &&
+			!message.person?.toLowerCase().includes(input.person.toLowerCase())
+		) {
 			return false;
 		}
 		if (input.startTime !== undefined && message.timestamp < input.startTime) {
@@ -1388,7 +1523,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		).map(toRawMessage);
 	}
 
-	private getRowsByMessageIds(messageIds: string[], userId?: string): RawMessageRow[] {
+	private getRowsByMessageIds(
+		messageIds: string[],
+		userId?: string,
+	): RawMessageRow[] {
 		const ids = Array.from(new Set(messageIds.filter(Boolean)));
 		if (ids.length === 0) {
 			return [];

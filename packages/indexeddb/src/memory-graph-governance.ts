@@ -20,7 +20,12 @@ import {
 	createRawMessageMemoryGraphStore,
 	ownerScopeFromMessage,
 } from "./memory-graph-evolution";
-import type { MemorySummaryQuery, MemorySummaryRecord, RawMessage, RawMessageQuery } from "./storage";
+import type {
+	MemorySummaryQuery,
+	MemorySummaryRecord,
+	RawMessage,
+	RawMessageQuery,
+} from "./storage";
 export type RawMessageMemoryGraphCorrectionAction =
 	| {
 			type: "correct-summary";
@@ -82,16 +87,13 @@ export interface RawMessageGraphGovernanceStorage extends RawMessageGraphEvoluti
 		messageIds: string[],
 		input: { userId?: string; supersededBySummaryId?: string },
 	) => Promise<number>;
-	searchMessagesSemantically?: (input: SemanticSearchInput) => Promise<unknown[]>;
+	searchMessagesSemantically?: (
+		input: SemanticSearchInput,
+	) => Promise<unknown[]>;
 }
 
 export type MemoryGraphGovernanceRuntimeStatus =
-	| "applied"
-	| "no-op"
-	| "replayed"
-	| "conflict"
-	| "partial-failure"
-	| "failed";
+	"applied" | "no-op" | "replayed" | "conflict" | "partial-failure" | "failed";
 
 export interface MemoryGraphGovernanceRuntimeResult {
 	status: MemoryGraphGovernanceRuntimeStatus;
@@ -111,8 +113,10 @@ export interface MemoryGraphGovernanceRuntimeResult {
 	error?: { name: string; message: string };
 }
 
-const CORRECTION_COMMAND_DIMENSION = "__opencontextMemoryGraphCorrectionCommandId";
-const CORRECTION_COMMAND_FINGERPRINT_DIMENSION = "__opencontextMemoryGraphCorrectionCommandFingerprint";
+const CORRECTION_COMMAND_DIMENSION =
+	"__opencontextMemoryGraphCorrectionCommandId";
+const CORRECTION_COMMAND_FINGERPRINT_DIMENSION =
+	"__opencontextMemoryGraphCorrectionCommandFingerprint";
 
 function stagedCorrectedSummary(
 	summary: MemorySummaryRecord,
@@ -130,7 +134,9 @@ function stagedCorrectedSummary(
 	};
 }
 
-function publishCorrectedSummary(summary: MemorySummaryRecord): MemorySummaryRecord {
+function publishCorrectedSummary(
+	summary: MemorySummaryRecord,
+): MemorySummaryRecord {
 	const published = publishMemorySummary(summary);
 	const dimensions = { ...(published.dimensions ?? {}) };
 	delete dimensions[CORRECTION_COMMAND_DIMENSION];
@@ -164,7 +170,9 @@ function canonicalValue(value: unknown): unknown {
 
 function commandFingerprint(
 	kind: "correction" | "rollback",
-	command: RawMessageMemoryGraphCorrectionCommand | RawMessageMemoryGraphRollbackCommand,
+	command:
+		| RawMessageMemoryGraphCorrectionCommand
+		| RawMessageMemoryGraphRollbackCommand,
 	trustedContext: RawMessageMemoryGraphTrustedContext,
 ): string {
 	const payload = { ...command } as Record<string, unknown>;
@@ -191,7 +199,10 @@ function hasCommandFingerprintConflict(
 	);
 }
 
-function ownerScope(userId: string, input: { workspaceId?: string; tenantId?: string }): OwnerScope {
+function ownerScope(
+	userId: string,
+	input: { workspaceId?: string; tenantId?: string },
+): OwnerScope {
 	return {
 		userId,
 		workspaceId: input.workspaceId,
@@ -220,19 +231,27 @@ function runtimeResult(input: {
 		ownerScope: { ...input.ownerScope },
 		commandId: input.commandId,
 		graphVersion: input.graphVersion,
-		appliedOperationIds: (input.operations ?? []).map((operation) => operation.operationId),
+		appliedOperationIds: (input.operations ?? []).map(
+			(operation) => operation.operationId,
+		),
 		restoredRecords: input.restoredRecords ?? 0,
 		reasonCodes: unique(input.reasonCodes),
 		summaryId: input.summaryId,
-		sourceRecordIds: input.sourceRecordIds ? [...input.sourceRecordIds] : undefined,
+		sourceRecordIds: input.sourceRecordIds
+			? [...input.sourceRecordIds]
+			: undefined,
 		error: input.error,
 	};
 }
 
 function validateCommand(command: RawMessageMemoryGraphCommandBase): string[] {
 	return [
-		...(command.commandId.trim().length === 0 ? ["memory_graph_command_id_required"] : []),
-		...(command.reason.trim().length === 0 ? ["memory_graph_command_reason_required"] : []),
+		...(command.commandId.trim().length === 0
+			? ["memory_graph_command_id_required"]
+			: []),
+		...(command.reason.trim().length === 0
+			? ["memory_graph_command_reason_required"]
+			: []),
 	];
 }
 
@@ -246,9 +265,14 @@ function persistenceStatus(input: {
 	return input.mutatesGraph ? "applied" : "no-op";
 }
 
-function metadataStringArray(metadata: Record<string, unknown> | undefined, key: string): string[] {
+function metadataStringArray(
+	metadata: Record<string, unknown> | undefined,
+	key: string,
+): string[] {
 	const value = metadata?.[key];
-	return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+	return Array.isArray(value)
+		? value.filter((item): item is string => typeof item === "string")
+		: [];
 }
 
 async function restoreCorrectionMessages(input: {
@@ -256,7 +280,8 @@ async function restoreCorrectionMessages(input: {
 	userId: string;
 	messages: RawMessage[];
 }): Promise<
-	{ success: true; restoredRecords: number } | { success: false; restoredRecords: number; error: unknown }
+	| { success: true; restoredRecords: number }
+	| { success: false; restoredRecords: number; error: unknown }
 > {
 	if (typeof input.storage.restoreDeprecatedMessages !== "function") {
 		return { success: true, restoredRecords: 0 };
@@ -314,8 +339,18 @@ export async function runMemoryGraphCorrection(input: {
 		const priorCommandOperations = await store.readAppliedOperations({
 			ownerScope: scope,
 		});
-		const fingerprint = commandFingerprint("correction", input.command, input.trustedContext);
-		if (hasCommandFingerprintConflict(priorCommandOperations, input.command.commandId, fingerprint)) {
+		const fingerprint = commandFingerprint(
+			"correction",
+			input.command,
+			input.trustedContext,
+		);
+		if (
+			hasCommandFingerprintConflict(
+				priorCommandOperations,
+				input.command.commandId,
+				fingerprint,
+			)
+		) {
 			return runtimeResult({
 				status: "conflict",
 				ownerScope: scope,
@@ -348,14 +383,20 @@ export async function runMemoryGraphCorrection(input: {
 		if (input.command.action.type === "correct-summary") {
 			const correction = input.command.action;
 			const targetCorrectedSummaryId =
-				correction.correctedSummaryId ?? correctedSummaryId(scope, input.command.commandId);
-			const summaryIds = unique([correction.summaryId, targetCorrectedSummaryId]);
+				correction.correctedSummaryId ??
+				correctedSummaryId(scope, input.command.commandId);
+			const summaryIds = unique([
+				correction.summaryId,
+				targetCorrectedSummaryId,
+			]);
 			const oldSummaries = await input.storage.querySummaries({
 				userId: scope.userId,
 				summaryIds,
 				pageSize: summaryIds.length,
 			});
-			const oldSummary = oldSummaries.find((summary) => summary.summaryId === correction.summaryId);
+			const oldSummary = oldSummaries.find(
+				(summary) => summary.summaryId === correction.summaryId,
+			);
 			if (!oldSummary || correction.correctedContent.trim().length === 0) {
 				return runtimeResult({
 					status: "failed",
@@ -363,7 +404,9 @@ export async function runMemoryGraphCorrection(input: {
 					commandId: input.command.commandId,
 					graphVersion: snapshot.version,
 					reasonCodes: [
-						oldSummary ? "memory_graph_corrected_content_required" : "memory_graph_summary_not_found",
+						oldSummary
+							? "memory_graph_corrected_content_required"
+							: "memory_graph_summary_not_found",
 					],
 				});
 			}
@@ -374,7 +417,9 @@ export async function runMemoryGraphCorrection(input: {
 					sameOwnerScope(node.ownerScope, scope),
 			);
 			const targetCluster = snapshot.clusters.find(
-				(cluster) => cluster.clusterId === correction.clusterId && sameOwnerScope(cluster.ownerScope, scope),
+				(cluster) =>
+					cluster.clusterId === correction.clusterId &&
+					sameOwnerScope(cluster.ownerScope, scope),
 			);
 			if (!graphSummary || !targetCluster?.nodeIds.includes(graphSummary.id)) {
 				return runtimeResult({
@@ -387,7 +432,9 @@ export async function runMemoryGraphCorrection(input: {
 			}
 			previousSummary = oldSummary;
 			summaryId = targetCorrectedSummaryId;
-			const storedSummaryWithCorrectedId = oldSummaries.find((summary) => summary.summaryId === summaryId);
+			const storedSummaryWithCorrectedId = oldSummaries.find(
+				(summary) => summary.summaryId === summaryId,
+			);
 			const graphAlreadyOwnsCorrectedSummary = snapshot.nodes.some(
 				(node) =>
 					node.id === summaryId &&
@@ -399,13 +446,21 @@ export async function runMemoryGraphCorrection(input: {
 			const pendingSummaryBelongsToCommand =
 				storedSummaryWithCorrectedId !== undefined &&
 				isMemorySummaryPublicationPending(storedSummaryWithCorrectedId) &&
-				storedSummaryWithCorrectedId.dimensions?.[CORRECTION_COMMAND_DIMENSION] === input.command.commandId &&
-				storedSummaryWithCorrectedId.dimensions?.[CORRECTION_COMMAND_FINGERPRINT_DIMENSION] === fingerprint;
+				storedSummaryWithCorrectedId.dimensions?.[
+					CORRECTION_COMMAND_DIMENSION
+				] === input.command.commandId &&
+				storedSummaryWithCorrectedId.dimensions?.[
+					CORRECTION_COMMAND_FINGERPRINT_DIMENSION
+				] === fingerprint;
 			const pendingSummaryReusesCommandId =
 				storedSummaryWithCorrectedId !== undefined &&
 				isMemorySummaryPublicationPending(storedSummaryWithCorrectedId) &&
-				storedSummaryWithCorrectedId.dimensions?.[CORRECTION_COMMAND_DIMENSION] === input.command.commandId &&
-				storedSummaryWithCorrectedId.dimensions?.[CORRECTION_COMMAND_FINGERPRINT_DIMENSION] !== fingerprint;
+				storedSummaryWithCorrectedId.dimensions?.[
+					CORRECTION_COMMAND_DIMENSION
+				] === input.command.commandId &&
+				storedSummaryWithCorrectedId.dimensions?.[
+					CORRECTION_COMMAND_FINGERPRINT_DIMENSION
+				] !== fingerprint;
 			if (pendingSummaryReusesCommandId) {
 				return runtimeResult({
 					status: "conflict",
@@ -426,7 +481,9 @@ export async function runMemoryGraphCorrection(input: {
 					ownerScope: scope,
 					commandId: input.command.commandId,
 					graphVersion: snapshot.version,
-					reasonCodes: ["memory_graph_correction_corrected_summary_id_conflict"],
+					reasonCodes: [
+						"memory_graph_correction_corrected_summary_id_conflict",
+					],
 				});
 			}
 			correctedSummary = stagedCorrectedSummary(
@@ -450,7 +507,10 @@ export async function runMemoryGraphCorrection(input: {
 			action = input.command.action;
 			if (action.type === "remove-member") {
 				memberMessage = await input.storage.getMessageById(action.nodeId);
-				if (memberMessage && !sameOwnerScope(ownerScopeFromMessage(memberMessage), scope)) {
+				if (
+					memberMessage &&
+					!sameOwnerScope(ownerScopeFromMessage(memberMessage), scope)
+				) {
 					return runtimeResult({
 						status: "no-op",
 						ownerScope: scope,
@@ -474,7 +534,9 @@ export async function runMemoryGraphCorrection(input: {
 		});
 		const removeMemberOperation =
 			action.type === "remove-member"
-				? (plan.operations.find((operation) => operation.kind === "remove-cluster-member") ??
+				? (plan.operations.find(
+						(operation) => operation.kind === "remove-cluster-member",
+					) ??
 					priorCommandOperations.find(
 						(operation) =>
 							operation.kind === "remove-cluster-member" &&
@@ -485,19 +547,27 @@ export async function runMemoryGraphCorrection(input: {
 			action.type === "remove-member"
 				? unique([
 						action.nodeId,
-						...metadataStringArray(removeMemberOperation?.metadata, "restoreSourceNodeIds"),
+						...metadataStringArray(
+							removeMemberOperation?.metadata,
+							"restoreSourceNodeIds",
+						),
 					])
 				: [];
 		const correctionRestoreMessages = (
 			await Promise.all(
-				correctionRestoreSourceIds.map((messageId) => input.storage.getMessageById(messageId)),
+				correctionRestoreSourceIds.map((messageId) =>
+					input.storage.getMessageById(messageId),
+				),
 			)
 		).filter(
 			(message): message is RawMessage =>
-				message !== null && sameOwnerScope(ownerScopeFromMessage(message), scope),
+				message !== null &&
+				sameOwnerScope(ownerScopeFromMessage(message), scope),
 		);
 		if (
-			correctionRestoreMessages.some((message) => message.deprecatedAt !== undefined) &&
+			correctionRestoreMessages.some(
+				(message) => message.deprecatedAt !== undefined,
+			) &&
 			typeof input.storage.restoreDeprecatedMessages !== "function"
 		) {
 			return runtimeResult({
@@ -505,7 +575,10 @@ export async function runMemoryGraphCorrection(input: {
 				ownerScope: scope,
 				commandId: input.command.commandId,
 				graphVersion: snapshot.version,
-				reasonCodes: ["adapter_missing_restore_deprecated_messages", "memory_graph_correction_not_applied"],
+				reasonCodes: [
+					"adapter_missing_restore_deprecated_messages",
+					"memory_graph_correction_not_applied",
+				],
 				sourceRecordIds: correctionRestoreSourceIds,
 			});
 		}
@@ -513,7 +586,9 @@ export async function runMemoryGraphCorrection(input: {
 			if (
 				action.type === "remove-member" &&
 				removeMemberOperation &&
-				correctionRestoreMessages.some((message) => message.deprecatedAt !== undefined) &&
+				correctionRestoreMessages.some(
+					(message) => message.deprecatedAt !== undefined,
+				) &&
 				typeof input.storage.restoreDeprecatedMessages === "function"
 			) {
 				const restoration = await restoreCorrectionMessages({
@@ -539,19 +614,27 @@ export async function runMemoryGraphCorrection(input: {
 					commandId: input.command.commandId,
 					graphVersion: snapshot.version,
 					restoredRecords: restoration.restoredRecords,
-					reasonCodes: [...plan.reasonCodes, "memory_graph_correction_restore_retried"],
+					reasonCodes: [
+						...plan.reasonCodes,
+						"memory_graph_correction_restore_retried",
+					],
 					sourceRecordIds: correctionRestoreSourceIds,
 				});
 			}
 			if (correctedSummary && commandWasApplied) {
 				try {
-					await input.storage.upsertSummaries([publishCorrectedSummary(correctedSummary)]);
+					await input.storage.upsertSummaries([
+						publishCorrectedSummary(correctedSummary),
+					]);
 					return runtimeResult({
 						status: "replayed",
 						ownerScope: scope,
 						commandId: input.command.commandId,
 						graphVersion: snapshot.version,
-						reasonCodes: [...plan.reasonCodes, "memory_graph_corrected_summary_publication_retried"],
+						reasonCodes: [
+							...plan.reasonCodes,
+							"memory_graph_corrected_summary_publication_retried",
+						],
 						summaryId,
 					});
 				} catch (error) {
@@ -580,8 +663,12 @@ export async function runMemoryGraphCorrection(input: {
 			for (const operation of plan.operations) {
 				operation.metadata = {
 					...(operation.metadata ?? {}),
-					previousSummaryId: action.type === "correct-summary" ? action.summaryId : undefined,
-					previousSummaryText: action.type === "correct-summary" ? previousSummary?.summaryText : undefined,
+					previousSummaryId:
+						action.type === "correct-summary" ? action.summaryId : undefined,
+					previousSummaryText:
+						action.type === "correct-summary"
+							? previousSummary?.summaryText
+							: undefined,
 				};
 			}
 		}
@@ -594,7 +681,9 @@ export async function runMemoryGraphCorrection(input: {
 		const persisted = await store.persistPlan(plan);
 		if (correctedSummary && !persisted.conflict) {
 			try {
-				await input.storage.upsertSummaries([publishCorrectedSummary(correctedSummary)]);
+				await input.storage.upsertSummaries([
+					publishCorrectedSummary(correctedSummary),
+				]);
 			} catch (error) {
 				return runtimeResult({
 					status: "partial-failure",
@@ -602,7 +691,10 @@ export async function runMemoryGraphCorrection(input: {
 					commandId: input.command.commandId,
 					graphVersion: persisted.version,
 					operations: persisted.appliedOperations,
-					reasonCodes: [...plan.reasonCodes, "memory_graph_corrected_summary_publication_failed"],
+					reasonCodes: [
+						...plan.reasonCodes,
+						"memory_graph_corrected_summary_publication_failed",
+					],
 					summaryId,
 					error: errorInfo(error),
 				});
@@ -612,7 +704,9 @@ export async function runMemoryGraphCorrection(input: {
 		if (
 			!persisted.conflict &&
 			action.type === "remove-member" &&
-			correctionRestoreMessages.some((message) => message.deprecatedAt !== undefined) &&
+			correctionRestoreMessages.some(
+				(message) => message.deprecatedAt !== undefined,
+			) &&
 			typeof input.storage.restoreDeprecatedMessages === "function"
 		) {
 			const restoration = await restoreCorrectionMessages({
@@ -629,7 +723,10 @@ export async function runMemoryGraphCorrection(input: {
 					graphVersion: persisted.version,
 					operations: persisted.appliedOperations,
 					restoredRecords,
-					reasonCodes: [...plan.reasonCodes, "memory_graph_correction_restore_failed"],
+					reasonCodes: [
+						...plan.reasonCodes,
+						"memory_graph_correction_restore_failed",
+					],
 					sourceRecordIds: correctionRestoreSourceIds,
 					error: errorInfo(restoration.error),
 				});
@@ -651,7 +748,10 @@ export async function runMemoryGraphCorrection(input: {
 			: undefined;
 		return {
 			...runtimeResult({
-				status: correctedSummary && persisted.conflict ? "partial-failure" : persistenceStatus(persisted),
+				status:
+					correctedSummary && persisted.conflict
+						? "partial-failure"
+						: persistenceStatus(persisted),
 				ownerScope: scope,
 				commandId: input.command.commandId,
 				graphVersion: persisted.version,
@@ -665,7 +765,10 @@ export async function runMemoryGraphCorrection(input: {
 						: []),
 				],
 				summaryId,
-				sourceRecordIds: action.type === "remove-member" ? correctionRestoreSourceIds : undefined,
+				sourceRecordIds:
+					action.type === "remove-member"
+						? correctionRestoreSourceIds
+						: undefined,
 			}),
 			auditTrail: audit
 				? {
@@ -687,20 +790,29 @@ export async function runMemoryGraphCorrection(input: {
 	}
 }
 
-function sourceIdsForSummary(snapshot: MemoryGraphSnapshot, summaryId: string): string[] {
+function sourceIdsForSummary(
+	snapshot: MemoryGraphSnapshot,
+	summaryId: string,
+): string[] {
 	const summary = snapshot.nodes.find((node) => node.id === summaryId);
 	const metadataSources = Array.isArray(summary?.metadata?.sourceNodeIds)
-		? summary.metadata.sourceNodeIds.filter((value): value is string => typeof value === "string")
+		? summary.metadata.sourceNodeIds.filter(
+				(value): value is string => typeof value === "string",
+			)
 		: [];
 	const edgeSources = snapshot.edges
 		.filter((edge) => edge.kind === "supersede" && edge.toNodeId === summaryId)
 		.map((edge) => edge.fromNodeId);
 	return unique([...metadataSources, ...edgeSources]).filter(
-		(nodeId) => snapshot.nodes.find((node) => node.id === nodeId)?.type === "raw",
+		(nodeId) =>
+			snapshot.nodes.find((node) => node.id === nodeId)?.type === "raw",
 	);
 }
 
-function predecessorSummaryIdsForSummary(snapshot: MemoryGraphSnapshot, summaryId: string): string[] {
+function predecessorSummaryIdsForSummary(
+	snapshot: MemoryGraphSnapshot,
+	summaryId: string,
+): string[] {
 	const nodesById = new Map(snapshot.nodes.map((node) => [node.id, node]));
 	const summary = nodesById.get(summaryId);
 	const correctedFromSummaryId =
@@ -712,7 +824,9 @@ function predecessorSummaryIdsForSummary(snapshot: MemoryGraphSnapshot, summaryI
 		...snapshot.edges
 			.filter(
 				(edge) =>
-					edge.kind === "supersede" && edge.toNodeId === summaryId && edge.metadata?.inactive !== true,
+					edge.kind === "supersede" &&
+					edge.toNodeId === summaryId &&
+					edge.metadata?.inactive !== true,
 			)
 			.map((edge) => edge.fromNodeId)
 			.filter((nodeId) => {
@@ -753,8 +867,18 @@ export async function runMemoryGraphRollback(input: {
 		const priorCommandOperations = await store.readAppliedOperations({
 			ownerScope: scope,
 		});
-		const fingerprint = commandFingerprint("rollback", input.command, input.trustedContext);
-		if (hasCommandFingerprintConflict(priorCommandOperations, input.command.commandId, fingerprint)) {
+		const fingerprint = commandFingerprint(
+			"rollback",
+			input.command,
+			input.trustedContext,
+		);
+		if (
+			hasCommandFingerprintConflict(
+				priorCommandOperations,
+				input.command.commandId,
+				fingerprint,
+			)
+		) {
 			return runtimeResult({
 				status: "conflict",
 				ownerScope: scope,
@@ -786,8 +910,14 @@ export async function runMemoryGraphRollback(input: {
 			nodeId: input.command.summaryId,
 			includeDeprecated: true,
 		});
-		const predecessorSummaryNodeIds = predecessorSummaryIdsForSummary(snapshot, input.command.summaryId);
-		const directSourceRecordIds = sourceIdsForSummary(snapshot, input.command.summaryId);
+		const predecessorSummaryNodeIds = predecessorSummaryIdsForSummary(
+			snapshot,
+			input.command.summaryId,
+		);
+		const directSourceRecordIds = sourceIdsForSummary(
+			snapshot,
+			input.command.summaryId,
+		);
 		const sourceRecordIds =
 			predecessorSummaryNodeIds.length > 0 && directSourceRecordIds.length > 0
 				? directSourceRecordIds
@@ -839,14 +969,19 @@ export async function runMemoryGraphRollback(input: {
 				commandId: input.command.commandId,
 				graphVersion: prepared.version,
 				operations: prepared.appliedOperations,
-				reasonCodes: [...prepare.reasonCodes, "adapter_missing_restore_deprecated_messages"],
+				reasonCodes: [
+					...prepare.reasonCodes,
+					"adapter_missing_restore_deprecated_messages",
+				],
 				summaryId: input.command.summaryId,
 				sourceRecordIds,
 			});
 		}
 		let restoredRecords = 0;
 		try {
-			const summaryNode = snapshot.nodes.find((node) => node.id === input.command.summaryId);
+			const summaryNode = snapshot.nodes.find(
+				(node) => node.id === input.command.summaryId,
+			);
 			const correctedFromSummaryId =
 				typeof summaryNode?.metadata?.correctedFromSummaryId === "string"
 					? summaryNode.metadata.correctedFromSummaryId
@@ -856,10 +991,13 @@ export async function runMemoryGraphRollback(input: {
 				...(correctedFromSummaryId ? [correctedFromSummaryId] : []),
 			]);
 			for (const supersededBySummaryId of deprecationSummaryIds) {
-				restoredRecords += await input.storage.restoreDeprecatedMessages(sourceRecordIds, {
-					userId: scope.userId,
-					supersededBySummaryId,
-				});
+				restoredRecords += await input.storage.restoreDeprecatedMessages(
+					sourceRecordIds,
+					{
+						userId: scope.userId,
+						supersededBySummaryId,
+					},
+				);
 			}
 		} catch (error) {
 			return runtimeResult({
@@ -876,7 +1014,9 @@ export async function runMemoryGraphRollback(input: {
 			});
 		}
 		const restoredSources = await Promise.all(
-			sourceRecordIds.map((messageId) => input.storage.getMessageById(messageId)),
+			sourceRecordIds.map((messageId) =>
+				input.storage.getMessageById(messageId),
+			),
 		);
 		const incompleteSourceRestore = restoredSources.some(
 			(message) =>
@@ -905,14 +1045,18 @@ export async function runMemoryGraphRollback(input: {
 		const appliedOperations = await store.readAppliedOperations({
 			ownerScope: scope,
 		});
-		const previousLifecycleByClusterId: Record<string, MemoryClusterLifecycleStatus | undefined> = {};
+		const previousLifecycleByClusterId: Record<
+			string,
+			MemoryClusterLifecycleStatus | undefined
+		> = {};
 		for (const operation of appliedOperations) {
 			if (
 				operation.kind === "set-cluster-lifecycle" &&
 				operation.clusterId &&
 				operation.supersededByNodeId === input.command.summaryId
 			) {
-				previousLifecycleByClusterId[operation.clusterId] = operation.fromStatus;
+				previousLifecycleByClusterId[operation.clusterId] =
+					operation.fromStatus;
 			}
 		}
 		const finalize = buildMemoryGraphRollbackFinalizePlan({
@@ -942,18 +1086,25 @@ export async function runMemoryGraphRollback(input: {
 		});
 		return {
 			...runtimeResult({
-				status: finalized.conflict ? "partial-failure" : persistenceStatus(finalized),
+				status: finalized.conflict
+					? "partial-failure"
+					: persistenceStatus(finalized),
 				ownerScope: scope,
 				commandId: input.command.commandId,
 				graphVersion: finalized.version,
-				operations: [...prepared.appliedOperations, ...finalized.appliedOperations],
+				operations: [
+					...prepared.appliedOperations,
+					...finalized.appliedOperations,
+				],
 				restoredRecords,
 				reasonCodes: [
 					...prepare.reasonCodes,
 					...finalize.reasonCodes,
 					...prepared.diagnostics,
 					...finalized.diagnostics,
-					...(finalized.conflict ? ["memory_graph_rollback_finalize_version_conflict"] : []),
+					...(finalized.conflict
+						? ["memory_graph_rollback_finalize_version_conflict"]
+						: []),
 				],
 				summaryId: input.command.summaryId,
 				sourceRecordIds,

@@ -24,7 +24,10 @@ export interface RawMessageData {
 /**
  * Extract raw messages from Slack format
  */
-export function extractSlackMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractSlackMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -33,16 +36,20 @@ export function extractSlackMessages(messages: unknown[], botId: string): RawMes
 		.filter((msg) => msg && typeof msg === "object")
 		.map((msg: any, index: number) => {
 			const timestamp = msg.ts || msg.timestamp || msg.time;
-			const content = msg.text || msg.content || msg.message || msg.snippet || "";
+			const content =
+				msg.text || msg.content || msg.message || msg.snippet || "";
 			const channel = msg.channel || msg.chatName || msg.chatId || "unknown";
-			const sender = msg.user || msg.userName || msg.sender || msg.from || "unknown";
+			const sender =
+				msg.user || msg.userName || msg.sender || msg.from || "unknown";
 
 			// Generate unique messageId
 			let messageId: string;
 			if (msg.clientMsgId || msg.msgId) {
 				messageId = String(msg.clientMsgId || msg.msgId);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `slack_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -67,7 +74,10 @@ export function extractSlackMessages(messages: unknown[], botId: string): RawMes
 /**
  * Extract raw messages from Discord format
  */
-export function extractDiscordMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractDiscordMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -76,16 +86,21 @@ export function extractDiscordMessages(messages: unknown[], botId: string): RawM
 		.filter((msg) => msg && typeof msg === "object")
 		.map((msg: any, index: number) => {
 			const timestamp = msg.timestamp || msg.createdTimestamp;
-			const content = msg.content || msg.message || msg.text || msg.snippet || "";
-			const channel = msg.channelName || msg.channelId || msg.guildId || "unknown";
-			const sender = msg.authorName || msg.authorUsername || msg.userName || "unknown";
+			const content =
+				msg.content || msg.message || msg.text || msg.snippet || "";
+			const channel =
+				msg.channelName || msg.channelId || msg.guildId || "unknown";
+			const sender =
+				msg.authorName || msg.authorUsername || msg.userName || "unknown";
 
 			// Generate unique messageId
 			let messageId: string;
 			if (msg.id) {
 				messageId = String(msg.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `discord_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -129,7 +144,8 @@ export function extractUnifiedInsightMessages(
 			const tsNum = typeof tsRaw === "number" ? tsRaw : Number(tsRaw) || 0;
 
 			// ExtractedMessageInfo and part pipeline use second-level timestamp; IndexedDB display layer handles seconds
-			const timestampSec = tsNum >= 1e12 ? Math.floor(tsNum / 1000) : Math.floor(tsNum);
+			const timestampSec =
+				tsNum >= 1e12 ? Math.floor(tsNum / 1000) : Math.floor(tsNum);
 
 			let messageId: string;
 			if (idRaw !== undefined && idRaw !== null && idRaw !== "") {
@@ -147,7 +163,8 @@ export function extractUnifiedInsightMessages(
 				botId,
 				channel,
 				person: sender,
-				timestamp: timestampSec > 0 ? timestampSec : Math.floor(Date.now() / 1000),
+				timestamp:
+					timestampSec > 0 ? timestampSec : Math.floor(Date.now() / 1000),
 				content,
 				attachments: extractAttachments(msg.attachments),
 				metadata: {
@@ -160,7 +177,10 @@ export function extractUnifiedInsightMessages(
 /**
  * Extract raw messages from Telegram format
  */
-export function extractTelegramMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractTelegramMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -171,7 +191,8 @@ export function extractTelegramMessages(messages: unknown[], botId: string): Raw
 			const timestamp = msg.date || msg.timestamp || msg.time;
 			const content = msg.text || msg.message || msg.content || msg.snippet;
 			const chatId = msg.chatName || msg.chatTitle || msg.chatId || "unknown";
-			const sender = msg.fromName || msg.fromFirstName || msg.sender || "unknown";
+			const sender =
+				msg.fromName || msg.fromFirstName || msg.sender || "unknown";
 
 			// Generate unique messageId using combination of fields
 			// Use msg.id if available, otherwise create a unique composite key
@@ -206,7 +227,10 @@ export function extractTelegramMessages(messages: unknown[], botId: string): Raw
 /**
  * Extract raw messages from WhatsApp format
  */
-export function extractWhatsAppMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractWhatsAppMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -224,7 +248,9 @@ export function extractWhatsAppMessages(messages: unknown[], botId: string): Raw
 			if (msg.id || msg.key?.id) {
 				messageId = String(msg.id || msg.key?.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `whatsapp_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -248,7 +274,10 @@ export function extractWhatsAppMessages(messages: unknown[], botId: string): Raw
 /**
  * Extract raw messages from iMessage format
  */
-export function extractIMessageMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractIMessageMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -305,17 +334,26 @@ export function extractEmailMessages(
 	return emails
 		.filter((email) => email && typeof email === "object")
 		.map((email: any, index: number) => {
-			const timestamp = email.timestamp || email.date || email.time || Math.floor(Date.now() / 1000);
-			const content = email.text || email.snippet || email.subject || email.body || "";
-			const channel = email.from?.email || email.sender || email.fromEmail || "unknown";
-			const sender = email.from?.name || email.senderName || email.fromName || "unknown";
+			const timestamp =
+				email.timestamp ||
+				email.date ||
+				email.time ||
+				Math.floor(Date.now() / 1000);
+			const content =
+				email.text || email.snippet || email.subject || email.body || "";
+			const channel =
+				email.from?.email || email.sender || email.fromEmail || "unknown";
+			const sender =
+				email.from?.name || email.senderName || email.fromName || "unknown";
 
 			// Generate unique messageId
 			let messageId: string;
 			if (email.uid || email.id) {
 				messageId = String(email.uid || email.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `${platform}_${botId}_${timestamp || 0}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -341,7 +379,10 @@ export function extractEmailMessages(
 /**
  * Extract raw messages from Teams format
  */
-export function extractTeamsMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractTeamsMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -351,15 +392,22 @@ export function extractTeamsMessages(messages: unknown[], botId: string): RawMes
 		.map((msg: any, index: number) => {
 			const timestamp = msg.timestamp || msg.createdDateTime || msg.time;
 			const content = msg.body?.content || msg.content || msg.text || "";
-			const channel = msg.channelName || msg.chatName || msg.channelId || "unknown";
-			const sender = msg.from?.user?.displayName || msg.senderName || msg.userName || "unknown";
+			const channel =
+				msg.channelName || msg.chatName || msg.channelId || "unknown";
+			const sender =
+				msg.from?.user?.displayName ||
+				msg.senderName ||
+				msg.userName ||
+				"unknown";
 
 			// Generate unique messageId
 			let messageId: string;
 			if (msg.id) {
 				messageId = String(msg.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `teams_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -383,7 +431,10 @@ export function extractTeamsMessages(messages: unknown[], botId: string): RawMes
 /**
  * Extract raw messages from LinkedIn format
  */
-export function extractLinkedInMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractLinkedInMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -401,7 +452,9 @@ export function extractLinkedInMessages(messages: unknown[], botId: string): Raw
 			if (msg.id) {
 				messageId = String(msg.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `linkedin_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -424,7 +477,10 @@ export function extractLinkedInMessages(messages: unknown[], botId: string): Raw
 /**
  * Extract raw messages from Instagram format
  */
-export function extractInstagramMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractInstagramMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -442,7 +498,9 @@ export function extractInstagramMessages(messages: unknown[], botId: string): Ra
 			if (msg.id) {
 				messageId = String(msg.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `instagram_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -465,7 +523,10 @@ export function extractInstagramMessages(messages: unknown[], botId: string): Ra
 /**
  * Extract raw messages from X (Twitter) format
  */
-export function extractXMessages(messages: unknown[], botId: string): RawMessageData[] {
+export function extractXMessages(
+	messages: unknown[],
+	botId: string,
+): RawMessageData[] {
 	if (!Array.isArray(messages)) {
 		return [];
 	}
@@ -483,7 +544,9 @@ export function extractXMessages(messages: unknown[], botId: string): RawMessage
 			if (msg.id) {
 				messageId = String(msg.id);
 			} else {
-				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = content
+					? btoa(content.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `twitter_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
 			}
 
@@ -506,7 +569,11 @@ export function extractXMessages(messages: unknown[], botId: string): RawMessage
 /**
  * Extract raw messages from RSS feed format
  */
-export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: string): RawMessageData[] {
+export function extractRSSMessages(
+	items: unknown[],
+	botId: string,
+	feedTitle?: string,
+): RawMessageData[] {
 	if (!Array.isArray(items)) {
 		return [];
 	}
@@ -514,11 +581,19 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 	return items
 		.filter((item) => item && typeof item === "object")
 		.map((item: any, index: number) => {
-			const timestamp = item.pubDate || item.publishedAt || item.date || item.isoDate;
-			const parsedTimestamp = timestamp ? new Date(timestamp).getTime() / 1000 : Date.now() / 1000;
+			const timestamp =
+				item.pubDate || item.publishedAt || item.date || item.isoDate;
+			const parsedTimestamp = timestamp
+				? new Date(timestamp).getTime() / 1000
+				: Date.now() / 1000;
 
 			// Extract content from various RSS fields
-			const content = item["content:encoded"] || item.content || item.summary || item.description || "";
+			const content =
+				item["content:encoded"] ||
+				item.content ||
+				item.summary ||
+				item.description ||
+				"";
 			const title = item.title || item.titleText || "";
 
 			// Combine title and content for better context
@@ -534,7 +609,9 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 			// Extract categories/tags
 			const categories = item.categories || item.tags || [];
 			const categoryList = Array.isArray(categories)
-				? categories.map((c: any) => (typeof c === "string" ? c : c?.name || c?.term)).filter(Boolean)
+				? categories
+						.map((c: any) => (typeof c === "string" ? c : c?.name || c?.term))
+						.filter(Boolean)
 				: [];
 
 			// Generate unique messageId
@@ -542,7 +619,9 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 			if (item.guid || item.id || item.link) {
 				messageId = String(item.guid || item.id || item.link);
 			} else {
-				const contentHash = fullContent ? btoa(fullContent.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = fullContent
+					? btoa(fullContent.substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `rss_${botId}_${parsedTimestamp}_${feedTitle || "feed"}_${person || "unknown"}_${contentHash}`;
 			}
 
@@ -552,7 +631,10 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 				botId,
 				channel: feedTitle || item.feedTitle || "RSS Feed",
 				person: person || feedTitle || "Unknown",
-				timestamp: typeof parsedTimestamp === "number" ? parsedTimestamp : Date.now() / 1000,
+				timestamp:
+					typeof parsedTimestamp === "number"
+						? parsedTimestamp
+						: Date.now() / 1000,
 				content: String(fullContent).trim(),
 				attachments: link
 					? [
@@ -656,7 +738,8 @@ export function extractRawMessages(
 	feedTitle?: string,
 ): RawMessageData[] {
 	// Handle JSON string input
-	const messageArray = typeof messages === "string" ? JSON.parse(messages) : messages;
+	const messageArray =
+		typeof messages === "string" ? JSON.parse(messages) : messages;
 
 	if (!Array.isArray(messageArray) || messageArray.length === 0) {
 		return [];

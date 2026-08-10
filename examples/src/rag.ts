@@ -23,17 +23,32 @@ export default async function testRag() {
 		);
 		check(
 			"each chunk has start/end positions",
-			chunks.every((c) => typeof c?.startPosition === "number" && typeof c?.endPosition === "number"),
+			chunks.every(
+				(c) =>
+					typeof c?.startPosition === "number" &&
+					typeof c?.endPosition === "number",
+			),
 		);
 		check(
 			"chunk start positions are non-decreasing",
-			chunks.every((c, i) => i === 0 || c.startPosition >= chunks[i - 1].startPosition),
+			chunks.every(
+				(c, i) => i === 0 || c.startPosition >= chunks[i - 1].startPosition,
+			),
 		);
 
 		// Verify vector-store classes are exported as constructors.
 		const ragModule = await import("@melandlabs/rag");
-		check("SQLiteVecStore is a class", typeof ragModule.SQLiteVecStore === "function");
-		check("ChromaVectorStore is a class", typeof ragModule.ChromaVectorStore === "function");
-		check("generateEmbedding is a function", typeof ragModule.generateEmbedding === "function");
+		check(
+			"SQLiteVecStore is a class",
+			typeof ragModule.SQLiteVecStore === "function",
+		);
+		check(
+			"ChromaVectorStore is a class",
+			typeof ragModule.ChromaVectorStore === "function",
+		);
+		check(
+			"generateEmbedding is a function",
+			typeof ragModule.generateEmbedding === "function",
+		);
 	});
 }

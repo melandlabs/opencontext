@@ -5,7 +5,6 @@
 > (the facade) instead. Monorepo contributors depend on this package via
 > the workspace protocol.
 
-
 [Instagram](https://developers.facebook.com/docs/instagram-api) messaging
 adapter for OpenContext. Sends and receives Instagram DM conversations
 through the Meta Graph API.

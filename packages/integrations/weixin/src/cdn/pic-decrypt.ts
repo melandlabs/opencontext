@@ -7,8 +7,13 @@ async function fetchCdnBytes(url: string, label: string): Promise<Buffer> {
 	try {
 		res = await fetch(url);
 	} catch (err) {
-		const cause = (err as NodeJS.ErrnoException).cause ?? (err as NodeJS.ErrnoException).code ?? "(no cause)";
-		logger.error(`${label}: fetch network error url=${url} err=${String(err)} cause=${String(cause)}`);
+		const cause =
+			(err as NodeJS.ErrnoException).cause ??
+			(err as NodeJS.ErrnoException).code ??
+			"(no cause)";
+		logger.error(
+			`${label}: fetch network error url=${url} err=${String(err)} cause=${String(cause)}`,
+		);
 		throw err;
 	}
 	logger.debug(`${label}: response status=${res.status} ok=${res.ok}`);
@@ -25,7 +30,10 @@ async function fetchCdnBytes(url: string, label: string): Promise<Buffer> {
 function parseAesKey(aesKeyBase64: string, label: string): Buffer {
 	const decoded = Buffer.from(aesKeyBase64, "base64");
 	if (decoded.length === 16) return decoded;
-	if (decoded.length === 32 && /^[0-9a-fA-F]{32}$/.test(decoded.toString("ascii"))) {
+	if (
+		decoded.length === 32 &&
+		/^[0-9a-fA-F]{32}$/.test(decoded.toString("ascii"))
+	) {
 		return Buffer.from(decoded.toString("ascii"), "hex");
 	}
 	const msg = `${label}: aes_key format invalid, decoded length=${decoded.length}`;
@@ -44,7 +52,9 @@ export async function downloadAndDecryptBuffer(
 	const url = buildCdnDownloadUrl(encryptedQueryParam, cdnBaseUrl);
 	logger.debug(`${label}: fetching url=${url}`);
 	const encrypted = await fetchCdnBytes(url, label);
-	logger.debug(`${label}: downloaded ${encrypted.byteLength} bytes, decrypting`);
+	logger.debug(
+		`${label}: downloaded ${encrypted.byteLength} bytes, decrypting`,
+	);
 	const decrypted = decryptAesEcb(encrypted, key);
 	logger.debug(`${label}: decrypted ${decrypted.length} bytes`);
 	return decrypted;

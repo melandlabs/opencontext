@@ -27,21 +27,36 @@ import type {
 export type GoalStatus = z.infer<typeof GoalStatusSchema>;
 export type GoalCompletionPolicy = z.infer<typeof GoalCompletionPolicySchema>;
 export type GoalSource = z.infer<typeof GoalSourceSchema>;
-export type GoalCriterionVerification = z.infer<typeof GoalCriterionVerificationSchema>;
+export type GoalCriterionVerification = z.infer<
+	typeof GoalCriterionVerificationSchema
+>;
 export type GoalSuccessCriterion = z.infer<typeof GoalSuccessCriterionSchema>;
 export type GoalConstraint = z.infer<typeof GoalConstraintSchema>;
 export type GoalContextReference = z.infer<typeof GoalContextReferenceSchema>;
 export type AgentGoal = z.infer<typeof AgentGoalSchema>;
 export type CreateAgentGoalInput = z.input<typeof CreateAgentGoalInputSchema>;
-export type ParsedCreateAgentGoalInput = z.output<typeof CreateAgentGoalInputSchema>;
+export type ParsedCreateAgentGoalInput = z.output<
+	typeof CreateAgentGoalInputSchema
+>;
 export type AgentGoalUpdate = z.infer<typeof AgentGoalUpdateSchema>;
 export type GoalEvaluationResult = z.infer<typeof GoalEvaluationResultSchema>;
-export type RuntimeInstructionKind = z.infer<typeof RuntimeInstructionKindSchema>;
-export type RuntimeInstructionDeliveryMode = z.infer<typeof RuntimeInstructionDeliveryModeSchema>;
-export type RuntimeInstructionSource = z.infer<typeof RuntimeInstructionSourceSchema>;
+export type RuntimeInstructionKind = z.infer<
+	typeof RuntimeInstructionKindSchema
+>;
+export type RuntimeInstructionDeliveryMode = z.infer<
+	typeof RuntimeInstructionDeliveryModeSchema
+>;
+export type RuntimeInstructionSource = z.infer<
+	typeof RuntimeInstructionSourceSchema
+>;
 export type RuntimeInstruction = z.infer<typeof RuntimeInstructionSchema>;
-type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, Extract<keyof T, K>> : never;
-export type RuntimeInstructionDraft = DistributiveOmit<RuntimeInstruction, "sequence">;
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+	? Omit<T, Extract<keyof T, K>>
+	: never;
+export type RuntimeInstructionDraft = DistributiveOmit<
+	RuntimeInstruction,
+	"sequence"
+>;
 export type RuntimeProvider = z.infer<typeof RuntimeProviderSchema>;
 export type RuntimeSessionState = z.infer<typeof RuntimeSessionStateSchema>;
 export type GoalRunStatus = z.infer<typeof GoalRunStatusSchema>;
@@ -69,7 +84,8 @@ export interface PersistedAgentGoal {
 }
 
 export type GoalLifecycleTransitionAction = "pause" | "cancel";
-export type GoalLifecycleTransitionPhase = "prepared" | "boundary_observed" | "finalized";
+export type GoalLifecycleTransitionPhase =
+	"prepared" | "boundary_observed" | "finalized";
 
 /**
  * Durable shape of a terminal-boundary lifecycle transition.
@@ -91,7 +107,8 @@ export interface AgentGoalLifecycleTransition {
 	phase: GoalLifecycleTransitionPhase;
 }
 
-export type GoalReplacementPhase = "prepared" | "boundary_observed" | "activated";
+export type GoalReplacementPhase =
+	"prepared" | "boundary_observed" | "activated";
 
 /**
  * Durable shape of a two-phase primary Goal replacement.

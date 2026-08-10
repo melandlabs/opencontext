@@ -20,7 +20,11 @@ export function calculateBackoffDelay(
 }
 
 /** Determine whether a connection is stale based on last event time. */
-export function isConnectionStale(lastEventTime: number, now: number, staleThresholdMs: number): boolean {
+export function isConnectionStale(
+	lastEventTime: number,
+	now: number,
+	staleThresholdMs: number,
+): boolean {
 	const elapsed = now - lastEventTime;
 	return elapsed > staleThresholdMs;
 }

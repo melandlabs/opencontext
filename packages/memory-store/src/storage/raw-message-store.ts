@@ -9,7 +9,10 @@
 
 import type { RawMessageStorageManager } from "@melandlabs/indexeddb/storage";
 import type { MemoryStoreConfig, MemoryStoreEnv } from "../config";
-import { hasPostgresFactory, resolvePostgresFactory } from "./postgres-raw-message-factory";
+import {
+	hasPostgresFactory,
+	resolvePostgresFactory,
+} from "./postgres-raw-message-factory";
 import {
 	closeSQLiteRawMessageManager,
 	getSQLiteRawMessageManager,
@@ -50,13 +53,17 @@ export interface RawMessageStore {
 function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
 	if (env) return env;
 	return {
-		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
+		isTauriMode: () =>
+			process.env.IS_TAURI === "true" ||
+			typeof process.env.TAURI_MODE === "string",
 		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
 		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
 	};
 }
 
-export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}): RawMessageStore {
+export function createRawMessageStore(
+	options: CreateRawMessageStoreOptions = {},
+): RawMessageStore {
 	const env = resolveEnv(options.env);
 
 	return {
@@ -68,7 +75,9 @@ export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}
 		},
 		async getManager(): Promise<RawMessageStorageManagerWithSearch> {
 			if (isSQLiteRawMessageStorageAvailable(env)) {
-				return (await getSQLiteRawMessageManager(env)) as unknown as RawMessageStorageManagerWithSearch;
+				return (await getSQLiteRawMessageManager(
+					env,
+				)) as unknown as RawMessageStorageManagerWithSearch;
 			}
 			const pg = await resolvePostgresFactory(env);
 			if (!pg) {
@@ -91,7 +100,9 @@ export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}
 let moduleStore: RawMessageStore | null = null;
 let moduleConfig: MemoryStoreConfig | null = null;
 
-export function configureRawMessageStore(config: MemoryStoreConfig): RawMessageStore {
+export function configureRawMessageStore(
+	config: MemoryStoreConfig,
+): RawMessageStore {
 	moduleConfig = config;
 	moduleStore = createRawMessageStore({ env: config.env });
 	return moduleStore;

@@ -25,7 +25,8 @@ export type AgentRuntimeInstructionSnapshot = RuntimeInstruction;
 export type AgentRuntimeInstructionPayload = RuntimeInstruction["payload"];
 export type AgentGoalEvidencePayload = GoalEvidence["payload"];
 
-export type AgentRuntimePendingOperation = AgentGoalLifecycleTransition | AgentGoalReplacement;
+export type AgentRuntimePendingOperation =
+	AgentGoalLifecycleTransition | AgentGoalReplacement;
 
 /**
  * Historical command results are kept independently from the mutable Goal row
@@ -48,13 +49,10 @@ export type AgentGoalCommandCheckpoint =
 
 export type AgentGoalSlot = "primary";
 export type AgentGoalSlotState = "assigned" | "reserved" | "released";
-export type AgentGoalCommandType = "goal_instruction" | "lifecycle" | "replacement";
+export type AgentGoalCommandType =
+	"goal_instruction" | "lifecycle" | "replacement";
 export type AgentGoalCommandPhase =
-	| "committed"
-	| "prepared"
-	| "boundary_observed"
-	| "finalized"
-	| "activated";
+	"committed" | "prepared" | "boundary_observed" | "finalized" | "activated";
 
 export type {
 	DeliveryState,
