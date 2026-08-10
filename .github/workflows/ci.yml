@@ -73,6 +73,9 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      # examples/ smoke-tests import @melandlabs/* packages and need dist/
+      # artifacts to be present before `pnpm -r test` runs.
+      - run: pnpm -r build
       - run: pnpm -r test
 
   build:

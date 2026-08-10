@@ -13,7 +13,7 @@ import type { Messages } from "./message";
 export abstract class MessagePlatformAdapter {
 	public name: string;
 	public botAccountId: number;
-	protected listeners: Map<MessageTarget, MessageHandler<MessageTarget>> = new Map();
+	protected listeners: Map<MessageTarget, MessageHandler<any>> = new Map();
 
 	/**
 	 * Initialize the adapter
