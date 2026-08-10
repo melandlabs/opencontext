@@ -28,17 +28,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/ai/rag"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/ai/rag",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ai/rag",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · rag module",
+  "description": "OpenContext · rag module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@chroma-core/default-embed": "^0.1.9",

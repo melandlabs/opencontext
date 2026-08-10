@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/voice-kokoro"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/voice-kokoro",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/voice-kokoro",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · voice-kokoro module",
+  "description": "OpenContext · voice-kokoro module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {},
   "devDependencies": {

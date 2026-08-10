@@ -1,6 +1,6 @@
 # @opencontext/i18n
 
-Locale message bundles used across the OpenLoomi web app. Ships the raw
+Locale message bundles used across the OpenContext web app. Ships the raw
 strings as ESM modules so they can be tree-shaken into a host app's i18n
 runtime.
 

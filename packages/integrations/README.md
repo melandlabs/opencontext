@@ -1,6 +1,6 @@
 # @opencontext/integrations
 
-Unified package for openloomi integration packages.
+Unified package for opencontext integration packages.
 
 ## Packages
 

@@ -23,17 +23,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/telegram"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/telegram",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/telegram",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · integrations/telegram module",
+  "description": "OpenContext · integrations/telegram module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@opencontext/ai": "workspace:*",

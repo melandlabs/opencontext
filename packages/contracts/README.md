@@ -1,6 +1,6 @@
 # `@opencontext/contracts`
 
-Cross-cutting type contracts shared between the OpenLoomi **runtime** sub-project
+Cross-cutting type contracts shared between the OpenContext **runtime** sub-project
 (memory / context / environment / agent) and the **UI** sub-project (Next.js +
 Tauri + components).
 

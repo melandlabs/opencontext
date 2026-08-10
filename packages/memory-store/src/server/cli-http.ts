@@ -3,7 +3,7 @@
  * CLI entry for the memory-store HTTP daemon.
  *
  * Usage:
- *   openloomi-memory-http --port 7421 --host 127.0.0.1
+ *   opencontext-memory-http --port 7421 --host 127.0.0.1
  *
  * Reads `MEMORY_HTTP_PORT` and `MEMORY_HTTP_HOST` env vars as
  * defaults. Wires up the standalone memory store (no Drizzle — only
@@ -33,7 +33,7 @@ function parseArgs(argv: string[]): CliArgs {
 			i += 1;
 		} else if (arg === "--help" || arg === "-h") {
 			console.log(
-				"Usage: openloomi-memory-http [--port <port>] [--host <host>]",
+				"Usage: opencontext-memory-http [--port <port>] [--host <host>]",
 			);
 			process.exit(0);
 		}

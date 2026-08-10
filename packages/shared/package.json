@@ -15,16 +15,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/shared"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/shared",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/shared",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "Shared utility primitives used across OpenLoomi packages.",
-  "keywords": ["openloomi", "shared", "utilities"],
+  "description": "Shared utility primitives used across OpenContext packages.",
+  "keywords": ["opencontext", "shared", "utilities"],
   "dependencies": {
     "@opencontext/ui-runtime": "workspace:*",
     "clsx": "^2.1.1",

@@ -1,6 +1,6 @@
 # @opencontext/integrations-imessage
 
-[iMessage](https://support.apple.com/messages) integration for OpenLoomi,
+[iMessage](https://support.apple.com/messages) integration for OpenContext,
 powered by [`@photon-ai/imessage-kit`](https://www.npmjs.com/package/@photon-ai/imessage-kit)
 on macOS. Lets bots send and receive iMessage / SMS conversations.
 

@@ -2,7 +2,7 @@
 
 Storage abstraction with first-class adapters for the local filesystem and
 [Vercel Blob](https://vercel.com/docs/storage/vercel-blob). Lets the rest of
-the OpenLoomi stack stay agnostic of where bytes actually live.
+the OpenContext stack stay agnostic of where bytes actually live.
 
 ## Installation
 

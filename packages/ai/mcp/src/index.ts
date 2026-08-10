@@ -11,29 +11,29 @@ export type {
 } from "./loader";
 
 export {
-	createOpenLoomiMcpServer,
-	runOpenLoomiMcpStdioServer,
-	type CreateOpenLoomiMcpServerOptions,
+	createOpenContextMcpServer,
+	runOpenContextMcpStdioServer,
+	type CreateOpenContextMcpServerOptions,
 } from "./server";
 export {
-	OpenLoomiClient,
-	OpenLoomiApiError,
-	resolveOpenLoomiBaseUrl,
-	type OpenLoomiClientOptions,
-	type OpenLoomiRequestOptions,
-} from "./openloomi/client";
+	OpenContextClient,
+	OpenContextApiError,
+	resolveOpenContextBaseUrl,
+	type OpenContextClientOptions,
+	type OpenContextRequestOptions,
+} from "./opencontext/client";
 export {
-	getOpenLoomiTokenPath,
-	readOpenLoomiAuthToken,
-	decodeStoredOpenLoomiToken,
-	type OpenLoomiAuthToken,
-	type OpenLoomiAuthTokenSource,
-} from "./openloomi/token";
+	getOpenContextTokenPath,
+	readOpenContextAuthToken,
+	decodeStoredOpenContextToken,
+	type OpenContextAuthToken,
+	type OpenContextAuthTokenSource,
+} from "./opencontext/token";
 export {
-	OPENLOOMI_INSTALL_URL,
-	checkOpenLoomiReadiness,
-	formatOpenLoomiReadiness,
-	type OpenLoomiApiProbe,
-	type OpenLoomiReadiness,
-	type OpenLoomiReadinessState,
-} from "./openloomi/readiness";
+	OPENCONTEXT_INSTALL_URL,
+	checkOpenContextReadiness,
+	formatOpenContextReadiness,
+	type OpenContextApiProbe,
+	type OpenContextReadiness,
+	type OpenContextReadinessState,
+} from "./opencontext/readiness";

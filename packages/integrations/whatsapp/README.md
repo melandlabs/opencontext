@@ -1,6 +1,6 @@
 # @opencontext/integrations-whatsapp
 
-[WhatsApp](https://www.whatsapp.com/) integration for OpenLoomi, powered by
+[WhatsApp](https://www.whatsapp.com/) integration for OpenContext, powered by
 [`@whiskeysockets/baileys`](https://www.npmjs.com/package/@whiskeysockets/baileys)
 (a WebSocket-based multi-device client). Includes channel adapter,
 conversation store, markdown renderer, and a multi-account client registry.

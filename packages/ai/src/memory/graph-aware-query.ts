@@ -209,7 +209,7 @@ function persistedHitMatchesSnapshot(input: {
 			return true;
 		}
 		return (
-			input.hit.summary.dimensions?.__openloomiMemoryPublicationRevision ===
+			input.hit.summary.dimensions?.__opencontextMemoryPublicationRevision ===
 			graphRevision
 		);
 	}

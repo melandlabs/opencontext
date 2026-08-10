@@ -1,7 +1,7 @@
 # @opencontext/memory-store
 
-OpenLoomi memory storage + search SDK with optional HTTP and MCP server
-entry points. The package is intentionally decoupled from the openloomi
+OpenContext memory storage + search SDK with optional HTTP and MCP server
+entry points. The package is intentionally decoupled from the opencontext
 web app's database and env layers — every consumer wires up its own
 implementation via `MemoryStoreConfig`.
 
@@ -43,8 +43,8 @@ const hits = await store.searchUnifiedMemory({ userId, query });
 CLI bins ship with the package:
 
 ```bash
-openloomi-memory-http --port 7421 --host 127.0.0.1
-openloomi-memory-mcp
+opencontext-memory-http --port 7421 --host 127.0.0.1
+opencontext-memory-mcp
 ```
 
 ## Configuration matrix
@@ -144,8 +144,8 @@ const store = await createMemoryStore({
 		backend: "chroma",
 		chroma: {
 			url: process.env.CHROMA_URL ?? "http://127.0.0.1:8000",
-			rawMessagesCollection: "openloomi_raw_messages",
-			insightsCollection: "openloomi_insights",
+			rawMessagesCollection: "opencontext_raw_messages",
+			insightsCollection: "opencontext_insights",
 		},
 	},
 	unified: { embedQuery: myEmbedder },
@@ -245,7 +245,7 @@ console.log(`listening at ${url}`);
 Or run the CLI:
 
 ```bash
-MEMORY_HTTP_HOST=0.0.0.0 MEMORY_HTTP_PORT=7421 openloomi-memory-http
+MEMORY_HTTP_HOST=0.0.0.0 MEMORY_HTTP_PORT=7421 opencontext-memory-http
 ```
 
 Endpoints:
@@ -270,7 +270,7 @@ location /memory/ {
 ### 7. MCP daemon
 
 ```bash
-openloomi-memory-mcp
+opencontext-memory-mcp
 ```
 
 Tools exposed over stdio:
@@ -287,11 +287,11 @@ Tools exposed over stdio:
 ```json
 {
 	"mcpServers": {
-		"openloomi-memory": {
+		"opencontext-memory": {
 			"command": "npx",
 			"args": ["-y", "@opencontext/memory-store", "memory-mcp"],
 			"env": {
-				"DATABASE_URL": "postgres://user:pass@host:5432/openloomi"
+				"DATABASE_URL": "postgres://user:pass@host:5432/opencontext"
 			}
 		}
 	}
@@ -303,10 +303,10 @@ For local dev against this monorepo, point at the built CLI directly:
 ```json
 {
 	"mcpServers": {
-		"openloomi-memory": {
+		"opencontext-memory": {
 			"command": "node",
 			"args": [
-				"/path/to/openloomi/packages/memory-store/dist/server/cli-mcp.js"
+				"/path/to/opencontext/packages/memory-store/dist/server/cli-mcp.js"
 			]
 		}
 	}
@@ -321,8 +321,8 @@ Same shape — Cursor reads `mcpServers` from its MCP settings
 ```json
 {
 	"mcpServers": {
-		"openloomi-memory": {
-			"command": "openloomi-memory-mcp"
+		"opencontext-memory": {
+			"command": "opencontext-memory-mcp"
 		}
 	}
 }
@@ -366,5 +366,5 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 ## See also
 
-- [`apps/marketing/content/memory.mdx`](https://github.com/melandlabs/openloomi/blob/main/apps/marketing/content/memory.mdx)
+- [`apps/marketing/content/memory.mdx`](https://github.com/melandlabs/opencontext/blob/main/apps/marketing/content/memory.mdx)
   — end-to-end memory architecture and the standalone-service section.

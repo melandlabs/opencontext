@@ -114,9 +114,9 @@ export interface MemoryGraphGovernanceRuntimeResult {
 }
 
 const CORRECTION_COMMAND_DIMENSION =
-	"__openloomiMemoryGraphCorrectionCommandId";
+	"__opencontextMemoryGraphCorrectionCommandId";
 const CORRECTION_COMMAND_FINGERPRINT_DIMENSION =
-	"__openloomiMemoryGraphCorrectionCommandFingerprint";
+	"__opencontextMemoryGraphCorrectionCommandFingerprint";
 
 function stagedCorrectedSummary(
 	summary: MemorySummaryRecord,

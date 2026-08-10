@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/google-docs"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/google-docs",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/google-docs",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · integrations/google-docs module",
+  "description": "OpenContext · integrations/google-docs module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "googleapis": "^140.0.0",

@@ -20,17 +20,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/ai/mcp"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/ai/mcp",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ai/mcp",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · mcp module",
+  "description": "OpenContext · mcp module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
@@ -46,6 +46,6 @@
     "prepublishOnly": "pnpm build"
   },
   "bin": {
-    "openloomi-mcp": "./dist/cli.js"
+    "opencontext-mcp": "./dist/cli.js"
   }
 }

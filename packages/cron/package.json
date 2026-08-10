@@ -17,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "url": "git+https://github.com/melandlabs/opencontext.git",
     "directory": "packages/cron"
   },
   "license": "Apache-2.0",
-  "description": "Cron scheduling primitives (types, schedule math, SSE stream response) shared between OpenLoomi runtime and UI.",
-  "keywords": ["openloomi", "cron", "scheduler"],
+  "description": "Cron scheduling primitives (types, schedule math, SSE stream response) shared between OpenContext runtime and UI.",
+  "keywords": ["opencontext", "cron", "scheduler"],
   "dependencies": {
     "croner": "^8"
   },

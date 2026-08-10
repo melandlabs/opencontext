@@ -1,5 +1,5 @@
 /**
- * @opencontext/integrations - Unified package for openloomi integration packages
+ * @opencontext/integrations - Unified package for opencontext integration packages
  *
  * This is the main entry point that re-exports core interfaces and types.
  * Individual platform adapters are available via subpaths:

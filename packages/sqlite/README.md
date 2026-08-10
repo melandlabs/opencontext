@@ -1,6 +1,6 @@
 # @opencontext/sqlite
 
-SQLite-backed persistence layer for OpenLoomi. Wraps `better-sqlite3` with
+SQLite-backed persistence layer for OpenContext. Wraps `better-sqlite3` with
 the `sqlite-vec` extension and exposes the raw message store plus the shared
 schema definitions.
 

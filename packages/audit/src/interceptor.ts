@@ -17,7 +17,7 @@ let projectRoot = "";
 /**
  * Determine if a file path belongs to "non-project"
  * - Files within project directory are not recorded
- * - node_modules / .next / .openloomi directories are not recorded
+ * - node_modules / .next / .opencontext directories are not recorded
  */
 function isNonProjectPath(filePath: string): boolean {
 	try {
@@ -30,9 +30,9 @@ function isNonProjectPath(filePath: string): boolean {
 		if (resolved.startsWith(projectRoot)) {
 			return false;
 		}
-		// Skip ~/.openloomi app data directory
-		const openloomiDir = resolve(homedir(), ".openloomi");
-		if (resolved.startsWith(openloomiDir)) {
+		// Skip ~/.opencontext app data directory
+		const opencontextDir = resolve(homedir(), ".opencontext");
+		if (resolved.startsWith(opencontextDir)) {
 			return false;
 		}
 		// Skip /dev/null, /proc and other system pseudo-files

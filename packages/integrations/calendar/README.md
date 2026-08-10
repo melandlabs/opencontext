@@ -1,6 +1,6 @@
 # @opencontext/integrations-calendar
 
-Google Calendar integration for OpenLoomi. Built on the official
+Google Calendar integration for OpenContext. Built on the official
 [`googleapis`](https://www.npmjs.com/package/googleapis) SDK and supports
 event listing, creation, and OAuth credential management.
 

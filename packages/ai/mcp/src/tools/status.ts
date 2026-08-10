@@ -1,28 +1,28 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import {
-	checkOpenLoomiReadiness,
-	formatOpenLoomiReadiness,
-	type OpenLoomiReadiness,
-} from "../openloomi/readiness";
-import type { OpenLoomiToolContext } from "./index";
+	checkOpenContextReadiness,
+	formatOpenContextReadiness,
+	type OpenContextReadiness,
+} from "../opencontext/readiness";
+import type { OpenContextToolContext } from "./index";
 
 function toStructuredContent(
-	readiness: OpenLoomiReadiness,
+	readiness: OpenContextReadiness,
 ): Record<string, unknown> {
 	return { ...readiness };
 }
 
 export function registerStatusTools(
 	server: McpServer,
-	context: OpenLoomiToolContext,
+	context: OpenContextToolContext,
 ): void {
 	server.registerTool(
-		"openloomi_status",
+		"opencontext_status",
 		{
-			title: "OpenLoomi Status",
+			title: "OpenContext Status",
 			description:
-				"Check whether the local OpenLoomi Desktop API and MCP token authentication are ready.",
+				"Check whether the local OpenContext Desktop API and MCP token authentication are ready.",
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -31,7 +31,7 @@ export function registerStatusTools(
 			},
 		},
 		async () => {
-			const readiness = await checkOpenLoomiReadiness({
+			const readiness = await checkOpenContextReadiness({
 				authToken: context.authToken,
 				preferredBaseUrl: context.client.baseUrl,
 			});
@@ -40,7 +40,7 @@ export function registerStatusTools(
 				content: [
 					{
 						type: "text" as const,
-						text: formatOpenLoomiReadiness(readiness),
+						text: formatOpenContextReadiness(readiness),
 					},
 				],
 				structuredContent: toStructuredContent(readiness),
@@ -49,11 +49,11 @@ export function registerStatusTools(
 	);
 
 	server.registerTool(
-		"openloomi_setup",
+		"opencontext_setup",
 		{
-			title: "OpenLoomi Setup",
+			title: "OpenContext Setup",
 			description:
-				"Run first-use OpenLoomi MCP setup checks and return the exact next step when Desktop, API, token, or auth is not ready.",
+				"Run first-use OpenContext MCP setup checks and return the exact next step when Desktop, API, token, or auth is not ready.",
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -62,7 +62,7 @@ export function registerStatusTools(
 			},
 		},
 		async () => {
-			const readiness = await checkOpenLoomiReadiness({
+			const readiness = await checkOpenContextReadiness({
 				authToken: context.authToken,
 				preferredBaseUrl: context.client.baseUrl,
 			});
@@ -71,7 +71,7 @@ export function registerStatusTools(
 				content: [
 					{
 						type: "text" as const,
-						text: formatOpenLoomiReadiness(readiness),
+						text: formatOpenContextReadiness(readiness),
 					},
 				],
 				structuredContent: toStructuredContent(readiness),

@@ -72,7 +72,7 @@ async function getInsightSQLiteVecStore(env: MemoryStoreEnv) {
 		await import("@opencontext/rag/sqlite-vec-store");
 	return await getSQLiteVecStore(dbPath, undefined, {
 		collectionName:
-			process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "openloomi_insights",
+			process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "opencontext_insights",
 	});
 }
 

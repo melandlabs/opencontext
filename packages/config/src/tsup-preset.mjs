@@ -1,4 +1,4 @@
-// Shared tsup preset for all OpenLoomi packages.
+// Shared tsup preset for all OpenContext packages.
 // Usage in a package's tsup.config.ts:
 //
 //   import { makeTsupConfig } from "@opencontext/config/tsup-preset";

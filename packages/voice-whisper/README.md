@@ -1,7 +1,7 @@
 # @opencontext/voice-whisper
 
 [Whisper](https://openai.com/research/whisper) speech-to-text provider for
-OpenLoomi. Streams transcribed text from a local Whisper model and exposes a
+OpenContext. Streams transcribed text from a local Whisper model and exposes a
 common `VoiceProvider` interface.
 
 ## Installation

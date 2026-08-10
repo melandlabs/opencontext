@@ -6,7 +6,7 @@
 
 A temporal context graph, a memory API, retrieval primitives,
 and a multiple-platform integration mesh — designed to be embedded into any
-host process. Battle-tested inside [openloomi](https://github.com/melandlabs/openloomi).
+host process. Battle-tested inside [opencontext](https://github.com/melandlabs/opencontext).
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -213,12 +213,12 @@ runtime substrate — every package is independently versioned, has a
 single responsibility, and consumes only `@opencontext/contracts`
 from the boundary layer.
 
-| Compared with…                                   | opencontext adds                                                                                                   |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| A flat vector DB (Pinecone, Weaviate, Qdrant)    | A **temporal graph** — facts have `valid_from` / `valid_until` and get superseded, not just similarity-matched     |
-| A context/memory library                         | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine        |
-| Wiring your own agent loop                       | A **separable Loop engine** that schedules when to call `@opencontext/ai`, instead of an LLM loop all the way down |
-| Embedding openloomi just to get its integrations | **Library-first API surface** — every package is independently published, no React/Next/Tauri required to use      |
+| Compared with…                                     | opencontext adds                                                                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| A flat vector DB (Pinecone, Weaviate, Qdrant)      | A **temporal graph** — facts have `valid_from` / `valid_until` and get superseded, not just similarity-matched     |
+| A context/memory library                           | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine        |
+| Wiring your own agent loop                         | A **separable Loop engine** that schedules when to call `@opencontext/ai`, instead of an LLM loop all the way down |
+| Embedding opencontext just to get its integrations | **Library-first API surface** — every package is independently published, no React/Next/Tauri required to use      |
 
 ## Provider matrix
 
@@ -237,7 +237,7 @@ from the boundary layer.
 ```
                        ┌────────────────────────────┐
                        │     Host application       │   ← your UI, CLI, or daemon
-                       │   (openloomi, an example,  │
+                       │   (opencontext, an example,  │
                        │    or your own embedder)   │
                        └─────────────┬──────────────┘
                                      │
@@ -264,13 +264,12 @@ in [`docs/architecture.md`](./docs/architecture.md).
 
 - [`docs/architecture.md`](./docs/architecture.md) — data model, lifecycle, transport surfaces
 - [`docs/philosophy.md`](./docs/philosophy.md) — why this shape, why this split
-- [`docs/split-from-openloomi.md`](./docs/split-from-openloomi.md) — history of the carve-out
+- [`docs/split-from-opencontext.md`](./docs/split-from-opencontext.md) — history of the carve-out
 - Each package's `README.md` — API surface, examples, migration notes
 
 ## Contributing
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md). Every change needs a
-changeset entry — run `pnpm changeset` after editing any package.
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ## License
 

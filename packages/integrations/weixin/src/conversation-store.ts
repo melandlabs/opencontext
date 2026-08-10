@@ -2,7 +2,7 @@
  * WeChat iLink Conversation Store
  *
  * File-backed per-day in-memory store for conversation history with AI.
- * Data persists to ~/.openloomi/memory/weixin/YYYY-MM-DD.json
+ * Data persists to ~/.opencontext/memory/weixin/YYYY-MM-DD.json
  *
  * Token trimming is handled by handleAgentRuntime (40K budget) — not here.
  */
@@ -17,7 +17,7 @@ import { join } from "node:path";
 import { homedir } from "node:os";
 
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".openloomi", "data", "memory");
+	const base = join(homedir(), ".opencontext", "data", "memory");
 	return userId ? join(base, userId) : base;
 }
 

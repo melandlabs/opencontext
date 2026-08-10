@@ -90,9 +90,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
-      - name: Verify no leftover @openloomi/* imports
+      - name: Verify no leftover @opencontext/* imports
         run: |
-          ! grep -rn --include='*.ts' --include='*.tsx' --include='*.json' '@openloomi/' \
+          ! grep -rn --include='*.ts' --include='*.tsx' --include='*.json' '@opencontext/' \
             packages apps services 2>/dev/null \
             | grep -v 'CHANGELOG.md'
 

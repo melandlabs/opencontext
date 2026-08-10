@@ -3,7 +3,7 @@
  * CLI entry for the memory-store MCP daemon.
  *
  * Usage:
- *   openloomi-memory-mcp
+ *   opencontext-memory-mcp
  *
  * Exposes the standalone memory store over MCP stdio. To enable
  * unified search, hosts must register a postgres factory via

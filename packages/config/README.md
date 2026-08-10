@@ -1,7 +1,7 @@
 # @opencontext/config
 
 Shared build, lint, and TypeScript presets used across every package in the
-OpenLoomi monorepo. Centralises `tsup`, ESLint, and `tsconfig` configuration so
+OpenContext monorepo. Centralises `tsup`, ESLint, and `tsconfig` configuration so
 each package's `package.json` stays minimal.
 
 ## Installation

@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/rss"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/rss",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/rss",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · rss module",
+  "description": "OpenContext · rss module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "fast-xml-parser": "^4.3.4",

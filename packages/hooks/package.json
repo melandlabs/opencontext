@@ -25,17 +25,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/hooks"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/hooks",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/hooks",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · hooks module",
+  "description": "OpenContext · hooks module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "peerDependencies": {
     "react": ">=18.0.0",

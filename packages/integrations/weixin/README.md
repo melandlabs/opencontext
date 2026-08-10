@@ -1,6 +1,6 @@
 # @opencontext/integrations-weixin
 
-[WeChat](https://www.wechat.com/) (微信) integration for OpenLoomi. Built on
+[WeChat](https://www.wechat.com/) (微信) integration for OpenContext. Built on
 the official
 [`@tencent-weixin/openclaw-weixin`](https://www.npmjs.com/package/@tencent-weixin/openclaw-weixin)
 SDK and ships helpers for QR login, CDN asset decryption, and iLink

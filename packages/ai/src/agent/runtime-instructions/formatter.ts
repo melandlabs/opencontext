@@ -34,9 +34,9 @@ function formatInstructionEnvelope(
 	] as const;
 
 	return [
-		`<openloomi_runtime_instruction${formatAttributes(attributes)}>`,
+		`<opencontext_runtime_instruction${formatAttributes(attributes)}>`,
 		body,
-		"</openloomi_runtime_instruction>",
+		"</opencontext_runtime_instruction>",
 	].join("\n");
 }
 
@@ -44,7 +44,7 @@ function formatInstructionBody(instruction: RuntimeInstruction): string {
 	switch (instruction.kind) {
 		case "goal.activate":
 			return [
-				"Action: Activate this OpenLoomi Goal.",
+				"Action: Activate this OpenContext Goal.",
 				formatGoal(instruction.payload.goal),
 				`Context safety: ${CONTEXT_SAFETY_NOTICE}`,
 			].join("\n\n");
@@ -84,7 +84,7 @@ function formatInstructionBody(instruction: RuntimeInstruction): string {
 			return `Action: Remove Goal constraint ${escapeText(instruction.payload.constraintId)}.`;
 		case "control.interrupt":
 			return [
-				"Action: Interrupt the current turn. Do not begin a replacement Goal until OpenLoomi sends its activation instruction.",
+				"Action: Interrupt the current turn. Do not begin a replacement Goal until OpenContext sends its activation instruction.",
 				`Reason: ${escapeText(instruction.payload.reason)}`,
 				`Expected run epoch: ${instruction.payload.expectedRunEpoch}`,
 				instruction.payload.replacementGoalId
@@ -264,9 +264,9 @@ function formatUntrustedContextBlock(context: GoalContextReference): string {
 	].filter((line): line is string => line !== undefined);
 
 	return [
-		`<openloomi_untrusted_context${formatAttributes(attributes)}>`,
+		`<opencontext_untrusted_context${formatAttributes(attributes)}>`,
 		body.length > 0 ? body.join("\n\n") : "No context snapshot was provided.",
-		"</openloomi_untrusted_context>",
+		"</opencontext_untrusted_context>",
 	].join("\n");
 }
 

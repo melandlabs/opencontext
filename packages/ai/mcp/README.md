@@ -1,11 +1,11 @@
 # @opencontext/mcp
 
-Stdio MCP server for using local OpenLoomi Desktop from MCP-capable agent
+Stdio MCP server for using local OpenContext Desktop from MCP-capable agent
 runtimes.
 
 ## Local Build
 
-Build the MCP server from the OpenLoomi repository:
+Build the MCP server from the OpenContext repository:
 
 ```bash
 pnpm --filter @opencontext/mcp build
@@ -16,9 +16,9 @@ Then point the runtime at the built stdio entrypoint:
 ```json
 {
 	"mcpServers": {
-		"openloomi-local": {
+		"opencontext-local": {
 			"command": "node",
-			"args": ["/path/to/openloomi/packages/ai/mcp/dist/cli.js"]
+			"args": ["/path/to/opencontext/packages/ai/mcp/dist/cli.js"]
 		}
 	}
 }
@@ -27,27 +27,27 @@ Then point the runtime at the built stdio entrypoint:
 CLI clients can add the local server with:
 
 ```bash
-codex mcp add openloomi-local -- node "/path/to/openloomi/packages/ai/mcp/dist/cli.js"
-claude mcp add --transport stdio --scope user openloomi-local -- node "/path/to/openloomi/packages/ai/mcp/dist/cli.js"
+codex mcp add opencontext-local -- node "/path/to/opencontext/packages/ai/mcp/dist/cli.js"
+claude mcp add --transport stdio --scope user opencontext-local -- node "/path/to/opencontext/packages/ai/mcp/dist/cli.js"
 ```
 
 On Windows, use an escaped path in JSON, such as
-`C:\\path\\to\\openloomi\\packages\\ai\\mcp\\dist\\cli.js`.
+`C:\\path\\to\\opencontext\\packages\\ai\\mcp\\dist\\cli.js`.
 
 ## User Flow
 
 1. Add the MCP server config in the agent runtime.
 2. Reload or restart the runtime's MCP servers.
-3. Run `openloomi_setup` or `openloomi_status` first.
-4. Follow the returned setup guidance if OpenLoomi Desktop is not ready.
-5. Use OpenLoomi memory, RAG, knowledge base, connector, and Loop tools.
+3. Run `opencontext_setup` or `opencontext_status` first.
+4. Follow the returned setup guidance if OpenContext Desktop is not ready.
+5. Use OpenContext memory, RAG, knowledge base, connector, and Loop tools.
 
 ## Tools
 
-- `openloomi_setup`, `openloomi_status`
-- `openloomi_memory_search`
-- `openloomi_rag_search`
-- `openloomi_kb_list_documents`, `openloomi_kb_get_document`,
-  `openloomi_kb_stats`
-- `openloomi_connectors_list_accounts`, `openloomi_connectors_status`
-- `openloomi_loop_state`, `openloomi_loop_list_decisions`
+- `opencontext_setup`, `opencontext_status`
+- `opencontext_memory_search`
+- `opencontext_rag_search`
+- `opencontext_kb_list_documents`, `opencontext_kb_get_document`,
+  `opencontext_kb_stats`
+- `opencontext_connectors_list_accounts`, `opencontext_connectors_status`
+- `opencontext_loop_state`, `opencontext_loop_list_decisions`

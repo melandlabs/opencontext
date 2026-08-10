@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/google-meet"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/google-meet",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/google-meet",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi \u00b7 integrations/google-meet module",
+  "description": "OpenContext \u00b7 integrations/google-meet module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "devDependencies": {
     "@opencontext/config": "workspace:*",

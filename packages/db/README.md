@@ -1,6 +1,6 @@
 # `@opencontext/db`
 
-Building blocks shared between OpenLoomi runtime and UI sub-projects.
+Building blocks shared between OpenContext runtime and UI sub-projects.
 
 Phase 4 of the [runtime/UI split plan](../../docs/split-runtime-ui.md) — currently
 ships only the dependency-free helpers extracted from `apps/web/lib/db`:

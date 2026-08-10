@@ -1,7 +1,7 @@
 # `apps/` is reserved for example host applications that demonstrate
 # the `@opencontext/*` packages. The primary application that consumes
-# this runtime — `openloomi/desktop` — lives in the sibling repo
-# `melandlabs/openloomi` and is **not** duplicated here.
+# this runtime — `opencontext/desktop` — lives in the sibling repo
+# `melandlabs/opencontext` and is **not** duplicated here.
 #
 # Add a new example under this directory when you want to show how
 # to embed opencontext into a host process (e.g. a CLI, a desktop

@@ -18,7 +18,7 @@ type AgentPermissionRequest = Parameters<
 >[0];
 
 export type AgentRuntimePermissionRequest = AgentPermissionRequest & {
-	/** Opaque OpenLoomi request id exposed to clients instead of provider ids. */
+	/** Opaque OpenContext request id exposed to clients instead of provider ids. */
 	requestId: string;
 };
 

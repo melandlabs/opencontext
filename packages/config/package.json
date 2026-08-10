@@ -17,16 +17,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/config"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/config",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/config",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "Shared tsup preset and lint/tsconfig presets for OpenLoomi packages.",
-  "keywords": ["openloomi", "tsup", "monorepo"],
+  "description": "Shared tsup preset and lint/tsconfig presets for OpenContext packages.",
+  "keywords": ["opencontext", "tsup", "monorepo"],
   "scripts": {
     "build": "tsup",
     "prepublishOnly": "pnpm build"

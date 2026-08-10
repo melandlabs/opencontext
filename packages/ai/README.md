@@ -1,6 +1,6 @@
 # @opencontext/ai
 
-Core AI building blocks used by the OpenLoomi runtime. Provides the agent
+Core AI building blocks used by the OpenContext runtime. Provides the agent
 loop, memory interface, sandbox execution surface, audio helpers, and shared
 types.
 

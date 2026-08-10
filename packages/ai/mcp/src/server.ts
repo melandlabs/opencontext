@@ -2,30 +2,30 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import {
-	OpenLoomiClient,
-	type OpenLoomiClientOptions,
-} from "./openloomi/client";
+	OpenContextClient,
+	type OpenContextClientOptions,
+} from "./opencontext/client";
 import {
-	readOpenLoomiAuthToken,
-	type OpenLoomiAuthToken,
-} from "./openloomi/token";
-import { registerOpenLoomiTools } from "./tools";
+	readOpenContextAuthToken,
+	type OpenContextAuthToken,
+} from "./opencontext/token";
+import { registerOpenContextTools } from "./tools";
 
 const DEFAULT_SERVER_NAME = "@opencontext/mcp";
 const DEFAULT_SERVER_VERSION = "0.9.0";
 
-export interface CreateOpenLoomiMcpServerOptions extends OpenLoomiClientOptions {
+export interface CreateOpenContextMcpServerOptions extends OpenContextClientOptions {
 	name?: string;
 	version?: string;
 }
 
-export async function createOpenLoomiMcpServer(
-	options: CreateOpenLoomiMcpServerOptions = {},
+export async function createOpenContextMcpServer(
+	options: CreateOpenContextMcpServerOptions = {},
 ): Promise<McpServer> {
 	const tokenResult = options.token
-		? ({ token: options.token, source: "env" } satisfies OpenLoomiAuthToken)
-		: await readOpenLoomiAuthToken();
-	const client = new OpenLoomiClient({
+		? ({ token: options.token, source: "env" } satisfies OpenContextAuthToken)
+		: await readOpenContextAuthToken();
+	const client = new OpenContextClient({
 		...options,
 		token: tokenResult.token ?? undefined,
 	});
@@ -34,15 +34,15 @@ export async function createOpenLoomiMcpServer(
 		version: options.version ?? DEFAULT_SERVER_VERSION,
 	});
 
-	registerOpenLoomiTools(server, { client, authToken: tokenResult });
+	registerOpenContextTools(server, { client, authToken: tokenResult });
 
 	return server;
 }
 
-export async function runOpenLoomiMcpStdioServer(
-	options: CreateOpenLoomiMcpServerOptions = {},
+export async function runOpenContextMcpStdioServer(
+	options: CreateOpenContextMcpServerOptions = {},
 ): Promise<McpServer> {
-	const server = await createOpenLoomiMcpServer(options);
+	const server = await createOpenContextMcpServer(options);
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
 	return server;

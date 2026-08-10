@@ -14,7 +14,7 @@ Related documents:
 
 ## Product Intent
 
-OpenLoomi memory should evolve through interaction between new and existing
+OpenContext memory should evolve through interaction between new and existing
 evidence. Memory must not remain a collection of isolated fragments connected
 only at query time by semantic similarity.
 

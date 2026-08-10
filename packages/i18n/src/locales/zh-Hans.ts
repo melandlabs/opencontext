@@ -23,9 +23,9 @@ const zhHans = {
 		reconnect: "重新连接",
 		email: "电子邮件",
 		password: "密码",
-		welcome: "欢迎使用 openloomi 内测版",
+		welcome: "欢迎使用 opencontext 内测版",
 		more: "更多",
-		askopenloomi: "询问 openloomi",
+		askopencontext: "询问 opencontext",
 		continue: "下一步",
 		add: "添加",
 		customInputPlaceholder: "输入后按回车键添加",
@@ -102,7 +102,7 @@ const zhHans = {
 		newChat: "新对话",
 		guest: "游客",
 		guestInputPlaceholder: "发送消息...",
-		youCanTry: "试着从以上场景开始使用 openloomi",
+		youCanTry: "试着从以上场景开始使用 opencontext",
 		noMoreData: "没有更多数据了",
 		noResults: "暂无结果",
 		loadingMore: "加载更多详情...",
@@ -120,8 +120,8 @@ const zhHans = {
 				description: "追踪 OpenAI、Claude、Google 等厂商的最新动态。",
 			},
 			frontendDesign: {
-				title: "为 openloomi 创建网站介绍页",
-				description: "设计精美的产品落地页，展示 openloomi 的功能。",
+				title: "为 opencontext 创建网站介绍页",
+				description: "设计精美的产品落地页，展示 opencontext 的功能。",
 			},
 			linkedinPost: {
 				title: "创建一个事件和定时任务追踪提醒我喝水",
@@ -136,14 +136,14 @@ const zhHans = {
 				description: "生成独特的生成艺术和视觉效果。",
 			},
 			presentation: {
-				title: "告诉我 openloomi 的功能指引",
-				description: "告诉我 openloomi 的功能指引",
+				title: "告诉我 opencontext 的功能指引",
+				description: "告诉我 opencontext 的功能指引",
 			},
 		},
 		quickAuthPrimaryCta: "开始授权",
-		quickAuthTitle: "先把 openloomi 连接到你的工具",
+		quickAuthTitle: "先把 opencontext 连接到你的工具",
 		quickAuthSubtitle:
-			"选择一个集成完成授权后，openloomi 才能同步消息并帮助你快速回复。",
+			"选择一个集成完成授权后，opencontext 才能同步消息并帮助你快速回复。",
 		quickAuthStatusConnect: "连接 {{platform}}",
 		quickAuthStatusConnected: "已连接：{{name}}",
 		quickAuthStatusConnectedFallback: "已连接",
@@ -152,22 +152,23 @@ const zhHans = {
 		rssTabWithCount: "RSS",
 		noConnectedPlatforms: "你还没有连接任何集成。",
 		allPlatformsConnected: "所有可用的集成都已连接。",
-		readyToChat: "已完成授权，随时可以开始使用 openloomi。",
+		readyToChat: "已完成授权，随时可以开始使用 opencontext。",
 		enterChat: "进入聊天",
-		openloomiIntro1: "我是你的智能沟通助手，可以帮你从分散在各个集成的消息中，",
-		openloomiIntro2: "快速找到最重要的内容，提升沟通效率。",
+		opencontextIntro1:
+			"我是你的智能沟通助手，可以帮你从分散在各个集成的消息中，",
+		opencontextIntro2: "快速找到最重要的内容，提升沟通效率。",
 		contactUs: "联系我们",
 		suggestion:
-			"如果您对 openloomi 有任何使用建议和想法，我们非常期待您与我们交流。",
+			"如果您对 opencontext 有任何使用建议和想法，我们非常期待您与我们交流。",
 		joinTelegram: "加入我们的 Telegram 群组",
 		joinDiscord: "加入我们的 Discord 社区",
 		mailToUs: "给我们发邮件",
 		reply: "我们会尽快回复您的消息",
 		desktopAppFeedbackHint: "欢迎加入我们的社区分享反馈和建议",
-		telegramBotHeadline: "通过 Telegram Bot 使用 openloomi",
+		telegramBotHeadline: "通过 Telegram Bot 使用 opencontext",
 		telegramBotDescription:
-			"安装官方 openloomi Bot，即可在 Telegram 中直接运行 /insight、/ask、/reply 等指令并查看理解。",
-		openTelegramBot: "打开 openloomi Bot",
+			"安装官方 opencontext Bot，即可在 Telegram 中直接运行 /insight、/ask、/reply 等指令并查看理解。",
+		openTelegramBot: "打开 opencontext Bot",
 		unAuth:
 			"您还没有完成各个沟通集成的授权，我暂时无法获取您的任何沟通信息，现在您只要完成授权，我就可以从海量的沟通信息中找到您关注的内容了，请选择您想要链接的集成：",
 		supportedPlatforms:
@@ -202,7 +203,7 @@ const zhHans = {
 		sendErrorCannotFindInputEntity:
 			"您需要在 Telegram 中将该接收者添加为您的联系人",
 		sending: "发送中...",
-		thinking: "openloomi 正在思考...",
+		thinking: "opencontext 正在思考...",
 		generating: "正在为你整理最佳回复",
 		sendSuccess: "消息发送成功！",
 		retry: "重试",
@@ -214,23 +215,24 @@ const zhHans = {
 		scrollToLatest: "回到底部",
 		newReply: "新回复",
 		replyReady:
-			"openloomi 已为您准备了消息草稿。点击详情在右侧的工具面板中查看。",
+			"opencontext 已为您准备了消息草稿。点击详情在右侧的工具面板中查看。",
 		clickToViewDetails: "点击查看详情",
 		replyRefresh: "帮我重新生成回复草稿。",
-		replyFinish: "openloomi 已经帮您将消息发送到 {{platform}} 的 {{recipient}}",
-		replyError: "抱歉，openloomi 发送消息时遇到了错误: {{error}}",
+		replyFinish:
+			"opencontext 已经帮您将消息发送到 {{platform}} 的 {{recipient}}",
+		replyError: "抱歉，opencontext 发送消息时遇到了错误: {{error}}",
 		replyToneHeading: "语气预设",
-		replyToneHint: "用于 openloomi 自动生成回复时的语气。",
+		replyToneHint: "用于 opencontext 自动生成回复时的语气。",
 		replyToneChangeHint: "切换语气会重新生成接下来的草稿。",
 		replyRegenerating: "正在重新生成",
 		replyRegenerateFailed: "草稿生成失败，请稍后再试。",
 		replyToneLabel: "语气：{{tone}}",
 		replyGenerateWithTone: "请以{{toneLabel}}的语气撰写回复。",
 		replyRefreshWithTone: "请重新生成这份回复草稿，保持{{toneLabel}}的语气。",
-		aiSoulHeading: "openloomi Soul",
+		aiSoulHeading: "opencontext Soul",
 		aiSoulIntroDescription:
-			"设置 openloomi 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
-		aiSoulHint: "用一段话定义 openloomi 的性格和风格，留空则使用默认设置",
+			"设置 opencontext 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
+		aiSoulHint: "用一段话定义 opencontext 的性格和风格，留空则使用默认设置",
 		aiSoulPromptLabel: "自定义提示词",
 		aiSoulPromptPlaceholder:
 			"例如：你是一个思维清晰、直接高效的助手，回答简洁，优先给出行动建议而不是分析。",
@@ -345,7 +347,7 @@ const zhHans = {
 		support: "支持",
 		allRightsReserved: "保留所有权利",
 		fetchCreditFailed: "获取额度信息失败",
-		authenticating: "正在连接 openloomi...",
+		authenticating: "正在连接 opencontext...",
 		executing: "正在执行...",
 		processing: "处理中...",
 		searchingMessages: "正在搜索消息...",
@@ -589,15 +591,15 @@ const zhHans = {
 		},
 		skillsSettings: {
 			title: "技能",
-			description: "从 ~/.openloomi/skills 管理 Claude Code 技能",
+			description: "从 ~/.opencontext/skills 管理 Claude Code 技能",
 			titleNew: "技能",
-			descriptionNew: "为 openloomi 提供预封装且可重复的最佳实践与工具",
+			descriptionNew: "为 opencontext 提供预封装且可重复的最佳实践与工具",
 			searchPlaceholder: "搜索技能...",
 			enableSkills: "启用技能",
 			addSkill: "添加技能",
 			add: "添加",
 			addSkillSource: "添加技能来源",
-			addSkillTooltip: "打开 ~/.openloomi/skills 文件夹",
+			addSkillTooltip: "打开 ~/.opencontext/skills 文件夹",
 			loading: "正在加载技能...",
 			loadFailed: "加载技能失败",
 			openedFolder: "已打开技能文件夹",
@@ -612,12 +614,12 @@ const zhHans = {
 			closeMenu: "关闭菜单",
 			closeModal: "关闭",
 			cancel: "取消",
-			userSource: "~/.openloomi/skills",
+			userSource: "~/.opencontext/skills",
 			builtinSource: "内置",
 			noSkillsFound: '未找到匹配 "{{query}}" 的技能',
 			noSkillsInstalled: "尚未安装技能",
 			noSkillsInMarketplace: "暂无技能",
-			addSkillsToDirectory: "将技能添加到 ~/.openloomi/skills 目录",
+			addSkillsToDirectory: "将技能添加到 ~/.opencontext/skills 目录",
 			addSkillsHint: '点击上方"添加"按钮从多个来源安装技能',
 			deleteDialog: {
 				title: "删除技能",
@@ -653,7 +655,7 @@ const zhHans = {
 		// Credits top-up
 		creditsTopUp: {
 			topUpTitle: "充值积分",
-			topUpDescription: "购买 openloomi 积分，用于 AI 对话和功能使用",
+			topUpDescription: "购买 opencontext 积分，用于 AI 对话和功能使用",
 			selectAmount: "选择充值金额",
 			customAmount: "自定义金额",
 			creditsLabel: "积分",
@@ -683,7 +685,7 @@ const zhHans = {
 			codexCompatibilityError: {
 				title: "Codex 配置需要处理",
 				suggestions: [
-					"升级 Codex，然后重启 OpenLoomi",
+					"升级 Codex，然后重启 OpenContext",
 					"或选择当前 Codex CLI 支持的模型",
 				],
 				docsAction: "打开 Codex 安装指南",
@@ -706,15 +708,15 @@ const zhHans = {
 	personalization: {
 		skillsSettings: {
 			title: "技能",
-			description: "管理 ~/.openloomi/skills 中的技能",
+			description: "管理 ~/.opencontext/skills 中的技能",
 			titleNew: "技能",
-			descriptionNew: "为 openloomi 提供预封装的可复用最佳实践和工具",
+			descriptionNew: "为 opencontext 提供预封装的可复用最佳实践和工具",
 			searchPlaceholder: "搜索技能...",
 			enableSkills: "启用技能",
 			addSkill: "添加技能",
 			add: "添加",
 			addSkillSource: "从...添加技能",
-			addSkillTooltip: "打开 ~/.openloomi/skills 文件夹",
+			addSkillTooltip: "打开 ~/.opencontext/skills 文件夹",
 			loading: "加载技能中...",
 			loadFailed: "加载技能失败",
 			openedFolder: "已打开技能文件夹",
@@ -729,12 +731,12 @@ const zhHans = {
 			closeMenu: "关闭菜单",
 			closeModal: "取消",
 			cancel: "取消",
-			userSource: "~/.openloomi/skills",
+			userSource: "~/.opencontext/skills",
 			builtinSource: "内置",
 			noSkillsFound: '未找到匹配 "{{query}}" 的技能',
 			noSkillsInstalled: "尚未安装技能",
 			noSkillsInMarketplace: "没有可用的技能",
-			addSkillsToDirectory: "将技能添加到 ~/.openloomi/skills 目录",
+			addSkillsToDirectory: "将技能添加到 ~/.opencontext/skills 目录",
 			addSkillsHint: '点击上方的"添加"按钮从多个来源安装技能',
 			deleteDialog: {
 				title: "删除技能",
@@ -794,7 +796,7 @@ const zhHans = {
 		weixin: "微信",
 	},
 	connectors: {
-		pageDescription: "关联您的平台或订阅您关心的内容 — openloomi 为您守望。",
+		pageDescription: "关联您的平台或订阅您关心的内容 — opencontext 为您守望。",
 		// #361 — capability state labels. 与单纯的 "connected" 措辞分开，让
 		// 用户清楚"已授权"与"被 Loop 监听"是两件事。
 		capabilityConnected: "已连接",
@@ -803,7 +805,7 @@ const zhHans = {
 		capabilityNeedsSetup: "需要配置",
 		capabilityUnsupported: "暂未支持映射",
 		capabilityReasonNoMapping:
-			"OpenLoomi 识别此集成，但其信号类型尚未映射到具体决策。",
+			"OpenContext 识别此集成，但其信号类型尚未映射到具体决策。",
 		capabilityReasonNotLoopMonitored:
 			"已授权用于聊天与记忆；Loop 暂未从此来源拉取信号。",
 		capabilitySummary:
@@ -838,7 +840,7 @@ const zhHans = {
 			cli_unauthorized:
 				"请通过 Composio 登录、为智能体运行 `claude auth login`,或在 API 设置中配置一个 Anthropic 兼容的 provider。",
 			timeout:
-				"请到 `~/.openloomi/loop/preferences.json` 缩短探测间隔,或检查网络。",
+				"请到 `~/.opencontext/loop/preferences.json` 缩短探测间隔,或检查网络。",
 			transport_error: "智能体服务未响应,请检查网络后重试。",
 			agent_http_error: "智能体返回了非正常状态码,请稍后重试。",
 			empty_response: "探测完成但未返回内容,可重试。",
@@ -850,7 +852,7 @@ const zhHans = {
 		probeKindCopied: "已复制",
 		probeKindSignIn: "让智能体登录",
 		probeKindSignInPrompt:
-			"请帮用户修复 Composio CLI 的鉴权以便 Loop 探测可以运行。最快的路径是在终端运行 `composio login --no-wait`,但如果用户更愿意,也可以提示 (a) 直接运行 `claude auth login` 鉴权 Claude runtime,或 (b) 打开 OpenLoomi 的 API 设置(/?page=ai-api-settings)添加 Anthropic 兼容的 provider。然后重新探测。",
+			"请帮用户修复 Composio CLI 的鉴权以便 Loop 探测可以运行。最快的路径是在终端运行 `composio login --no-wait`,但如果用户更愿意,也可以提示 (a) 直接运行 `claude auth login` 鉴权 Claude runtime,或 (b) 打开 OpenContext 的 API 设置(/?page=ai-api-settings)添加 Anthropic 兼容的 provider。然后重新探测。",
 		probeKindOpenSettings: "打开 API 设置",
 		probeKindHttpTooltip: "上游状态:{{status}}",
 		healthOk: "正常",
@@ -861,14 +863,14 @@ const zhHans = {
 		description: "在一个地方管理您的连接平台、RSS 订阅和已保存文件。",
 		feedsSectionTitle: "RSS 资讯订阅",
 		feedsSectionDescription:
-			"将精选或自定义的 RSS 订阅源接入 openloomi，把 Web3、金融、科技、AI、设计、硬件等讯息集中管理。",
+			"将精选或自定义的 RSS 订阅源接入 opencontext，把 Web3、金融、科技、AI、设计、硬件等讯息集中管理。",
 		imSectionDescription:
 			"连接您常用的即时通讯工具，统一管理对话、接收实时通知，在一处处理所有聊天消息。",
 		calendarFeedToggle: "显示在信息流",
 		calendarFeedToggleSuccess: "已更新日历信息流偏好。",
 		telegramReconnectSuccess: "请在 Telegram 中发送 /login 命令以重新连接",
 		calendarFeedToggleDesc:
-			"把连接的日历（Google/Outlook）中新建/临近的日程推送到 openloomi。",
+			"把连接的日历（Google/Outlook）中新建/临近的日程推送到 opencontext。",
 		addPlatform: "添加平台",
 		addConnector: "添加连接器",
 		connectMoreViaComposio: "通过 Composio 连接更多",
@@ -895,7 +897,7 @@ const zhHans = {
 		feedTitlePlaceholder: "用于在列表中展示的名称",
 		feedCategoryPlaceholder: "如 Web3",
 		customFeedDescription:
-			"粘贴任意 RSS / Atom / JSON Feed 链接，openloomi 会定期拉取并在理解信息流中展示最新内容。",
+			"粘贴任意 RSS / Atom / JSON Feed 链接，opencontext 会定期拉取并在理解信息流中展示最新内容。",
 		importOpmlBadge: "OPML 批量导入",
 		importOpmlTitle: "上传 OPML 文件批量添加订阅",
 		importOpmlDescription:
@@ -958,7 +960,7 @@ const zhHans = {
 		},
 		rssResourceTitle: "更多 RSS 来源",
 		rssResourceDescription:
-			"这些网站整理了大量可订阅的内容，复制你喜欢的 RSS 地址，粘贴到 openloomi 即可。",
+			"这些网站整理了大量可订阅的内容，复制你喜欢的 RSS 地址，粘贴到 opencontext 即可。",
 		rssResource: {
 			feedly: "在 Feedly 公开目录里搜索热门的商业、科技、财经资讯。",
 			rsshub: "RSSHub Radar（以及社区维护的路由）几乎能为任何网站生成 RSS。",
@@ -1010,7 +1012,7 @@ const zhHans = {
 		todoLastFollowUp: "上次跟进：{{time}}",
 		todoFollowUpNote: "备注：{{note}}",
 		todoOpenLink: "打开链接",
-		todoAskopenloomi: "一键执行",
+		todoAskopencontext: "一键执行",
 		discardTitleEdit: "放弃修改",
 		saveTitleEdit: "保存修改",
 		sendEmojiReply: "发送 {{emoji}} 回复",
@@ -1347,13 +1349,13 @@ const zhHans = {
 		notesTab: "笔记",
 		filesTab: "文件",
 	},
-	openloomi: {
+	opencontext: {
 		assistant: "AI 消息助手",
 		communicationAssistant: "AI 沟通助手",
-		contextPrefix: "当前openloomi仅针对以下内容与您沟通",
-		thinking: "openloomi 正在思考...",
+		contextPrefix: "当前opencontext仅针对以下内容与您沟通",
+		thinking: "opencontext 正在思考...",
 		placeholder: "询问关于这份日报的任何问题...",
-		placeholderGeneral: "向 openloomi 提问任何关于消息管理的问题...",
+		placeholderGeneral: "向 opencontext 提问任何关于消息管理的问题...",
 	},
 	bot: {
 		createError: "AI Agent 创建失败",
@@ -1367,7 +1369,7 @@ const zhHans = {
 		maxFocusedReached: "最多只能聚焦 5 个事件",
 		replyOptions: {
 			quickSelect: "快速选择回复",
-			title: "openloomi回复建议",
+			title: "opencontext回复建议",
 			act: "推进",
 			ask: "追问",
 			alter: "调整",
@@ -1426,13 +1428,13 @@ const zhHans = {
 			saveSuccess: "已保存文件，可在「已保存文件」页面管理。",
 			saveFailed: "保存失败。",
 			downloadFailed: "无法下载此文件。",
-			saveToopenloomi: "保存到 openloomi",
+			saveToopencontext: "保存到 opencontext",
 			saveToGoogleDrive: "保存到 Google Drive",
 			saveToNotion: "保存到 Notion",
 			connectGoogleDrive: "请先在「集成」页连接 Google Drive。",
 			connectNotion: "请先在「集成」页连接 Notion。",
 			openIntegrations: "打开集成设置",
-			missingBlob: "未在 openloomi 存储中找到该文件。",
+			missingBlob: "未在 opencontext 存储中找到该文件。",
 			upgradePrompt: "升级至 Basic 或 Pro 套餐即可保存文件。",
 			upgradeAction: "升级以保存",
 			saveCost: "保存会消耗 {{credits}} 积分",
@@ -1461,12 +1463,12 @@ const zhHans = {
 		refresh: "刷新",
 		doRefresh: "刷新",
 		noChatHistory: "暂无相关历史对话",
-		discussWithopenloomi: "和 openloomi 讨论",
+		discussWithopencontext: "和 opencontext 讨论",
 		openChat: "打开对话",
 		closeChat: "关闭对话",
 		openWorkspace: "打开工作空间",
 		closeWorkspace: "关闭工作空间",
-		continueDiscussWithopenloomi: "继续和 openloomi 讨论",
+		continueDiscussWithopencontext: "继续和 opencontext 讨论",
 		newChat: "新对话",
 		chatHistory: "历史对话",
 		focus: "聚焦",
@@ -1649,11 +1651,12 @@ const zhHans = {
 				platformIntegration: {
 					title: "你知道吗？",
 					content:
-						"大多数人每天会在多个平台间频繁切换\n于是openloomi把它们汇聚在一个可控的视图中",
+						"大多数人每天会在多个平台间频繁切换\n于是opencontext把它们汇聚在一个可控的视图中",
 				},
 				privacy: {
 					title: "关于隐私",
-					content: "openloomi只保留结构化洞察\n原始消息在处理后不会被长期存储",
+					content:
+						"opencontext只保留结构化洞察\n原始消息在处理后不会被长期存储",
 				},
 				focus: {
 					title: "关于Focus",
@@ -1675,17 +1678,17 @@ const zhHans = {
 				people: {
 					title: "人物",
 					content:
-						"openloomi会把相关的沟通、承诺整理到一个人物下\n重要关系，不必靠记忆维系",
+						"opencontext会把相关的沟通、承诺整理到一个人物下\n重要关系，不必靠记忆维系",
 				},
 				crossLanguage: {
 					title: "跨语言沟通",
 					content:
-						"openloomi可以在回复前帮你完成理解与翻译\n减少不必要的来回确认",
+						"opencontext可以在回复前帮你完成理解与翻译\n减少不必要的来回确认",
 				},
 				actionSuggestions: {
 					title: "行动建议",
 					content:
-						"openloomi会给Insight事件生成下一步建议\n是否执行，始终由你决定",
+						"opencontext会给Insight事件生成下一步建议\n是否执行，始终由你决定",
 				},
 				random: "随机切换提示",
 			},
@@ -1709,21 +1712,21 @@ const zhHans = {
 	},
 	guide: {
 		close: "关闭引导",
-		heading: "欢迎来到 openloomi",
+		heading: "欢迎来到 opencontext",
 		step: "步骤",
 		back: "上一步",
 		skip: "暂时跳过",
 		open: "打开欢迎引导",
-		summariesTitle: "让 openloomi 帮你理解重点",
+		summariesTitle: "让 opencontext 帮你理解重点",
 		summariesBody: "最新理解已经准备好。点击“查看理解”可随时重新打开此面板。",
 		summariesEmpty:
-			"当 openloomi 同步完你的收件箱后，理解就会出现在这里。你可以继续处理自己的事务。",
+			"当 opencontext 同步完你的收件箱后，理解就会出现在这里。你可以继续处理自己的事务。",
 		summariesCta: "查看理解",
 		detailTitle: "在行动前先看完整上下文",
 		detailBody: "打开卡片可查看事件原因、相关成员与待处理事项。",
 		detailCta: "继续",
 		replyTitle: "以AI助手快速回复",
-		replyBody: "润色 openloomi 草拟的内容，一键发送，我们会确认送达状态。",
+		replyBody: "润色 opencontext 草拟的内容，一键发送，我们会确认送达状态。",
 		replyCta: "开始回复",
 	},
 	mobileDock: {
@@ -1739,7 +1742,7 @@ const zhHans = {
 		navigation: "导航",
 		insight: "洞察",
 		focus: "今日",
-		openloomi: "openloomi",
+		opencontext: "opencontext",
 		more: "资产",
 	},
 	urgency: {
@@ -1782,7 +1785,7 @@ const zhHans = {
 		forgotPassword: "忘记密码？",
 		forgotPasswordTitle: "重置密码",
 		forgotPasswordSubtitle:
-			"请输入你注册 openloomi 时使用的邮箱，我们会发送重置链接。",
+			"请输入你注册 opencontext 时使用的邮箱，我们会发送重置链接。",
 		resetMissingEmail: "请输入有效的邮箱地址。",
 		resetRequestCta: "发送重置链接",
 		resetRequestSending: "发送中...",
@@ -1796,7 +1799,7 @@ const zhHans = {
 		signInCta: "登录",
 		needAccount: "还没有账号？",
 		signUpLink: "立即注册",
-		signUpTitle: "创建你的 openloomi 账号",
+		signUpTitle: "创建你的 opencontext 账号",
 		signUpSubtitle: "一分钟完成注册，开始整合你的沟通渠道。",
 		passwordRequirements: "密码要求",
 		passwordRuleLength: "长度需在 8-20 个字符之间",
@@ -1813,7 +1816,7 @@ const zhHans = {
 		resetSubmitCta: "保存新密码",
 		resetSubmitting: "保存中...",
 		resetSuccessHeading: "密码已更新",
-		resetSuccessBody: "现在可以使用新密码登录 openloomi。",
+		resetSuccessBody: "现在可以使用新密码登录 opencontext。",
 		resetBackToLogin: "返回登录",
 		requestAnotherLink: "重新申请重置链接",
 		toastSignInSuccess: "登录成功！",
@@ -1846,7 +1849,7 @@ const zhHans = {
 		signUpCta: "创建账号",
 		haveAccount: "已经有账号了？",
 		signInLink: "去登录",
-		heroTitle: "openloomi 是你的对话化身",
+		heroTitle: "opencontext 是你的对话化身",
 		heroSubtitle: "通过隐私保护、理解、记忆与智能，重新定义沟通。",
 		illustrationPlaceholder: "此处预留品牌配图",
 		slackDes:
@@ -1858,17 +1861,17 @@ const zhHans = {
 			"授权我们访问你的 Discord 服务器，接收和发送信息，查看频道和成员信息",
 		discordConnectTitle: "连接 Discord",
 		discordConnectDescription:
-			"选择你希望 openloomi 工作的 Discord 服务器。继续之前请确保已经邀请 openloomi 机器人加入该服务器。",
+			"选择你希望 opencontext 工作的 Discord 服务器。继续之前请确保已经邀请 opencontext 机器人加入该服务器。",
 		discordGuildSelectLabel: "Discord 服务器",
 		discordGuildPlaceholder: "请选择服务器",
 		discordGuildLoading: "正在加载你的 Discord 服务器…",
 		discordGuildFetchError: "暂时无法获取你的 Discord 服务器列表，请稍后重试。",
 		discordSelectGuildError: "请选择要连接的 Discord 服务器。",
 		discordNoManageableGuilds:
-			"没有找到你可管理的 Discord 服务器。请先邀请 openloomi 机器人后再试。",
+			"没有找到你可管理的 Discord 服务器。请先邀请 opencontext 机器人后再试。",
 		discordInviteReminder:
-			"请先邀请 openloomi 机器人加入服务器，这样才能读取消息并生成理解。",
-		discordInviteCta: "邀请 openloomi Bot",
+			"请先邀请 opencontext 机器人加入服务器，这样才能读取消息并生成理解。",
+		discordInviteCta: "邀请 opencontext Bot",
 		discordCreateBotCta: "连接 Discord 服务器",
 		discordGuildOwnerSuffix: "拥有者",
 		qrErrorRetry: "二维码生成失败，请点击刷新按钮重试",
@@ -1879,19 +1882,19 @@ const zhHans = {
 		outlookDes:
 			"授权我们通过 IMAP/SMTP 访问你的 Outlook 邮箱，读取和发送邮件。",
 		outlookCalendarDes:
-			"连接 Outlook 日历，openloomi 能感知日程变更并帮你创建/更新事件。",
+			"连接 Outlook 日历，opencontext 能感知日程变更并帮你创建/更新事件。",
 		linkedinDes: "授权我们访问你的 LinkedIn 私信，帮助你汇总和加速回复。",
 		twitterDes:
-			"授权我们访问你的 X 账号，openloomi 可以读取/发布推文并在同一地方回复私信。",
+			"授权我们访问你的 X 账号，opencontext 可以读取/发布推文并在同一地方回复私信。",
 		instagramDes: "授权我们访问你的 Instagram 私信，帮助你汇总并快速回复。",
 		googleCalendarDes:
-			"授权我们访问你的 Google 日历，让 openloomi 帮你同步新建/即将开始的日程并快速处理。",
+			"授权我们访问你的 Google 日历，让 opencontext 帮你同步新建/即将开始的日程并快速处理。",
 		googleDriveDes:
-			"连接 Google Drive 后，openloomi 可直接把文件保存到你的个人云盘。",
+			"连接 Google Drive 后，opencontext 可直接把文件保存到你的个人云盘。",
 		googleDocsDes:
-			"连接 Google Docs 后，openloomi 能感知文档变更并帮助你直接更新内容。",
+			"连接 Google Docs 后，opencontext 能感知文档变更并帮助你直接更新内容。",
 		notionDes:
-			"连接 Notion 后，可以把文件保存到指定页面/数据库，并让 openloomi 学习你的内容。",
+			"连接 Notion 后，可以把文件保存到指定页面/数据库，并让 opencontext 学习你的内容。",
 		messengerDes:
 			"连接你的 Facebook Page，通过 Messenger 读取和回复消息（需要 Page Access Token）。",
 		whatsappDes:
@@ -1910,7 +1913,7 @@ const zhHans = {
 		githubAddAssigneesSuccess: "分配成功！",
 		githubAddAssigneesFailed: "添加分配人失败。",
 		hubspotDes:
-			"连接 HubSpot，感知交易/线索的变化，并在 openloomi 内更新阶段。",
+			"连接 HubSpot，感知交易/线索的变化，并在 opencontext 内更新阶段。",
 		asanaDes: "连接 Asana，管理任务、跟踪项目并更新工作项。",
 		jiraDes: "连接 Jira，跟踪问题、管理项目并与团队协作。",
 		linearDes: "连接 Linear，管理问题、跟踪项目并优化工作流程。",
@@ -1930,12 +1933,12 @@ const zhHans = {
 		messengerMissingToken: "请填写 Page ID 和 Page Access Token。",
 		messengerSuccess: "Facebook Messenger 账号连接成功！",
 		imessageDes:
-			"连接 iMessage 以在 openloomi 中读取和发送消息（仅支持 macOS）。",
+			"连接 iMessage 以在 opencontext 中读取和发送消息（仅支持 macOS）。",
 		feishuDes:
-			"使用 App ID 和 App Secret 通过 WebSocket 长连接 Lark/飞书，与 openloomi 对话。",
+			"使用 App ID 和 App Secret 通过 WebSocket 长连接 Lark/飞书，与 opencontext 对话。",
 		feishuTitle: "连接 Lark/飞书",
 		feishuDescription:
-			"在 Lark/飞书开放平台创建企业自建应用并开启机器人能力，选择「使用长连接接收事件」并订阅 im.message.receive_v1，将凭证填入下方即可与 openloomi 对话。",
+			"在 Lark/飞书开放平台创建企业自建应用并开启机器人能力，选择「使用长连接接收事件」并订阅 im.message.receive_v1，将凭证填入下方即可与 opencontext 对话。",
 		feishuAppId: "App ID",
 		feishuAppSecret: "App Secret",
 		feishuDisplayName: "显示名称（可选）",
@@ -1946,7 +1949,7 @@ const zhHans = {
 		feishuConnectSuccess: "Lark/飞书已连接",
 		feishuConnectRestartTitle: "Lark/飞书连接成功",
 		feishuConnectRestartDescTauri:
-			"为使 Lark/飞书消息监听稳定生效，请完全退出并重新启动 openloomi 桌面客户端",
+			"为使 Lark/飞书消息监听稳定生效，请完全退出并重新启动 opencontext 桌面客户端",
 		feishuConnectRestartDescWeb:
 			"建议刷新当前页面，以确保 Lark/飞书监听与集成状态已完全生效",
 		feishuConnectRestartConfirm: "知道了",
@@ -1962,7 +1965,7 @@ const zhHans = {
 		feishuUserCodeHint: "若页面要求输入验证码：",
 		feishuManualEntryTitle: "手动填写凭证",
 		feishuHideManual: "收起手动填写",
-		feishuBotDescription: "通过 Lark/飞书与 openloomi 对话",
+		feishuBotDescription: "通过 Lark/飞书与 opencontext 对话",
 		feishuStepsLink: "接入步骤",
 		feishuStepsSection1Title: "一、创建 Lark/飞书应用并获取凭证",
 		feishuSteps1Before: "打开 ",
@@ -1971,11 +1974,11 @@ const zhHans = {
 		feishuSteps2: "在「凭证与基础信息」中获取 App ID、App Secret",
 		feishuSteps3:
 			"在配置中填写上述 App ID 和 App Secret，点击「连接 Lark/飞书」按钮",
-		feishuSteps4: "重启 openloomi",
+		feishuSteps4: "重启 opencontext",
 		feishuSteps5: "回到 Lark/飞书开放平台，在「能力」中启用 机器人",
 		feishuSteps6:
 			"选择「权限管理」中的「批量导入/导出权限」，将以下 JSON 代码复制进去",
-		feishuStepsNote: "注：如果此处未显示长连接，尝试重启 openloomi",
+		feishuStepsNote: "注：如果此处未显示长连接，尝试重启 opencontext",
 		feishuSteps7:
 			"在「事件与回调」中，点击「事件配置」，选择「使用长连接接收事件」",
 		feishuSteps8:
@@ -1987,20 +1990,20 @@ const zhHans = {
 		feishuStepsAddFav2: "搜索刚刚创建的机器人名称并添加",
 		feishuStepsAddFav3: "可以看到机器人已添加到常用中，双击可进入对话界面",
 		dingtalkDes:
-			"使用钉钉开放平台 Client ID 与 Client Secret，通过 Stream 长连接与 openloomi 对话。",
+			"使用钉钉开放平台 Client ID 与 Client Secret，通过 Stream 长连接与 opencontext 对话。",
 		dingtalkTitle: "连接钉钉",
 		dingtalkDescription:
-			"在钉钉开放平台创建企业内部应用，添加 Stream 模式机器人，将 Client ID（AppKey）与 Client Secret 填入下方即可与 openloomi 对话。",
+			"在钉钉开放平台创建企业内部应用，添加 Stream 模式机器人，将 Client ID（AppKey）与 Client Secret 填入下方即可与 opencontext 对话。",
 		dingtalkClientId: "Client ID (AppKey)",
 		dingtalkClientSecret: "Client Secret (AppSecret)",
 		dingtalkDisplayName: "显示名称（可选）",
 		dingtalkDisplayNamePlaceholder: "我的钉钉机器人",
 		dingtalkConnect: "连接钉钉",
 		dingtalkClientIdSecretRequired: "请填写 Client ID 和 Client Secret",
-		dingtalkBotDescription: "通过钉钉与 openloomi 对话",
+		dingtalkBotDescription: "通过钉钉与 opencontext 对话",
 		dingtalkConnectRestartTitle: "钉钉连接成功",
 		dingtalkConnectRestartDescTauri:
-			"为使钉钉消息监听稳定生效，请完全退出并重新启动 openloomi 桌面客户端",
+			"为使钉钉消息监听稳定生效，请完全退出并重新启动 opencontext 桌面客户端",
 		dingtalkConnectRestartDescWeb:
 			"建议刷新当前页面，以确保钉钉监听与集成状态已完全生效",
 		dingtalkConnectRestartConfirm: "知道了",
@@ -2013,14 +2016,14 @@ const zhHans = {
 		dingtalkSteps2:
 			"应用能力中添加「机器人」，选择 Stream 模式（长连接接收消息）",
 		dingtalkSteps3:
-			"发布应用后，在 openloomi 中填写 Client ID 与 Client Secret 并连接",
+			"发布应用后，在 opencontext 中填写 Client ID 与 Client Secret 并连接",
 		dingtalkSteps4:
 			"网页部署时服务端会自动拉起 Stream；桌面端连接后建议重启应用",
 		qqbotDes:
-			"使用 QQ 开放平台 AppID 和 AppSecret，通过 WebSocket 与 openloomi 对话。",
+			"使用 QQ 开放平台 AppID 和 AppSecret，通过 WebSocket 与 opencontext 对话。",
 		qqbotTitle: "连接 QQ",
 		qqbotDescription:
-			"在 QQ 开放平台创建机器人，获取 AppID 和 AppSecret 填入下方即可与 openloomi 对话。",
+			"在 QQ 开放平台创建机器人，获取 AppID 和 AppSecret 填入下方即可与 opencontext 对话。",
 		qqbotAppId: "App ID",
 		qqbotAppSecret: "App Secret",
 		qqbotDisplayName: "显示名称（可选）",
@@ -2037,9 +2040,9 @@ const zhHans = {
 		qqbotSteps3: "获取 AppID 和 AppSecret",
 		qqbotSteps4: "在配置中填写 AppID 和 AppSecret，点击“连接 QQ”按钮",
 		qqbotAppIdSecretRequired: "请填写 App ID 和 App Secret",
-		qqbotBotDescription: "通过 QQ 与 openloomi 对话",
+		qqbotBotDescription: "通过 QQ 与 opencontext 对话",
 		weixinLabel: "微信",
-		weixinDes: "在页面内扫码登录微信，通过长轮询与 openloomi 对话。",
+		weixinDes: "在页面内扫码登录微信，通过长轮询与 opencontext 对话。",
 		weixinTitle: "连接微信",
 		weixinHelpLink: "说明与常见问题",
 		weixinConnectSuccess: "微信已连接",
@@ -2064,7 +2067,7 @@ const zhHans = {
 		weixinErrorLoginFailed: "登录失败",
 		imessageConnectTitle: "连接 iMessage",
 		imessageConnectDescription:
-			"连接您的 Mac iMessage 以在 openloomi 中读取和发送消息。",
+			"连接您的 Mac iMessage 以在 opencontext 中读取和发送消息。",
 		imessageMacOnly: "仅支持 macOS",
 		imessageMacOnlyDesc:
 			"iMessage 集成仅在 macOS 系统上可用。请在 Mac 电脑上使用此功能。",
@@ -2078,7 +2081,7 @@ const zhHans = {
 		imessageErrorLocalFileOnly: "本地文件存储仅在 Tauri 模式下可用",
 		imessageErrorFileNotFound: "本地文件不存在: {{path}}",
 		imessageErrorPermission:
-			"需要授予完全磁盘访问权限才能读取 iMessage 数据库。请在 系统设置 > 隐私与安全性 > 完全磁盘访问权限 中添加当前运行应用的进程（如 Terminal、Node 或 openloomi），然后重启应用再试。",
+			"需要授予完全磁盘访问权限才能读取 iMessage 数据库。请在 系统设置 > 隐私与安全性 > 完全磁盘访问权限 中添加当前运行应用的进程（如 Terminal、Node 或 opencontext），然后重启应用再试。",
 		imessageErrorConnection: "无法连接到 iMessage: {{message}}",
 		imessageNotAvailable:
 			"iMessage 不可用。请确保您正在 macOS 系统上运行，并已授予完全磁盘访问权限。",
@@ -2088,13 +2091,13 @@ const zhHans = {
 		displayName: "显示名称",
 		imessageDisplayNamePlaceholder: "我的 iMessage",
 		imessageDisplayNameHint:
-			"这个名称将用于在 openloomi 中标识您的 iMessage 账户",
+			"这个名称将用于在 opencontext 中标识您的 iMessage 账户",
 		imessageDataNote:
-			"您的消息数据将保留在本地设备上。openloomi 只会在您使用时读取最近的消息用于生成洞察。",
+			"您的消息数据将保留在本地设备上。opencontext 只会在您使用时读取最近的消息用于生成洞察。",
 		imessageConnecting: "正在连接 iMessage...",
 		imessageConnected: "iMessage 已连接",
 		imessageConnectedDesc:
-			"您现在可以通过 openloomi 访问您的 iMessage 消息了。",
+			"您现在可以通过 opencontext 访问您的 iMessage 消息了。",
 		imessageError: "连接失败",
 		imessageConnect: "连接 iMessage",
 		displayNameRequired: "请输入显示名称",
@@ -2183,7 +2186,7 @@ const zhHans = {
 		whatsappError: "出现问题",
 		whatsappTryAgain: "重试",
 		whatsappConnectDescription:
-			"使用手机上的 WhatsApp 扫描二维码以连接 openloomi。未经你的许可，我们不会存储或读取聊天记录。",
+			"使用手机上的 WhatsApp 扫描二维码以连接 opencontext。未经你的许可，我们不会存储或读取聊天记录。",
 		whatsappGeneratingQr: "正在生成安全二维码…",
 		whatsappScanInstruction:
 			"在手机上打开 WhatsApp → 右上角设置 : → 已关联的设备 → 关联新设备，然后扫描上方二维码。",
@@ -2273,10 +2276,10 @@ const zhHans = {
 			"无法连接到 Gmail 服务器，请检查网络或防火墙是否允许访问 imap.gmail.com:993，稍后重试。",
 		slackAdminConfirmTitle: "需要 Slack 管理员权限",
 		slackAdminConfirmDesc:
-			"您需要是 Slack 工作区的管理员才能授权此集成。普通成员无法将 openloomi 添加到工作区。",
+			"您需要是 Slack 工作区的管理员才能授权此集成。普通成员无法将 opencontext 添加到工作区。",
 		discordAdminConfirmTitle: "需要 Discord 管理员权限",
 		discordAdminConfirmDesc:
-			"您需要是 Discord 服务器的管理员才能授权此集成。普通成员无法将 openloomi 添加到服务器。",
+			"您需要是 Discord 服务器的管理员才能授权此集成。普通成员无法将 opencontext 添加到服务器。",
 		iAmAdmin: "我是管理员",
 		errors: {
 			streamError: {
@@ -2402,7 +2405,7 @@ const zhHans = {
 			runtimeNotLoggedIn: {
 				title: "Claude runtime 未登录",
 				description:
-					"聊天正在使用内置的 Claude runtime，但未找到任何 Claude 凭据。请登录 Claude runtime，或在 OpenLoomi 中配置一个 Anthropic 兼容的 API 密钥。",
+					"聊天正在使用内置的 Claude runtime，但未找到任何 Claude 凭据。请登录 Claude runtime，或在 OpenContext 中配置一个 Anthropic 兼容的 API 密钥。",
 				suggestions: [
 					"在终端运行 `claude auth login` 后重试",
 					"或在 API 设置中添加一个 Anthropic 兼容的 provider",
@@ -2412,7 +2415,7 @@ const zhHans = {
 		},
 	},
 	survey: {
-		title: "欢迎加入 openloomi！",
+		title: "欢迎加入 opencontext！",
 		intro:
 			"为了更好地服务您，请花约 1 分钟完成这份简短的问卷，感谢您的宝贵意见！",
 		shared: {
@@ -2555,7 +2558,7 @@ const zhHans = {
 		guest: {
 			step1: {
 				title: "先连接一个集成开始使用",
-				body: "通过这个按钮把 openloomi 与 Slack、Telegram、Gmail 等集成连接起来，我们才能获取你关心的对话。",
+				body: "通过这个按钮把 opencontext 与 Slack、Telegram、Gmail 等集成连接起来，我们才能获取你关心的对话。",
 			},
 			step2: {
 				title: "挑选常用的授权方式",
@@ -2563,12 +2566,12 @@ const zhHans = {
 			},
 			step3: {
 				title: "连接完成之后？",
-				body: "openloomi 会自动读取新消息、生成每日理解，并草拟回复，帮助你更快清空收件箱。",
+				body: "opencontext 会自动读取新消息、生成每日理解，并草拟回复，帮助你更快清空收件箱。",
 			},
 		},
 		summary: {
 			open: "使用引导",
-			openHelp: "看看 openloomi 如何整理你的信息",
+			openHelp: "看看 opencontext 如何整理你的信息",
 			step1: {
 				title: "查看已连接与可添加的集成",
 				body: "这里展示了你已经授权的账号，你也可以点击增加新的平台集成。",
@@ -2582,8 +2585,8 @@ const zhHans = {
 				body: "每个卡片代表一条理解，串联相关的对话脉络。点击即可了解为什么重要、需要做什么。",
 			},
 			step4: {
-				title: "向 openloomi 提问",
-				body: "在聊天框中直接提问，例如“今天有哪些重要事项？”、“谁提到了发布？”——openloomi 会基于已连接的渠道帮你作答。",
+				title: "向 opencontext 提问",
+				body: "在聊天框中直接提问，例如“今天有哪些重要事项？”、“谁提到了发布？”——opencontext 会基于已连接的渠道帮你作答。",
 			},
 			step5: {
 				title: "展开完整上下文",
@@ -2591,7 +2594,7 @@ const zhHans = {
 			},
 			step6: {
 				title: "自定义理解与回复偏好",
-				body: "设置生成语言、重点关注的人和话题，openloomi 会按照你的喜好提供理解。",
+				body: "设置生成语言、重点关注的人和话题，opencontext 会按照你的喜好提供理解。",
 			},
 			step7: {
 				title: "升级解锁更多能力",
@@ -2602,7 +2605,7 @@ const zhHans = {
 	insightPreferences: {
 		title: "理解与回复偏好",
 		subtitle:
-			"告诉 openloomi 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
+			"告诉 opencontext 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
 		loading: "正在载入偏好设置…",
 		languageLabel: "回复语言",
 		languageDescription: "AI 将优先使用该语言进行回复。",
@@ -2626,7 +2629,7 @@ const zhHans = {
 			description:
 				"基于 Onboarding 与问卷输入推断的行业语境，将直接影响理解语气与内容重点。",
 			introDescription:
-				"你提供的信息越完整，openloomi 就能越准确地判断什么值得你关注。",
+				"你提供的信息越完整，opencontext 就能越准确地判断什么值得你关注。",
 			industryHeading: "行业识别",
 			industryEmpty: "暂未识别行业，完成 Onboarding 问卷即可解锁更精确的语境。",
 			industryLabel: "我的行业",
@@ -2643,7 +2646,7 @@ const zhHans = {
 				"还没有工作内容描述，可以在 Onboarding 第一环节补充以提升理解精准度。",
 			workDescriptionLabel: "我的描述",
 			workDescriptionHint:
-				"用自己的话介绍你的工作和日常，openloomi 会用这些信息更好地理解你的上下文",
+				"用自己的话介绍你的工作和日常，opencontext 会用这些信息更好地理解你的上下文",
 			workDescriptionPlaceholder:
 				"例如：我是一家 B2B SaaS 公司的联创，主要负责产品和融资。每天在 Slack 和邮件里处理大量信息，最关注客户续约和新一轮融资进展。",
 			emptyResults: "无结果，可输入自定义",
@@ -2652,12 +2655,12 @@ const zhHans = {
 		roles: {
 			heading: "角色增强与偏好",
 			description:
-				"查看当前用于定制理解的角色，并按需添加额外增强，让 openloomi 更贴近你的职责。",
+				"查看当前用于定制理解的角色，并按需添加额外增强，让 opencontext 更贴近你的职责。",
 			currentLabel: "已识别的角色",
 			noneDetected: "暂未检测到角色—连接更多渠道或完善问卷即可激活角色增强。",
 			selectionLabel: "手动调整角色焦点",
 			selectionDescription:
-				"额外选择几个角色增强，openloomi 仍会叠加问卷与自动推测的结果，一起决定输出重点。",
+				"额外选择几个角色增强，opencontext 仍会叠加问卷与自动推测的结果，一起决定输出重点。",
 			selectionHint: "最多选择 {{count}} 个角色",
 			limitReached: "最多可选择 {{count}} 个角色，请先取消其他选项。",
 			manualSelectedLabel: "我手动固定的角色",
@@ -2768,7 +2771,7 @@ const zhHans = {
 			},
 		},
 		focusPeopleLabel: "我关注的人",
-		focusPeopleDescription: "openloomi 会优先处理与这些人相关的信息",
+		focusPeopleDescription: "opencontext 会优先处理与这些人相关的信息",
 		focusPeopleExampleIntro: "（比如，",
 		focusPeopleExampleOutro: "）",
 		focusPeopleExamplePhrase1: "财务部的Jess",
@@ -2827,17 +2830,17 @@ const zhHans = {
 	securityPrompt: {
 		title: "连接 Telegram",
 		description: "授权我们访问您的 Telegram 账户、收发消息、查看频道和成员信息",
-		commitmentTitle: "openloomi 对您的 Telegram 数据的承诺",
+		commitmentTitle: "opencontext 对您的 Telegram 数据的承诺",
 		permissions: {
 			readMessages: "读取消息内容",
 			readMessagesDesc:
 				"我们将读取您的 Telegram 消息，用于生成对话理解、提供快速回复建议以及识别重要信息。",
 			sendMessages: "发送消息",
 			sendMessagesDesc:
-				"只有在您明确指示的情况下，openloomi 才会代表您在 Telegram 中发送消息，以帮助您高效回复。",
+				"只有在您明确指示的情况下，opencontext 才会代表您在 Telegram 中发送消息，以帮助您高效回复。",
 			viewGroups: "查看群组和联系人",
 			viewGroupsDesc:
-				"这有助于 openloomi 了解您的社交网络，智能识别沟通上下文和提及内容。",
+				"这有助于 opencontext 了解您的社交网络，智能识别沟通上下文和提及内容。",
 		},
 		principles: {
 			leastAccess: "最小权限原则",
@@ -2851,25 +2854,25 @@ const zhHans = {
 			accessControl: "访问控制",
 			accessControlDesc: "所有系统操作都有权限验证和审计日志。",
 		},
-		learnMore: "了解更多：openloomi 隐私政策 →",
+		learnMore: "了解更多：opencontext 隐私政策 →",
 		stepsTitle: "授权访问步骤",
-		stepsDesc: "授权前，请确保您了解 openloomi 如何保护您的数据。",
+		stepsDesc: "授权前，请确保您了解 opencontext 如何保护您的数据。",
 		step1: "点击下方的「连接」按钮",
 		step2: "您将被重定向到 Telegram",
 		step3: "登录您的 Telegram 账户",
-		step4: "授权 openloomi 访问您的 Telegram 数据",
-		step5: "您将被重定向回 openloomi",
+		step4: "授权 opencontext 访问您的 Telegram 数据",
+		step5: "您将被重定向回 opencontext",
 		privacyNotice:
-			"隐私声明：点击「连接」，即表示您同意 openloomi 根据我们的隐私政策处理您的 Telegram 数据。您的数据将被安全加密，仅用于提供 openloomi 服务。",
+			"隐私声明：点击「连接」，即表示您同意 opencontext 根据我们的隐私政策处理您的 Telegram 数据。您的数据将被安全加密，仅用于提供 opencontext 服务。",
 		continueButton: "继续连接",
 	},
 	whatsapp: {
 		missingTokenTitle: "缺少登录令牌",
 		missingTokenDesc: "请返回 WhatsApp 并重新发送 {{command}}。",
 		title: "连接 WhatsApp 机器人",
-		pendingMessage: "正在绑定你的 openloomi 账号…",
+		pendingMessage: "正在绑定你的 opencontext 账号…",
 		success: {
-			message: "绑定成功！现在可以回到 WhatsApp 使用 openloomi 机器人了。",
+			message: "绑定成功！现在可以回到 WhatsApp 使用 opencontext 机器人了。",
 		},
 		error: {
 			missingToken: "缺少登录令牌，请重新在 WhatsApp 中发送 /login。",
@@ -2877,7 +2880,7 @@ const zhHans = {
 			linkFailed: "绑定失败，请返回 WhatsApp 并重新发送 /login。",
 		},
 		actions: {
-			backToConsole: "返回 openloomi 控制台",
+			backToConsole: "返回 opencontext 控制台",
 			goToIntegrations: "前往集成页面",
 			retry: "重新尝试",
 			contactSupport: "联系支持团队",
@@ -2891,9 +2894,9 @@ const zhHans = {
 		missingTokenTitle: "缺少登录令牌",
 		missingTokenDesc: "请返回 Telegram 并重新发送 {{command}}。",
 		title: "连接 Telegram 机器人",
-		pendingMessage: "正在绑定你的 openloomi 账号…",
+		pendingMessage: "正在绑定你的 opencontext 账号…",
 		success: {
-			message: "绑定成功！现在可以回到 Telegram 使用 openloomi 机器人了。",
+			message: "绑定成功！现在可以回到 Telegram 使用 opencontext 机器人了。",
 		},
 		error: {
 			missingToken: "缺少登录令牌，请重新在 Telegram 中发送 /login。",
@@ -2913,7 +2916,7 @@ const zhHans = {
 			retry: "重试",
 		},
 		actions: {
-			backToConsole: "返回 openloomi 控制台",
+			backToConsole: "返回 opencontext 控制台",
 			openTelegram: "打开 Telegram",
 			retry: "重新尝试",
 			contactSupport: "联系支持团队",
@@ -2983,12 +2986,13 @@ const zhHans = {
 		missingTokenTitle: "缺少登录令牌",
 		missingTokenDesc: "请返回 Discord 并重新发送 /login 命令。",
 		title: "连接 Discord 机器人",
-		pendingMessage: "正在绑定你的 openloomi 账号…",
+		pendingMessage: "正在绑定你的 opencontext 账号…",
 		missingTokenError: "缺少登录令牌，请重新在 Discord 中发送 /login。",
 		defaultLinkError: "绑定失败",
-		successMessage: "绑定成功！现在可以回到 Discord 使用 openloomi 机器人了。",
+		successMessage:
+			"绑定成功！现在可以回到 Discord 使用 opencontext 机器人了。",
 		defaultRetryError: "绑定失败，请返回 Discord 并重新发送 /login。",
-		backToConsoleBtn: "返回 openloomi 控制台",
+		backToConsoleBtn: "返回 opencontext 控制台",
 		retryBtn: "重新尝试",
 		contactSupportBtn: "联系支持团队",
 		linkingBtn: "绑定中…",
@@ -3002,7 +3006,7 @@ const zhHans = {
 	assistantIcon: "助手",
 	applyBtn: "申请",
 	suggestedAction1st: {
-		title: "openloomi 是什么",
+		title: "opencontext 是什么",
 	},
 	suggestedAction2nd: {
 		title: "我的联系人有哪些",
@@ -3077,8 +3081,8 @@ const zhHans = {
 		action: "帮我生成一个包含详细内容的文档",
 	},
 	chat: {
-		replySent: "已发送。openloomi 将监控回复。",
-		replyGenerating: "openloomi 正在生成您的回复...",
+		replySent: "已发送。opencontext 将监控回复。",
+		replyGenerating: "opencontext 正在生成您的回复...",
 		replyQueued: "正在发送...",
 		scrollToBottom: "滚动到底部",
 		sendAs: "账号",
@@ -3132,7 +3136,7 @@ const zhHans = {
 			saveSuccess: "已保存文件，可在“已保存文件”页面管理。",
 			saveFailed: "保存失败。",
 			downloadFailed: "无法下载此文件。",
-			missingBlob: "未在 openloomi 存储中找到该文件。",
+			missingBlob: "未在 opencontext 存储中找到该文件。",
 			storageWarning: "存储空间已使用 {{percent}}%，建议清理或升级。",
 			unsupportedSource: "此文件暂不支持保存。",
 			viaSource: "来自 {{source}}",
@@ -3211,7 +3215,7 @@ const zhHans = {
 			"在此管理你从对话中保存的图片、视频和文档（每次保存会消耗 2 积分）。",
 		uploadTitle: "上传文件",
 		uploadDescription:
-			"从本地上传文件到 openloomi 存储，之后即可直接进行分析。",
+			"从本地上传文件到 opencontext 存储，之后即可直接进行分析。",
 		uploadButton: "上传文件",
 		uploading: "正在上传...",
 		uploadSuccess: "文件上传成功。",
@@ -3244,7 +3248,7 @@ const zhHans = {
 		loadMore: "加载更多",
 		storageProviderLabel: "存储位置",
 		providers: {
-			vercel_blob: "openloomi 云存储",
+			vercel_blob: "opencontext 云存储",
 			google_drive: "Google Drive",
 			notion: "Notion",
 		},
@@ -3258,7 +3262,7 @@ const zhHans = {
 		},
 		firstReply: {
 			title: "发送第一条回复",
-			description: "用 openloomi 回复一次，解锁更多自动化能力。",
+			description: "用 opencontext 回复一次，解锁更多自动化能力。",
 		},
 		integrationProgress: "已连接 {{count}} 个账号",
 		replyProgress: "已发送 {{count}} 条回复",
@@ -3281,7 +3285,7 @@ const zhHans = {
 		adminCap: "每日上限",
 	},
 	nav: {
-		messageHub: "openloomi",
+		messageHub: "opencontext",
 		brief: "今日",
 		focus: "聚焦",
 		newChat: "对话",
@@ -3313,7 +3317,7 @@ const zhHans = {
 		profile: "个人资料",
 		notifications: "通知偏好",
 		archive: "收纳箱",
-		myopenloomi: "我的openloomi",
+		myopencontext: "我的opencontext",
 		summaryPreferences: "理解与回复偏好",
 		language: "语言设置",
 		/** Settings sidebar language entry: differentiated from account menu copy, bilingual display */
@@ -3328,7 +3332,7 @@ const zhHans = {
 		upgrade: "升级套餐",
 		help: "帮助",
 		checkForUpdates: "检查更新",
-		referralCardTitle: "分享 openloomi 给好友",
+		referralCardTitle: "分享 opencontext 给好友",
 		referralCardSubtitle: "获得额外奖励",
 		personalization: "个性化",
 		onboardingGuide: "新手引导",
@@ -3346,13 +3350,13 @@ const zhHans = {
 		onboardingGuide: {
 			title: "开始使用",
 			dialogTitle: "新手引导",
-			heading: "认识 openloomi",
+			heading: "认识 opencontext",
 			subheading: "完成剩余步骤即可完成初始化设置。",
-			resumeHint: "点击这里，探索 openloomi 的更多可能。",
+			resumeHint: "点击这里，探索 opencontext 的更多可能。",
 			resumeHintImageAlt: "入门引导",
 			openMandatoryDebug: "onboarding",
 			collectInfo: {
-				title: "让 openloomi 更了解你的世界",
+				title: "让 opencontext 更了解你的世界",
 				messagingAppsTitle: "连接消息平台",
 				telegram: "Telegram",
 				whatsapp: "WhatsApp",
@@ -3366,20 +3370,20 @@ const zhHans = {
 					iconLabel: "任务说明",
 					openDocButton: "了解更多",
 					connectTelegram:
-						"连接 Telegram 后，你可以直接在 Telegram 里和 openloomi 对话。",
+						"连接 Telegram 后，你可以直接在 Telegram 里和 opencontext 对话。",
 					connectWhatsApp:
-						"连接 WhatsApp 后，你可以直接在 WhatsApp 里和 openloomi 对话。",
+						"连接 WhatsApp 后，你可以直接在 WhatsApp 里和 opencontext 对话。",
 					connectIMessage:
-						"连接 iMessage 后，你可以直接在 iMessage 里和 openloomi 对话。",
-					connectQQ: "连接 QQ 后，你可以直接在 QQ 里和 openloomi 对话。",
+						"连接 iMessage 后，你可以直接在 iMessage 里和 opencontext 对话。",
+					connectQQ: "连接 QQ 后，你可以直接在 QQ 里和 opencontext 对话。",
 					connectFeishu:
-						"连接 Lark/飞书后，你可以直接在 Lark/飞书里和 openloomi 对话。",
+						"连接 Lark/飞书后，你可以直接在 Lark/飞书里和 opencontext 对话。",
 					linkPlatform:
-						"连接 Slack、Gmail、Telegram 等平台。openloomi 会读取你的对话，主动识别哪些事情需要跟进——不需要你反复查看。",
+						"连接 Slack、Gmail、Telegram 等平台。opencontext 会读取你的对话，主动识别哪些事情需要跟进——不需要你反复查看。",
 					addSubscription:
-						"添加 Newsletter、RSS 或行业资讯源。openloomi 持续追踪，只把真正和你相关的内容推送给你。",
+						"添加 Newsletter、RSS 或行业资讯源。opencontext 持续追踪，只把真正和你相关的内容推送给你。",
 					uploadFile:
-						"上传文档、报告或参考资料。openloomi 会把它们作为背景知识，让回答更准确、更贴近你的实际情况。",
+						"上传文档、报告或参考资料。opencontext 会把它们作为背景知识，让回答更准确、更贴近你的实际情况。",
 				},
 			},
 		},
@@ -3998,7 +4002,7 @@ const zhHans = {
 			messageCount:
 				"过去 24 小时，{{agentName}} 一共帮您处理了 {{messageCount}} 条信息源，生成了 {{insightCount}} 条洞察事件",
 			messageCountShort:
-				"过去 24 小时，openloomi 一共帮您处理了 {{messageCount}} 条信息源",
+				"过去 24 小时，opencontext 一共帮您处理了 {{messageCount}} 条信息源",
 		},
 	},
 	agent: {
@@ -4006,7 +4010,7 @@ const zhHans = {
 			todo: "行动项",
 			favorite: "收藏",
 			people: "人脉",
-			askAi: "openloomi",
+			askAi: "opencontext",
 			messages: "信息源",
 			files: "文件",
 		},
@@ -4283,9 +4287,9 @@ const zhHans = {
 				noTools: "暂无工具",
 				noArtifacts: "暂无输出",
 				emptyFiles: "暂无文件",
-				emptyFilesHint: "与 openloomi 对话生成一些文件",
+				emptyFilesHint: "与 opencontext 对话生成一些文件",
 				noSkills: "未安装技能",
-				skillsHint: "添加技能到 ~/.openloomi/skills/",
+				skillsHint: "添加技能到 ~/.opencontext/skills/",
 				searchSkills: "搜索技能",
 				searchSkillsPlaceholder: "搜索技能",
 				skillAuthor: "作者",
@@ -4402,7 +4406,7 @@ const zhHans = {
 				completed: "已完成",
 				error: "错误",
 				noHistory: "暂无执行历史",
-				tauriOnly: "定时任务仅在 openloomi 桌面客户端中可用。",
+				tauriOnly: "定时任务仅在 opencontext 桌面客户端中可用。",
 				viewChat: "查看对话",
 				output: "输出",
 				task: "任务指令",
@@ -4528,13 +4532,13 @@ const zhHans = {
 	cookie: {
 		title: "我们使用 Cookie 帮你更高效地沟通",
 		description:
-			"为了让 openloomi 正常运行，记住你的偏好，并持续优化聚合理解，提升个性化对话体验。我们会使用不同类型的 Cookie。你可以选择接受全部、或只使用必要功能。如需了解更多关于我们使用的 Cookie 的信息，请参阅我们的隐私政策。",
+			"为了让 opencontext 正常运行，记住你的偏好，并持续优化聚合理解，提升个性化对话体验。我们会使用不同类型的 Cookie。你可以选择接受全部、或只使用必要功能。如需了解更多关于我们使用的 Cookie 的信息，请参阅我们的隐私政策。",
 		acceptAll: "接受全部",
 		onlyNecessary: "仅必要",
 	},
 	alpha: {
 		info1:
-			"openloomi 目前处于 Alpha 测试阶段，功能仍在持续迭代优化，我们期待与您一起共创，帮助 openloomi 变得更好；",
+			"opencontext 目前处于 Alpha 测试阶段，功能仍在持续迭代优化，我们期待与您一起共创，帮助 opencontext 变得更好；",
 		info2:
 			"为了保证服务稳定和控制运行成本，本阶段提供有限的免费使用额度。您每天可免费体验小时级理解刷新和 20 轮对话，额度次日刷新；",
 		info3:
@@ -4554,7 +4558,7 @@ const zhHans = {
 			"为日常工作繁忙的您提供更强大的消息处理能力。更长的历史记录、更多的处理量,以及每周自动学习您的沟通习惯。",
 		pro: "专业版",
 		proDesc:
-			"为专业人士和高强度沟通场景设计。大幅提升的处理能力、更长的记忆周期,让 openloomi 成为真正懂您的智能助理。",
+			"为专业人士和高强度沟通场景设计。大幅提升的处理能力、更长的记忆周期,让 opencontext 成为真正懂您的智能助理。",
 		team: "团队版",
 		teamDesc:
 			"为团队打造的协作型智能通信中枢。共享积分池让团队灵活分配资源,统一的消息管理确保信息透明。",
@@ -4697,12 +4701,12 @@ const zhHans = {
 		},
 	},
 	affiliate: {
-		headerEyebrow: "与 openloomi 一起成长",
+		headerEyebrow: "与 opencontext 一起成长",
 		title: "推广计划",
 		subtitle:
-			"向你的受众推荐 openloomi，每一笔订阅都能获得 30% 的持续返佣，让他们享受更智能的对话，你也能持续获得收益。",
+			"向你的受众推荐 opencontext，每一笔订阅都能获得 30% 的持续返佣，让他们享受更智能的对话，你也能持续获得收益。",
 		heroSupporting:
-			"内容创作者、社区负责人和自动化专家都在使用openloomi，将对话转化为可靠的收入来源。",
+			"内容创作者、社区负责人和自动化专家都在使用opencontext，将对话转化为可靠的收入来源。",
 		loading: "正在加载推广数据...",
 		status: {
 			approved: "已通过",
@@ -4736,7 +4740,7 @@ const zhHans = {
 		linkLabel: "推广链接",
 		linkCopied: "推广链接已复制。",
 		shareHint:
-			"在任意 openloomi 链接上添加 ?ref={{code}}，访问者会自动保存推广信息。",
+			"在任意 opencontext 链接上添加 ?ref={{code}}，访问者会自动保存推广信息。",
 		requestPayout: "申请提现",
 		transactionsTitle: "最近佣金",
 		table: {
@@ -4753,7 +4757,7 @@ const zhHans = {
 		applyTitle: "申请成为推广人",
 		applySubtitle: "告诉我们你的业务场景，我们会为你开通专属推广渠道。",
 		applyCustomCode: "自定义推广码（可选）",
-		applyCodePlaceholder: "例如 openloomiKOL",
+		applyCodePlaceholder: "例如 opencontextKOL",
 		applyCodeHint: "建议使用字母或数字，方便粉丝输入。",
 		applyCustomSlug: "个性化链接（可选）",
 		applySlugPlaceholder: "your-brand",
@@ -4822,7 +4826,7 @@ const zhHans = {
 			audience: {
 				question: "谁可以加入？",
 				answer:
-					"欢迎内容创作者、社区管理者和AI爱好者加入，只要你热爱并愿意推广 openloomi。",
+					"欢迎内容创作者、社区管理者和AI爱好者加入，只要你热爱并愿意推广 opencontext。",
 			},
 			tracking: {
 				question: "推荐如何追踪？",
@@ -4906,7 +4910,7 @@ const zhHans = {
 		successDescription: "您已成功订阅 {{plan}}，我们稍后将发送收据。",
 		whatsNext: "下一步",
 		activationNote:
-			"新的订阅权益将在几分钟内在 openloomi 中生效，如需更多信息我们会通知您。",
+			"新的订阅权益将在几分钟内在 opencontext 中生效，如需更多信息我们会通知您。",
 		successChecklist1: "立即开始使用新的额度和集成自动化功能。",
 		successChecklist2: "可随时前往订阅中心管理账单或调整订阅计划。",
 		returnToDashboard: "返回控制台",
@@ -5007,11 +5011,11 @@ const zhHans = {
 		currentPlan: "当前套餐",
 		accountEdit: "账户",
 		accountSettings: "账户",
-		openloomiSettings: "语言",
+		opencontextSettings: "语言",
 		profileSoulPageTitle: "个性化",
 		profileSoulNavTitle: "个性化",
 		skillsNavTitle: "技能",
-		profileDescription: "更新在 openloomi 中展示的名称与头像",
+		profileDescription: "更新在 opencontext 中展示的名称与头像",
 		accountOverviewTitle: "账户概览",
 		accountOverviewDescription: "查看身份、积分使用与最近活动。",
 		profileFormTitle: "个人资料",
@@ -5070,12 +5074,12 @@ const zhHans = {
 		experimentalFeatures: "实验性功能",
 		subscriptionDescription: "管理您的订阅计划和积分使用情况",
 		personalizationDescription:
-			"告诉 openloomi 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
+			"告诉 opencontext 你关注的人、主题与语言风格，我们会优先呈现更贴近需求的理解。",
 		rolesDescription:
-			"查看系统识别的角色、行业与工作背景，并手动固定你希望 openloomi 着重关注的身份。",
+			"查看系统识别的角色、行业与工作背景，并手动固定你希望 opencontext 着重关注的身份。",
 		personalizationTabs: {
 			avatar: "助手形象",
-			basic: "openloomi Soul",
+			basic: "opencontext Soul",
 			roles: "我的描述",
 			people: "我的关注",
 			contexts: "我的情景",
@@ -5084,11 +5088,11 @@ const zhHans = {
 			skills: "我的技能",
 		},
 		basicSettingsDescription:
-			"配置 openloomi 的基础设置，包括理解与回复的语言以及理解刷新频率。",
+			"配置 opencontext 的基础设置，包括理解与回复的语言以及理解刷新频率。",
 		peopleDescription:
-			"告诉 openloomi 你关注的人和主题，它会在追踪时优先处理这些内容，让最重要的信息第一时间呈现。",
+			"告诉 opencontext 你关注的人和主题，它会在追踪时优先处理这些内容，让最重要的信息第一时间呈现。",
 		contextsDescription:
-			"选择你关注的情景，openloomi 会自动将事件归入对应分类，让你随时切换视角、聚焦当下最重要的事。",
+			"选择你关注的情景，opencontext 会自动将事件归入对应分类，让你随时切换视角、聚焦当下最重要的事。",
 		contextsListTitle: "我的情景",
 		categoryName: "情景名称",
 		categoryDescription: "情景描述",
@@ -5182,14 +5186,14 @@ const zhHans = {
 		enableCategory: "启用情景",
 		disableCategory: "禁用情景",
 		dragToReorder: "拖拽排序",
-		topicsDescription: "openloomi 会将其作为判断事件优先级的参考",
+		topicsDescription: "opencontext 会将其作为判断事件优先级的参考",
 		preferencesLandingDescription:
 			"助手设定已拆分为多个独立分栏，可在左侧快速跳转到形象、语言、角色、关注对象与主题设置。",
 		preferencesLandingHint:
 			"若需更新优先关注的人或主题，请使用“我关注的人 / 我关注的主题”分栏；角色增强位于“我的描述”。",
 		assistantNameLabel: "助手称呼",
 		assistantNameEdit: "编辑助手称呼",
-		avatarStateDescription: "openloomi 的形象会根据不同状态自动变化",
+		avatarStateDescription: "opencontext 的形象会根据不同状态自动变化",
 		currentTokenBalance: "当前积分余额",
 		creditsRemaining: "剩余积分",
 		currentBalance: "当前余额",
@@ -5260,7 +5264,7 @@ const zhHans = {
 		},
 	},
 	share: {
-		shareContent: "分享 openloomi",
+		shareContent: "分享 opencontext",
 		shareDescription: "选择分享方式并自定义您的消息",
 		shareSettings: "分享设置",
 		customizeShare: "个性化您的分享消息",
@@ -5285,12 +5289,12 @@ const zhHans = {
 		previewGenerated: "分享预览已生成",
 	},
 	onboarding: {
-		title: "欢迎使用 openloomi",
+		title: "欢迎使用 opencontext",
 		common: {
 			back: "上一步",
 		},
 		welcome: {
-			title: "👋 欢迎来到 openloomi",
+			title: "👋 欢迎来到 opencontext",
 			userNameFallback: "新用户",
 			description1: "你的主动式 AI 工作空间。",
 			description2: "感知信号、协调任务、追踪结果。",
@@ -5303,14 +5307,14 @@ const zhHans = {
 			oneClickRecruit: "一键招募",
 			preWelcome: {
 				eyebrow: "你的 AI 工作台",
-				title: "欢迎来到 openloomi",
+				title: "欢迎来到 opencontext",
 				description: "读懂工作。追踪要事。每件事画上句号。",
 				startButton: "开始使用 →",
 				privacy: "你的数据始终私密，不会用于任何模型训练。",
 				languageButton: "语言",
 			},
 			profile: {
-				title: "帮助 openloomi 认识你",
+				title: "帮助 opencontext 认识你",
 			},
 			mate: {
 				title: "招募你的第一个 AI Mate",
@@ -5334,9 +5338,9 @@ const zhHans = {
 			workDescriptionSubtitle: "帮助我们更好地了解你的工作内容和需求",
 			workDescriptionTextareaPlaceholder:
 				"请描述你平时主要做的工作内容，比如对接客户询盘、管理订单发货、协调供应商...",
-			instruction: "先让openloomi认识一下你吧",
+			instruction: "先让opencontext认识一下你吧",
 			description:
-				"告诉 openloomi 你的角色和工作重点，\n让它更好地理解你的思考方式和关注方向。",
+				"告诉 opencontext 你的角色和工作重点，\n让它更好地理解你的思考方式和关注方向。",
 			selectorHint: "可多选；再次点击或删除标签即可取消。",
 			doneButton: "完成填写",
 		},
@@ -5347,12 +5351,12 @@ const zhHans = {
 		},
 		industry: {
 			title: "先从你的行业开始",
-			subtitle: "让 openloomi 了解你的工作场景",
+			subtitle: "让 opencontext 了解你的工作场景",
 			otherPlaceholder: "输入其他行业",
 		},
 		role: {
 			title: "选择你的角色",
-			subtitle: "让 openloomi 更贴近你的工作方式",
+			subtitle: "让 opencontext 更贴近你的工作方式",
 		},
 		size: {
 			title: "选择团队规模",
@@ -5360,15 +5364,15 @@ const zhHans = {
 			submitButton: "完成",
 		},
 		painPoints: {
-			title: "openloomi 该如何组织你的注意力？",
+			title: "opencontext 该如何组织你的注意力？",
 			subtitle:
-				"选择关注的情景，openloomi将自动归类事件，助你轻松切换关注模式。",
+				"选择关注的情景，opencontext将自动归类事件，助你轻松切换关注模式。",
 			configuredTitle: "已设置的关注规则",
 			configuredSubtitle: "需要时可以继续添加或删除",
 			configuredEmpty: "还没有关注规则，先从下方模板填写几个场景吧。",
 			templatesTitle: "选择模板后完成填空",
 			templatesSubtitle:
-				"点击一个选项并补全空白，openloomi 才能准确理解你要盯的信号",
+				"点击一个选项并补全空白，opencontext 才能准确理解你要盯的信号",
 			templatesHint: "不知道写什么？选择一个模板填入，再修改它",
 			customLabel: "完全自定义输入",
 			customSubtitle: "如果模板不适用，可以直接描述你想关注的场景",
@@ -5394,7 +5398,7 @@ const zhHans = {
 					projectProgress: {
 						title: "追踪项目进展",
 						template: "追踪 [项目名] 的重要进展和变化",
-						example: "比如：追踪 openloomi 项目的重要进展和变化",
+						example: "比如：追踪 opencontext 项目的重要进展和变化",
 					},
 					pendingTasks: {
 						title: "记录待处理事项",
@@ -5424,7 +5428,7 @@ const zhHans = {
 					teamAchievements: {
 						title: "捕捉团队成就",
 						template: "捕捉 [团队/项目] 的里程碑和成就",
-						example: "比如：捕捉 openloomi 上线和用户数量突破的好消息",
+						example: "比如：捕捉 opencontext 上线和用户数量突破的好消息",
 					},
 				},
 				executiveUpdates: {
@@ -5446,7 +5450,7 @@ const zhHans = {
 				projectUpdates: {
 					title: "项目进展和更新",
 					description: "我参与的项目有新动态",
-					helper: "告诉 openloomi 是哪个项目、以及要追的里程碑。",
+					helper: "告诉 opencontext 是哪个项目、以及要追的里程碑。",
 					preview: "当 {{project}} 项目出现 {{milestone}} 相关更新时通知我。",
 					fields: {
 						project: {
@@ -5495,12 +5499,12 @@ const zhHans = {
 				keywordWatch: {
 					title: "特定关键词或话题",
 					description: "比如：产品发布、融资、竞品……",
-					helper: "告诉 openloomi 具体词汇以及适用范围。",
+					helper: "告诉 opencontext 具体词汇以及适用范围。",
 					preview: "当对话中提到 {{keyword}} 且与 {{context}} 相关时提醒我。",
 					fields: {
 						keyword: {
 							label: "关键词/短语",
-							placeholder: "如：openloomi 2.0",
+							placeholder: "如：opencontext 2.0",
 						},
 						context: {
 							label: "限定范围",
@@ -5511,7 +5515,7 @@ const zhHans = {
 				channelMonitor: {
 					title: "某些频道/群组的消息",
 					description: "例如：核心项目群、客户群……",
-					helper: "写明频道名称和关注理由，让 openloomi 持续盯住。",
+					helper: "写明频道名称和关注理由，让 opencontext 持续盯住。",
 					preview: "持续关注 {{channel}} 的对话，尤其关于 {{reason}} 的内容。",
 					fields: {
 						channel: {
@@ -5592,7 +5596,7 @@ const zhHans = {
 		complete: {
 			title: "认识你的 AI 助手",
 			subtitle:
-				"openloomi会帮你过滤噪音，将零散信号转化为清晰事件，一切由你掌控。",
+				"opencontext会帮你过滤噪音，将零散信号转化为清晰事件，一切由你掌控。",
 			nameLabel: "AI助手名称",
 			namePlaceholder: "给我起个名字吧",
 			openSettings: "打开个性化设置",
@@ -5601,10 +5605,10 @@ const zhHans = {
 		integration: {
 			title: "连接平台，解锁更深入的洞察",
 			subtitle:
-				"授权平台，让openloomi有真实的信息可供理解。你可以先连接一个，之后随时添加或移除。",
+				"授权平台，让opencontext有真实的信息可供理解。你可以先连接一个，之后随时添加或移除。",
 			privacyTipsTitle: "隐私承诺🔐",
 			privacyTips:
-				"openloomi 仅访问完成任务所必需的最少数据。\n原始聊天记录与邮件内容仅保存在你的设备中，不会上传至云端。\n授权与配置数据均采用行业标准加密（AES-256 / TLS 1.2+）。\n你可以随时断开任何平台的连接。",
+				"opencontext 仅访问完成任务所必需的最少数据。\n原始聊天记录与邮件内容仅保存在你的设备中，不会上传至云端。\n授权与配置数据均采用行业标准加密（AES-256 / TLS 1.2+）。\n你可以随时断开任何平台的连接。",
 			defaultTwinName: "你的AI助手",
 			connected: "已连接 {{count}} 个平台",
 			addPlatform: "添加平台",
@@ -5617,104 +5621,104 @@ const zhHans = {
 			rewardCompleted: "奖励已准备就绪！",
 			rewardClaimedBadge: "+{{credits}} 积分",
 			footerNote:
-				"你可以前往集成管理页面授权 openloomi 获取更多内容，例如RSS源或上传文件。",
+				"你可以前往集成管理页面授权 opencontext 获取更多内容，例如RSS源或上传文件。",
 		},
 		hub: {
-			title: "认识 openloomi",
+			title: "认识 opencontext",
 			progress: "进度：{{done}}/{{total}} 步骤已完成",
 			description: "新手引导流程",
 			groups: {
 				required: "快速上手",
-				recommended: "感受 openloomi",
+				recommended: "感受 opencontext",
 				explore: "了解更多",
 			},
 			steps: {
 				setupProfile: {
-					title: "帮助 openloomi 认识你",
-					desc: "你提供的信息越完整，openloomi 就能越准确地判断什么值得你关注。",
-					guideTitle: "帮助 openloomi 认识你",
+					title: "帮助 opencontext 认识你",
+					desc: "你提供的信息越完整，opencontext 就能越准确地判断什么值得你关注。",
+					guideTitle: "帮助 opencontext 认识你",
 				},
-				configureopenloomiPersonality: {
-					title: "为 openloomi 注入灵魂",
-					desc: "设置 openloomi 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
-					guideTitle: "配置你的 openloomi 性格",
-					bullet1: "在个性化设置中调整 openloomi 的语气与风格",
+				configureopencontextPersonality: {
+					title: "为 opencontext 注入灵魂",
+					desc: "设置 opencontext 的性格和工作方式，让它用你最舒适的节奏和风格陪伴你。",
+					guideTitle: "配置你的 opencontext 性格",
+					bullet1: "在个性化设置中调整 opencontext 的语气与风格",
 					bullet2: "可选择更专业、更简洁或更详细的回复方式",
 					bullet3: "配置会随使用持续优化，随时可修改",
 				},
 				createFirstEvent: {
 					title: "创建第一个追踪事件",
-					desc: "添加或同步一条追踪事件，让 openloomi 开始为你整理",
+					desc: "添加或同步一条追踪事件，让 opencontext 开始为你整理",
 					guideTitle: "创建第一个追踪事件",
 					bullet1: "从连接的平台同步消息，或手动添加一条追踪事件",
 					bullet2: "追踪事件会按情景自动分类，便于后续查看",
-					bullet3: "有了追踪事件后，就可以让 openloomi 帮你分析或给建议",
+					bullet3: "有了追踪事件后，就可以让 opencontext 帮你分析或给建议",
 					popoverHint: "选择一种方式创建第一个追踪事件",
 					popoverSubtitle:
-						"告诉 openloomi 你想追踪什么，它会自动监控进展、提醒你关键更新。",
+						"告诉 opencontext 你想追踪什么，它会自动监控进展、提醒你关键更新。",
 					actionAuthorizePlatform: "自动追踪",
 					actionAuthorizePlatformDesc:
-						"连接你的账号，openloomi 将自动发现值得追踪的内容",
-					actionChatWithAI: "和 openloomi 对话",
+						"连接你的账号，opencontext 将自动发现值得追踪的内容",
+					actionChatWithAI: "和 opencontext 对话",
 					actionChatWithAIDesc:
-						"用对话或上传文件，让 openloomi 理解并创建追踪事件",
+						"用对话或上传文件，让 opencontext 理解并创建追踪事件",
 					createTrackingPrompt:
-						"使用 openloomi-event-creator 技能帮我创建每小时提醒我喝水的追踪",
+						"使用 opencontext-event-creator 技能帮我创建每小时提醒我喝水的追踪",
 				},
 				trackingByContext: {
 					title: "将你的追踪事件按照情景自动分类",
-					desc: "选择关注的情景，openloomi 将自动归类事件，助你轻松切换关注模式",
+					desc: "选择关注的情景，opencontext 将自动归类事件，助你轻松切换关注模式",
 					subtitle:
-						"选择关注的情景，openloomi 将自动归类事件，助你轻松切换关注模式",
+						"选择关注的情景，opencontext 将自动归类事件，助你轻松切换关注模式",
 					actionButton: "完成",
 				},
-				openloomiFirstTask: {
-					title: "让 openloomi 帮你做第一件事",
-					desc: "对某条事件提问或下达任务，体验 openloomi 的协助能力",
-					guideTitle: "让 openloomi 帮你做第一件事",
-					bullet1: "在事件卡片上点击「询问 openloomi」，输入你的问题",
-					bullet2: "可以请 openloomi 总结、写回复、或给出下一步建议",
+				opencontextFirstTask: {
+					title: "让 opencontext 帮你做第一件事",
+					desc: "对某条事件提问或下达任务，体验 opencontext 的协助能力",
+					guideTitle: "让 opencontext 帮你做第一件事",
+					bullet1: "在事件卡片上点击「询问 opencontext」，输入你的问题",
+					bullet2: "可以请 opencontext 总结、写回复、或给出下一步建议",
 					bullet3: "回复会基于该事件的完整上下文，而非泛泛而谈",
-					popoverSubtitle: "告诉 openloomi 你想做什么，它会帮你完成。",
+					popoverSubtitle: "告诉 opencontext 你想做什么，它会帮你完成。",
 					tryIt: "试试看",
 					action1Title: "起草消息",
 					action1Desc:
-						"告诉 openloomi 你想表达什么，她来帮你把意思说得专业、有温度。",
+						"告诉 opencontext 你想表达什么，她来帮你把意思说得专业、有温度。",
 					action1Prompt:
 						"帮我起草一条消息，发给我的投资人，告诉他 A 轮进展顺利，下周安排一次同步。",
-					action2Title: "和 openloomi 一起写",
+					action2Title: "和 opencontext 一起写",
 					action2Desc:
-						"把脑子里的想法说出来，openloomi 陪你一起思考，把零散的创意变成真正可用的内容。",
+						"把脑子里的想法说出来，opencontext 陪你一起思考，把零散的创意变成真正可用的内容。",
 					action2Prompt: "我想写一份产品定位文档，我来说想法，你帮我整理成型。",
 					action3Title: "拆解任务",
 					action3Desc:
-						"没有结构的目标很难推进。描述你想达成的事，openloomi 帮你拆解成清晰、可执行的下一步。",
+						"没有结构的目标很难推进。描述你想达成的事，opencontext 帮你拆解成清晰、可执行的下一步。",
 					action3Prompt:
 						"我想在 30 天内签下前 10 个付费用户，帮我拆解成具体的行动计划。",
 					action4Title: "规划内容策略",
 					action4Desc:
-						"内容是品牌最持久的资产。告诉 openloomi 你的产品和受众，她帮你规划有节奏的内容矩阵。",
+						"内容是品牌最持久的资产。告诉 opencontext 你的产品和受众，她帮你规划有节奏的内容矩阵。",
 					action4Prompt:
 						"我的产品是面向 SMB 创始人的 AI 工作助手，帮我制定一份 LinkedIn 内容发布策略。",
 					action5Title: "激发营销创意",
 					action5Desc:
-						"好的市场创意往往就差一个切入角度。告诉 openloomi 你在推什么，她帮你找到亮点。",
+						"好的市场创意往往就差一个切入角度。告诉 opencontext 你在推什么，她帮你找到亮点。",
 					action5Prompt:
 						"我们即将发布 AI Agent 产品的新功能，帮我想 5 个有传播性的创意推广方案。",
 					action6Title: "搭建演示框架",
 					action6Desc:
-						"演示的结构决定说服力。描述主题和对象，openloomi 帮你搭框架，让你专注内容本身。",
+						"演示的结构决定说服力。描述主题和对象，opencontext 帮你搭框架，让你专注内容本身。",
 					action6Prompt:
 						"帮我做一份面向 VC 的融资 Deck 大纲，我们是 AI 通讯助手早期创业公司，Pre-A 轮。",
 					action7Title: "AI 行业简报",
 					action7Desc:
-						"AI 领域每天都在变。openloomi 过滤噪音，只呈现真正值得关注的行业信号。",
+						"AI 领域每天都在变。opencontext 过滤噪音，只呈现真正值得关注的行业信号。",
 					action7Prompt: "今天 AI 行业有什么值得关注的动态？帮我做一个简报。",
-					action8Title: "openloomi 能帮我做什么？",
+					action8Title: "opencontext 能帮我做什么？",
 					action8Desc:
-						"不知道如何使用 openloomi？这里是你的起点，探索她能做什么，找到最适合你的使用方式。",
+						"不知道如何使用 opencontext？这里是你的起点，探索她能做什么，找到最适合你的使用方式。",
 					action8Prompt:
-						"我是早期创业公司的创始人，每天要处理大量沟通，openloomi 能帮我做什么？",
+						"我是早期创业公司的创始人，每天要处理大量沟通，opencontext 能帮我做什么？",
 				},
 				updateEvents: {
 					title: "更新你的事件",
@@ -5724,32 +5728,32 @@ const zhHans = {
 					bullet2: "收藏：标记重要事件，方便之后查找",
 					bullet3: "状态会同步到工作区，便于回顾与管理",
 				},
-				letopenloomiKnowYouCare: {
-					title: "让 openloomi 了解你所关心的",
-					desc: "告诉 openloomi 你最在意的人、话题和事项",
-					guideTitle: "让 openloomi 了解你所关心的",
-					bullet1: "添加你希望 openloomi 重点关注的人、话题或项目",
-					bullet2: "openloomi 会优先为你推送与关注内容相关的追踪事件",
+				letopencontextKnowYouCare: {
+					title: "让 opencontext 了解你所关心的",
+					desc: "告诉 opencontext 你最在意的人、话题和事项",
+					guideTitle: "让 opencontext 了解你所关心的",
+					bullet1: "添加你希望 opencontext 重点关注的人、话题或项目",
+					bullet2: "opencontext 会优先为你推送与关注内容相关的追踪事件",
 					bullet3: "随时可以更新你的关注列表，跟上你的优先级变化",
 				},
 				firstChat: {
-					title: "通过通讯软件和 openloomi 对话",
-					desc: "不只在 App 里——\n你现在可以通过 Telegram、QQ、Lark/飞书、iMessage、WhatsApp\n直接和你的 openloomi 对话。\n随时提问、随时追踪，用你最顺手的工具就够了。",
-					guideTitle: "通过通讯软件和 openloomi 对话",
+					title: "通过通讯软件和 opencontext 对话",
+					desc: "不只在 App 里——\n你现在可以通过 Telegram、QQ、Lark/飞书、iMessage、WhatsApp\n直接和你的 opencontext 对话。\n随时提问、随时追踪，用你最顺手的工具就够了。",
+					guideTitle: "通过通讯软件和 opencontext 对话",
 					learnMoreLink: "了解如何接入 →",
-					bullet1: "在已连接的通讯软件中向 openloomi 发送消息",
-					bullet2: "可询问今日追踪事件、让 openloomi 执行任务或获取建议",
+					bullet1: "在已连接的通讯软件中向 opencontext 发送消息",
+					bullet2: "可询问今日追踪事件、让 opencontext 执行任务或获取建议",
 					bullet3: "对话与网页端同步，多端无缝衔接",
 					bullet4:
 						"注意：需要保持电脑开机和软件打开才能接受消息，所有数据均存储在本地",
 				},
 				exploreAgents: {
 					title: "了解智能代理",
-					desc: "通过定时任务，把重复的事情交给 openloomi——它会在你设定的时间自动处理，你不用再惦记。技能则像是给 openloomi 装上了专属工具箱，针对特定场景，让它做得更准、更到位。",
+					desc: "通过定时任务，把重复的事情交给 opencontext——它会在你设定的时间自动处理，你不用再惦记。技能则像是给 opencontext 装上了专属工具箱，针对特定场景，让它做得更准、更到位。",
 					descAutomation:
-						"在定时任务中，你可以管理所有的自动执行安排。\n把那些需要重复做、或者安排在未来的事都交给 openloomi，到了时间它会自动帮你处理好。",
+						"在定时任务中，你可以管理所有的自动执行安排。\n把那些需要重复做、或者安排在未来的事都交给 opencontext，到了时间它会自动帮你处理好。",
 					descSkill:
-						"在技能中，你可以为 openloomi 配置适合不同场景的能力。\n这些技能让它在处理特定任务时更懂你的语境，执行得更准、更到位。",
+						"在技能中，你可以为 opencontext 配置适合不同场景的能力。\n这些技能让它在处理特定任务时更懂你的语境，执行得更准、更到位。",
 					guideTitle: "了解智能代理",
 					learnMoreAutomation: "了解定时任务",
 					learnMoreSkills: "了解技能",
@@ -5762,7 +5766,7 @@ const zhHans = {
 				},
 				exploreLibrary: {
 					title: "了解库",
-					desc: "库 是 openloomi 帮你沉淀内容的地方。你可以在这里查看和整理所有 Tracking 中的笔记与文件，以及对话中生成的内容。",
+					desc: "库 是 opencontext 帮你沉淀内容的地方。你可以在这里查看和整理所有 Tracking 中的笔记与文件，以及对话中生成的内容。",
 					guideTitle: "了解库",
 					bullet1: "归档的事件与洞察会沉淀到工作区",
 					bullet2: "支持搜索、筛选、标记与导出",
@@ -5779,13 +5783,14 @@ const zhHans = {
 			stepGotIt: "我已了解，标记完成",
 			stepContentComingSoon: "内容即将推出",
 			groupAllDone: "全部完成",
-			finishButton: "进入 openloomi",
+			finishButton: "进入 opencontext",
 			finishHint: "完成「快速上手」中的所有步骤后，即可结束引导",
 			finishAlertTitle: "🎉 基础配置完成！",
 			finishAlertDescription:
-				"现在可以进入 openloomi 了，也可以继续完成后面的步骤。\n想重新回来？菜单底部的「新手引导」随时可用。",
+				"现在可以进入 opencontext 了，也可以继续完成后面的步骤。\n想重新回来？菜单底部的「新手引导」随时可用。",
 			startHereFirstTitle: "先从这里开始",
-			startHereFirstDescription: "先花 2 分钟完成这 3 步，openloomi 会更懂你。",
+			startHereFirstDescription:
+				"先花 2 分钟完成这 3 步，opencontext 会更懂你。",
 			finishError: "完成引导失败，请重试",
 			finishing: "正在完成...",
 		},
@@ -5809,8 +5814,8 @@ const zhHans = {
 		},
 		avatarBackground: "头像",
 		colorPresetLabels: {
-			"openloomi-primary": "品牌主色",
-			"openloomi-original": "原初之光",
+			"opencontext-primary": "品牌主色",
+			"opencontext-original": "原初之光",
 			"sunset-dream": "暮色流光",
 			"sakura-breeze": "樱风拂面",
 			"forest-whisper": "森语低吟",
@@ -5896,15 +5901,15 @@ const zhHans = {
 	},
 	toast: {
 		genericError: "出错了",
-		serverStartFailed: "openloomi 启动失败",
-		serverStartError: "openloomi 启动出错",
-		appStarting: "openloomi 正在启动...",
-		appDownloading: "openloomi 正在更新...",
+		serverStartFailed: "opencontext 启动失败",
+		serverStartError: "opencontext 启动出错",
+		appStarting: "opencontext 正在启动...",
+		appDownloading: "opencontext 正在更新...",
 	},
 	update: {
 		titleNewVersion: "发现新版本",
 		titleUpdateComplete: "更新完成",
-		description: "openloomi 有新版本可用，建议更新以获得最新功能和修复。",
+		description: "opencontext 有新版本可用，建议更新以获得最新功能和修复。",
 		descriptionRestarting: "更新已安装完成，应用即将自动重启...",
 		currentVersion: "当前版本",
 		latestVersion: "最新版本",
@@ -5925,7 +5930,7 @@ const zhHans = {
 	pet: {
 		menu: {
 			title: "菜单",
-			openLoomi: "打开 Loomi",
+			opencontext: "打开 Loomi",
 			settings: "设置",
 			theme: "主题",
 			themeFox: "狐狸",
@@ -5935,8 +5940,8 @@ const zhHans = {
 			quit: "退出 Loomi",
 		},
 		theme: {
-			customDirHelp: "把 PNG 放到 ~/.openloomi/pet-custom/<名称>/",
-			overrideHelp: "编辑 ~/.openloomi/pet-config.json",
+			customDirHelp: "把 PNG 放到 ~/.opencontext/pet-custom/<名称>/",
+			overrideHelp: "编辑 ~/.opencontext/pet-config.json",
 			statePrefixHelp: "文件名需包含状态名,如 idle.png、thinking.png",
 			noCustomThemes: "暂未发现自定义主题",
 			loadedToast: "主题 {{name}} 已加载",

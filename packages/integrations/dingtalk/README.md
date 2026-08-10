@@ -1,6 +1,6 @@
 # @opencontext/integrations-dingtalk
 
-[DingTalk](https://www.dingtalk.com/) (钉钉) chat adapter for OpenLoomi.
+[DingTalk](https://www.dingtalk.com/) (钉钉) chat adapter for OpenContext.
 Implements the common channel interface and lets bots send / receive
 messages over DingTalk's Open Platform.
 

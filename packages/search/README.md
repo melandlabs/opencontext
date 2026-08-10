@@ -1,6 +1,6 @@
 # @opencontext/search
 
-Web search adapters used by the OpenLoomi agent. Currently includes a Brave
+Web search adapters used by the OpenContext agent. Currently includes a Brave
 Search client; additional providers can be plugged in via the shared
 interface.
 

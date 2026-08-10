@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/dingtalk"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/dingtalk",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/dingtalk",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi \u00b7 integrations/dingtalk module",
+  "description": "OpenContext \u00b7 integrations/dingtalk module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@opencontext/ai": "workspace:*",

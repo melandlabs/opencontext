@@ -1,6 +1,6 @@
 # @opencontext/integrations-linkedin
 
-[LinkedIn](https://www.linkedin.com/) messaging adapter for OpenLoomi.
+[LinkedIn](https://www.linkedin.com/) messaging adapter for OpenContext.
 Authenticates with LinkedIn OAuth 2.0 and exchanges direct messages on
 behalf of the connected user.
 

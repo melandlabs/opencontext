@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/jira"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/jira",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/jira",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi \u00b7 integrations/jira module",
+  "description": "OpenContext \u00b7 integrations/jira module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@opencontext/shared": "workspace:*"

@@ -17,11 +17,11 @@ interface MemorySummaryPublicationCarrier {
 }
 
 export const MEMORY_SUMMARY_PUBLICATION_DIMENSION =
-	"__openloomiMemoryPublication";
+	"__opencontextMemoryPublication";
 export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION =
-	"__openloomiMemoryPublicationRevision";
+	"__opencontextMemoryPublicationRevision";
 export const MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION =
-	"__openloomiMemoryPublicationExpectedRevision";
+	"__opencontextMemoryPublicationExpectedRevision";
 const PENDING_PUBLICATION = "pending";
 
 function hashString(input: string): string {

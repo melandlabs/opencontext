@@ -27,7 +27,7 @@ export type QuietDayFillerId =
 	"none" | "ai-news-digest" | "weather-calendar" | "memory-resurface";
 
 /**
- * The shape persisted to `~/.openloomi/loop/config.json`. New
+ * The shape persisted to `~/.opencontext/loop/config.json`. New
  * opt-in fields should default to `false` (or a benign sentinel) so
  * that upgrading users aren't suddenly opted into a feature.
  */
@@ -101,7 +101,7 @@ export interface LoopPreferences {
 	 * which gates the same fan-out) rather than as a new top-level
 	 * setting, so the same PUT body that opts the user in also
 	 * shapes how often they want to be pestered. The counter itself
-	 * is persisted to `~/.openloomi/loop/attention.json` (NOT
+	 * is persisted to `~/.opencontext/loop/attention.json` (NOT
 	 * `config.json`) to avoid a write-race on the preferences path.
 	 */
 	attentionBudget?: {
@@ -130,7 +130,7 @@ export interface LoopPreferences {
 	/**
 	 * When the brief or wrap snapshot is empty (no surfaced items /
 	 * highlights), skip the templated "nothing to do" card entirely.
-	 * Snapshot still gets persisted to `~/.openloomi/loop/{brief,wrap}.json`
+	 * Snapshot still gets persisted to `~/.opencontext/loop/{brief,wrap}.json`
 	 * for history; the pet bubble stays silent and no badge increments.
 	 *
 	 * Default `true` — opt-out via

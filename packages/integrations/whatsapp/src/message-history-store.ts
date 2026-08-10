@@ -72,7 +72,7 @@ export type PersistedChatInfo = {
 };
 
 function defaultBaseDir(): string {
-	return join(homedir(), ".openloomi", "data", "whatsapp-history");
+	return join(homedir(), ".opencontext", "data", "whatsapp-history");
 }
 
 function sanitizeForFilename(value: string): string {

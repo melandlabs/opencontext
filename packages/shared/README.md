@@ -1,6 +1,6 @@
 # @opencontext/shared
 
-Reusable utilities, types, and constants extracted from the OpenLoomi web app.
+Reusable utilities, types, and constants extracted from the OpenContext web app.
 
 ## Installation
 

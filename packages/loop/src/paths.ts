@@ -1,7 +1,7 @@
 /**
  * Loop filesystem paths.
  *
- * Production location:  ~/.openloomi/loop/
+ * Production location:  ~/.opencontext/loop/
  *   - signals.jsonl       append-only signal log
  *   - decisions.json      { pending, done, dismissed } buckets
  *   - status.json         last-tick summary (for at-a-glance status)
@@ -12,7 +12,7 @@
  *   - mutes.json          key-scoped skip rules (dismiss → "don't show this kind again")
  *   - migrated.json       marker written after legacy data migration
  *
- * Legacy location (read once on first boot): skills/openloomi-loop/data/
+ * Legacy location (read once on first boot): skills/opencontext-loop/data/
  * The `migrate()` function copies the legacy signals.jsonl + decisions.json
  * into the new location, never deleting the originals.
  */
@@ -27,7 +27,7 @@ import {
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-export const LOOP_HOME = join(homedir(), ".openloomi", "loop");
+export const LOOP_HOME = join(homedir(), ".opencontext", "loop");
 
 export const LOOP_PATHS = {
 	home: LOOP_HOME,
@@ -94,8 +94,8 @@ interface MigrationSource {
 
 function legacySourceCandidates(): MigrationSource[] {
 	const out: MigrationSource[] = [];
-	// Walk up the current working dir looking for skills/openloomi-loop/data.
-	// Covers `cd apps/web && node ...` and `cd /path/to/openloomi && node ...`.
+	// Walk up the current working dir looking for skills/opencontext-loop/data.
+	// Covers `cd apps/web && node ...` and `cd /path/to/opencontext && node ...`.
 	const cwd = process.cwd();
 	const probes = [
 		cwd,
@@ -105,7 +105,7 @@ function legacySourceCandidates(): MigrationSource[] {
 		resolve(cwd, "../../../.."),
 	];
 	for (const dir of probes) {
-		const dataDir = join(dir, "skills", "openloomi-loop", "data");
+		const dataDir = join(dir, "skills", "opencontext-loop", "data");
 		if (existsSync(join(dataDir, "decisions.json"))) {
 			out.push({
 				signals: join(dataDir, "signals.jsonl"),

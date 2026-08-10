@@ -177,7 +177,7 @@ export interface AgentMessage {
 	};
 	/** Permission request fields */
 	permissionRequest?: {
-		/** Opaque OpenLoomi request id used when submitting the decision. */
+		/** Opaque OpenContext request id used when submitting the decision. */
 		requestId: string;
 		toolName: string;
 		toolInput: Record<string, unknown>;
@@ -380,7 +380,7 @@ export interface AgentConfig {
 export interface SkillsConfig {
 	/** Whether skills are globally enabled */
 	enabled: boolean;
-	/** Whether to load skills from user directory (~/.openloomi/skills) */
+	/** Whether to load skills from user directory (~/.opencontext/skills) */
 	userDirEnabled: boolean;
 	/** Whether to load skills from app directory (workspace/skills) */
 	appDirEnabled: boolean;
@@ -396,7 +396,7 @@ export interface McpConfig {
 	enabled: boolean;
 	/** Whether to load MCP servers from user directory (claude config) */
 	userDirEnabled: boolean;
-	/** Whether to load MCP servers from app directory (openloomi config) */
+	/** Whether to load MCP servers from app directory (opencontext config) */
 	appDirEnabled: boolean;
 	/** Custom MCP config file path (legacy support) */
 	mcpConfigPath?: string;
@@ -415,7 +415,7 @@ export interface AgentOptions {
 	supplementalInput?: AgentSupplementalInputSource;
 	/** Working directory */
 	cwd?: string;
-	/** Use cwd exactly instead of wrapping it in an OpenLoomi session folder */
+	/** Use cwd exactly instead of wrapping it in an OpenContext session folder */
 	useProvidedWorkDir?: boolean;
 	/** Allowed tools */
 	allowedTools?: string[];

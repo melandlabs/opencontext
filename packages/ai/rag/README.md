@@ -1,6 +1,6 @@
 # @opencontext/ai-rag
 
-Retrieval-Augmented Generation (RAG) primitives for OpenLoomi. Provides
+Retrieval-Augmented Generation (RAG) primitives for OpenContext. Provides
 text chunking, embedding adapters (local Transformers, OpenAI, ChromaDB),
 document parsers (PDF, ZIP, etc.), and pluggable vector stores
 (sqlite-vec, pgvector, ChromaDB).

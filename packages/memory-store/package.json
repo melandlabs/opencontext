@@ -29,17 +29,17 @@
     "./memory-graph-correction-policy": "./dist/policies/memory-graph-correction-policy.js"
   },
   "bin": {
-    "openloomi-memory-http": "./dist/server/cli-http.js",
-    "openloomi-memory-mcp": "./dist/server/cli-mcp.js"
+    "opencontext-memory-http": "./dist/server/cli-http.js",
+    "opencontext-memory-mcp": "./dist/server/cli-mcp.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "url": "git+https://github.com/melandlabs/opencontext.git",
     "directory": "packages/memory-store"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi memory storage + search SDK with HTTP and MCP server entry points.",
-  "keywords": ["openloomi", "memory", "storage", "search", "sdk", "mcp", "http"],
+  "description": "OpenContext memory storage + search SDK with HTTP and MCP server entry points.",
+  "keywords": ["opencontext", "memory", "storage", "search", "sdk", "mcp", "http"],
   "dependencies": {
     "@hono/node-server": "^1.13.7",
     "@modelcontextprotocol/sdk": "^1.25.3",

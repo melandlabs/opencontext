@@ -34,17 +34,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/ai/memory-consolidation"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/ai/memory-consolidation",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ai/memory-consolidation",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · memory-consolidation module",
+  "description": "OpenContext · memory-consolidation module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "devDependencies": {
     "@opencontext/config": "workspace:*",

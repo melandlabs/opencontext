@@ -18,16 +18,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/ui-runtime"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/ui-runtime",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/ui-runtime",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
   "description": "UI-side runtime primitives (Tauri platform detection, browser/Tauri filesystem adapters).",
-  "keywords": ["openloomi", "ui", "tauri", "platform"],
+  "keywords": ["opencontext", "ui", "tauri", "platform"],
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",
     "@tauri-apps/plugin-dialog": "^2.7.1",

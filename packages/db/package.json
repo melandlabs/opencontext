@@ -17,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "url": "git+https://github.com/melandlabs/opencontext.git",
     "directory": "packages/db"
   },
   "license": "Apache-2.0",
-  "description": "Database building blocks (batch helpers, crypto utilities, agent-goal runtime schema types) shared between OpenLoomi runtime and UI.",
-  "keywords": ["openloomi", "db", "database", "drizzle"],
+  "description": "Database building blocks (batch helpers, crypto utilities, agent-goal runtime schema types) shared between OpenContext runtime and UI.",
+  "keywords": ["opencontext", "db", "database", "drizzle"],
   "dependencies": {
     "ai": "^3",
     "bcrypt-ts": "^5"

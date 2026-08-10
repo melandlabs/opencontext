@@ -1,6 +1,6 @@
 # `@opencontext/cron`
 
-Scheduling primitives shared between OpenLoomi runtime and UI sub-projects.
+Scheduling primitives shared between OpenContext runtime and UI sub-projects.
 
 Phase 5 of the [runtime/UI split plan](../../docs/split-runtime-ui.md) — currently
 ships only the leaf pieces of `apps/web/lib/cron` that have no DB / insights /

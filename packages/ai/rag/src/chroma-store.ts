@@ -34,7 +34,7 @@ type ChromaMetadataValue = string | number | boolean | null;
 type ChromaMetadata = Record<string, ChromaMetadataValue>;
 
 const DEFAULT_CHROMA_URL = "http://localhost:8000";
-const DEFAULT_COLLECTION_NAME = "openloomi_rag_chunks";
+const DEFAULT_COLLECTION_NAME = "opencontext_rag_chunks";
 
 /**
  * Chroma-backed implementation of the shared vector store interface.
@@ -196,7 +196,7 @@ export class ChromaVectorStore implements IVectorStore {
 		if (!this.collection) {
 			this.collection = await this.client.getOrCreateCollection({
 				name: this.collectionName,
-				// OpenLoomi always supplies vectors explicitly. Disabling Chroma's
+				// OpenContext always supplies vectors explicitly. Disabling Chroma's
 				// default embedding function avoids model downloads and dimension drift.
 				embeddingFunction: null,
 				metadata: {

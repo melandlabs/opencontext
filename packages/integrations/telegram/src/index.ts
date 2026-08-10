@@ -18,7 +18,7 @@ export type {
 
 // Re-export utility functions
 export {
-	openloomiMessageToTgText,
-	tgMessageToopenloomiMessage,
+	opencontextMessageToTgText,
+	tgMessageToopencontextMessage,
 } from "./adapter";
 export { withTimeout, CONNECT_TIMEOUT_MS } from "./adapter";

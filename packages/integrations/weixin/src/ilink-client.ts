@@ -203,7 +203,7 @@ function assertWriteOk(rawText: string, apiName: string): void {
 }
 
 function generateClientId(): string {
-	return `openloomi-weixin-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+	return `opencontext-weixin-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
 }
 
 // =============================================================================

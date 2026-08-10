@@ -18,17 +18,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/asana"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/asana",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/asana",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · integrations/asana module",
+  "description": "OpenContext · integrations/asana module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@opencontext/shared": "workspace:*",

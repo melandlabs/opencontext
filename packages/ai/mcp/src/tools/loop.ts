@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { OpenLoomiToolContext } from "./index";
-import { jsonToolResult, withReadyOpenLoomiClient } from "./response";
+import type { OpenContextToolContext } from "./index";
+import { jsonToolResult, withReadyOpenContextClient } from "./response";
 
 const LOOP_READ_TIMEOUT_MS = 55000;
 
@@ -22,14 +22,14 @@ function limitItems<T>(items: T[], limit?: number): T[] {
 
 export function registerLoopTools(
 	server: McpServer,
-	context: OpenLoomiToolContext,
+	context: OpenContextToolContext,
 ): void {
 	server.registerTool(
-		"openloomi_loop_state",
+		"opencontext_loop_state",
 		{
-			title: "OpenLoomi Loop State",
+			title: "OpenContext Loop State",
 			description:
-				"Read the local OpenLoomi Loop dashboard state, including preferences, counts, connectors, and last tick metadata.",
+				"Read the local OpenContext Loop dashboard state, including preferences, counts, connectors, and last tick metadata.",
 			annotations: {
 				readOnlyHint: true,
 				destructiveHint: false,
@@ -38,24 +38,24 @@ export function registerLoopTools(
 			},
 		},
 		async () =>
-			withReadyOpenLoomiClient(
+			withReadyOpenContextClient(
 				context,
-				"OpenLoomi Loop state failed",
+				"OpenContext Loop state failed",
 				async (client) => {
 					const result = await client.getJson("/api/loop/state", {
 						timeoutMs: LOOP_READ_TIMEOUT_MS,
 					});
-					return jsonToolResult("OpenLoomi Loop state", result);
+					return jsonToolResult("OpenContext Loop state", result);
 				},
 			),
 	);
 
 	server.registerTool(
-		"openloomi_loop_list_decisions",
+		"opencontext_loop_list_decisions",
 		{
-			title: "OpenLoomi Loop Decisions",
+			title: "OpenContext Loop Decisions",
 			description:
-				"List local OpenLoomi Loop decisions. Defaults to pending decisions for the user's approval queue.",
+				"List local OpenContext Loop decisions. Defaults to pending decisions for the user's approval queue.",
 			inputSchema: {
 				status: decisionStatusSchema
 					.optional()
@@ -76,9 +76,9 @@ export function registerLoopTools(
 			},
 		},
 		async (args) =>
-			withReadyOpenLoomiClient(
+			withReadyOpenContextClient(
 				context,
-				"OpenLoomi Loop decision listing failed",
+				"OpenContext Loop decision listing failed",
 				async (client) => {
 					const status = args.status ?? "pending";
 					const result = await client.getJson(
@@ -101,7 +101,7 @@ export function registerLoopTools(
 						},
 					};
 
-					return jsonToolResult("OpenLoomi Loop decisions", filtered);
+					return jsonToolResult("OpenContext Loop decisions", filtered);
 				},
 			),
 	);

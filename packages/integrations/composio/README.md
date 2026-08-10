@@ -1,6 +1,6 @@
 # @opencontext/integrations-composio
 
-[Composio](https://composio.dev/) adapter helpers for OpenLoomi. Exposes the
+[Composio](https://composio.dev/) adapter helpers for OpenContext. Exposes the
 shared `ComposioClient`, toolkit slug constants, and credential helpers used
 by the Google Calendar / Google Meet integrations.
 

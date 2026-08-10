@@ -1,15 +1,15 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 
-import { OpenLoomiApiError, OpenLoomiClient } from "../openloomi/client";
+import { OpenContextApiError, OpenContextClient } from "../opencontext/client";
 import {
-	checkOpenLoomiReadiness,
-	formatOpenLoomiReadiness,
-} from "../openloomi/readiness";
-import type { OpenLoomiToolContext } from "./index";
+	checkOpenContextReadiness,
+	formatOpenContextReadiness,
+} from "../opencontext/readiness";
+import type { OpenContextToolContext } from "./index";
 
 const MAX_TEXT_RESULT_LENGTH = 12000;
 
-export type OpenLoomiToolResult = CallToolResult;
+export type OpenContextToolResult = CallToolResult;
 
 function toStructuredContent(value: unknown): Record<string, unknown> {
 	if (typeof value === "object" && value !== null && !Array.isArray(value)) {
@@ -31,7 +31,7 @@ export function jsonToolResult(
 	title: string,
 	value: unknown,
 	structuredContent: Record<string, unknown> = toStructuredContent(value),
-): OpenLoomiToolResult {
+): OpenContextToolResult {
 	return {
 		content: [
 			{
@@ -46,12 +46,12 @@ export function jsonToolResult(
 export function apiErrorToolResult(
 	title: string,
 	error: unknown,
-): OpenLoomiToolResult {
+): OpenContextToolResult {
 	if (
 		error instanceof Error &&
 		(error.name === "AbortError" || /aborted/i.test(error.message))
 	) {
-		const message = "Request timed out before OpenLoomi responded.";
+		const message = "Request timed out before OpenContext responded.";
 		return {
 			content: [{ type: "text", text: `${title}: ${message}` }],
 			structuredContent: {
@@ -64,12 +64,12 @@ export function apiErrorToolResult(
 		};
 	}
 
-	if (error instanceof OpenLoomiApiError) {
+	if (error instanceof OpenContextApiError) {
 		return {
 			content: [
 				{
 					type: "text",
-					text: `${title}: OpenLoomi API request failed (${error.status})\n\n${stringifyForText(
+					text: `${title}: OpenContext API request failed (${error.status})\n\n${stringifyForText(
 						error.body,
 					)}`,
 				},
@@ -95,13 +95,13 @@ export function apiErrorToolResult(
 	};
 }
 
-export async function requireReadyOpenLoomiClient(
-	context: OpenLoomiToolContext,
+export async function requireReadyOpenContextClient(
+	context: OpenContextToolContext,
 ): Promise<
-	| { ready: true; client: OpenLoomiClient }
-	| { ready: false; result: OpenLoomiToolResult }
+	| { ready: true; client: OpenContextClient }
+	| { ready: false; result: OpenContextToolResult }
 > {
-	const readiness = await checkOpenLoomiReadiness({
+	const readiness = await checkOpenContextReadiness({
 		authToken: context.authToken,
 		preferredBaseUrl: context.client.baseUrl,
 	});
@@ -113,7 +113,7 @@ export async function requireReadyOpenLoomiClient(
 				content: [
 					{
 						type: "text",
-						text: formatOpenLoomiReadiness(readiness),
+						text: formatOpenContextReadiness(readiness),
 					},
 				],
 				structuredContent: { readiness: { ...readiness } },
@@ -124,19 +124,19 @@ export async function requireReadyOpenLoomiClient(
 
 	return {
 		ready: true,
-		client: new OpenLoomiClient({
+		client: new OpenContextClient({
 			baseUrl: readiness.baseUrl ?? context.client.baseUrl,
 			token: context.authToken.token ?? undefined,
 		}),
 	};
 }
 
-export async function withReadyOpenLoomiClient(
-	context: OpenLoomiToolContext,
+export async function withReadyOpenContextClient(
+	context: OpenContextToolContext,
 	title: string,
-	run: (client: OpenLoomiClient) => Promise<OpenLoomiToolResult>,
-): Promise<OpenLoomiToolResult> {
-	const ready = await requireReadyOpenLoomiClient(context);
+	run: (client: OpenContextClient) => Promise<OpenContextToolResult>,
+): Promise<OpenContextToolResult> {
+	const ready = await requireReadyOpenContextClient(context);
 	if (!ready.ready) {
 		return ready.result;
 	}

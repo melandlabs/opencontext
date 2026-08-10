@@ -10,7 +10,7 @@ contributors.
 - **Security policy**: [`SECURITY.md`](./SECURITY.md)
 - **Architecture**: [`docs/architecture.md`](./docs/architecture.md)
 - **Philosophy**: [`docs/philosophy.md`](./docs/philosophy.md)
-- **Why we split from openloomi**: [`docs/split-from-openloomi.md`](./docs/split-from-openloomi.md)
+- **Why we split from opencontext**: [`docs/split-from-opencontext.md`](./docs/split-from-opencontext.md)
 - **Changesets (how we release)**: <https://github.com/changesets/changesets>
 
 ## Repository layout

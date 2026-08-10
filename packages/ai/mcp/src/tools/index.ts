@@ -1,20 +1,20 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import type { OpenLoomiClient } from "../openloomi/client";
-import type { OpenLoomiAuthToken } from "../openloomi/token";
+import type { OpenContextClient } from "../opencontext/client";
+import type { OpenContextAuthToken } from "../opencontext/token";
 import { registerConnectorTools } from "./connectors";
 import { registerLoopTools } from "./loop";
 import { registerMemoryTools } from "./memory";
 import { registerStatusTools } from "./status";
 
-export interface OpenLoomiToolContext {
-	client: OpenLoomiClient;
-	authToken: OpenLoomiAuthToken;
+export interface OpenContextToolContext {
+	client: OpenContextClient;
+	authToken: OpenContextAuthToken;
 }
 
-export function registerOpenLoomiTools(
+export function registerOpenContextTools(
 	server: McpServer,
-	context: OpenLoomiToolContext,
+	context: OpenContextToolContext,
 ): void {
 	registerStatusTools(server, context);
 	registerMemoryTools(server, context);

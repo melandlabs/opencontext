@@ -50,7 +50,7 @@ export interface RawMessage {
 	supersededBySummaryId?: string;
 }
 
-export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "openloomi-chat:";
+export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
 
 export function mergeStoredChatMemoryEvidence(
 	existing: RawMessage,
@@ -147,11 +147,11 @@ export const MEMORY_SUMMARY_OWNER_SCOPE_CONFLICT =
 	"memory_summary_owner_scope_conflict";
 export const MEMORY_SUMMARY_WRITE_CONFLICT = "memory_summary_write_conflict";
 export const MEMORY_SUMMARY_PUBLICATION_DIMENSION =
-	"__openloomiMemoryPublication";
+	"__opencontextMemoryPublication";
 export const MEMORY_SUMMARY_PUBLICATION_REVISION_DIMENSION =
-	"__openloomiMemoryPublicationRevision";
+	"__opencontextMemoryPublicationRevision";
 export const MEMORY_SUMMARY_PUBLICATION_EXPECTED_REVISION_DIMENSION =
-	"__openloomiMemoryPublicationExpectedRevision";
+	"__opencontextMemoryPublicationExpectedRevision";
 
 export function isMemorySummaryPublicationPendingRecord(summary: {
 	dimensions?: MemorySummaryRecord["dimensions"] | null;

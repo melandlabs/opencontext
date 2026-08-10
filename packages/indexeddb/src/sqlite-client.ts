@@ -115,7 +115,7 @@ export function shouldUseRawMessageApiStorage(): boolean {
 export function getRawMessagesSQLiteMigrationStorageKey(
 	userId: string,
 ): string {
-	return `openloomi:raw-messages-sqlite-migration:v${SQLITE_RAW_MESSAGES_MIGRATION_VERSION}:${userId}`;
+	return `opencontext:raw-messages-sqlite-migration:v${SQLITE_RAW_MESSAGES_MIGRATION_VERSION}:${userId}`;
 }
 
 function getMigrationStorage(): Storage | null {

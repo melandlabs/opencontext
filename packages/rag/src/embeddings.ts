@@ -35,8 +35,9 @@ async function getOpenAIClient(): Promise<OpenAI> {
 		apiKey: OPENROUTER_API_KEY,
 		baseURL: EMBEDDING_BASE_URL,
 		defaultHeaders: {
-			"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "https://openloomi.ai",
-			"X-Title": "openloomi AI",
+			"HTTP-Referer":
+				process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai",
+			"X-Title": "opencontext AI",
 		},
 	});
 }

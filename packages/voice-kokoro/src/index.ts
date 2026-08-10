@@ -228,7 +228,7 @@ function splitSpeechText(text: string): string[] {
 function isKokoroDebugEnabled(): boolean {
 	if (typeof window === "undefined") return false;
 	try {
-		return window.localStorage?.getItem("openloomi:kokoro-debug") === "1";
+		return window.localStorage?.getItem("opencontext:kokoro-debug") === "1";
 	} catch {
 		return false;
 	}

@@ -23,17 +23,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/storage"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/storage",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/storage",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · storage module",
+  "description": "OpenContext · storage module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@vercel/blob": "^0.27.1"

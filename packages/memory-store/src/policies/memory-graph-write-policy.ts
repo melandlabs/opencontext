@@ -76,9 +76,9 @@ export function resolveMemoryGraphWritePolicy(
 ): MemoryGraphWritePolicyDecision {
 	return resolveAllowlistedMemoryGraphPolicy({
 		userId,
-		enabled: environment.OPENLOOMI_MEMORY_GRAPH_WRITE_ENABLED,
-		killSwitch: environment.OPENLOOMI_MEMORY_GRAPH_WRITE_KILL_SWITCH,
-		allowlist: environment.OPENLOOMI_MEMORY_GRAPH_WRITE_COHORT_USER_IDS,
+		enabled: environment.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED,
+		killSwitch: environment.OPENCONTEXT_MEMORY_GRAPH_WRITE_KILL_SWITCH,
+		allowlist: environment.OPENCONTEXT_MEMORY_GRAPH_WRITE_COHORT_USER_IDS,
 		reasonCodes: {
 			killed: "memory_graph_write_kill_switch",
 			disabled: "memory_graph_write_disabled",

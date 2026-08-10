@@ -39,7 +39,7 @@ interface StoredVectorRecord {
 	dimensions: number;
 }
 
-const DEFAULT_COLLECTION_NAME = "openloomi_rag_chunks";
+const DEFAULT_COLLECTION_NAME = "opencontext_rag_chunks";
 const SEARCH_OVERFETCH_MULTIPLIER = 8;
 
 export class SQLiteVecStore implements IVectorStore {
@@ -55,8 +55,8 @@ export class SQLiteVecStore implements IVectorStore {
 	) {
 		this.collectionName = options.collectionName || DEFAULT_COLLECTION_NAME;
 		const safeCollectionName = sanitizeIdentifier(this.collectionName);
-		this.recordsTableName = `openloomi_vec_${safeCollectionName}_records`;
-		this.vectorTablePrefix = `openloomi_vec_${safeCollectionName}_d`;
+		this.recordsTableName = `opencontext_vec_${safeCollectionName}_records`;
+		this.vectorTablePrefix = `opencontext_vec_${safeCollectionName}_d`;
 
 		this.db = new Database(dbPath);
 		this.db.pragma("journal_mode = WAL");

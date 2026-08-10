@@ -1,6 +1,6 @@
 # `@opencontext/loop`
 
-Loop filesystem + CLI shim resolver shared between OpenLoomi runtime and UI sub-projects.
+Loop filesystem + CLI shim resolver shared between OpenContext runtime and UI sub-projects.
 
 Phase 5 of the [runtime/UI split plan](../../docs/split-runtime-ui.md) — currently
 ships only the leaf pieces of `apps/web/lib/loop` that have no DB / agent /

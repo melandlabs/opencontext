@@ -1,7 +1,7 @@
 /**
  * MCP Config Loader
  *
- * Loads MCP server configuration from ~/.openloomi/mcp.json
+ * Loads MCP server configuration from ~/.opencontext/mcp.json
  * Uses mtime-based caching to avoid re-reading unchanged files
  */
 
@@ -67,14 +67,14 @@ export type McpServerConfig =
 	McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
 
 /**
- * Get the MCP config path (default: ~/.openloomi/mcp.json)
- * Override by setting OPENLOOMI_MCP_CONFIG_PATH environment variable.
+ * Get the MCP config path (default: ~/.opencontext/mcp.json)
+ * Override by setting OPENCONTEXT_MCP_CONFIG_PATH environment variable.
  */
 export function getMcpConfigPath(): string {
-	if (process.env.OPENLOOMI_MCP_CONFIG_PATH) {
-		return process.env.OPENLOOMI_MCP_CONFIG_PATH;
+	if (process.env.OPENCONTEXT_MCP_CONFIG_PATH) {
+		return process.env.OPENCONTEXT_MCP_CONFIG_PATH;
 	}
-	return path.join(os.homedir(), ".openloomi", "mcp.json");
+	return path.join(os.homedir(), ".opencontext", "mcp.json");
 }
 
 /**
@@ -141,7 +141,7 @@ export interface McpConfig {
 }
 
 /**
- * Load MCP servers configuration from ~/.openloomi/mcp.json
+ * Load MCP servers configuration from ~/.opencontext/mcp.json
  * Uses mtime-based caching to avoid re-reading unchanged files
  *
  * @param mcpConfig Optional config to control loading
@@ -168,7 +168,7 @@ export async function loadMcpServers(
 		}
 
 		// Load and cache
-		const servers = await loadMcpServersFromFile(configPath, "openloomi");
+		const servers = await loadMcpServersFromFile(configPath, "opencontext");
 		setCachedMcpConfig(configPath, stats.mtimeMs, servers);
 		return servers;
 	} catch {

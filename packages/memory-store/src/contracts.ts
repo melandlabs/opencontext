@@ -16,7 +16,7 @@
 import type { MemoryRecord } from "@opencontext/ai/memory";
 
 /** Prefix used to reserve chat-memory evidence IDs that must not collide. */
-export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "openloomi-chat:";
+export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
 
 /** A locally-defined re-export of the raw-message shape used by the SDK.
  * Kept as a structural type so consumers (apps/web, SQLite, postgres

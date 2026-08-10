@@ -212,12 +212,12 @@ while using Chroma as the vector index, for example.
 
 `@opencontext/memory-store` exposes the runtime over four surfaces:
 
-| Surface      | Module                                                                               | Purpose                                                                                                         |
-| ------------ | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| Programmatic | `@opencontext/memory-store`                                                          | Direct import from a Node/Bun/Deno process.                                                                     |
-| HTTP daemon  | `@opencontext/memory-store/http`                                                     | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
-| MCP server   | `@opencontext/memory-store/mcp`                                                      | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
-| CLI          | `openloomi-memory-http` / `openloomi-memory-mcp` (shipped via `@opencontext/ai/mcp`) | Run the HTTP or MCP server from a terminal.                                                                     |
+| Surface      | Module                                                                                   | Purpose                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Programmatic | `@opencontext/memory-store`                                                              | Direct import from a Node/Bun/Deno process.                                                                     |
+| HTTP daemon  | `@opencontext/memory-store/http`                                                         | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
+| MCP server   | `@opencontext/memory-store/mcp`                                                          | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
+| CLI          | `opencontext-memory-http` / `opencontext-memory-mcp` (shipped via `@opencontext/ai/mcp`) | Run the HTTP or MCP server from a terminal.                                                                     |
 
 The HTTP and MCP surfaces are thin wrappers around the programmatic
 API. They share types via `@opencontext/contracts` and never reimplement

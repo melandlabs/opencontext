@@ -17,8 +17,8 @@ type FilePickerWindow = Window & {
 
 type FSHandle = FileSystemDirectoryHandle | FileSystemFileHandle;
 
-const VAULT_HANDLE_KEY = "openloomi:obsidian:vault-handle";
-const VAULT_HANDLE_ID = "openloomi-obsidian-vault";
+const VAULT_HANDLE_KEY = "opencontext:obsidian:vault-handle";
+const VAULT_HANDLE_ID = "opencontext-obsidian-vault";
 
 function isSupported(): boolean {
 	if (typeof window === "undefined") return false;
@@ -41,7 +41,7 @@ function isFileSystemAccessSupported(): boolean {
 
 async function openIDB(): Promise<IDBDatabase> {
 	return new Promise((resolve, reject) => {
-		const req = indexedDB.open("openloomi-fs", 1);
+		const req = indexedDB.open("opencontext-fs", 1);
 		req.onupgradeneeded = () => {
 			const db = req.result;
 			if (!db.objectStoreNames.contains("handles")) {

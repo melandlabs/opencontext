@@ -18,17 +18,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/indexeddb"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/indexeddb",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/indexeddb",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · indexeddb module",
+  "description": "OpenContext · indexeddb module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {},
   "peerDependencies": {

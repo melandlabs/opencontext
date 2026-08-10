@@ -7,18 +7,18 @@ updates:
       day: "monday"
     open-pull-requests-limit: 8
     groups:
-      openloomi-major:
+      opencontext-major:
         update-types:
           - "major"
         labels:
           - "dependencies"
           - "breaking"
-      openloomi-minor:
+      opencontext-minor:
         update-types:
           - "minor"
         labels:
           - "dependencies"
-      openloomi-patch:
+      opencontext-patch:
         update-types:
           - "patch"
         labels:

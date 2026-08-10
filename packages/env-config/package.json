@@ -17,16 +17,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/env-config"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/env-config",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/env-config",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
   "description": "Environment, deployment-mode and Tauri path constants used by both UI and runtime services.",
-  "keywords": ["openloomi", "env", "config", "tauri"],
+  "keywords": ["opencontext", "env", "config", "tauri"],
   "devDependencies": {
     "@opencontext/config": "workspace:*",
     "typescript": "^5.6.3"

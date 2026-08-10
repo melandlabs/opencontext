@@ -1,7 +1,7 @@
 # @opencontext/voice-kokoro
 
 [Kokoro](https://github.com/hexgrad/kokoro) text-to-speech provider for
-OpenLoomi. Streams synthesized speech from a local Kokoro model and exposes a
+OpenContext. Streams synthesized speech from a local Kokoro model and exposes a
 common `VoiceProvider` interface.
 
 ## Installation

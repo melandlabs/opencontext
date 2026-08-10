@@ -1,6 +1,6 @@
 # @opencontext/integrations-channels
 
-Multi-channel integration framework for OpenLoomi. Provides the shared
+Multi-channel integration framework for OpenContext. Provides the shared
 `Channel`, `Platform`, and `ExtractedMessageInfo` types, plus re-exports of
 per-platform adapters (Telegram, WhatsApp, WeChat, DingTalk, Feishu, QQ Bot,
 Discord, Gmail, iMessage, Docs, HubSpot).

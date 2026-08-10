@@ -20,17 +20,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/security"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/security",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/security",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · security module",
+  "description": "OpenContext · security module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "fernet": "^0.4.0"

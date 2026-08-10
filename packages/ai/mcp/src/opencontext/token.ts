@@ -3,19 +3,19 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-export type OpenLoomiAuthTokenSource = "env" | "file" | "missing";
+export type OpenContextAuthTokenSource = "env" | "file" | "missing";
 
-export interface OpenLoomiAuthToken {
+export interface OpenContextAuthToken {
 	token: string | null;
-	source: OpenLoomiAuthTokenSource;
+	source: OpenContextAuthTokenSource;
 	path?: string;
 	error?: string;
 }
 
-export function getOpenLoomiTokenPath(): string {
+export function getOpenContextTokenPath(): string {
 	return (
-		process.env.OPENLOOMI_TOKEN_PATH ??
-		path.join(os.homedir(), ".openloomi", "token")
+		process.env.OPENCONTEXT_TOKEN_PATH ??
+		path.join(os.homedir(), ".opencontext", "token")
 	);
 }
 
@@ -23,7 +23,7 @@ function looksLikeJwt(token: string): boolean {
 	return token.split(".").length >= 2;
 }
 
-export function decodeStoredOpenLoomiToken(rawToken: string): string {
+export function decodeStoredOpenContextToken(rawToken: string): string {
 	const trimmed = rawToken.trim();
 	if (!trimmed || looksLikeJwt(trimmed)) {
 		return trimmed;
@@ -37,19 +37,19 @@ export function decodeStoredOpenLoomiToken(rawToken: string): string {
 	}
 }
 
-export async function readOpenLoomiAuthToken(): Promise<OpenLoomiAuthToken> {
-	const envToken = process.env.OPENLOOMI_AUTH_TOKEN?.trim();
+export async function readOpenContextAuthToken(): Promise<OpenContextAuthToken> {
+	const envToken = process.env.OPENCONTEXT_AUTH_TOKEN?.trim();
 	if (envToken) {
 		return {
-			token: decodeStoredOpenLoomiToken(envToken),
+			token: decodeStoredOpenContextToken(envToken),
 			source: "env",
 		};
 	}
 
-	const tokenPath = getOpenLoomiTokenPath();
+	const tokenPath = getOpenContextTokenPath();
 	try {
 		const fileToken = await fs.readFile(tokenPath, "utf8");
-		const token = decodeStoredOpenLoomiToken(fileToken);
+		const token = decodeStoredOpenContextToken(fileToken);
 		return {
 			token: token || null,
 			source: token ? "file" : "missing",

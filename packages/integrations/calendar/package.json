@@ -17,17 +17,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/melandlabs/openloomi.git",
+    "url": "https://github.com/melandlabs/opencontext.git",
     "directory": "packages/integrations/calendar"
   },
-  "homepage": "https://github.com/melandlabs/openloomi/tree/main/packages/integrations/calendar",
+  "homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/integrations/calendar",
   "bugs": {
-    "url": "https://github.com/melandlabs/openloomi/issues"
+    "url": "https://github.com/melandlabs/opencontext/issues"
   },
   "license": "Apache-2.0",
-  "description": "OpenLoomi · integrations/calendar module",
+  "description": "OpenContext · integrations/calendar module",
   "keywords": [
-    "openloomi"
+    "opencontext"
   ],
   "dependencies": {
     "@opencontext/integrations": "workspace:*",

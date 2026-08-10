@@ -1,8 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 
-import type { OpenLoomiToolContext } from "./index";
-import { jsonToolResult, withReadyOpenLoomiClient } from "./response";
+import type { OpenContextToolContext } from "./index";
+import { jsonToolResult, withReadyOpenContextClient } from "./response";
 
 const CONNECTOR_READ_TIMEOUT_MS = 30000;
 const CONNECTOR_REFRESH_TIMEOUT_MS = 55000;
@@ -56,14 +56,14 @@ function filterByStatus<T>(items: T[], status?: string): T[] {
 
 export function registerConnectorTools(
 	server: McpServer,
-	context: OpenLoomiToolContext,
+	context: OpenContextToolContext,
 ): void {
 	server.registerTool(
-		"openloomi_connectors_list_accounts",
+		"opencontext_connectors_list_accounts",
 		{
-			title: "OpenLoomi Connected Accounts",
+			title: "OpenContext Connected Accounts",
 			description:
-				"List native OpenLoomi integration accounts for the authenticated local user.",
+				"List native OpenContext integration accounts for the authenticated local user.",
 			inputSchema: {
 				platform: z
 					.string()
@@ -84,9 +84,9 @@ export function registerConnectorTools(
 			},
 		},
 		async (args) =>
-			withReadyOpenLoomiClient(
+			withReadyOpenContextClient(
 				context,
-				"OpenLoomi connected account listing failed",
+				"OpenContext connected account listing failed",
 				async (client) => {
 					const result = await client.getJson("/api/integrations/accounts", {
 						timeoutMs: CONNECTOR_READ_TIMEOUT_MS,
@@ -108,17 +108,17 @@ export function registerConnectorTools(
 						},
 					};
 
-					return jsonToolResult("OpenLoomi connected accounts", filtered);
+					return jsonToolResult("OpenContext connected accounts", filtered);
 				},
 			),
 	);
 
 	server.registerTool(
-		"openloomi_connectors_status",
+		"opencontext_connectors_status",
 		{
-			title: "OpenLoomi Connector Status",
+			title: "OpenContext Connector Status",
 			description:
-				"Run OpenLoomi's native live connector health check, including native account readiness when authentication is available.",
+				"Run OpenContext's native live connector health check, including native account readiness when authentication is available.",
 			inputSchema: {
 				platform: z
 					.string()
@@ -134,9 +134,9 @@ export function registerConnectorTools(
 			},
 		},
 		async (args) =>
-			withReadyOpenLoomiClient(
+			withReadyOpenContextClient(
 				context,
-				"OpenLoomi connector status failed",
+				"OpenContext connector status failed",
 				async (client) => {
 					const result = await client.getJson(
 						"/api/loop/connectors?refresh=1",
@@ -163,7 +163,7 @@ export function registerConnectorTools(
 						},
 					};
 
-					return jsonToolResult("OpenLoomi connector status", filtered);
+					return jsonToolResult("OpenContext connector status", filtered);
 				},
 			),
 	);

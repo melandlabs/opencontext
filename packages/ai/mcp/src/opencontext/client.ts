@@ -1,29 +1,29 @@
-export const DEFAULT_OPENLOOMI_BASE_URLS = [
+export const DEFAULT_OPENCONTEXT_BASE_URLS = [
 	"http://127.0.0.1:3414",
 	"http://localhost:3414",
 	"http://127.0.0.1:3515",
 	"http://localhost:3515",
 ] as const;
 
-export interface OpenLoomiClientOptions {
+export interface OpenContextClientOptions {
 	baseUrl?: string;
 	token?: string;
 	timeoutMs?: number;
 	fetchImpl?: typeof fetch;
 }
 
-export interface OpenLoomiRequestOptions extends RequestInit {
+export interface OpenContextRequestOptions extends RequestInit {
 	token?: string | null;
 	timeoutMs?: number;
 }
 
-export class OpenLoomiApiError extends Error {
+export class OpenContextApiError extends Error {
 	readonly status: number;
 	readonly body: unknown;
 
 	constructor(message: string, status: number, body: unknown) {
 		super(message);
-		this.name = "OpenLoomiApiError";
+		this.name = "OpenContextApiError";
 		this.status = status;
 		this.body = body;
 	}
@@ -52,17 +52,17 @@ function createAbortSignal(timeoutMs: number): AbortSignal {
 	return controller.signal;
 }
 
-export class OpenLoomiClient {
+export class OpenContextClient {
 	readonly baseUrl: string;
 	readonly token?: string;
 	private readonly timeoutMs: number;
 	private readonly fetchImpl: typeof fetch;
 
-	constructor(options: OpenLoomiClientOptions = {}) {
+	constructor(options: OpenContextClientOptions = {}) {
 		this.baseUrl = normalizeBaseUrl(
 			options.baseUrl ??
-				process.env.OPENLOOMI_API_URL ??
-				DEFAULT_OPENLOOMI_BASE_URLS[0],
+				process.env.OPENCONTEXT_API_URL ??
+				DEFAULT_OPENCONTEXT_BASE_URLS[0],
 		);
 		this.token = options.token;
 		this.timeoutMs = options.timeoutMs ?? 5000;
@@ -71,7 +71,7 @@ export class OpenLoomiClient {
 
 	async request<T = unknown>(
 		path: string,
-		options: OpenLoomiRequestOptions = {},
+		options: OpenContextRequestOptions = {},
 	): Promise<T> {
 		const headers = new Headers(options.headers);
 		const token = options.token === undefined ? this.token : options.token;
@@ -96,8 +96,8 @@ export class OpenLoomiClient {
 				"error" in body &&
 				typeof body.error === "string"
 					? body.error
-					: `OpenLoomi API request failed with status ${response.status}`;
-			throw new OpenLoomiApiError(message, response.status, body);
+					: `OpenContext API request failed with status ${response.status}`;
+			throw new OpenContextApiError(message, response.status, body);
 		}
 
 		return body as T;
@@ -105,7 +105,7 @@ export class OpenLoomiClient {
 
 	getJson<T = unknown>(
 		path: string,
-		options: Omit<OpenLoomiRequestOptions, "method"> = {},
+		options: Omit<OpenContextRequestOptions, "method"> = {},
 	): Promise<T> {
 		return this.request<T>(path, { ...options, method: "GET" });
 	}
@@ -113,7 +113,7 @@ export class OpenLoomiClient {
 	postJson<T = unknown>(
 		path: string,
 		body: unknown,
-		options: Omit<OpenLoomiRequestOptions, "body" | "method"> = {},
+		options: Omit<OpenContextRequestOptions, "body" | "method"> = {},
 	): Promise<T> {
 		const headers = new Headers(options.headers);
 		headers.set("Content-Type", "application/json");
@@ -127,7 +127,7 @@ export class OpenLoomiClient {
 	}
 }
 
-export async function resolveOpenLoomiBaseUrl(
+export async function resolveOpenContextBaseUrl(
 	options: {
 		baseUrl?: string;
 		token?: string | null;
@@ -137,12 +137,12 @@ export async function resolveOpenLoomiBaseUrl(
 ): Promise<string | null> {
 	const candidates = [
 		options.baseUrl,
-		process.env.OPENLOOMI_API_URL,
-		...DEFAULT_OPENLOOMI_BASE_URLS,
+		process.env.OPENCONTEXT_API_URL,
+		...DEFAULT_OPENCONTEXT_BASE_URLS,
 	].filter((value): value is string => Boolean(value));
 
 	for (const candidate of candidates) {
-		const client = new OpenLoomiClient({
+		const client = new OpenContextClient({
 			baseUrl: candidate,
 			token: options.token ?? undefined,
 			timeoutMs: options.timeoutMs ?? 1500,
@@ -156,7 +156,7 @@ export async function resolveOpenLoomiBaseUrl(
 			});
 			return client.baseUrl;
 		} catch (error) {
-			if (error instanceof OpenLoomiApiError && error.status < 500) {
+			if (error instanceof OpenContextApiError && error.status < 500) {
 				return client.baseUrl;
 			}
 		}

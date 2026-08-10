@@ -2,7 +2,7 @@
  * Memory store configuration — injected by the host application.
  *
  * The memory-store package is intentionally decoupled from the
- * openloomi web app's database and env layers. Each consumer wires up
+ * opencontext web app's database and env layers. Each consumer wires up
  * its own implementation of these contracts.
  *
  * Required for raw-message persistence:

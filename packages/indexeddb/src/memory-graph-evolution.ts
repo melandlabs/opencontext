@@ -18,8 +18,8 @@ export type { MemoryGraphEvolutionRunResult } from "../../ai/memory-consolidatio
 import type { RawMessage, RawMessageQuery } from "./storage";
 
 const LEDGER_METADATA_KEY = "memoryGraphLedger";
-const LEDGER_MESSAGE_PREFIX = "__openloomi_memory_graph__";
-const LEDGER_PLATFORM = "openloomi-internal";
+const LEDGER_MESSAGE_PREFIX = "__opencontext_memory_graph__";
+const LEDGER_PLATFORM = "opencontext-internal";
 const LEDGER_BOT_ID = "memory-graph";
 
 export interface RawMessageGraphEvolutionStorage {
@@ -422,7 +422,7 @@ export function createRawMessageMemoryGraphStore(input: {
 					userId: input.ownerScope.userId,
 					channel: input.ownerScope.workspaceId,
 					timestamp: Math.floor(now / 1000),
-					content: "OpenLoomi internal memory graph ledger",
+					content: "OpenContext internal memory graph ledger",
 					attachments: [],
 					metadata: { [LEDGER_METADATA_KEY]: payload },
 					createdAt: Math.floor(now / 1000),

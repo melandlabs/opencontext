@@ -76,7 +76,7 @@ the same data.
 
 ## Why a 27-platform integration mesh
 
-The first version of openloomi had three integrations: Gmail, Slack,
+The first version of opencontext had three integrations: Gmail, Slack,
 and Google Calendar. Within a year, the user-facing product needed
 twenty-three more. Each one came with its own quirks:
 
@@ -96,9 +96,9 @@ a uniform `IntegrationAction` shape on the write side. The cost is N
 packages; the benefit is that each one is small enough to read in one
 sitting, and the cost of adding a 28th platform is bounded.
 
-## Why split from openloomi
+## Why split from opencontext
 
-openloomi — the desktop companion that consumes opencontext — is a
+opencontext — the desktop companion that consumes opencontext — is a
 Next.js + Tauri application. It owns:
 
 - A user interface (chat surface, settings, integrations list, etc.)
@@ -117,18 +117,18 @@ Keeping them in the same monorepo meant:
 - Every UI change touched the runtime's release process.
 - Every runtime change risked breaking a UI build.
 - Contributors who wanted to use opencontext in their own UI had to
-  depend on the entire openloomi monorepo.
+  depend on the entire opencontext monorepo.
 
 The split solves all three. After the split:
 
 - Runtime releases follow changesets and publish to npm under
-  `@opencontext/*`. UI releases stay private to the openloomi
+  `@opencontext/*`. UI releases stay private to the opencontext
   monorepo.
 - A UI change cannot accidentally trigger a runtime version bump.
 - An open-source embedder can `pnpm add @opencontext/memory-store`
   without pulling in any UI code.
 
-See [`docs/split-from-openloomi.md`](./split-from-openloomi.md) for the
+See [`docs/split-from-opencontext.md`](./split-from-opencontext.md) for the
 timeline.
 
 ## Why a monorepo, not a polyrepo

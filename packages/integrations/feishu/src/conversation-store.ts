@@ -1,7 +1,7 @@
 /**
  * Feishu (Lark) Conversation Store
  *
- * Session file per chat: ~/.openloomi/data/memory/{domain}-sessions/{userId}__{chatType}__{chatId}.json
+ * Session file per chat: ~/.opencontext/data/memory/{domain}-sessions/{userId}__{chatType}__{chatId}.json
  * Used to persist merged API history + local turns; context is trimmed by character budget for the model.
  */
 
@@ -18,7 +18,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".openloomi", "data", "memory");
+	const base = join(homedir(), ".opencontext", "data", "memory");
 	return userId ? join(base, userId) : base;
 }
 

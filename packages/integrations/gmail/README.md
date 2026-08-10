@@ -1,6 +1,6 @@
 # @opencontext/integrations-gmail
 
-Gmail integration for OpenLoomi focused on persisting Gmail threads /
+Gmail integration for OpenContext focused on persisting Gmail threads /
 messages into the conversation store for later search and triage.
 
 ## Installation

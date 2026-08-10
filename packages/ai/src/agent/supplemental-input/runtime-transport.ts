@@ -28,7 +28,7 @@ export class SupplementalInputRuntimeTransportError extends Error {
 }
 
 /**
- * Adapts validated OpenLoomi Runtime Instructions to a live agent input queue.
+ * Adapts validated OpenContext Runtime Instructions to a live agent input queue.
  *
  * The transport reports `queued`, not `written_to_sdk`: resolving an async
  * iterator waiter is still an in-process handoff. Provider event correlation

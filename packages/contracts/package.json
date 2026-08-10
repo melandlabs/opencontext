@@ -18,12 +18,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/melandlabs/openloomi.git",
+    "url": "git+https://github.com/melandlabs/opencontext.git",
     "directory": "packages/contracts"
   },
   "license": "Apache-2.0",
-  "description": "Cross-cutting type contracts (UserType, IntegrationId, error codes, zod schemas) shared between OpenLoomi runtime and UI sub-projects.",
-  "keywords": ["openloomi", "contracts", "types", "schemas"],
+  "description": "Cross-cutting type contracts (UserType, IntegrationId, error codes, zod schemas) shared between OpenContext runtime and UI sub-projects.",
+  "keywords": ["opencontext", "contracts", "types", "schemas"],
   "peerDependencies": {
     "zod": "^4.3.6"
   },

@@ -13,8 +13,8 @@ import type { DocumentChunk } from "@opencontext/rag/vector-service";
 
 import { rawMessageToMemoryRecord, type RawMessage } from "../contracts";
 
-const DEFAULT_RAW_MESSAGES_COLLECTION = "openloomi_raw_messages";
-const DEFAULT_INSIGHTS_COLLECTION = "openloomi_insights";
+const DEFAULT_RAW_MESSAGES_COLLECTION = "opencontext_raw_messages";
+const DEFAULT_INSIGHTS_COLLECTION = "opencontext_insights";
 const RAW_VECTOR_BACKEND_ENV_KEYS = [
 	"RAW_MESSAGE_VECTOR_STORE_BACKEND",
 	"MEMORY_VECTOR_STORE_BACKEND",

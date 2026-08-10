@@ -1,7 +1,7 @@
 # @opencontext/integrations-facebook-messenger
 
 [Facebook Messenger](https://developers.facebook.com/docs/messenger-platform/)
-adapter for OpenLoomi. Sends and receives page messages through the Meta
+adapter for OpenContext. Sends and receives page messages through the Meta
 Messenger Platform.
 
 ## Installation

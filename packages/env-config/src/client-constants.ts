@@ -39,7 +39,7 @@ export const DEFAULT_AI_MODEL =
 export const AI_PROXY_BASE_URL =
 	process.env.NEXT_PUBLIC_AI_PROXY_URL || "/api/ai";
 /** Application data directory name (used in home directory) */
-export const APP_DIR_NAME = ".openloomi";
+export const APP_DIR_NAME = ".opencontext";
 
 // Feature flags (default false = hidden, set NEXT_PUBLIC_FF_SCREEN_MEMORY=1 to enable)
 export const FF_SCREEN_MEMORY =

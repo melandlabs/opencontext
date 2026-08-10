@@ -1,6 +1,6 @@
 # @opencontext/security
 
-Cryptographic and validation primitives for OpenLoomi: Fernet token
+Cryptographic and validation primitives for OpenContext: Fernet token
 encryption, URL allowlisting, and a pluggable key manager.
 
 ## Installation

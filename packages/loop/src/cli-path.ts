@@ -11,9 +11,9 @@
  * against a missing file and silently produced zero decisions.
  *
  * Resolution order (first match wins):
- *   1. `OPENLOOMI_LOOP_CLI` env var — escape hatch for split-process
+ *   1. `OPENCONTEXT_LOOP_CLI` env var — escape hatch for split-process
  *      setups (skill runs in one shell, Next.js server in another).
- *   2. Packaged bundle — `~/.openloomi/runtime/loop-cli.mjs`. The Tauri
+ *   2. Packaged bundle — `~/.opencontext/runtime/loop-cli.mjs`. The Tauri
  *      desktop optimizer copies `apps/web/scripts/loop-cli.mjs` to this
  *      location during build, so the shipped app always has the shim
  *      next to other Loop assets.
@@ -30,7 +30,7 @@
  *
  * Returns `null` when no candidate exists. Callers should treat a
  * `null` return as a soft error: surface the missing path in the tick
- * log so the user can set `OPENLOOMI_LOOP_CLI` to fix it.
+ * log so the user can set `OPENCONTEXT_LOOP_CLI` to fix it.
  */
 import { existsSync } from "node:fs";
 import { homedir } from "node:os";
@@ -43,7 +43,7 @@ import { fileURLToPath } from "node:url";
  * shipped app has a stable, predictable shim location that doesn't
  * depend on the .app bundle's internal layout.
  */
-const PACKAGED_RUNTIME_DIR = join(homedir(), ".openloomi", "runtime");
+const PACKAGED_RUNTIME_DIR = join(homedir(), ".opencontext", "runtime");
 
 /**
  * Filename we expect. The shim itself spawns `tsx` and forwards to
@@ -179,9 +179,9 @@ interface ResolveOptions {
  */
 export function resolveLoopCli(opts: ResolveOptions = {}): string | null {
 	const found =
-		process.env.OPENLOOMI_LOOP_CLI &&
-		(opts.dryRun || isLoopCliFile(process.env.OPENLOOMI_LOOP_CLI))
-			? [{ path: process.env.OPENLOOMI_LOOP_CLI, from: "env" }]
+		process.env.OPENCONTEXT_LOOP_CLI &&
+		(opts.dryRun || isLoopCliFile(process.env.OPENCONTEXT_LOOP_CLI))
+			? [{ path: process.env.OPENCONTEXT_LOOP_CLI, from: "env" }]
 			: [];
 	if (found.length) return found[0].path;
 
@@ -212,19 +212,19 @@ export function resolveLoopCli(opts: ResolveOptions = {}): string | null {
  * Diagnostic listing — returns every candidate the resolver
  * considered, with the source and an `exists` flag. Used by the
  * `loop doctor` CLI so a user can see where the resolver looked and
- * set `OPENLOOMI_LOOP_CLI` accordingly when nothing matched.
+ * set `OPENCONTEXT_LOOP_CLI` accordingly when nothing matched.
  */
 export function listLoopCliCandidates(): Array<{
 	path: string;
 	from: string;
 	exists: boolean;
 }> {
-	const env = process.env.OPENLOOMI_LOOP_CLI;
+	const env = process.env.OPENCONTEXT_LOOP_CLI;
 	const out: Array<{ path: string; from: string; exists: boolean }> = [];
 	if (env)
 		out.push({
 			path: env,
-			from: "env:OPENLOOMI_LOOP_CLI",
+			from: "env:OPENCONTEXT_LOOP_CLI",
 			exists: isLoopCliFile(env),
 		});
 	for (const dir of [

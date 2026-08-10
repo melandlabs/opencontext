@@ -1,6 +1,6 @@
 # @opencontext/integrations-hubspot
 
-[HubSpot](https://www.hubspot.com/) CRM integration for OpenLoomi. Provides a
+[HubSpot](https://www.hubspot.com/) CRM integration for OpenContext. Provides a
 typed client for deals, pipeline stages, and credential persistence.
 
 ## Installation

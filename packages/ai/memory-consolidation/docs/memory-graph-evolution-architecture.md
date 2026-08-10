@@ -12,7 +12,7 @@ Delivery order: [Execution plan](./memory-graph-evolution-execution-plan.md).
 
 ## Architecture Objective
 
-The architecture adds a write-side memory evolution loop to OpenLoomi's existing
+The architecture adds a write-side memory evolution loop to OpenContext's existing
 summary, soft-deprecation, and graph-aware retrieval capabilities.
 
 New evidence must be able to change memory structure without turning ingestion

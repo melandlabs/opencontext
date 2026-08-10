@@ -1,7 +1,7 @@
 # @opencontext/integrations-feishu
 
 [Feishu](https://www.feishu.cn/) (飞书, also known as Lark) integration for
-OpenLoomi. Wraps the official [`@larksuiteoapi/node-sdk`](https://www.npmjs.com/package/@larksuiteoapi/node-sdk)
+OpenContext. Wraps the official [`@larksuiteoapi/node-sdk`](https://www.npmjs.com/package/@larksuiteoapi/node-sdk)
 and provides app registration, registration-cookie flow, conversation
 storage, and channel adapter glue.
 

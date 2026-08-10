@@ -1108,7 +1108,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				continue;
 			}
 
-			const text = openloomiMessageToTgText(message);
+			const text = opencontextMessageToTgText(message);
 			if (text.trim().length > 0) {
 				textParts.push(text);
 			} else if (typeof message !== "string") {
@@ -1547,7 +1547,7 @@ export type {
 	ExtractedMessageInfo,
 } from "@opencontext/integrations/channels/sources/types";
 
-export function openloomiMessageToTgText(message: Message): string {
+export function opencontextMessageToTgText(message: Message): string {
 	if (typeof message === "string") {
 		return message;
 	}
@@ -1559,7 +1559,7 @@ export function openloomiMessageToTgText(message: Message): string {
 	}
 	if ("nodes" in message) {
 		return message.nodes
-			.map((node) => openloomiMessageToTgText(node as Message))
+			.map((node) => opencontextMessageToTgText(node as Message))
 			.join("");
 	}
 	return "";
@@ -1576,7 +1576,7 @@ function describeUnsupportedMessage(message: Message): string {
 	return "content";
 }
 
-export function tgMessageToopenloomiMessage(message: Api.Message): Messages {
+export function tgMessageToopencontextMessage(message: Api.Message): Messages {
 	const messages: Messages = [];
 
 	if (!message.message) {

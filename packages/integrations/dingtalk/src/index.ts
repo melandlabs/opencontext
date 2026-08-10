@@ -391,7 +391,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			if (text) {
 				await this.postRobotMessage(id, "sampleMarkdown", {
 					text,
-					title: "openloomi",
+					title: "opencontext",
 				});
 			}
 

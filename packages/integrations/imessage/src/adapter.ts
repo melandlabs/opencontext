@@ -6,7 +6,7 @@
 import { MessagePlatformAdapter } from "@opencontext/integrations/channels";
 import type {
 	Messages,
-	Message as openloomiMessage,
+	Message as opencontextMessage,
 	Image,
 	File as FileMessage,
 	MessageEvent,
@@ -568,7 +568,7 @@ end tell`;
 	 * Check if message is an image message
 	 * Image messages have url or base64 property, but no name and size properties (distinguishes from file messages)
 	 */
-	private isImageMessage(message: openloomiMessage): message is Image {
+	private isImageMessage(message: opencontextMessage): message is Image {
 		if (typeof message !== "object" || message === null) return false;
 		// Image messages have url or base64, but file messages have id, name, size, url
 		// Distinguish files from images by checking for name and size
@@ -582,7 +582,7 @@ end tell`;
 	 * Check if message is a file message
 	 * File messages have id, name, size, url properties
 	 */
-	private isFileMessage(message: openloomiMessage): message is FileMessage {
+	private isFileMessage(message: opencontextMessage): message is FileMessage {
 		if (typeof message !== "object" || message === null) return false;
 		return (
 			"id" in message &&
@@ -592,7 +592,7 @@ end tell`;
 		);
 	}
 
-	private describeUnsupportedMessage(message: openloomiMessage): string {
+	private describeUnsupportedMessage(message: opencontextMessage): string {
 		if (!message || typeof message !== "object") return typeof message;
 		if ("length" in message && "url" in message) return "voice";
 		if ("origin" in message) return "quote";
@@ -605,10 +605,10 @@ end tell`;
 
 	/**
 	 * Get temp file directory path
-	 * Creates openloomi-imessage subdirectory for storing temp files
+	 * Creates opencontext-imessage subdirectory for storing temp files
 	 */
 	private async getTempDir(): Promise<string> {
-		const tempDir = join(tmpdir(), "openloomi-imessage");
+		const tempDir = join(tmpdir(), "opencontext-imessage");
 		try {
 			await mkdir(tempDir, { recursive: true });
 		} catch {
@@ -900,7 +900,7 @@ end tell`;
 					return {
 						available: false,
 						error:
-							"Full Disk Access permission is required to read iMessage database. Please add the current running application process (such as Terminal, Node, or openloomi) in System Settings > Privacy & Security > Full Disk Access, then restart the app and try again.",
+							"Full Disk Access permission is required to read iMessage database. Please add the current running application process (such as Terminal, Node, or opencontext) in System Settings > Privacy & Security > Full Disk Access, then restart the app and try again.",
 					};
 				}
 

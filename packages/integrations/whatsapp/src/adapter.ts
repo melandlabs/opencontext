@@ -17,9 +17,9 @@ import type {
 	MessageTarget,
 } from "@opencontext/integrations/channels";
 import type {
-	File as openloomiFile,
-	Image as openloomiImage,
-	Message as openloomiMessage,
+	File as opencontextFile,
+	Image as opencontextImage,
+	Message as opencontextMessage,
 	Messages,
 } from "@opencontext/integrations/channels";
 import type { ExtractedMessageInfo } from "@opencontext/integrations/channels/sources/types";
@@ -101,19 +101,23 @@ type LoginDeferred = {
 	rejectLogin: (error: Error) => void;
 };
 
-function isImageMessage(message: openloomiMessage): message is openloomiImage {
+function isImageMessage(
+	message: opencontextMessage,
+): message is opencontextImage {
 	if (typeof message !== "object" || message === null) return false;
 	if (!("url" in message) && !("base64" in message)) return false;
 	if ("length" in message) return false;
 	return !isFileMessage(message);
 }
 
-function isFileMessage(message: openloomiMessage): message is openloomiFile {
+function isFileMessage(
+	message: opencontextMessage,
+): message is opencontextFile {
 	if (typeof message !== "object" || message === null) return false;
 	return "url" in message && "name" in message;
 }
 
-function describeUnsupportedMessage(message: openloomiMessage): string {
+function describeUnsupportedMessage(message: opencontextMessage): string {
 	if (!message || typeof message !== "object") return typeof message;
 	if ("length" in message && "url" in message) return "voice";
 	if ("origin" in message) return "quote";
@@ -333,7 +337,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			auth,
 			logger,
 			printQRInTerminal: false,
-			browser: ["openloomi", "Desktop", "0.3.0"],
+			browser: ["opencontext", "Desktop", "0.3.0"],
 			generateHighQualityLinkPreview: false,
 			connectTimeoutMs: 30_000,
 			syncFullHistory: true,
@@ -1868,7 +1872,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 	}
 
 	private async prepareMediaMessage(
-		image: openloomiImage,
+		image: opencontextImage,
 	): Promise<{ image: Buffer }> {
 		let buffer: Buffer;
 
@@ -1895,7 +1899,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		return { image: buffer };
 	}
 
-	private async prepareFileMessage(file: openloomiFile): Promise<{
+	private async prepareFileMessage(file: opencontextFile): Promise<{
 		document: Buffer;
 		mimetype: string;
 		fileName: string;

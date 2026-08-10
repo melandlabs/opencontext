@@ -1,6 +1,6 @@
 # @opencontext/integrations-telegram
 
-[Telegram](https://telegram.org/) integration for OpenLoomi, powered by the
+[Telegram](https://telegram.org/) integration for OpenContext, powered by the
 [`telegram`](https://www.npmjs.com/package/telegram) (MTProto) client.
 Includes channel adapter, markdown rendering, conversation store, state
 container, and TData decryption / conversion helpers.
