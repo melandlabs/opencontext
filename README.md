@@ -246,15 +246,15 @@ from the boundary layer.
             └────────────────────────┬────────────────────────┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
-       │   Memory substrate                                         │
-       │   @opencontext/memory-store · rag · sqlite · indexeddb     │
-       └─────────────────────────────┬──────────────────────────────-┘
+       │   Memory substrate                                        │
+       │   @opencontext/memory-store · rag · sqlite · indexeddb    │
+       └─────────────────────────────┬────────────────────────────-┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
        │   Engine        @opencontext/loop · cron · insights       │
-       │   Agent runtime @opencontext/ai                            │
+       │   Agent runtime @opencontext/ai                           │
        │   Mesh          @opencontext/integrations (21 adapters)   │
-       └────────────────────────────────────────────────────────────┘
+       └───────────────────────────────────────────────────────────┘
 ```
 
 Full data-flow diagrams, transport surfaces, and storage backends are

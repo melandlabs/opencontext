@@ -4,7 +4,7 @@
 
 **驱动 Agentic 应用的上下文运行时底座**
 
-一个时序上下文图谱、一套内存 API、检索原语,
+一个时序上下文图谱、一套记忆 API、检索原语,
 和一个多平台集成网格，设计上可被嵌入到任何宿主进程。
 已在 [openloomi](https://github.com/melandlabs/openloomi) 中经过实战检验。
 
@@ -185,12 +185,12 @@ const { results, warnings } = await search.searchUnifiedMemory({
 
 ## 它有什么不同
 
-OpenContext 既不是内存库,也不是向量数据库。它是一个运行时底座 —— 每个包独立版本化、单一职责,并且在边界层只消费 `@opencontext/contracts`。
+OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时底座 —— 每个包独立版本化、单一职责,并且在边界层只消费 `@opencontext/contracts`。
 
 | 对比对象                                         | opencontext 多出来的能力                                                                 |
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------- |
 | 一个扁平的向量数据库(Pinecone、Weaviate、Qdrant) | **时序图** —— 事实带有 `valid_from` / `valid_until`,会被取代,而不仅仅是按相似度匹配      |
-| 一个上下文 / 内存库                              | **运行时而非库** —— HTTP daemon、MCP server、CLI,以及集成网格与 Loop 引擎                |
+| 一个上下文 / 记忆库                              | **运行时而非库** —— HTTP daemon、MCP server、CLI,以及集成网格与 Loop 引擎                |
 | 自己接一套 agent 循环                            | **可分离的 Loop 引擎** —— 调度何时调用 `@opencontext/ai`,而不是一路贯穿到底都是 LLM 循环 |
 | 为了使用集成而必须嵌入整个 opencontext           | **Library-First API 面** —— 每个包都可独立发布,使用任意一个都不要求 React / Next / Tauri |
 
@@ -220,15 +220,15 @@ OpenContext 既不是内存库,也不是向量数据库。它是一个运行时�
             └────────────────────────┬────────────────────────┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
-       │   内存底座                                              │
-       │   @opencontext/memory-store · rag · sqlite · indexeddb     │
-       └─────────────────────────────┬──────────────────────────────-┘
+       │   记忆底座                                                 │
+       │   @opencontext/memory-store · rag · sqlite · indexeddb    │
+       └─────────────────────────────┬────────────────────────────-┘
                                      │
        ┌─────────────────────────────┴─────────────────────────────┐
        │   引擎        @opencontext/loop · cron · insights          │
-       │   Agent 运行时 @opencontext/ai                            │
-       │   网格          @opencontext/integrations(21 个适配器)       │
-       └────────────────────────────────────────────────────────────┘
+       │   Agent 运行时 @opencontext/ai                             │
+       │   网格          @opencontext/integrations(21 个适配器)      │
+       └───────────────────────────────────────────────────────────┘
 ```
 
 完整的数据流图、传输面与存储后端见
