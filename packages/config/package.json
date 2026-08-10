@@ -6,12 +6,12 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"main": "./dist/index.js",
-	"module": "./dist/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.cjs",
 	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/index.js",
-		"./eslint": "./dist/eslint.js",
+		".": "./dist/index.cjs",
+		"./eslint": "./dist/eslint.cjs",
 		"./tsconfig": "./src/tsconfig.json",
 		"./tsup-preset": "./src/tsup-preset.mjs"
 	},

@@ -13,9 +13,9 @@
 		"./provider": "./dist/provider.js",
 		"./local": "./dist/local.js",
 		"./memory": "./dist/memory.js",
-		"./adapters": "./dist/adapters/index.js",
-		"./adapters/local-fs": "./dist/adapters/local-fs.js",
-		"./adapters/vercel-blob": "./dist/adapters/vercel-blob.js"
+		"./adapters": "./dist/adapters-index.js",
+		"./adapters/local-fs": "./dist/adapters-local-fs.js",
+		"./adapters/vercel-blob": "./dist/adapters-vercel-blob.js"
 	},
 	"repository": {
 		"type": "git",

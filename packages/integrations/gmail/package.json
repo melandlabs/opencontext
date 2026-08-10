@@ -2,13 +2,18 @@
 	"name": "@melandlabs/integrations-gmail",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"main": "./dist/conversation-store.js",
 	"types": "./dist/conversation-store.d.ts",
 	"exports": {
+		".": "./dist/conversation-store.js",
 		"./conversation-store": "./dist/conversation-store.js"
 	},
 	"repository": {
@@ -22,7 +27,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/gmail module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*"
 	},

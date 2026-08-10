@@ -9,8 +9,7 @@
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./dist/index.js",
-		"./storage": "./dist/storage.js"
+		".": "./dist/index.js"
 	},
 	"repository": {
 		"type": "git",

@@ -4,3 +4,4 @@ packages:
   - 'packages/ai/*'
   - 'packages/integrations/*'
   - 'services/*'
+  - 'examples'

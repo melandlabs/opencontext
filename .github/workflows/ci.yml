@@ -116,3 +116,32 @@ jobs:
               exit 1
             fi
           fi
+
+  smoke:
+    # End-to-end verification of every @melandlabs/* package against the
+    # npm registry. Runs `examples/` smoke tests; packages are installed
+    # straight from npmjs.org so we catch publish-time issues
+    # (missing exports, broken subpaths, etc.) before they ship.
+    name: Smoke test published @melandlabs/* packages
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Install published packages
+        working-directory: examples
+        run: pnpm install --registry=https://registry.npmjs.org
+
+      - name: Run smoke tests
+        working-directory: examples
+        run: pnpm test

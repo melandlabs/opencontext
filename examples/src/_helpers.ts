@@ -7,12 +7,13 @@
  * `node --experimental-strip-types src/index.ts`) surfaces failures to CI.
  */
 
-export type Check = (label: string, ok: boolean) => void;
+export type Check = (label: string, ok: boolean, detail?: string) => void;
 
 export function makeCheck(prefix: string): Check {
-	return (label, ok) => {
+	return (label, ok, detail) => {
 		const tag = ok ? "OK  " : "FAIL";
-		console.log(`[${tag}] ${prefix}: ${label}`);
+		const suffix = detail ? ` (${detail})` : "";
+		console.log(`[${tag}] ${prefix}: ${label}${suffix}`);
 		if (!ok) process.exitCode = 1;
 	};
 }

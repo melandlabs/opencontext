@@ -1,0 +1,88 @@
+name: Release
+
+# Publishes @melandlabs/* packages to npm via changesets.
+# Triggered after the CI workflow passes on main — a release PR is opened
+# (or updated) by changesets when changesets are present, and merged via
+# the "Version Packages" PR. This workflow runs on push to main and uses
+# NPM_ACCESS_TOKEN (configured as a repo secret) to authenticate against
+# https://registry.npmjs.org/.
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    # Only publish when changesets reports new versions. The
+    # "changesets/action" step handles versioning, commit, and PR
+    # creation; we only run `pnpm changeset publish` once that work
+    # is done and we're pushing the resulting commit back to main.
+    if: ${{ github.event.head_commit.message != 'ci: skip publish' }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          # Always publish against npmjs.org — the user-facing registry.
+          registry-url: https://registry.npmjs.org/
+
+      - run: pnpm install --frozen-lockfile
+
+      # Build every package so the published tarballs contain fresh dist/.
+      - run: pnpm -r --filter='./packages/*' --filter='./packages/ai/*' --filter='./packages/integrations/*' build
+
+      # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
+      # avoids changesets trying to push a tag (we let the version PR do
+      # that); `--tag latest` is the default but stated explicitly.
+      - name: Publish
+        env:
+          NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+        run: pnpm changeset publish --no-git-tag --tag latest
+        shell: bash
+
+  smoke:
+    name: Smoke test published packages
+    runs-on: ubuntu-latest
+    needs: publish
+    # Runs after a successful publish to verify the artifacts on the
+    # public registry. Uses the same examples/ suite as the local smoke
+    # test, but installs dependencies straight from npmjs.org.
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+          registry-url: https://registry.npmjs.org/
+
+      - name: Run smoke tests
+        working-directory: examples
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+        run: |
+          pnpm install --registry=https://registry.npmjs.org
+          pnpm test

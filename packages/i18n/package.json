@@ -10,8 +10,8 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js",
-		"./locales/en-US": "./dist/locales/en-US.js",
-		"./locales/zh-Hans": "./dist/locales/zh-Hans.js"
+		"./locales/en-US": "./dist/locales-en-US.js",
+		"./locales/zh-Hans": "./dist/locales-zh-Hans.js"
 	},
 	"repository": {
 		"type": "git",

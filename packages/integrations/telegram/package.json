@@ -18,7 +18,7 @@
 		"./markdown": "./dist/markdown.js",
 		"./conversation-store": "./dist/conversation-store.js",
 		"./state": "./dist/state.js",
-		"./tdata-decrypter": "./dist/tdata-decrypter/index.js",
+		"./tdata-decrypter": "./dist/tdata-decrypter-index.js",
 		"./tdata-converter": "./dist/tdata-converter.js"
 	},
 	"repository": {
