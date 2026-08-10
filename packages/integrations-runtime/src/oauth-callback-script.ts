@@ -8,7 +8,7 @@
  * callback HTML responses.
  */
 export function jsonForScript(value: unknown) {
-  const serialized = JSON.stringify(value);
-  if (serialized === undefined) return serialized;
-  return serialized.replace(/</g, "\\u003c");
+	const serialized = JSON.stringify(value);
+	if (serialized === undefined) return serialized;
+	return serialized.replace(/</g, "\\u003c");
 }

@@ -10,17 +10,17 @@ import { UserLocale } from "@opencontext/shared";
 
 import { defaultLanguageDirectiveBuilder } from "./adapters/default-language-directive-builder";
 import type {
-  AgentConfig,
-  AgentMessage,
-  AgentOptions,
-  AgentProvider,
-  AgentSession,
-  AgentSubagentDefinition,
-  ExecuteOptions,
-  IAgent,
-  PlanOptions,
-  ProviderCapabilities,
-  TaskPlan,
+	AgentConfig,
+	AgentMessage,
+	AgentOptions,
+	AgentProvider,
+	AgentSession,
+	AgentSubagentDefinition,
+	ExecuteOptions,
+	IAgent,
+	PlanOptions,
+	ProviderCapabilities,
+	TaskPlan,
 } from "./types";
 
 /**
@@ -36,14 +36,14 @@ import type {
  *     follow the user's input language)
  */
 export function getLanguageInstructionForBase(
-  language: string | undefined,
+	language: string | undefined,
 ): string {
-  if (!language) return "";
-  const locale = UserLocale.fromString(language) ?? UserLocale.default();
-  return defaultLanguageDirectiveBuilder.buildDirective(
-    locale,
-    "conversational",
-  );
+	if (!language) return "";
+	const locale = UserLocale.fromString(language) ?? UserLocale.default();
+	return defaultLanguageDirectiveBuilder.buildDirective(
+		locale,
+		"conversational",
+	);
 }
 
 /**
@@ -52,19 +52,19 @@ export function getLanguageInstructionForBase(
  * Markdown or emoji-heavy instruction formatting in final answers.
  */
 export function getProfessionalOutputStyleInstruction(
-  language: string | undefined,
+	language: string | undefined,
 ): string {
-  const isChinese = UserLocale.fromString(language)?.isChinese() ?? false;
+	const isChinese = UserLocale.fromString(language)?.isChinese() ?? false;
 
-  const localizedRules = isChinese
-    ? `
+	const localizedRules = isChinese
+		? `
 - When replying in Simplified Chinese, use clear, business-like language.
 - Avoid slogan-like or disconnected phrase fragments.
 - Use natural Chinese punctuation. Do not mix decorative arrows, repeated exclamation marks, or excessive symbols.
 - Do not mix English phrase fragments such as "Note:", "Tip:", "Key:", "TL;DR:" into Chinese sentences.`
-    : "";
+		: "";
 
-  return `
+	return `
 ## User-Facing Output Style
 
 Apply these rules to final answers unless the user explicitly requests another style.
@@ -134,9 +134,9 @@ Apply these rules to final answers unless the user explicitly requests another s
  * Agent capabilities interface
  */
 export interface AgentCapabilities extends ProviderCapabilities {
-  supportsPlan: boolean;
-  supportsStreaming: boolean;
-  supportsSandbox: boolean;
+	supportsPlan: boolean;
+	supportsStreaming: boolean;
+	supportsSandbox: boolean;
 }
 
 /**
@@ -145,188 +145,188 @@ export interface AgentCapabilities extends ProviderCapabilities {
  * Implements IProvider interface methods for compatibility.
  */
 export abstract class BaseAgent implements IAgent {
-  abstract readonly provider: AgentProvider;
+	abstract readonly provider: AgentProvider;
 
-  /** Provider type (alias for provider) */
-  get type(): string {
-    return this.provider;
-  }
+	/** Provider type (alias for provider) */
+	get type(): string {
+		return this.provider;
+	}
 
-  /** Human-readable name */
-  get name(): string {
-    return `${this.provider} Agent`;
-  }
+	/** Human-readable name */
+	get name(): string {
+		return `${this.provider} Agent`;
+	}
 
-  /** Provider version */
-  readonly version: string = "1.0.0";
+	/** Provider version */
+	readonly version: string = "1.0.0";
 
-  protected config: AgentConfig;
-  protected sessions: Map<string, AgentSession> = new Map();
-  protected plans: Map<string, TaskPlan> = new Map();
+	protected config: AgentConfig;
+	protected sessions: Map<string, AgentSession> = new Map();
+	protected plans: Map<string, TaskPlan> = new Map();
 
-  constructor(config: AgentConfig) {
-    this.config = config;
-  }
+	constructor(config: AgentConfig) {
+		this.config = config;
+	}
 
-  /**
-   * Create a new session
-   */
-  protected createSession(
-    phase: AgentSession["phase"] = "idle",
-    options?: { abortController?: AbortController },
-  ): AgentSession {
-    const session: AgentSession = {
-      id: nanoid(),
-      createdAt: new Date(),
-      phase,
-      isAborted: false,
-      // If external abortController is provided, use it; otherwise create new
-      abortController: options?.abortController || new AbortController(),
-      config: this.config,
-    };
-    this.sessions.set(session.id, session);
-    return session;
-  }
+	/**
+	 * Create a new session
+	 */
+	protected createSession(
+		phase: AgentSession["phase"] = "idle",
+		options?: { abortController?: AbortController },
+	): AgentSession {
+		const session: AgentSession = {
+			id: nanoid(),
+			createdAt: new Date(),
+			phase,
+			isAborted: false,
+			// If external abortController is provided, use it; otherwise create new
+			abortController: options?.abortController || new AbortController(),
+			config: this.config,
+		};
+		this.sessions.set(session.id, session);
+		return session;
+	}
 
-  /**
-   * Get an existing session
-   */
-  protected getSession(sessionId: string): AgentSession | undefined {
-    return this.sessions.get(sessionId);
-  }
+	/**
+	 * Get an existing session
+	 */
+	protected getSession(sessionId: string): AgentSession | undefined {
+		return this.sessions.get(sessionId);
+	}
 
-  /**
-   * Update session phase
-   */
-  protected updateSessionPhase(
-    sessionId: string,
-    phase: AgentSession["phase"],
-  ): void {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.phase = phase;
-    }
-  }
+	/**
+	 * Update session phase
+	 */
+	protected updateSessionPhase(
+		sessionId: string,
+		phase: AgentSession["phase"],
+	): void {
+		const session = this.sessions.get(sessionId);
+		if (session) {
+			session.phase = phase;
+		}
+	}
 
-  /**
-   * Store a plan
-   */
-  protected storePlan(plan: TaskPlan): void {
-    this.plans.set(plan.id, plan);
-  }
+	/**
+	 * Store a plan
+	 */
+	protected storePlan(plan: TaskPlan): void {
+		this.plans.set(plan.id, plan);
+	}
 
-  /**
-   * Get a stored plan
-   */
-  getPlan(planId: string): TaskPlan | undefined {
-    return this.plans.get(planId);
-  }
+	/**
+	 * Get a stored plan
+	 */
+	getPlan(planId: string): TaskPlan | undefined {
+		return this.plans.get(planId);
+	}
 
-  /**
-   * Delete a stored plan
-   */
-  deletePlan(planId: string): void {
-    this.plans.delete(planId);
-  }
+	/**
+	 * Delete a stored plan
+	 */
+	deletePlan(planId: string): void {
+		this.plans.delete(planId);
+	}
 
-  /**
-   * Stop execution for a session
-   */
-  async stop(sessionId: string): Promise<void> {
-    const session = this.sessions.get(sessionId);
-    if (session) {
-      session.isAborted = true;
-      session.abortController.abort();
-    }
-  }
+	/**
+	 * Stop execution for a session
+	 */
+	async stop(sessionId: string): Promise<void> {
+		const session = this.sessions.get(sessionId);
+		if (session) {
+			session.isAborted = true;
+			session.abortController.abort();
+		}
+	}
 
-  // ============================================================================
-  // IProvider Interface Methods
-  // ============================================================================
+	// ============================================================================
+	// IProvider Interface Methods
+	// ============================================================================
 
-  /**
-   * Check if this agent is available
-   * Override in subclasses if specific checks are needed
-   */
-  async isAvailable(): Promise<boolean> {
-    return true;
-  }
+	/**
+	 * Check if this agent is available
+	 * Override in subclasses if specific checks are needed
+	 */
+	async isAvailable(): Promise<boolean> {
+		return true;
+	}
 
-  /**
-   * Initialize the agent with configuration
-   * Override in subclasses if initialization is needed
-   */
-  async init(config?: Record<string, unknown>): Promise<void> {
-    if (config) {
-      this.config = { ...this.config, ...config } as AgentConfig;
-    }
-  }
+	/**
+	 * Initialize the agent with configuration
+	 * Override in subclasses if initialization is needed
+	 */
+	async init(config?: Record<string, unknown>): Promise<void> {
+		if (config) {
+			this.config = { ...this.config, ...config } as AgentConfig;
+		}
+	}
 
-  /**
-   * Shutdown the agent and cleanup resources
-   */
-  async shutdown(): Promise<void> {
-    // Stop all active sessions
-    for (const [sessionId, session] of this.sessions) {
-      if (!session.isAborted) {
-        await this.stop(sessionId);
-      }
-    }
-    this.sessions.clear();
-    this.plans.clear();
-  }
+	/**
+	 * Shutdown the agent and cleanup resources
+	 */
+	async shutdown(): Promise<void> {
+		// Stop all active sessions
+		for (const [sessionId, session] of this.sessions) {
+			if (!session.isAborted) {
+				await this.stop(sessionId);
+			}
+		}
+		this.sessions.clear();
+		this.plans.clear();
+	}
 
-  /**
-   * Get agent capabilities
-   * Override in subclasses to provide specific capabilities
-   */
-  getCapabilities(): AgentCapabilities {
-    return {
-      features: ["run", "plan", "execute", "stop"],
-      supportsPlan: true,
-      supportsStreaming: true,
-      supportsSandbox: false,
-    };
-  }
+	/**
+	 * Get agent capabilities
+	 * Override in subclasses to provide specific capabilities
+	 */
+	getCapabilities(): AgentCapabilities {
+		return {
+			features: ["run", "plan", "execute", "stop"],
+			supportsPlan: true,
+			supportsStreaming: true,
+			supportsSandbox: false,
+		};
+	}
 
-  /**
-   * Clean up old sessions (call periodically)
-   */
-  protected cleanupSessions(maxAgeMs: number = 30 * 60 * 1000): void {
-    const now = Date.now();
-    for (const [id, session] of this.sessions) {
-      if (now - session.createdAt.getTime() > maxAgeMs) {
-        this.sessions.delete(id);
-      }
-    }
-  }
+	/**
+	 * Clean up old sessions (call periodically)
+	 */
+	protected cleanupSessions(maxAgeMs: number = 30 * 60 * 1000): void {
+		const now = Date.now();
+		for (const [id, session] of this.sessions) {
+			if (now - session.createdAt.getTime() > maxAgeMs) {
+				this.sessions.delete(id);
+			}
+		}
+	}
 
-  // Abstract methods to be implemented by providers
-  abstract run(
-    prompt: string,
-    options?: AgentOptions,
-  ): AsyncGenerator<AgentMessage>;
+	// Abstract methods to be implemented by providers
+	abstract run(
+		prompt: string,
+		options?: AgentOptions,
+	): AsyncGenerator<AgentMessage>;
 
-  abstract plan(
-    prompt: string,
-    options?: PlanOptions,
-  ): AsyncGenerator<AgentMessage>;
+	abstract plan(
+		prompt: string,
+		options?: PlanOptions,
+	): AsyncGenerator<AgentMessage>;
 
-  abstract execute(options: ExecuteOptions): AsyncGenerator<AgentMessage>;
+	abstract execute(options: ExecuteOptions): AsyncGenerator<AgentMessage>;
 }
 
 /**
  * Planning instruction template with intent detection
  */
 export const PLANNING_INSTRUCTION = (timezone?: string) => {
-  // Add current date info (using user's timezone or local timezone as fallback)
-  const now = new Date();
-  const effectiveTimezone =
-    timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const localDate = now.toLocaleDateString("zh-CN", {
-    timeZone: effectiveTimezone,
-  });
-  return `**IMPORTANT: Today's date is ${localDate}.** Use this date as the reference point for any time-related questions or calculations.
+	// Add current date info (using user's timezone or local timezone as fallback)
+	const now = new Date();
+	const effectiveTimezone =
+		timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const localDate = now.toLocaleDateString("zh-CN", {
+		timeZone: effectiveTimezone,
+	});
+	return `**IMPORTANT: Today's date is ${localDate}.** Use this date as the reference point for any time-related questions or calculations.
 
 ${getProfessionalOutputStyleInstruction(undefined)}
 
@@ -418,9 +418,9 @@ For **COMPLEX TASKS**, respond ONLY with:
  * Sandbox configuration for script execution
  */
 export interface SandboxOptions {
-  enabled: boolean;
-  image?: string;
-  apiEndpoint?: string;
+	enabled: boolean;
+	image?: string;
+	apiEndpoint?: string;
 }
 
 // TODO: Remove this workaround once Claude Code fixes the Read.pages validation bug (#2679).
@@ -432,43 +432,43 @@ When using the Claude Code Read tool, always include a non-empty \`pages\` value
 - Never omit \`pages\`, and never pass \`pages: ""\` or whitespace-only \`pages\`.`;
 
 export function withClaudeCodeReadToolWorkaround(systemPrompt: string): string {
-  return `${systemPrompt.trimEnd()}\n\n${CLAUDE_CODE_READ_TOOL_WORKAROUND_INSTRUCTION}`;
+	return `${systemPrompt.trimEnd()}\n\n${CLAUDE_CODE_READ_TOOL_WORKAROUND_INSTRUCTION}`;
 }
 
 export function withClaudeCodeReadToolWorkaroundForSubagents(
-  subagents: Record<string, AgentSubagentDefinition> | undefined,
+	subagents: Record<string, AgentSubagentDefinition> | undefined,
 ): Record<string, AgentSubagentDefinition> | undefined {
-  if (!subagents) return undefined;
+	if (!subagents) return undefined;
 
-  return Object.fromEntries(
-    Object.entries(subagents).map(([name, definition]) => [
-      name,
-      {
-        ...definition,
-        prompt: withClaudeCodeReadToolWorkaround(definition.prompt),
-      },
-    ]),
-  );
+	return Object.fromEntries(
+		Object.entries(subagents).map(([name, definition]) => [
+			name,
+			{
+				...definition,
+				prompt: withClaudeCodeReadToolWorkaround(definition.prompt),
+			},
+		]),
+	);
 }
 
 /**
  * Generate workspace instruction for prompts
  */
 export function getWorkspaceInstruction(
-  workDir: string,
-  sandbox?: SandboxOptions,
-  timezone?: string,
-  language?: string,
+	workDir: string,
+	sandbox?: SandboxOptions,
+	timezone?: string,
+	language?: string,
 ): string {
-  // Add current date info (using user's timezone or local timezone as fallback)
-  const now = new Date();
-  const effectiveTimezone =
-    timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const localDate = now.toLocaleDateString("zh-CN", {
-    timeZone: effectiveTimezone,
-  });
+	// Add current date info (using user's timezone or local timezone as fallback)
+	const now = new Date();
+	const effectiveTimezone =
+		timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const localDate = now.toLocaleDateString("zh-CN", {
+		timeZone: effectiveTimezone,
+	});
 
-  let instruction = `
+	let instruction = `
 **IMPORTANT: Today's date is ${localDate}.** Use this date as the reference point for any time-related questions or calculations.
 
 ${getProfessionalOutputStyleInstruction(language)}
@@ -576,9 +576,9 @@ Always use native Markdown table syntax (| col | col |); NEVER wrap a table in a
 
 `;
 
-  // Add sandbox instructions when enabled
-  if (sandbox?.enabled) {
-    instruction += `
+	// Add sandbox instructions when enabled
+	if (sandbox?.enabled) {
+		instruction += `
 ## Sandbox Mode (ENABLED)
 Sandbox mode is enabled — you MUST run all scripts through sandbox tools.
 - **Prefer Node.js (.js) scripts**: the app has a built-in Node.js runtime (fs, path, http, https, crypto, child_process, etc. cover most tasks), while Python must be installed separately. Use Python only for Python-only libraries (numpy, pandas, etc.).
@@ -589,40 +589,40 @@ Sandbox mode is enabled — you MUST run all scripts through sandbox tools.
 Example: \`sandbox_run_script\` with \`filePath: "${workDir}/script.js"\`, \`workDir: "${workDir}"\`, optional \`packages: ["axios"]\` (npm package names; use pip names for Python).
 
 `;
-  }
+	}
 
-  return instruction;
+	return instruction;
 }
 
 /**
  * Format a plan for execution phase
  */
 export function formatPlanForExecution(
-  plan: TaskPlan,
-  workDir?: string,
-  sandbox?: SandboxOptions,
-  aiSoulPrompt?: string,
-  language?: string,
-  timezone?: string,
+	plan: TaskPlan,
+	workDir?: string,
+	sandbox?: SandboxOptions,
+	aiSoulPrompt?: string,
+	language?: string,
+	timezone?: string,
 ): string {
-  const stepsText = plan.steps
-    .map((step, index) => `${index + 1}. ${step.description}`)
-    .join("\n");
+	const stepsText = plan.steps
+		.map((step, index) => `${index + 1}. ${step.description}`)
+		.join("\n");
 
-  // IMPORTANT: aiSoulPrompt must come BEFORE workspaceNote to override default identity
-  const aiSoulInstruction =
-    aiSoulPrompt && aiSoulPrompt.trim().length > 0
-      ? `\n\n**User-Defined AI Soul (Custom Instructions)**:\n${aiSoulPrompt.trim()}\n`
-      : "";
+	// IMPORTANT: aiSoulPrompt must come BEFORE workspaceNote to override default identity
+	const aiSoulInstruction =
+		aiSoulPrompt && aiSoulPrompt.trim().length > 0
+			? `\n\n**User-Defined AI Soul (Custom Instructions)**:\n${aiSoulPrompt.trim()}\n`
+			: "";
 
-  // Include language instruction based on user preference
-  const languageInstruction = getLanguageInstructionForBase(language);
+	// Include language instruction based on user preference
+	const languageInstruction = getLanguageInstructionForBase(language);
 
-  const workspaceNote = workDir
-    ? getWorkspaceInstruction(workDir, sandbox, timezone, language)
-    : getProfessionalOutputStyleInstruction(language);
+	const workspaceNote = workDir
+		? getWorkspaceInstruction(workDir, sandbox, timezone, language)
+		: getProfessionalOutputStyleInstruction(language);
 
-  return `You are executing a pre-approved plan. Follow these steps in order:
+	return `You are executing a pre-approved plan. Follow these steps in order:
 ${languageInstruction}${aiSoulInstruction}${workspaceNote}
 Goal: ${plan.goal}
 
@@ -640,212 +640,211 @@ Original request: `;
  * Response type from planning phase
  */
 export type PlanningResponse =
-  | { type: "direct_answer"; answer: string }
-  | { type: "plan"; plan: TaskPlan };
+	{ type: "direct_answer"; answer: string } | { type: "plan"; plan: TaskPlan };
 
 /**
  * Extract a complete JSON object from text, properly handling nested braces and strings
  */
 function extractJsonObject(text: string, startIndex = 0): string | undefined {
-  // Find the first opening brace
-  const firstBrace = text.indexOf("{", startIndex);
-  if (firstBrace === -1) return undefined;
+	// Find the first opening brace
+	const firstBrace = text.indexOf("{", startIndex);
+	if (firstBrace === -1) return undefined;
 
-  let braceCount = 0;
-  let inString = false;
-  let escapeNext = false;
+	let braceCount = 0;
+	let inString = false;
+	let escapeNext = false;
 
-  for (let i = firstBrace; i < text.length; i++) {
-    const char = text[i];
+	for (let i = firstBrace; i < text.length; i++) {
+		const char = text[i];
 
-    if (escapeNext) {
-      escapeNext = false;
-      continue;
-    }
+		if (escapeNext) {
+			escapeNext = false;
+			continue;
+		}
 
-    if (char === "\\" && inString) {
-      escapeNext = true;
-      continue;
-    }
+		if (char === "\\" && inString) {
+			escapeNext = true;
+			continue;
+		}
 
-    if (char === '"' && !escapeNext) {
-      inString = !inString;
-      continue;
-    }
+		if (char === '"' && !escapeNext) {
+			inString = !inString;
+			continue;
+		}
 
-    if (!inString) {
-      if (char === "{") braceCount++;
-      if (char === "}") {
-        braceCount--;
-        if (braceCount === 0) {
-          return text.slice(firstBrace, i + 1);
-        }
-      }
-    }
-  }
+		if (!inString) {
+			if (char === "{") braceCount++;
+			if (char === "}") {
+				braceCount--;
+				if (braceCount === 0) {
+					return text.slice(firstBrace, i + 1);
+				}
+			}
+		}
+	}
 
-  return undefined;
+	return undefined;
 }
 
 /**
  * Parse planning response from text - can be either a direct answer or a plan
  */
 export function parsePlanningResponse(
-  responseText: string,
+	responseText: string,
 ): PlanningResponse | undefined {
-  try {
-    // Try to find JSON in the response
-    let jsonString: string | undefined;
+	try {
+		// Try to find JSON in the response
+		let jsonString: string | undefined;
 
-    // Pattern 1: JSON in markdown code block
-    const codeBlockMatch = responseText.match(
-      /```(?:json)?\s*(\{[\s\S]*\})\s*```/,
-    );
-    if (codeBlockMatch) {
-      // Extract proper JSON from code block
-      jsonString = extractJsonObject(codeBlockMatch[1]);
-    }
+		// Pattern 1: JSON in markdown code block
+		const codeBlockMatch = responseText.match(
+			/```(?:json)?\s*(\{[\s\S]*\})\s*```/,
+		);
+		if (codeBlockMatch) {
+			// Extract proper JSON from code block
+			jsonString = extractJsonObject(codeBlockMatch[1]);
+		}
 
-    // Pattern 2: Raw JSON object - use proper extraction
-    if (!jsonString) {
-      // Look for JSON that starts with {"type"
-      const typeIndex = responseText.indexOf('{"type');
-      if (typeIndex !== -1) {
-        jsonString = extractJsonObject(responseText, typeIndex);
-      }
-    }
+		// Pattern 2: Raw JSON object - use proper extraction
+		if (!jsonString) {
+			// Look for JSON that starts with {"type"
+			const typeIndex = responseText.indexOf('{"type');
+			if (typeIndex !== -1) {
+				jsonString = extractJsonObject(responseText, typeIndex);
+			}
+		}
 
-    // Pattern 3: Try to find any JSON object with "type" field
-    if (!jsonString) {
-      jsonString = extractJsonObject(responseText);
-    }
+		// Pattern 3: Try to find any JSON object with "type" field
+		if (!jsonString) {
+			jsonString = extractJsonObject(responseText);
+		}
 
-    if (!jsonString) {
-      // No JSON found - treat as direct answer if it looks like conversational text
-      if (responseText.length > 0 && !responseText.includes('"steps"')) {
-        return { type: "direct_answer", answer: responseText.trim() };
-      }
-      return undefined;
-    }
+		if (!jsonString) {
+			// No JSON found - treat as direct answer if it looks like conversational text
+			if (responseText.length > 0 && !responseText.includes('"steps"')) {
+				return { type: "direct_answer", answer: responseText.trim() };
+			}
+			return undefined;
+		}
 
-    const parsed = JSON.parse(jsonString);
+		const parsed = JSON.parse(jsonString);
 
-    // Check if it's a direct answer
-    if (parsed.type === "direct_answer" && parsed.answer) {
-      return { type: "direct_answer", answer: parsed.answer };
-    }
+		// Check if it's a direct answer
+		if (parsed.type === "direct_answer" && parsed.answer) {
+			return { type: "direct_answer", answer: parsed.answer };
+		}
 
-    // Check if it's a plan (either explicit type or implicit by having steps)
-    if (
-      parsed.type === "plan" ||
-      (parsed.goal && Array.isArray(parsed.steps))
-    ) {
-      const plan = parsePlanFromResponse(responseText);
-      if (plan) {
-        return { type: "plan", plan };
-      }
-    }
+		// Check if it's a plan (either explicit type or implicit by having steps)
+		if (
+			parsed.type === "plan" ||
+			(parsed.goal && Array.isArray(parsed.steps))
+		) {
+			const plan = parsePlanFromResponse(responseText);
+			if (plan) {
+				return { type: "plan", plan };
+			}
+		}
 
-    return undefined;
-  } catch (error) {
-    console.error("Failed to parse planning response:", error);
-    return undefined;
-  }
+		return undefined;
+	} catch (error) {
+		console.error("Failed to parse planning response:", error);
+		return undefined;
+	}
 }
 
 /**
  * Parse plan JSON from response text
  */
 export function parsePlanFromResponse(
-  responseText: string,
+	responseText: string,
 ): TaskPlan | undefined {
-  try {
-    // Try multiple patterns to find JSON in the response
-    let jsonString: string | undefined;
+	try {
+		// Try multiple patterns to find JSON in the response
+		let jsonString: string | undefined;
 
-    // Pattern 1: JSON in markdown code block
-    const codeBlockMatch = responseText.match(
-      /```(?:json)?\s*(\{[\s\S]*\})\s*```/,
-    );
-    if (codeBlockMatch) {
-      jsonString = extractJsonObject(codeBlockMatch[1]);
-    }
+		// Pattern 1: JSON in markdown code block
+		const codeBlockMatch = responseText.match(
+			/```(?:json)?\s*(\{[\s\S]*\})\s*```/,
+		);
+		if (codeBlockMatch) {
+			jsonString = extractJsonObject(codeBlockMatch[1]);
+		}
 
-    // Pattern 2: Look for JSON with goal and steps
-    if (!jsonString) {
-      // Find a JSON object that contains "goal"
-      const goalIndex = responseText.indexOf('"goal"');
-      if (goalIndex !== -1) {
-        // Search backward for the opening brace
-        let startIndex = goalIndex;
-        while (startIndex > 0 && responseText[startIndex] !== "{") {
-          startIndex--;
-        }
-        if (responseText[startIndex] === "{") {
-          jsonString = extractJsonObject(responseText, startIndex);
-        }
-      }
-    }
+		// Pattern 2: Look for JSON with goal and steps
+		if (!jsonString) {
+			// Find a JSON object that contains "goal"
+			const goalIndex = responseText.indexOf('"goal"');
+			if (goalIndex !== -1) {
+				// Search backward for the opening brace
+				let startIndex = goalIndex;
+				while (startIndex > 0 && responseText[startIndex] !== "{") {
+					startIndex--;
+				}
+				if (responseText[startIndex] === "{") {
+					jsonString = extractJsonObject(responseText, startIndex);
+				}
+			}
+		}
 
-    // Pattern 3: Try to find any JSON object
-    if (!jsonString) {
-      jsonString = extractJsonObject(responseText);
-    }
+		// Pattern 3: Try to find any JSON object
+		if (!jsonString) {
+			jsonString = extractJsonObject(responseText);
+		}
 
-    if (!jsonString) {
-      console.error("No plan JSON found in response");
-      console.error("Response text:", responseText.slice(0, 500));
-      return undefined;
-    }
+		if (!jsonString) {
+			console.error("No plan JSON found in response");
+			console.error("Response text:", responseText.slice(0, 500));
+			return undefined;
+		}
 
-    const parsed = JSON.parse(jsonString);
+		const parsed = JSON.parse(jsonString);
 
-    // Validate the parsed object has required fields
-    if (!parsed.goal || !Array.isArray(parsed.steps)) {
-      console.error("Parsed JSON missing required fields");
-      return undefined;
-    }
+		// Validate the parsed object has required fields
+		if (!parsed.goal || !Array.isArray(parsed.steps)) {
+			console.error("Parsed JSON missing required fields");
+			return undefined;
+		}
 
-    // Filter out empty or too vague steps
-    const validSteps = (parsed.steps || [])
-      .filter((step: { description?: string }) => {
-        const desc = step.description?.toLowerCase() || "";
-        // Filter out generic/vague steps
-        return (
-          desc.length > 10 &&
-          !desc.includes("execute the task") &&
-          !desc.includes("do the work") &&
-          !desc.includes("complete the request")
-        );
-      })
-      .map((step: { id?: string; description?: string }, index: number) => ({
-        id: step.id || String(index + 1),
-        description: step.description || "Unknown step",
-        status: "pending" as const,
-      }));
+		// Filter out empty or too vague steps
+		const validSteps = (parsed.steps || [])
+			.filter((step: { description?: string }) => {
+				const desc = step.description?.toLowerCase() || "";
+				// Filter out generic/vague steps
+				return (
+					desc.length > 10 &&
+					!desc.includes("execute the task") &&
+					!desc.includes("do the work") &&
+					!desc.includes("complete the request")
+				);
+			})
+			.map((step: { id?: string; description?: string }, index: number) => ({
+				id: step.id || String(index + 1),
+				description: step.description || "Unknown step",
+				status: "pending" as const,
+			}));
 
-    // If no valid steps after filtering, keep original steps
-    const finalSteps =
-      validSteps.length > 0
-        ? validSteps
-        : (parsed.steps || []).map(
-            (step: { id?: string; description?: string }, index: number) => ({
-              id: step.id || String(index + 1),
-              description: step.description || "Unknown step",
-              status: "pending" as const,
-            }),
-          );
+		// If no valid steps after filtering, keep original steps
+		const finalSteps =
+			validSteps.length > 0
+				? validSteps
+				: (parsed.steps || []).map(
+						(step: { id?: string; description?: string }, index: number) => ({
+							id: step.id || String(index + 1),
+							description: step.description || "Unknown step",
+							status: "pending" as const,
+						}),
+					);
 
-    return {
-      id: nanoid(),
-      goal: parsed.goal || "Unknown goal",
-      steps: finalSteps,
-      notes: parsed.notes,
-      createdAt: new Date(),
-    };
-  } catch (error) {
-    console.error("Failed to parse plan:", error);
-    console.error("Response text:", responseText.slice(0, 500));
-    return undefined;
-  }
+		return {
+			id: nanoid(),
+			goal: parsed.goal || "Unknown goal",
+			steps: finalSteps,
+			notes: parsed.notes,
+			createdAt: new Date(),
+		};
+	} catch (error) {
+		console.error("Failed to parse plan:", error);
+		console.error("Response text:", responseText.slice(0, 500));
+		return undefined;
+	}
 }

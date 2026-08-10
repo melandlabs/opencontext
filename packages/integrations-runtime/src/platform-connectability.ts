@@ -1,69 +1,69 @@
 import type { IntegrationId } from "@opencontext/contracts/integration-id";
 
 const ALL_INTEGRATION_PLATFORMS: IntegrationId[] = [
-  "telegram",
-  "whatsapp",
-  "slack",
-  "discord",
-  "gmail",
-  "outlook",
-  "linkedin",
-  "instagram",
-  "twitter",
-  "google_calendar",
-  "google_meet",
-  "outlook_calendar",
-  "teams",
-  "facebook_messenger",
-  "google_drive",
-  "google_docs",
-  "hubspot",
-  "notion",
-  "github",
-  "asana",
-  "jira",
-  "linear",
-  "imessage",
-  "feishu",
-  "dingtalk",
-  "qqbot",
-  "weixin",
+	"telegram",
+	"whatsapp",
+	"slack",
+	"discord",
+	"gmail",
+	"outlook",
+	"linkedin",
+	"instagram",
+	"twitter",
+	"google_calendar",
+	"google_meet",
+	"outlook_calendar",
+	"teams",
+	"facebook_messenger",
+	"google_drive",
+	"google_docs",
+	"hubspot",
+	"notion",
+	"github",
+	"asana",
+	"jira",
+	"linear",
+	"imessage",
+	"feishu",
+	"dingtalk",
+	"qqbot",
+	"weixin",
 ];
 
 const COMING_SOON_PLATFORMS = new Set<IntegrationId>([
-  "github",
-  "instagram",
-  "facebook_messenger",
-  "teams",
-  "asana",
-  "jira",
-  "linear",
+	"github",
+	"instagram",
+	"facebook_messenger",
+	"teams",
+	"asana",
+	"jira",
+	"linear",
 ]);
 
 const HIDDEN_CONNECTOR_PLATFORMS = new Set<IntegrationId>([
-  // Google Meet's Composio toolkit is retained as a low-level future hook
-  // for Meet spaces/artifacts, but it is not a user-facing connector today:
-  // it cannot represent "meetings I attended" or schedule meetings by itself.
-  // Calendar remains the user-facing connector for meeting schedules.
-  "google_meet",
+	// Google Meet's Composio toolkit is retained as a low-level future hook
+	// for Meet spaces/artifacts, but it is not a user-facing connector today:
+	// it cannot represent "meetings I attended" or schedule meetings by itself.
+	// Calendar remains the user-facing connector for meeting schedules.
+	"google_meet",
 ]);
 
 export function isIntegrationPlatformConnectable(platform: IntegrationId) {
-  if (HIDDEN_CONNECTOR_PLATFORMS.has(platform)) return false;
-  if (COMING_SOON_PLATFORMS.has(platform)) return false;
+	if (HIDDEN_CONNECTOR_PLATFORMS.has(platform)) return false;
+	if (COMING_SOON_PLATFORMS.has(platform)) return false;
 
-  switch (platform) {
-    case "outlook_calendar":
-      return process.env.NEXT_PUBLIC_OUTLOOK_CALENDAR_ENABLED === "true";
-    default:
-      return true;
-  }
+	switch (platform) {
+		case "outlook_calendar":
+			return process.env.NEXT_PUBLIC_OUTLOOK_CALENDAR_ENABLED === "true";
+		default:
+			return true;
+	}
 }
 
 export function getConnectableIntegrationPlatforms(): IntegrationId[] {
-  return ALL_INTEGRATION_PLATFORMS.filter((platform) =>
-    isIntegrationPlatformConnectable(platform),
-  );
+	return ALL_INTEGRATION_PLATFORMS.filter((platform) =>
+		isIntegrationPlatformConnectable(platform),
+	);
 }
 
 /**
@@ -76,10 +76,10 @@ export function getConnectableIntegrationPlatforms(): IntegrationId[] {
  * disappearing from the UI.
  */
 export function isIntegrationPlatformVisible(
-  platform: IntegrationId,
-  options: { hasConnectedAccounts: boolean } = { hasConnectedAccounts: false },
+	platform: IntegrationId,
+	options: { hasConnectedAccounts: boolean } = { hasConnectedAccounts: false },
 ): boolean {
-  if (HIDDEN_CONNECTOR_PLATFORMS.has(platform)) return false;
-  if (isIntegrationPlatformConnectable(platform)) return true;
-  return options.hasConnectedAccounts;
+	if (HIDDEN_CONNECTOR_PLATFORMS.has(platform)) return false;
+	if (isIntegrationPlatformConnectable(platform)) return true;
+	return options.hasConnectedAccounts;
 }

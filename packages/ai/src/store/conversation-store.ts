@@ -10,19 +10,19 @@
  */
 
 import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	readdirSync,
+	rmSync,
+	writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 
 export interface ConversationMessage {
-  timestamp: number;
-  role?: string;
-  content?: string;
+	timestamp: number;
+	role?: string;
+	content?: string;
 }
 
 /**
@@ -32,29 +32,29 @@ export interface ConversationMessage {
 type DayFileData = Record<string, Record<string, ConversationMessage[]>>;
 
 function ensureMemoryDir(memoryDir: string): void {
-  if (!existsSync(memoryDir)) {
-    mkdirSync(memoryDir, { recursive: true });
-  }
+	if (!existsSync(memoryDir)) {
+		mkdirSync(memoryDir, { recursive: true });
+	}
 }
 
 function getPrefixDir(memoryDir: string, prefix: string): string {
-  return join(memoryDir, prefix);
+	return join(memoryDir, prefix);
 }
 
 function ensurePrefixDir(memoryDir: string, prefix: string): string {
-  const dir = getPrefixDir(memoryDir, prefix);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-  return dir;
+	const dir = getPrefixDir(memoryDir, prefix);
+	if (!existsSync(dir)) {
+		mkdirSync(dir, { recursive: true });
+	}
+	return dir;
 }
 
 function getDayFilePath(
-  memoryDir: string,
-  prefix: string,
-  date: string,
+	memoryDir: string,
+	prefix: string,
+	date: string,
 ): string {
-  return join(ensurePrefixDir(memoryDir, prefix), `${date}.json`);
+	return join(ensurePrefixDir(memoryDir, prefix), `${date}.json`);
 }
 
 // ─── Legacy helpers (kept for reference and internal use) ─────────────────────
@@ -64,16 +64,16 @@ function getDayFilePath(
  * Reads the old flat `{prefix}-conversations.json` file.
  */
 export function loadConversations<T>(memoryDir: string, prefix: string): T {
-  const filePath = join(memoryDir, `${prefix}-conversations.json`);
-  try {
-    if (existsSync(filePath)) {
-      const raw = readFileSync(filePath, "utf-8");
-      return JSON.parse(raw) as T;
-    }
-  } catch (err) {
-    console.warn(`[${prefix}] Failed to load conversations from disk:`, err);
-  }
-  return {} as T;
+	const filePath = join(memoryDir, `${prefix}-conversations.json`);
+	try {
+		if (existsSync(filePath)) {
+			const raw = readFileSync(filePath, "utf-8");
+			return JSON.parse(raw) as T;
+		}
+	} catch (err) {
+		console.warn(`[${prefix}] Failed to load conversations from disk:`, err);
+	}
+	return {} as T;
 }
 
 /**
@@ -81,17 +81,17 @@ export function loadConversations<T>(memoryDir: string, prefix: string): T {
  * Writes directly to the old flat `{prefix}-conversations.json` file.
  */
 export function saveConversations<T>(
-  memoryDir: string,
-  prefix: string,
-  data: T,
+	memoryDir: string,
+	prefix: string,
+	data: T,
 ): void {
-  const filePath = join(memoryDir, `${prefix}-conversations.json`);
-  try {
-    ensureMemoryDir(memoryDir);
-    writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error(`[${prefix}] Failed to save conversations to disk:`, err);
-  }
+	const filePath = join(memoryDir, `${prefix}-conversations.json`);
+	try {
+		ensureMemoryDir(memoryDir);
+		writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+	} catch (err) {
+		console.error(`[${prefix}] Failed to save conversations to disk:`, err);
+	}
 }
 
 // ─── Migration ─────────────────────────────────────────────────────────────────
@@ -102,75 +102,75 @@ type LegacyData = Record<string, Record<string, Record<string, unknown[]>>>;
  * Migrates the legacy flat file to per-day files, then deletes the old file.
  */
 function migrateLegacyFile(memoryDir: string, prefix: string): void {
-  const legacyPath = join(memoryDir, `${prefix}-conversations.json`);
-  if (!existsSync(legacyPath)) return;
+	const legacyPath = join(memoryDir, `${prefix}-conversations.json`);
+	if (!existsSync(legacyPath)) return;
 
-  try {
-    const raw = readFileSync(legacyPath, "utf-8");
-    const legacy: LegacyData = JSON.parse(raw);
+	try {
+		const raw = readFileSync(legacyPath, "utf-8");
+		const legacy: LegacyData = JSON.parse(raw);
 
-    const migratedDays = new Map<string, DayFileData>();
+		const migratedDays = new Map<string, DayFileData>();
 
-    for (const [userKey, accounts] of Object.entries(legacy)) {
-      for (const [accountId, messages] of Object.entries(accounts)) {
-        for (const msg of messages as unknown as ConversationMessage[]) {
-          const ts = msg.timestamp as number;
-          if (!ts) continue;
+		for (const [userKey, accounts] of Object.entries(legacy)) {
+			for (const [accountId, messages] of Object.entries(accounts)) {
+				for (const msg of messages as unknown as ConversationMessage[]) {
+					const ts = msg.timestamp as number;
+					if (!ts) continue;
 
-          const dateStr = new Date(ts).toISOString().slice(0, 10);
+					const dateStr = new Date(ts).toISOString().slice(0, 10);
 
-          if (!migratedDays.has(dateStr)) {
-            migratedDays.set(dateStr, {});
-          }
-          // biome-ignore lint/style/noNonNullAssertion: dateStr is guaranteed to exist after the has() check above
-          const dayData = migratedDays.get(dateStr)!;
+					if (!migratedDays.has(dateStr)) {
+						migratedDays.set(dateStr, {});
+					}
+					// biome-ignore lint/style/noNonNullAssertion: dateStr is guaranteed to exist after the has() check above
+					const dayData = migratedDays.get(dateStr)!;
 
-          if (!dayData[userKey]) {
-            dayData[userKey] = {};
-          }
-          if (!dayData[userKey][accountId]) {
-            dayData[userKey][accountId] = [];
-          }
-          dayData[userKey][accountId].push(msg);
-        }
-      }
-    }
+					if (!dayData[userKey]) {
+						dayData[userKey] = {};
+					}
+					if (!dayData[userKey][accountId]) {
+						dayData[userKey][accountId] = [];
+					}
+					dayData[userKey][accountId].push(msg);
+				}
+			}
+		}
 
-    for (const [dateStr, dayData] of migratedDays) {
-      const filePath = getDayFilePath(memoryDir, prefix, dateStr);
-      const existing: DayFileData = existsSync(filePath)
-        ? JSON.parse(readFileSync(filePath, "utf-8"))
-        : {};
+		for (const [dateStr, dayData] of migratedDays) {
+			const filePath = getDayFilePath(memoryDir, prefix, dateStr);
+			const existing: DayFileData = existsSync(filePath)
+				? JSON.parse(readFileSync(filePath, "utf-8"))
+				: {};
 
-      // Merge: deep merge per userKey + accountId
-      for (const [userKey, accounts] of Object.entries(dayData)) {
-        if (!existing[userKey]) existing[userKey] = {};
-        for (const [accountId, msgs] of Object.entries(accounts)) {
-          if (!existing[userKey][accountId]) existing[userKey][accountId] = [];
-          const seenTimestamps = new Set(
-            existing[userKey][accountId].map((m) => m.timestamp),
-          );
-          for (const msg of msgs) {
-            if (!seenTimestamps.has(msg.timestamp)) {
-              existing[userKey][accountId].push(msg);
-            }
-          }
-        }
-      }
+			// Merge: deep merge per userKey + accountId
+			for (const [userKey, accounts] of Object.entries(dayData)) {
+				if (!existing[userKey]) existing[userKey] = {};
+				for (const [accountId, msgs] of Object.entries(accounts)) {
+					if (!existing[userKey][accountId]) existing[userKey][accountId] = [];
+					const seenTimestamps = new Set(
+						existing[userKey][accountId].map((m) => m.timestamp),
+					);
+					for (const msg of msgs) {
+						if (!seenTimestamps.has(msg.timestamp)) {
+							existing[userKey][accountId].push(msg);
+						}
+					}
+				}
+			}
 
-      writeFileSync(filePath, JSON.stringify(existing, null, 2), "utf-8");
-    }
+			writeFileSync(filePath, JSON.stringify(existing, null, 2), "utf-8");
+		}
 
-    rmSync(legacyPath);
-    console.info(
-      `[${prefix}] Migrated legacy conversation file and deleted it.`,
-    );
-  } catch (err) {
-    console.error(
-      `[${prefix}] Failed to migrate legacy conversation file:`,
-      err,
-    );
-  }
+		rmSync(legacyPath);
+		console.info(
+			`[${prefix}] Migrated legacy conversation file and deleted it.`,
+		);
+	} catch (err) {
+		console.error(
+			`[${prefix}] Failed to migrate legacy conversation file:`,
+			err,
+		);
+	}
 }
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
@@ -179,37 +179,37 @@ function migrateLegacyFile(memoryDir: string, prefix: string): void {
  * Reads a specific day's file, returning empty object if absent or on error.
  */
 function readDayFile(
-  memoryDir: string,
-  prefix: string,
-  date: string,
+	memoryDir: string,
+	prefix: string,
+	date: string,
 ): DayFileData {
-  const filePath = getDayFilePath(memoryDir, prefix, date);
-  try {
-    if (existsSync(filePath)) {
-      const raw = readFileSync(filePath, "utf-8");
-      return JSON.parse(raw) as DayFileData;
-    }
-  } catch (err) {
-    console.warn(`[${prefix}] Failed to load day file ${date}:`, err);
-  }
-  return {};
+	const filePath = getDayFilePath(memoryDir, prefix, date);
+	try {
+		if (existsSync(filePath)) {
+			const raw = readFileSync(filePath, "utf-8");
+			return JSON.parse(raw) as DayFileData;
+		}
+	} catch (err) {
+		console.warn(`[${prefix}] Failed to load day file ${date}:`, err);
+	}
+	return {};
 }
 
 /**
  * Writes a specific day's file, creating the prefix directory if needed.
  */
 function writeDayFile(
-  memoryDir: string,
-  prefix: string,
-  date: string,
-  data: DayFileData,
+	memoryDir: string,
+	prefix: string,
+	date: string,
+	data: DayFileData,
 ): void {
-  const filePath = getDayFilePath(memoryDir, prefix, date);
-  try {
-    writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
-  } catch (err) {
-    console.error(`[${prefix}] Failed to save day file ${date}:`, err);
-  }
+	const filePath = getDayFilePath(memoryDir, prefix, date);
+	try {
+		writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+	} catch (err) {
+		console.error(`[${prefix}] Failed to save day file ${date}:`, err);
+	}
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -221,10 +221,10 @@ const migratedPrefixes = new Set<string>();
  * Ensures the legacy flat file (if any) is migrated before any public operation.
  */
 function ensureMigrated(memoryDir: string, prefix: string): void {
-  const key = `${memoryDir}|${prefix}`;
-  if (migratedPrefixes.has(key)) return;
-  migrateLegacyFile(memoryDir, prefix);
-  migratedPrefixes.add(key);
+	const key = `${memoryDir}|${prefix}`;
+	if (migratedPrefixes.has(key)) return;
+	migrateLegacyFile(memoryDir, prefix);
+	migratedPrefixes.add(key);
 }
 
 /**
@@ -238,28 +238,28 @@ function ensureMigrated(memoryDir: string, prefix: string): void {
  * @param message   - The message to save; must contain a `timestamp` field
  */
 export function saveMessage(
-  memoryDir: string,
-  prefix: string,
-  userKey: string,
-  accountId: string,
-  message: ConversationMessage,
+	memoryDir: string,
+	prefix: string,
+	userKey: string,
+	accountId: string,
+	message: ConversationMessage,
 ): void {
-  ensureMigrated(memoryDir, prefix);
+	ensureMigrated(memoryDir, prefix);
 
-  const ts = message.timestamp ?? Date.now();
-  const dateStr = new Date(ts).toISOString().slice(0, 10);
+	const ts = message.timestamp ?? Date.now();
+	const dateStr = new Date(ts).toISOString().slice(0, 10);
 
-  const dayData = readDayFile(memoryDir, prefix, dateStr);
+	const dayData = readDayFile(memoryDir, prefix, dateStr);
 
-  if (!dayData[userKey]) dayData[userKey] = {};
-  if (!dayData[userKey][accountId]) dayData[userKey][accountId] = [];
+	if (!dayData[userKey]) dayData[userKey] = {};
+	if (!dayData[userKey][accountId]) dayData[userKey][accountId] = [];
 
-  // Append the message directly — dedup by timestamp+content is unreliable across same-millisecond saves
-  const newMsg = { ...message, timestamp: ts };
-  dayData[userKey][accountId].push(newMsg);
-  dayData[userKey][accountId].sort((a, b) => a.timestamp - b.timestamp);
+	// Append the message directly — dedup by timestamp+content is unreliable across same-millisecond saves
+	const newMsg = { ...message, timestamp: ts };
+	dayData[userKey][accountId].push(newMsg);
+	dayData[userKey][accountId].sort((a, b) => a.timestamp - b.timestamp);
 
-  writeDayFile(memoryDir, prefix, dateStr, dayData);
+	writeDayFile(memoryDir, prefix, dateStr, dayData);
 }
 
 /**
@@ -272,48 +272,48 @@ export function saveMessage(
  * @param accountId - Optional filter by account id
  */
 export function loadDay(
-  memoryDir: string,
-  prefix: string,
-  date: string,
-  userKey?: string,
-  accountId?: string,
+	memoryDir: string,
+	prefix: string,
+	date: string,
+	userKey?: string,
+	accountId?: string,
 ): ConversationMessage[] {
-  ensureMigrated(memoryDir, prefix);
+	ensureMigrated(memoryDir, prefix);
 
-  const dayData = readDayFile(memoryDir, prefix, date);
+	const dayData = readDayFile(memoryDir, prefix, date);
 
-  if (userKey && accountId) {
-    return dayData[userKey]?.[accountId] ?? [];
-  }
+	if (userKey && accountId) {
+		return dayData[userKey]?.[accountId] ?? [];
+	}
 
-  if (userKey) {
-    const accounts = dayData[userKey] ?? {};
-    return Object.values(accounts).flat();
-  }
+	if (userKey) {
+		const accounts = dayData[userKey] ?? {};
+		return Object.values(accounts).flat();
+	}
 
-  return Object.values(dayData).flatMap((accounts) =>
-    Object.values(accounts).flat(),
-  );
+	return Object.values(dayData).flatMap((accounts) =>
+		Object.values(accounts).flat(),
+	);
 }
 
 /**
  * Returns an array of date strings (YYYY-MM-DD) that have data for the given prefix.
  */
 export function listAvailableDays(memoryDir: string, prefix: string): string[] {
-  ensureMigrated(memoryDir, prefix);
+	ensureMigrated(memoryDir, prefix);
 
-  const prefixDir = getPrefixDir(memoryDir, prefix);
-  if (!existsSync(prefixDir)) return [];
+	const prefixDir = getPrefixDir(memoryDir, prefix);
+	if (!existsSync(prefixDir)) return [];
 
-  try {
-    return readdirSync(prefixDir)
-      .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
-      .map((f) => f.replace(/\.json$/, ""))
-      .sort();
-  } catch (err) {
-    console.warn(`[${prefix}] Failed to list available days:`, err);
-    return [];
-  }
+	try {
+		return readdirSync(prefixDir)
+			.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+			.map((f) => f.replace(/\.json$/, ""))
+			.sort();
+	} catch (err) {
+		console.warn(`[${prefix}] Failed to list available days:`, err);
+		return [];
+	}
 }
 
 /**
@@ -327,94 +327,94 @@ export function listAvailableDays(memoryDir: string, prefix: string): string[] {
  * @param endDate   - End date string (YYYY-MM-DD, inclusive)
  */
 export function loadDateRange(
-  memoryDir: string,
-  prefix: string,
-  userKey: string,
-  accountId: string,
-  startDate: string,
-  endDate: string,
+	memoryDir: string,
+	prefix: string,
+	userKey: string,
+	accountId: string,
+	startDate: string,
+	endDate: string,
 ): ConversationMessage[] {
-  ensureMigrated(memoryDir, prefix);
+	ensureMigrated(memoryDir, prefix);
 
-  const prefixDir = getPrefixDir(memoryDir, prefix);
-  if (!existsSync(prefixDir)) return [];
+	const prefixDir = getPrefixDir(memoryDir, prefix);
+	if (!existsSync(prefixDir)) return [];
 
-  const results: ConversationMessage[] = [];
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+	const results: ConversationMessage[] = [];
+	const start = new Date(startDate);
+	const end = new Date(endDate);
 
-  // Iterate over each day in the range
-  const current = new Date(start);
-  while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
-    const dayData = readDayFile(memoryDir, prefix, dateStr);
-    const msgs = dayData[userKey]?.[accountId];
-    if (msgs) {
-      for (const msg of msgs) {
-        // Extra safety filter in case the message timestamp falls outside the range
-        const tsDate = new Date(msg.timestamp).toISOString().split("T")[0];
-        if (tsDate >= startDate && tsDate <= endDate) {
-          results.push(msg);
-        }
-      }
-    }
-    current.setDate(current.getDate() + 1);
-  }
+	// Iterate over each day in the range
+	const current = new Date(start);
+	while (current <= end) {
+		const dateStr = current.toISOString().split("T")[0];
+		const dayData = readDayFile(memoryDir, prefix, dateStr);
+		const msgs = dayData[userKey]?.[accountId];
+		if (msgs) {
+			for (const msg of msgs) {
+				// Extra safety filter in case the message timestamp falls outside the range
+				const tsDate = new Date(msg.timestamp).toISOString().split("T")[0];
+				if (tsDate >= startDate && tsDate <= endDate) {
+					results.push(msg);
+				}
+			}
+		}
+		current.setDate(current.getDate() + 1);
+	}
 
-  // Sort final result by timestamp ascending
-  results.sort((a, b) => a.timestamp - b.timestamp);
-  return results;
+	// Sort final result by timestamp ascending
+	results.sort((a, b) => a.timestamp - b.timestamp);
+	return results;
 }
 
 /**
  * Rewrites a day file, removing all messages for the given userKey+accountId pair.
  */
 export function rewriteDayWithout(
-  memoryDir: string,
-  prefix: string,
-  date: string,
-  userKey: string,
-  accountId: string,
+	memoryDir: string,
+	prefix: string,
+	date: string,
+	userKey: string,
+	accountId: string,
 ): void {
-  ensureMigrated(memoryDir, prefix);
-  const dayData = readDayFile(memoryDir, prefix, date);
-  let changed = false;
+	ensureMigrated(memoryDir, prefix);
+	const dayData = readDayFile(memoryDir, prefix, date);
+	let changed = false;
 
-  if (dayData[userKey]?.[accountId]) {
-    delete dayData[userKey]?.[accountId];
-    changed = true;
-  }
-  if (dayData[userKey] && Object.keys(dayData[userKey]).length === 0) {
-    delete dayData[userKey];
-    changed = true;
-  }
+	if (dayData[userKey]?.[accountId]) {
+		delete dayData[userKey]?.[accountId];
+		changed = true;
+	}
+	if (dayData[userKey] && Object.keys(dayData[userKey]).length === 0) {
+		delete dayData[userKey];
+		changed = true;
+	}
 
-  if (changed) {
-    writeDayFile(memoryDir, prefix, date, dayData);
-  }
+	if (changed) {
+		writeDayFile(memoryDir, prefix, date, dayData);
+	}
 }
 
 /**
  * Removes all data for a specific userKey across all day files.
  */
 export function clearAllForUser(
-  memoryDir: string,
-  prefix: string,
-  userKey: string,
+	memoryDir: string,
+	prefix: string,
+	userKey: string,
 ): void {
-  ensureMigrated(memoryDir, prefix);
-  const days = listAvailableDays(memoryDir, prefix);
-  for (const date of days) {
-    const dayData = readDayFile(memoryDir, prefix, date);
-    let changed = false;
-    if (dayData[userKey]) {
-      delete dayData[userKey];
-      changed = true;
-    }
-    if (changed) {
-      writeDayFile(memoryDir, prefix, date, dayData);
-    }
-  }
+	ensureMigrated(memoryDir, prefix);
+	const days = listAvailableDays(memoryDir, prefix);
+	for (const date of days) {
+		const dayData = readDayFile(memoryDir, prefix, date);
+		let changed = false;
+		if (dayData[userKey]) {
+			delete dayData[userKey];
+			changed = true;
+		}
+		if (changed) {
+			writeDayFile(memoryDir, prefix, date, dayData);
+		}
+	}
 }
 
 /**
@@ -422,51 +422,51 @@ export function clearAllForUser(
  * Useful when userKey encodes multiple levels (e.g. Telegram's "telegram:self-chat:userId:").
  */
 export function clearAllForUserPrefix(
-  memoryDir: string,
-  prefix: string,
-  userKeyPrefix: string,
+	memoryDir: string,
+	prefix: string,
+	userKeyPrefix: string,
 ): void {
-  ensureMigrated(memoryDir, prefix);
-  const days = listAvailableDays(memoryDir, prefix);
-  for (const date of days) {
-    const dayData = readDayFile(memoryDir, prefix, date);
-    let changed = false;
-    for (const key of Object.keys(dayData)) {
-      if (key.startsWith(userKeyPrefix)) {
-        delete dayData[key];
-        changed = true;
-      }
-    }
-    if (changed) {
-      writeDayFile(memoryDir, prefix, date, dayData);
-    }
-  }
+	ensureMigrated(memoryDir, prefix);
+	const days = listAvailableDays(memoryDir, prefix);
+	for (const date of days) {
+		const dayData = readDayFile(memoryDir, prefix, date);
+		let changed = false;
+		for (const key of Object.keys(dayData)) {
+			if (key.startsWith(userKeyPrefix)) {
+				delete dayData[key];
+				changed = true;
+			}
+		}
+		if (changed) {
+			writeDayFile(memoryDir, prefix, date, dayData);
+		}
+	}
 }
 
 /**
  * Clears a specific (userKey, accountId) conversation from all day files.
  */
 export function clearConversationFromAllDays(
-  memoryDir: string,
-  prefix: string,
-  userKey: string,
-  accountId: string,
+	memoryDir: string,
+	prefix: string,
+	userKey: string,
+	accountId: string,
 ): void {
-  const days = listAvailableDays(memoryDir, prefix);
-  for (const date of days) {
-    rewriteDayWithout(memoryDir, prefix, date, userKey, accountId);
-  }
+	const days = listAvailableDays(memoryDir, prefix);
+	for (const date of days) {
+		rewriteDayWithout(memoryDir, prefix, date, userKey, accountId);
+	}
 }
 
 // ─── Compaction Summary ────────────────────────────────────────────────────────
 
 export interface CompactionSummaryMessage {
-  timestamp: number;
-  role: "compact_summary";
-  content: string;
-  compactedMessageCount: number;
-  compactedRangeStart: string; // ISO date YYYY-MM-DD
-  compactedRangeEnd: string; // ISO date YYYY-MM-DD
+	timestamp: number;
+	role: "compact_summary";
+	content: string;
+	compactedMessageCount: number;
+	compactedRangeStart: string; // ISO date YYYY-MM-DD
+	compactedRangeEnd: string; // ISO date YYYY-MM-DD
 }
 
 /**
@@ -484,60 +484,60 @@ export interface CompactionSummaryMessage {
  * @param compactedRangeEnd   - End of date range (YYYY-MM-DD, inclusive)
  */
 export function saveCompactionSummary(
-  memoryDir: string,
-  prefix: string,
-  userKey: string,
-  accountId: string,
-  summary: string,
-  compactedMessageCount: number,
-  compactedRangeStart: string,
-  compactedRangeEnd: string,
+	memoryDir: string,
+	prefix: string,
+	userKey: string,
+	accountId: string,
+	summary: string,
+	compactedMessageCount: number,
+	compactedRangeStart: string,
+	compactedRangeEnd: string,
 ): void {
-  ensureMigrated(memoryDir, prefix);
+	ensureMigrated(memoryDir, prefix);
 
-  const summaryMsg: CompactionSummaryMessage = {
-    timestamp: Date.now(),
-    role: "compact_summary",
-    content: summary,
-    compactedMessageCount,
-    compactedRangeStart,
-    compactedRangeEnd,
-  };
+	const summaryMsg: CompactionSummaryMessage = {
+		timestamp: Date.now(),
+		role: "compact_summary",
+		content: summary,
+		compactedMessageCount,
+		compactedRangeStart,
+		compactedRangeEnd,
+	};
 
-  const start = new Date(compactedRangeStart);
-  const end = new Date(compactedRangeEnd);
+	const start = new Date(compactedRangeStart);
+	const end = new Date(compactedRangeEnd);
 
-  const current = new Date(start);
-  while (current <= end) {
-    const dateStr = current.toISOString().split("T")[0];
-    const dayData = readDayFile(memoryDir, prefix, dateStr);
+	const current = new Date(start);
+	while (current <= end) {
+		const dateStr = current.toISOString().split("T")[0];
+		const dayData = readDayFile(memoryDir, prefix, dateStr);
 
-    // Remove all messages for this conversation in this day
-    if (dayData[userKey]?.[accountId]) {
-      // Keep only messages outside the compacted range
-      dayData[userKey][accountId] = dayData[userKey][accountId].filter(
-        (msg) => {
-          const msgDate = new Date(msg.timestamp).toISOString().split("T")[0];
-          return msgDate < compactedRangeStart || msgDate > compactedRangeEnd;
-        },
-      );
+		// Remove all messages for this conversation in this day
+		if (dayData[userKey]?.[accountId]) {
+			// Keep only messages outside the compacted range
+			dayData[userKey][accountId] = dayData[userKey][accountId].filter(
+				(msg) => {
+					const msgDate = new Date(msg.timestamp).toISOString().split("T")[0];
+					return msgDate < compactedRangeStart || msgDate > compactedRangeEnd;
+				},
+			);
 
-      // Append the summary message
-      dayData[userKey][accountId].push(summaryMsg as ConversationMessage);
+			// Append the summary message
+			dayData[userKey][accountId].push(summaryMsg as ConversationMessage);
 
-      // Clean up empty entries
-      if (dayData[userKey][accountId].length === 0) {
-        delete dayData[userKey][accountId];
-      }
-      if (Object.keys(dayData[userKey]).length === 0) {
-        delete dayData[userKey];
-      }
+			// Clean up empty entries
+			if (dayData[userKey][accountId].length === 0) {
+				delete dayData[userKey][accountId];
+			}
+			if (Object.keys(dayData[userKey]).length === 0) {
+				delete dayData[userKey];
+			}
 
-      writeDayFile(memoryDir, prefix, dateStr, dayData);
-    }
+			writeDayFile(memoryDir, prefix, dateStr, dayData);
+		}
 
-    current.setDate(current.getDate() + 1);
-  }
+		current.setDate(current.getDate() + 1);
+	}
 }
 
 // ─── Channel Store Helpers ───────────────────────────────────────────────────
@@ -547,10 +547,10 @@ export function saveCompactionSummary(
  * Uses proper path.join to handle cross-platform path separators.
  */
 export function getChannelMemoryDir(
-  memoryDir: string,
-  platform: string,
+	memoryDir: string,
+	platform: string,
 ): string {
-  return join(memoryDir, "channels", platform);
+	return join(memoryDir, "channels", platform);
 }
 
 /**
@@ -558,14 +558,14 @@ export function getChannelMemoryDir(
  * The channel path is automatically nested under channels/{platform}.
  */
 export function saveChannelMessage(
-  memoryDir: string,
-  platform: string,
-  userKey: string,
-  accountId: string,
-  message: ConversationMessage,
+	memoryDir: string,
+	platform: string,
+	userKey: string,
+	accountId: string,
+	message: ConversationMessage,
 ): void {
-  const channelDir = getChannelMemoryDir(memoryDir, platform);
-  saveMessage(channelDir, platform, userKey, accountId, message);
+	const channelDir = getChannelMemoryDir(memoryDir, platform);
+	saveMessage(channelDir, platform, userKey, accountId, message);
 }
 
 /**
@@ -573,49 +573,49 @@ export function saveChannelMessage(
  * The channel path is automatically nested under channels/{platform}.
  */
 export function loadChannelDay(
-  memoryDir: string,
-  platform: string,
-  date: string,
-  userKey?: string,
-  accountId?: string,
+	memoryDir: string,
+	platform: string,
+	date: string,
+	userKey?: string,
+	accountId?: string,
 ): ConversationMessage[] {
-  const channelDir = getChannelMemoryDir(memoryDir, platform);
-  return loadDay(channelDir, platform, date, userKey, accountId);
+	const channelDir = getChannelMemoryDir(memoryDir, platform);
+	return loadDay(channelDir, platform, date, userKey, accountId);
 }
 
 /**
  * Clears a specific conversation from all day files for a channel.
  */
 export function clearChannelConversationFromAllDays(
-  memoryDir: string,
-  platform: string,
-  userKey: string,
-  accountId: string,
+	memoryDir: string,
+	platform: string,
+	userKey: string,
+	accountId: string,
 ): void {
-  const channelDir = getChannelMemoryDir(memoryDir, platform);
-  clearConversationFromAllDays(channelDir, platform, userKey, accountId);
+	const channelDir = getChannelMemoryDir(memoryDir, platform);
+	clearConversationFromAllDays(channelDir, platform, userKey, accountId);
 }
 
 /**
  * Clears all conversations for a user within a channel.
  */
 export function clearAllChannelForUser(
-  memoryDir: string,
-  platform: string,
-  userKey: string,
+	memoryDir: string,
+	platform: string,
+	userKey: string,
 ): void {
-  const channelDir = getChannelMemoryDir(memoryDir, platform);
-  clearAllForUser(channelDir, platform, userKey);
+	const channelDir = getChannelMemoryDir(memoryDir, platform);
+	clearAllForUser(channelDir, platform, userKey);
 }
 
 /**
  * Clears all conversations for userKeys that start with a given prefix within a channel.
  */
 export function clearChannelForUserPrefix(
-  memoryDir: string,
-  platform: string,
-  userKeyPrefix: string,
+	memoryDir: string,
+	platform: string,
+	userKeyPrefix: string,
 ): void {
-  const channelDir = getChannelMemoryDir(memoryDir, platform);
-  clearAllForUserPrefix(channelDir, platform, userKeyPrefix);
+	const channelDir = getChannelMemoryDir(memoryDir, platform);
+	clearAllForUserPrefix(channelDir, platform, userKeyPrefix);
 }

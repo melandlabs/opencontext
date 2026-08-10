@@ -6,30 +6,30 @@ import { useEffect, useRef } from "react";
  * @param handler - The event handler function
  */
 export function useCustomEvent<T = any>(
-  eventName: string,
-  handler: (detail: T) => void,
+	eventName: string,
+	handler: (detail: T) => void,
 ) {
-  const handlerRef = useRef(handler);
+	const handlerRef = useRef(handler);
 
-  // Update ref on every render to ensure always using latest handler
-  useEffect(() => {
-    handlerRef.current = handler;
-  });
+	// Update ref on every render to ensure always using latest handler
+	useEffect(() => {
+		handlerRef.current = handler;
+	});
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+	useEffect(() => {
+		if (typeof window === "undefined") return;
 
-    const handleEvent = (e: Event) => {
-      const customEvent = e as CustomEvent<T>;
-      if (customEvent.detail !== undefined) {
-        handlerRef.current(customEvent.detail);
-      }
-    };
+		const handleEvent = (e: Event) => {
+			const customEvent = e as CustomEvent<T>;
+			if (customEvent.detail !== undefined) {
+				handlerRef.current(customEvent.detail);
+			}
+		};
 
-    window.addEventListener(eventName, handleEvent);
+		window.addEventListener(eventName, handleEvent);
 
-    return () => {
-      window.removeEventListener(eventName, handleEvent);
-    };
-  }, [eventName]);
+		return () => {
+			window.removeEventListener(eventName, handleEvent);
+		};
+	}, [eventName]);
 }

@@ -7,92 +7,92 @@ import { del, put, list } from "@vercel/blob";
 export type { Part } from "@vercel/blob";
 
 const VERCEL_BLOB_API_BASE =
-  process.env.VERCEL_BLOB_API_URL || "https://blob.vercel-storage.com";
+	process.env.VERCEL_BLOB_API_URL || "https://blob.vercel-storage.com";
 
 function getBlobToken(): string {
-  return process.env.BLOB_READ_WRITE_TOKEN || "";
+	return process.env.BLOB_READ_WRITE_TOKEN || "";
 }
 
 async function blobApi(
-  pathname: string,
-  init: RequestInit & { queryParams?: Record<string, string> },
+	pathname: string,
+	init: RequestInit & { queryParams?: Record<string, string> },
 ): Promise<Response> {
-  const token = getBlobToken();
-  const params = new URLSearchParams(init.queryParams || {}).toString();
-  const url = `${VERCEL_BLOB_API_BASE}${pathname}${params ? `?${params}` : ""}`;
+	const token = getBlobToken();
+	const params = new URLSearchParams(init.queryParams || {}).toString();
+	const url = `${VERCEL_BLOB_API_BASE}${pathname}${params ? `?${params}` : ""}`;
 
-  const headers: Record<string, string> = {
-    authorization: `Bearer ${token}`,
-    "x-api-version": "11",
-    ...(init.headers as Record<string, string>),
-  };
+	const headers: Record<string, string> = {
+		authorization: `Bearer ${token}`,
+		"x-api-version": "11",
+		...(init.headers as Record<string, string>),
+	};
 
-  return fetch(url, {
-    ...init,
-    headers,
-  });
+	return fetch(url, {
+		...init,
+		headers,
+	});
 }
 
 export type BlobUploadResult = {
-  url: string;
-  pathname: string;
-  downloadUrl?: string;
+	url: string;
+	pathname: string;
+	downloadUrl?: string;
 };
 
 export type BlobListResult = {
-  url: string;
-  pathname: string;
-  size: number;
-  uploadedAt: Date;
+	url: string;
+	pathname: string;
+	size: number;
+	uploadedAt: Date;
 };
 
 /**
  * Upload file to Vercel Blob
  */
 export async function uploadToVercelBlob(
-  pathname: string,
-  data: ArrayBuffer | Buffer,
-  contentType: string,
+	pathname: string,
+	data: ArrayBuffer | Buffer,
+	contentType: string,
 ): Promise<BlobUploadResult> {
-  const result = await put(pathname, data, {
-    access: "public",
-    contentType,
-    addRandomSuffix: false,
-  });
+	const result = await put(pathname, data, {
+		access: "public",
+		contentType,
+		addRandomSuffix: false,
+	});
 
-  return {
-    url: result.url,
-    pathname: result.pathname,
-    downloadUrl: result.downloadUrl,
-  };
+	return {
+		url: result.url,
+		pathname: result.pathname,
+		downloadUrl: result.downloadUrl,
+	};
 }
 
 /**
  * Delete file from Vercel Blob
  */
 export async function deleteFromVercelBlob(url: string): Promise<void> {
-  await del(url);
+	await del(url);
 }
 
 /**
  * List files in Vercel Blob
  */
 export async function listVercelBlobs(
-  prefix?: string,
+	prefix?: string,
 ): Promise<BlobListResult[]> {
-  const result = await list({ prefix });
+	const result = await list({ prefix });
 
-  return result.blobs.map((blob) => ({
-    url: blob.url,
-    pathname: blob.pathname,
-    size: blob.size,
-    uploadedAt: blob.uploadedAt,
-  }));
+	return result.blobs.map((blob) => ({
+		url: blob.url,
+		pathname: blob.pathname,
+		size: blob.size,
+		uploadedAt: blob.uploadedAt,
+	}));
 }
 
 export interface MultipartUploadSession {
-  key: string;
-  uploadId: string;
+	key: string;
+	uploadId: string;
 }
 
 /**
@@ -100,30 +100,30 @@ export interface MultipartUploadSession {
  * Returns the key and uploadId which are stored in Redis.
  */
 export async function beginMultipartUpload(
-  pathname: string,
-  contentType: string,
-  signal?: AbortSignal,
+	pathname: string,
+	contentType: string,
+	signal?: AbortSignal,
 ): Promise<MultipartUploadSession> {
-  const resp = await blobApi("/mpu", {
-    queryParams: { pathname },
-    method: "POST",
-    headers: {
-      "x-mpu-action": "create",
-      "x-content-type": contentType,
-    },
-    signal,
-  });
+	const resp = await blobApi("/mpu", {
+		queryParams: { pathname },
+		method: "POST",
+		headers: {
+			"x-mpu-action": "create",
+			"x-content-type": contentType,
+		},
+		signal,
+	});
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    console.error(
-      `[Blob MPU] create failed: status=${resp.status} body=${err} pathname=${pathname}`,
-    );
-    throw new Error(`Failed to create multipart upload: ${resp.status} ${err}`);
-  }
+	if (!resp.ok) {
+		const err = await resp.text();
+		console.error(
+			`[Blob MPU] create failed: status=${resp.status} body=${err} pathname=${pathname}`,
+		);
+		throw new Error(`Failed to create multipart upload: ${resp.status} ${err}`);
+	}
 
-  const data = (await resp.json()) as { key: string; uploadId: string };
-  return { key: data.key, uploadId: data.uploadId };
+	const data = (await resp.json()) as { key: string; uploadId: string };
+	return { key: data.key, uploadId: data.uploadId };
 }
 
 /**
@@ -131,77 +131,77 @@ export async function beginMultipartUpload(
  * Returns the etag needed to complete the upload.
  */
 export async function uploadBlobPart(
-  key: string,
-  uploadId: string,
-  partNumber: number,
-  body: ArrayBuffer | Buffer,
-  contentType: string,
-  signal?: AbortSignal,
+	key: string,
+	uploadId: string,
+	partNumber: number,
+	body: ArrayBuffer | Buffer,
+	contentType: string,
+	signal?: AbortSignal,
 ): Promise<{ etag: string; partNumber: number }> {
-  const resp = await blobApi("/mpu", {
-    queryParams: { pathname: key },
-    method: "POST",
-    headers: {
-      "x-mpu-action": "upload",
-      "x-mpu-key": encodeURIComponent(key),
-      "x-mpu-upload-id": uploadId,
-      "x-mpu-part-number": String(partNumber),
-      "x-content-type": contentType,
-    },
-    body: body instanceof ArrayBuffer ? body : Buffer.from(body as Buffer),
-    signal,
-  });
+	const resp = await blobApi("/mpu", {
+		queryParams: { pathname: key },
+		method: "POST",
+		headers: {
+			"x-mpu-action": "upload",
+			"x-mpu-key": encodeURIComponent(key),
+			"x-mpu-upload-id": uploadId,
+			"x-mpu-part-number": String(partNumber),
+			"x-content-type": contentType,
+		},
+		body: body instanceof ArrayBuffer ? body : Buffer.from(body as Buffer),
+		signal,
+	});
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    console.error(
-      `[Blob MPU] uploadPart failed: status=${resp.status} body=${err} key=${key} uploadId=${uploadId} partNumber=${partNumber}`,
-    );
-    throw new Error(`Failed to upload part: ${resp.status} ${err}`);
-  }
+	if (!resp.ok) {
+		const err = await resp.text();
+		console.error(
+			`[Blob MPU] uploadPart failed: status=${resp.status} body=${err} key=${key} uploadId=${uploadId} partNumber=${partNumber}`,
+		);
+		throw new Error(`Failed to upload part: ${resp.status} ${err}`);
+	}
 
-  // requestApi returns apiResponse.json(), so etag is in the body
-  const respBody = (await resp.json()) as { etag: string };
-  return { etag: respBody.etag, partNumber };
+	// requestApi returns apiResponse.json(), so etag is in the body
+	const respBody = (await resp.json()) as { etag: string };
+	return { etag: respBody.etag, partNumber };
 }
 
 /**
  * Complete a multipart upload and return the blob URL.
  */
 export async function finishMultipartUpload(
-  key: string,
-  parts: { etag: string; partNumber: number }[],
-  contentType: string,
-  uploadId: string,
-  signal?: AbortSignal,
+	key: string,
+	parts: { etag: string; partNumber: number }[],
+	contentType: string,
+	uploadId: string,
+	signal?: AbortSignal,
 ): Promise<BlobUploadResult> {
-  const resp = await blobApi("/mpu", {
-    queryParams: { pathname: key },
-    method: "POST",
-    headers: {
-      "x-mpu-action": "complete",
-      "x-mpu-key": encodeURIComponent(key),
-      "x-mpu-upload-id": uploadId,
-    },
-    body: JSON.stringify(parts),
-    signal,
-  });
+	const resp = await blobApi("/mpu", {
+		queryParams: { pathname: key },
+		method: "POST",
+		headers: {
+			"x-mpu-action": "complete",
+			"x-mpu-key": encodeURIComponent(key),
+			"x-mpu-upload-id": uploadId,
+		},
+		body: JSON.stringify(parts),
+		signal,
+	});
 
-  if (!resp.ok) {
-    const err = await resp.text();
-    throw new Error(
-      `Failed to complete multipart upload: ${resp.status} ${err}`,
-    );
-  }
+	if (!resp.ok) {
+		const err = await resp.text();
+		throw new Error(
+			`Failed to complete multipart upload: ${resp.status} ${err}`,
+		);
+	}
 
-  const data = (await resp.json()) as {
-    url: string;
-    pathname: string;
-    downloadUrl?: string;
-  };
-  return {
-    url: data.url,
-    pathname: data.pathname,
-    downloadUrl: data.downloadUrl,
-  };
+	const data = (await resp.json()) as {
+		url: string;
+		pathname: string;
+		downloadUrl?: string;
+	};
+	return {
+		url: data.url,
+		pathname: data.pathname,
+		downloadUrl: data.downloadUrl,
+	};
 }

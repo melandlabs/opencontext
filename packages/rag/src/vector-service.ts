@@ -13,57 +13,57 @@ export { SQLiteVecStore } from "./sqlite-vec-store";
 export { getSQLiteVecStore, resetSQLiteVecStore } from "./sqlite-vec-store";
 
 export {
-  getPGVectorStore,
-  processDocumentWithPGVector,
-  searchWithPGVector,
-  deleteDocumentsFromPGVector,
-  getDocumentCount,
-  listUserDocuments,
+	getPGVectorStore,
+	processDocumentWithPGVector,
+	searchWithPGVector,
+	deleteDocumentsFromPGVector,
+	getDocumentCount,
+	listUserDocuments,
 } from "./pgvector-store";
 
 export interface EmbeddingResult {
-  embedding: number[];
-  dimensions: number;
-  model: string;
+	embedding: number[];
+	dimensions: number;
+	model: string;
 }
 
 export interface SearchResult {
-  content: string;
-  score: number;
-  metadata?: Record<string, unknown>;
+	content: string;
+	score: number;
+	metadata?: Record<string, unknown>;
 }
 
 /**
  * Unified vector storage interface.
  */
 export interface IVectorStore {
-  addChunk(chunk: DocumentChunk): Promise<void>;
-  addChunks(chunks: DocumentChunk[]): Promise<void>;
-  similaritySearch(
-    queryEmbedding: number[],
-    limit?: number,
-    userId?: string,
-  ): Promise<VectorSearchResult[]>;
-  deleteDocument(documentId: string): Promise<void>;
-  getDocumentCount(): Promise<number>;
-  getChunkCount(): Promise<number>;
-  clear(): Promise<void>;
+	addChunk(chunk: DocumentChunk): Promise<void>;
+	addChunks(chunks: DocumentChunk[]): Promise<void>;
+	similaritySearch(
+		queryEmbedding: number[],
+		limit?: number,
+		userId?: string,
+	): Promise<VectorSearchResult[]>;
+	deleteDocument(documentId: string): Promise<void>;
+	getDocumentCount(): Promise<number>;
+	getChunkCount(): Promise<number>;
+	clear(): Promise<void>;
 }
 
 export interface VectorSearchResult {
-  id: string;
-  content: string;
-  score: number;
-  documentId: string;
-  metadata?: Record<string, unknown>;
+	id: string;
+	content: string;
+	score: number;
+	documentId: string;
+	metadata?: Record<string, unknown>;
 }
 
 export interface DocumentChunk {
-  id: string;
-  documentId: string;
-  content: string;
-  embedding: number[];
-  metadata?: Record<string, unknown>;
+	id: string;
+	documentId: string;
+	content: string;
+	embedding: number[];
+	metadata?: Record<string, unknown>;
 }
 
 // ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ export interface DocumentChunk {
 // ---------------------------------------------------------------------------
 
 interface VectorServiceConfig {
-  getStore: () => Promise<IVectorStore>;
+	getStore: () => Promise<IVectorStore>;
 }
 
 let _config: VectorServiceConfig | null = null;
@@ -81,11 +81,11 @@ let _config: VectorServiceConfig | null = null;
  * Must be called before getVectorStore().
  */
 export function configureVectorService(config: VectorServiceConfig): void {
-  _config = config;
+	_config = config;
 }
 
 function getConfig(): VectorServiceConfig | null {
-  return _config;
+	return _config;
 }
 
 // ---------------------------------------------------------------------------
@@ -96,15 +96,15 @@ function getConfig(): VectorServiceConfig | null {
  * Get the configured vector store instance.
  */
 export async function getVectorStore(): Promise<IVectorStore> {
-  const config = getConfig();
+	const config = getConfig();
 
-  if (!config) {
-    throw new Error(
-      "Vector service not configured. Call configureVectorService() first.",
-    );
-  }
+	if (!config) {
+		throw new Error(
+			"Vector service not configured. Call configureVectorService() first.",
+		);
+	}
 
-  return await config.getStore();
+	return await config.getStore();
 }
 
 // ---------------------------------------------------------------------------
@@ -112,68 +112,68 @@ export async function getVectorStore(): Promise<IVectorStore> {
 // ---------------------------------------------------------------------------
 
 export async function addDocumentToVectorStore(
-  documentId: string,
-  chunks: Array<{
-    content: string;
-    embedding: number[];
-    metadata?: Record<string, unknown>;
-  }>,
+	documentId: string,
+	chunks: Array<{
+		content: string;
+		embedding: number[];
+		metadata?: Record<string, unknown>;
+	}>,
 ): Promise<void> {
-  const vectorStore = await getVectorStore();
+	const vectorStore = await getVectorStore();
 
-  const documentChunks: DocumentChunk[] = chunks.map((chunk, index) => ({
-    id: `${documentId}_chunk_${index}`,
-    documentId,
-    content: chunk.content,
-    embedding: chunk.embedding,
-    metadata: {
-      ...chunk.metadata,
-      chunkIndex: index,
-    },
-  }));
+	const documentChunks: DocumentChunk[] = chunks.map((chunk, index) => ({
+		id: `${documentId}_chunk_${index}`,
+		documentId,
+		content: chunk.content,
+		embedding: chunk.embedding,
+		metadata: {
+			...chunk.metadata,
+			chunkIndex: index,
+		},
+	}));
 
-  await vectorStore.addChunks(documentChunks);
-  console.log(`✅ Added ${chunks.length} chunks to vector store`);
+	await vectorStore.addChunks(documentChunks);
+	console.log(`✅ Added ${chunks.length} chunks to vector store`);
 }
 
 export async function searchVectorStore(
-  queryEmbedding: number[],
-  limit = 10,
-  userId?: string,
+	queryEmbedding: number[],
+	limit = 10,
+	userId?: string,
 ): Promise<SearchResult[]> {
-  const vectorStore = await getVectorStore();
+	const vectorStore = await getVectorStore();
 
-  const results = await vectorStore.similaritySearch(
-    queryEmbedding,
-    limit,
-    userId,
-  );
+	const results = await vectorStore.similaritySearch(
+		queryEmbedding,
+		limit,
+		userId,
+	);
 
-  return results.map((r) => ({
-    content: r.content,
-    score: r.score,
-    metadata: r.metadata,
-  }));
+	return results.map((r) => ({
+		content: r.content,
+		score: r.score,
+		metadata: r.metadata,
+	}));
 }
 
 export async function deleteDocumentFromVectorStore(
-  documentId: string,
+	documentId: string,
 ): Promise<void> {
-  const vectorStore = await getVectorStore();
-  await vectorStore.deleteDocument(documentId);
-  console.log(`✅ Deleted document ${documentId} from vector store`);
+	const vectorStore = await getVectorStore();
+	await vectorStore.deleteDocument(documentId);
+	console.log(`✅ Deleted document ${documentId} from vector store`);
 }
 
 export async function getVectorStoreStats(): Promise<{
-  documentCount: number;
-  chunkCount: number;
+	documentCount: number;
+	chunkCount: number;
 }> {
-  const vectorStore = await getVectorStore();
+	const vectorStore = await getVectorStore();
 
-  const [documentCount, chunkCount] = await Promise.all([
-    vectorStore.getDocumentCount(),
-    vectorStore.getChunkCount(),
-  ]);
+	const [documentCount, chunkCount] = await Promise.all([
+		vectorStore.getDocumentCount(),
+		vectorStore.getChunkCount(),
+	]);
 
-  return { documentCount, chunkCount };
+	return { documentCount, chunkCount };
 }

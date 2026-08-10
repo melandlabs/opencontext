@@ -3,8 +3,8 @@
  */
 
 export {
-  routeModelCall,
-  checkCloudAIAvailability,
-  getRecommendedMode,
+	routeModelCall,
+	checkCloudAIAvailability,
+	getRecommendedMode,
 } from "./router";
 export type { ModelCallOptions, ModelCallResult } from "./router";

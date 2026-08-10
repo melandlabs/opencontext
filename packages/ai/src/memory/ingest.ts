@@ -1,7 +1,7 @@
 import type { MemoryRecord, MemoryTier } from "./contracts";
 
 export interface MemoryRecordIngestInput extends Omit<MemoryRecord, "tier"> {
-  tier?: MemoryTier;
+	tier?: MemoryTier;
 }
 
 /**
@@ -9,19 +9,19 @@ export interface MemoryRecordIngestInput extends Omit<MemoryRecord, "tier"> {
  * New records default to short-term tier when tier is omitted.
  */
 export function normalizeMemoryRecordForIngest(
-  input: MemoryRecordIngestInput,
+	input: MemoryRecordIngestInput,
 ): MemoryRecord {
-  return {
-    ...input,
-    tier: input.tier ?? "short",
-  };
+	return {
+		...input,
+		tier: input.tier ?? "short",
+	};
 }
 
 /**
  * Normalize a batch of records before persistence.
  */
 export function normalizeMemoryRecordsForIngest(
-  inputs: MemoryRecordIngestInput[],
+	inputs: MemoryRecordIngestInput[],
 ): MemoryRecord[] {
-  return inputs.map(normalizeMemoryRecordForIngest);
+	return inputs.map(normalizeMemoryRecordForIngest);
 }

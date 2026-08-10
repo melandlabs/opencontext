@@ -21,45 +21,45 @@ export type CompactionLevel = "soft" | "hard" | "emergency";
  * Result of a compaction operation.
  */
 export interface CompactionResult {
-  /** The generated summary content */
-  summary: string;
-  /** How many messages were summarized */
-  messageCount: number;
-  /** The compaction level that was triggered */
-  level: CompactionLevel;
-  /** Token count of the original messages */
-  originalTokens: number;
-  /** Token count of the generated summary */
-  summaryTokens: number;
+	/** The generated summary content */
+	summary: string;
+	/** How many messages were summarized */
+	messageCount: number;
+	/** The compaction level that was triggered */
+	level: CompactionLevel;
+	/** Token count of the original messages */
+	originalTokens: number;
+	/** Token count of the generated summary */
+	summaryTokens: number;
 }
 
 /**
  * Platform types that support compaction.
  */
 export type CompactionPlatform =
-  | "telegram"
-  | "whatsapp"
-  | "imessage"
-  | "gmail"
-  | "weixin"
-  // scheduler marks compaction work triggered by scheduled jobs rather than
-  // an inbound platform conversation.
-  | "scheduler";
+	| "telegram"
+	| "whatsapp"
+	| "imessage"
+	| "gmail"
+	| "weixin"
+	// scheduler marks compaction work triggered by scheduled jobs rather than
+	// an inbound platform conversation.
+	| "scheduler";
 
 /**
  * Build the system prompt for compaction summarization.
  */
 export function buildCompactionPrompt(level: CompactionLevel): string {
-  // The summarizer sees already-compacted history in some call paths, so the
-  // prompt explicitly tells it how to treat truncation markers and merged blocks.
-  const levelInstruction =
-    level === "emergency"
-      ? "EMERGENCY: The conversation has reached critical token limits. Be extremely concise while preserving ALL critical information."
-      : level === "hard"
-        ? "HARD: The conversation is near token limits. Preserve the most important context concisely."
-        : "SOFT: The conversation is growing large. Provide a concise summary of the key context.";
+	// The summarizer sees already-compacted history in some call paths, so the
+	// prompt explicitly tells it how to treat truncation markers and merged blocks.
+	const levelInstruction =
+		level === "emergency"
+			? "EMERGENCY: The conversation has reached critical token limits. Be extremely concise while preserving ALL critical information."
+			: level === "hard"
+				? "HARD: The conversation is near token limits. Preserve the most important context concisely."
+				: "SOFT: The conversation is growing large. Provide a concise summary of the key context.";
 
-  return `You are a conversation archivist. Your task is to compress a conversation segment into a structured summary that preserves the context needed to continue later.
+	return `You are a conversation archivist. Your task is to compress a conversation segment into a structured summary that preserves the context needed to continue later.
 
 ${levelInstruction}
 

@@ -12,53 +12,55 @@
 import type { MemoryStoreEnv } from "../config";
 
 export interface PostgresRawMessageManagerLike {
-  init?(): Promise<void>;
-  close?(): Promise<void>;
-  upsertRawMessages?(input: {
-    userId: string;
-    messages: unknown[];
-  }): Promise<unknown>;
-  getMessageById?(input: {
-    userId: string;
-    messageId: string;
-  }): Promise<unknown>;
-  searchMessagesSemantically?(input: {
-    userId: string;
-    queryEmbedding: number[];
-    embeddingModel?: string;
-    limit?: number;
-    scanLimit?: number;
-    threshold?: number;
-    includeArchived?: boolean;
-    includeDeprecated?: boolean;
-    platform?: string;
-    botId?: string;
-    channel?: string;
-    person?: string;
-    startTime?: number;
-    endTime?: number;
-  }): Promise<unknown[]>;
+	init?(): Promise<void>;
+	close?(): Promise<void>;
+	upsertRawMessages?(input: {
+		userId: string;
+		messages: unknown[];
+	}): Promise<unknown>;
+	getMessageById?(input: {
+		userId: string;
+		messageId: string;
+	}): Promise<unknown>;
+	searchMessagesSemantically?(input: {
+		userId: string;
+		queryEmbedding: number[];
+		embeddingModel?: string;
+		limit?: number;
+		scanLimit?: number;
+		threshold?: number;
+		includeArchived?: boolean;
+		includeDeprecated?: boolean;
+		platform?: string;
+		botId?: string;
+		channel?: string;
+		person?: string;
+		startTime?: number;
+		endTime?: number;
+	}): Promise<unknown[]>;
 }
 
-export type PostgresFactoryFn = (env?: MemoryStoreEnv) => Promise<PostgresRawMessageManagerLike>;
+export type PostgresFactoryFn = (
+	env?: MemoryStoreEnv,
+) => Promise<PostgresRawMessageManagerLike>;
 
 let factory: PostgresFactoryFn | null = null;
 
 export function registerPostgresFactory(fn: PostgresFactoryFn): void {
-  factory = fn;
+	factory = fn;
 }
 
 export function clearPostgresFactory(): void {
-  factory = null;
+	factory = null;
 }
 
 export async function resolvePostgresFactory(
-  env?: MemoryStoreEnv,
+	env?: MemoryStoreEnv,
 ): Promise<PostgresRawMessageManagerLike | null> {
-  if (!factory) return null;
-  return await factory(env);
+	if (!factory) return null;
+	return await factory(env);
 }
 
 export function hasPostgresFactory(): boolean {
-  return factory !== null;
+	return factory !== null;
 }

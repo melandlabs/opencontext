@@ -13,19 +13,19 @@
 import { startMcpServer } from "../mcp";
 
 async function main(): Promise<void> {
-  const server = await startMcpServer();
-  console.error("[memory-store/mcp] listening on stdio");
+	const server = await startMcpServer();
+	console.error("[memory-store/mcp] listening on stdio");
 
-  const shutdown = async (signal: NodeJS.Signals) => {
-    console.error(`[memory-store/mcp] ${signal} received, shutting down…`);
-    await server.close();
-    process.exit(0);
-  };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+	const shutdown = async (signal: NodeJS.Signals) => {
+		console.error(`[memory-store/mcp] ${signal} received, shutting down…`);
+		await server.close();
+		process.exit(0);
+	};
+	process.once("SIGINT", shutdown);
+	process.once("SIGTERM", shutdown);
 }
 
 main().catch((error) => {
-  console.error("[memory-store/mcp] fatal:", error);
-  process.exit(1);
+	console.error("[memory-store/mcp] fatal:", error);
+	process.exit(1);
 });

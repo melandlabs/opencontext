@@ -6,10 +6,10 @@
 
 // Types
 export type {
-  VideoGenerationRequest,
-  VideoGenerationResponse,
-  VideoModelInfo,
-  VideoCapabilities,
+	VideoGenerationRequest,
+	VideoGenerationResponse,
+	VideoModelInfo,
+	VideoCapabilities,
 } from "./types";
 
 // Base class
@@ -17,12 +17,12 @@ export { VideoGenProvider } from "./base";
 
 // Registry
 export {
-  registerVideoGenProvider,
-  getVideoGenProvider,
-  getAllVideoGenProviders,
-  getDefaultVideoGenProvider,
-  generateVideo,
-  getVideoGenProviderCapabilities,
+	registerVideoGenProvider,
+	getVideoGenProvider,
+	getAllVideoGenProviders,
+	getDefaultVideoGenProvider,
+	generateVideo,
+	getVideoGenProviderCapabilities,
 } from "./registry";
 
 // OpenAI Provider
@@ -33,9 +33,9 @@ export { OpenRouterVideoGenProvider } from "./providers/openrouter";
 
 // Re-export billing functions for convenience
 export {
-  calculateVideoCredits,
-  VIDEO_MODEL_PRICING,
-  VIDEO_MODEL_ALIASES,
-  getCanonicalVideoModel,
-  getVideoModelPricing,
+	calculateVideoCredits,
+	VIDEO_MODEL_PRICING,
+	VIDEO_MODEL_ALIASES,
+	getCanonicalVideoModel,
+	getVideoModelPricing,
 } from "../billing/model-pricing";

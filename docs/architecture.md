@@ -2,8 +2,8 @@
 
 This document describes how the packages in this monorepo fit together
 at runtime. It is meant to be read alongside the root
-[`README.md`](../README.md) — that one explains *what* opencontext is,
-this one explains *how* it works.
+[`README.md`](../README.md) — that one explains _what_ opencontext is,
+this one explains _how_ it works.
 
 ## Runtime substrate overview
 
@@ -18,8 +18,8 @@ There are five distinct layers:
    `@opencontext/storage`. These own durable state and the operations
    that mutate or read it.
 3. **Engine** — `@opencontext/loop`, `@opencontext/cron`,
-   `@opencontext/insights`, `@opencontext/audit`. These decide *when* and
-   *whether* to do work, and they record what was done.
+   `@opencontext/insights`, `@opencontext/audit`. These decide _when_ and
+   _whether_ to do work, and they record what was done.
 4. **Agent runtime** — `@opencontext/ai`. This is where LLM calls,
    tool execution, sandboxing, and image/audio generation live. It is the
    only layer that talks to model providers.
@@ -118,11 +118,11 @@ The graph is a directed acyclic graph where each node represents a fact
 and each edge represents a relationship between two facts. Three edge
 types are supported:
 
-| Edge type | Meaning |
-| --- | --- |
-| `extends` | The target adds detail to the source. Both remain valid. |
-| `supersedes` | The target is more recent and more authoritative. The source's `valid_until` is set to the target's `valid_from`. |
-| `contradicts` | The target conflicts with the source. Both remain valid; callers see both and decide. |
+| Edge type     | Meaning                                                                                                           |
+| ------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `extends`     | The target adds detail to the source. Both remain valid.                                                          |
+| `supersedes`  | The target is more recent and more authoritative. The source's `valid_until` is set to the target's `valid_from`. |
+| `contradicts` | The target conflicts with the source. Both remain valid; callers see both and decide.                             |
 
 Nodes carry five temporal fields:
 
@@ -133,8 +133,8 @@ Nodes carry five temporal fields:
 - `expired_at` — when the node was explicitly retired.
 
 A recall can ask for facts as-of a particular timestamp by filtering
-`valid_from ≤ t < valid_until`. This is what makes the graph *temporal*
-rather than just *versioned*.
+`valid_from ≤ t < valid_until`. This is what makes the graph _temporal_
+rather than just _versioned_.
 
 ## Data flow diagrams
 
@@ -193,16 +193,16 @@ loop tick → agent.run()
 
 ## Storage backends
 
-| Concern | Backend | Where |
-| --- | --- | --- |
-| Raw messages | SQLite-vec | `@opencontext/sqlite` (Tauri default), `@opencontext/indexeddb` (browser) |
-| Raw messages | Postgres | `@opencontext/memory-store/postgres-raw-message-factory` |
-| Vector index | SQLite-vec | `@opencontext/memory-store/sqlite-vector-index` |
-| Vector index | pgvector | `@opencontext/rag/pgvector-store` |
-| Vector index | Chroma | `@opencontext/memory-store/chroma-memory-index` |
-| Vector index | IndexedDB | `@opencontext/indexeddb/embedding` |
-| Blobs / attachments | Local fs | `@opencontext/storage/local-fs` |
-| Blobs / attachments | Vercel Blob | `@opencontext/storage/vercel-blob` |
+| Concern             | Backend     | Where                                                                     |
+| ------------------- | ----------- | ------------------------------------------------------------------------- |
+| Raw messages        | SQLite-vec  | `@opencontext/sqlite` (Tauri default), `@opencontext/indexeddb` (browser) |
+| Raw messages        | Postgres    | `@opencontext/memory-store/postgres-raw-message-factory`                  |
+| Vector index        | SQLite-vec  | `@opencontext/memory-store/sqlite-vector-index`                           |
+| Vector index        | pgvector    | `@opencontext/rag/pgvector-store`                                         |
+| Vector index        | Chroma      | `@opencontext/memory-store/chroma-memory-index`                           |
+| Vector index        | IndexedDB   | `@opencontext/indexeddb/embedding`                                        |
+| Blobs / attachments | Local fs    | `@opencontext/storage/local-fs`                                           |
+| Blobs / attachments | Vercel Blob | `@opencontext/storage/vercel-blob`                                        |
 
 The storage backend is chosen at boot via `MemoryStoreConfig`. Mixing
 backends is supported: a deployment can keep raw messages in Postgres
@@ -212,12 +212,12 @@ while using Chroma as the vector index, for example.
 
 `@opencontext/memory-store` exposes the runtime over four surfaces:
 
-| Surface | Module | Purpose |
-| --- | --- | --- |
-| Programmatic | `@opencontext/memory-store` | Direct import from a Node/Bun/Deno process. |
-| HTTP daemon | `@opencontext/memory-store/http` | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
-| MCP server | `@opencontext/memory-store/mcp` | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes. |
-| CLI | `openloomi-memory-http` / `openloomi-memory-mcp` (shipped via `@opencontext/ai/mcp`) | Run the HTTP or MCP server from a terminal. |
+| Surface      | Module                                                                               | Purpose                                                                                                         |
+| ------------ | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Programmatic | `@opencontext/memory-store`                                                          | Direct import from a Node/Bun/Deno process.                                                                     |
+| HTTP daemon  | `@opencontext/memory-store/http`                                                     | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
+| MCP server   | `@opencontext/memory-store/mcp`                                                      | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
+| CLI          | `openloomi-memory-http` / `openloomi-memory-mcp` (shipped via `@opencontext/ai/mcp`) | Run the HTTP or MCP server from a terminal.                                                                     |
 
 The HTTP and MCP surfaces are thin wrappers around the programmatic
 API. They share types via `@opencontext/contracts` and never reimplement

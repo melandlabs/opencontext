@@ -1,6 +1,6 @@
 type LanguageSettings = {
-  language?: string | null;
-  languageAuto?: string | null;
+	language?: string | null;
+	languageAuto?: string | null;
 };
 
 /**
@@ -11,11 +11,11 @@ type LanguageSettings = {
  * cannot overwrite each other.
  */
 export function resolveAgentLanguage(
-  s: LanguageSettings | null | undefined,
+	s: LanguageSettings | null | undefined,
 ): string | null {
-  if (!s) return null;
-  const explicit = (s.language ?? "").trim();
-  if (explicit) return explicit;
-  const auto = (s.languageAuto ?? "").trim();
-  return auto || null;
+	if (!s) return null;
+	const explicit = (s.language ?? "").trim();
+	if (explicit) return explicit;
+	const auto = (s.languageAuto ?? "").trim();
+	return auto || null;
 }

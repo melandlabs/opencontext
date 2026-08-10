@@ -18,34 +18,34 @@
 import type { UserLocale } from "@opencontext/shared";
 
 import type {
-  DirectiveChannel,
-  LanguageDirectiveBuilder,
+	DirectiveChannel,
+	LanguageDirectiveBuilder,
 } from "../ports/language-directive.port";
 
 export class DefaultLanguageDirectiveBuilder implements LanguageDirectiveBuilder {
-  buildDirective(locale: UserLocale | null, channel: DirectiveChannel): string {
-    if (locale == null) return "";
+	buildDirective(locale: UserLocale | null, channel: DirectiveChannel): string {
+		if (locale == null) return "";
 
-    const label = locale.promptLabel();
+		const label = locale.promptLabel();
 
-    if (channel === "conversational") {
-      return [
-        "",
-        "",
-        "**Language Preference**:",
-        `Reply to the user in ${label}. Tool names and inline labels shown to the user should use the same language. Internal reasoning may stay in any language; only the user-facing reply is locked.`,
-        "",
-      ].join("\n");
-    }
+		if (channel === "conversational") {
+			return [
+				"",
+				"",
+				"**Language Preference**:",
+				`Reply to the user in ${label}. Tool names and inline labels shown to the user should use the same language. Internal reasoning may stay in any language; only the user-facing reply is locked.`,
+				"",
+			].join("\n");
+		}
 
-    return [
-      "",
-      "",
-      "**Artifact Language**:",
-      `When writing report files (.md / .txt / .rtf) or other generated documents, use ${label}. Apply this to headings, body paragraphs, tables, and inline labels.`,
-      "",
-    ].join("\n");
-  }
+		return [
+			"",
+			"",
+			"**Artifact Language**:",
+			`When writing report files (.md / .txt / .rtf) or other generated documents, use ${label}. Apply this to headings, body paragraphs, tables, and inline labels.`,
+			"",
+		].join("\n");
+	}
 }
 
 /**
@@ -53,4 +53,4 @@ export class DefaultLanguageDirectiveBuilder implements LanguageDirectiveBuilder
  * avoids the noise of constructing it at every call site.
  */
 export const defaultLanguageDirectiveBuilder: LanguageDirectiveBuilder =
-  new DefaultLanguageDirectiveBuilder();
+	new DefaultLanguageDirectiveBuilder();

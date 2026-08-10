@@ -194,7 +194,7 @@ difference is that:
 - Publish each `@opencontext/*` package to npm and add a
   `release.yml` workflow that runs `pnpm changeset publish`.
 - Add CI that validates `pnpm -r build && pnpm -r typecheck &&
-  pnpm -r test && pnpm -r lint` against the openloomi monorepo's
+pnpm -r test && pnpm -r lint` against the openloomi monorepo's
   pinned versions.
 
 ## Credits

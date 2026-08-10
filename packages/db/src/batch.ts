@@ -15,20 +15,20 @@ export const DB_INSERT_CHUNK_SIZE = 100;
  * @param insertFn Insert function that receives a batch of data
  */
 export async function batchInsert<T>(
-  items: T[],
-  chunkSize: number,
-  insertFn: (chunk: T[]) => Promise<unknown>,
+	items: T[],
+	chunkSize: number,
+	insertFn: (chunk: T[]) => Promise<unknown>,
 ): Promise<unknown[]> {
-  const results: unknown[] = [];
-  for (let i = 0; i < items.length; i += chunkSize) {
-    const chunk = items.slice(i, i + chunkSize);
-    const result = await insertFn(chunk);
-    // If returns array, merge results
-    if (Array.isArray(result)) {
-      results.push(...result);
-    } else {
-      results.push(result);
-    }
-  }
-  return results;
+	const results: unknown[] = [];
+	for (let i = 0; i < items.length; i += chunkSize) {
+		const chunk = items.slice(i, i + chunkSize);
+		const result = await insertFn(chunk);
+		// If returns array, merge results
+		if (Array.isArray(result)) {
+			results.push(...result);
+		} else {
+			results.push(result);
+		}
+	}
+	return results;
 }

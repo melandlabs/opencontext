@@ -3,11 +3,11 @@
 import { runOpenLoomiMcpStdioServer } from "./server";
 
 async function main(): Promise<void> {
-  await runOpenLoomiMcpStdioServer();
+	await runOpenLoomiMcpStdioServer();
 }
 
 main().catch((error) => {
-  const message = error instanceof Error ? error.message : String(error);
-  console.error(`[openloomi-mcp] ${message}`);
-  process.exit(1);
+	const message = error instanceof Error ? error.message : String(error);
+	console.error(`[openloomi-mcp] ${message}`);
+	process.exit(1);
 });

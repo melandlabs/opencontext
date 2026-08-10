@@ -11,17 +11,17 @@ export type Messages = Message[];
  * Union type for all supported message components.
  */
 export type Message =
-  | Unknown
-  | PlainText
-  | Source
-  | Quote
-  | At
-  | AtAll
-  | Image
-  | Voice
-  | Forward
-  | File
-  | Emoji;
+	| Unknown
+	| PlainText
+	| Source
+	| Quote
+	| At
+	| AtAll
+	| Image
+	| Voice
+	| Forward
+	| File
+	| Emoji;
 
 // ==============================================
 // Specific Message Components
@@ -32,7 +32,7 @@ export type Message =
  * @property {string} text - The raw text content of the unknown message.
  */
 export type Unknown = {
-  text: string;
+	text: string;
 };
 
 /**
@@ -41,8 +41,8 @@ export type Unknown = {
  * @property {Date} time - Timestamp when the message was sent.
  */
 export type Source = {
-  id: number | string;
-  time: Date;
+	id: number | string;
+	time: Date;
 };
 
 /**
@@ -59,11 +59,11 @@ export type PlainText = string;
  * @property {Messages} origin - The original content of the quoted message.
  */
 export type Quote = {
-  id?: number;
-  groupId?: number | string;
-  senderId?: number | string;
-  targetId?: number | string;
-  origin: Messages;
+	id?: number;
+	groupId?: number | string;
+	senderId?: number | string;
+	targetId?: number | string;
+	origin: Messages;
 };
 
 /**
@@ -72,8 +72,8 @@ export type Quote = {
  * @property {string} [display] - Optional display name for the mention.
  */
 export type At = {
-  target: number | string;
-  display?: string;
+	target: number | string;
+	display?: string;
 };
 
 /**
@@ -89,12 +89,12 @@ export type AtAll = {};
  * @property {string} [base64] - Optional base64-encoded representation of the image.
  */
 export type Image = {
-  id?: string;
-  size?: number;
-  url: string;
-  path?: string;
-  base64?: string;
-  contentType?: string;
+	id?: string;
+	size?: number;
+	url: string;
+	path?: string;
+	base64?: string;
+	contentType?: string;
 };
 
 /**
@@ -106,11 +106,11 @@ export type Image = {
  * @property {string} [length] - Optional duration of the voice message.
  */
 export type Voice = {
-  id?: string;
-  url: string;
-  path?: string;
-  base64?: string;
-  length?: string;
+	id?: string;
+	url: string;
+	path?: string;
+	base64?: string;
+	length?: string;
 };
 
 /**
@@ -122,11 +122,11 @@ export type Voice = {
  * @property {Date} time - Timestamp when this message node was sent.
  */
 export type ForwardMessageNode = {
-  senderId: string | number | undefined;
-  senderName?: string;
-  messages?: Messages;
-  messageId?: string;
-  time: Date;
+	senderId: string | number | undefined;
+	senderName?: string;
+	messages?: Messages;
+	messageId?: string;
+	time: Date;
 };
 
 /**
@@ -138,11 +138,11 @@ export type ForwardMessageNode = {
  * @property {string} summary - Summary of the forwarded message.
  */
 export type ForwardMessageDisplay = {
-  title: string;
-  brief: string;
-  source: string;
-  preview: string[];
-  summary: string;
+	title: string;
+	brief: string;
+	source: string;
+	preview: string[];
+	summary: string;
 };
 
 /**
@@ -151,8 +151,8 @@ export type ForwardMessageDisplay = {
  * @property {ForwardMessageNode[]} nodes - Nodes containing the forwarded message content.
  */
 export type Forward = {
-  display: ForwardMessageDisplay;
-  nodes: ForwardMessageNode[];
+	display: ForwardMessageDisplay;
+	nodes: ForwardMessageNode[];
 };
 
 /**
@@ -163,10 +163,10 @@ export type Forward = {
  * @property {string} url - URL where the file can be downloaded.
  */
 export type File = {
-  id: string;
-  name: string;
-  size: number;
-  url: string;
+	id: string;
+	name: string;
+	size: number;
+	url: string;
 };
 
 /**
@@ -176,7 +176,7 @@ export type File = {
  * @property {string} name - Name of the emoji.
  */
 export type Emoji = {
-  type: string;
-  id: number;
-  name: string;
+	type: string;
+	id: number;
+	name: string;
 };

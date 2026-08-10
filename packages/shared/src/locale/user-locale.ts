@@ -24,87 +24,87 @@
 export type LocaleCode = "zh-Hans" | "en-US";
 
 export class UserLocale {
-  readonly code: LocaleCode;
+	readonly code: LocaleCode;
 
-  private constructor(code: LocaleCode) {
-    this.code = code;
-  }
+	private constructor(code: LocaleCode) {
+		this.code = code;
+	}
 
-  /**
-   * Product-level fallback. Picked when the user has neither a manual nor an
-   * auto-learned preference. English keeps the directive English so the
-   * model output is predictable for the global default.
-   */
-  static default(): UserLocale {
-    return new UserLocale("en-US");
-  }
+	/**
+	 * Product-level fallback. Picked when the user has neither a manual nor an
+	 * auto-learned preference. English keeps the directive English so the
+	 * model output is predictable for the global default.
+	 */
+	static default(): UserLocale {
+		return new UserLocale("en-US");
+	}
 
-  /**
-   * Parse a raw locale string. Recognises ISO codes (`zh`, `zh-CN`,
-   * `zh-Hans`, `en`, `en-US`) and short aliases. Returns null when the
-   * input is empty or outside the supported set so callers can decide
-   * whether to fall back to {@link UserLocale.default} or skip emitting a
-   * directive entirely.
-   */
-  static fromString(raw: string | null | undefined): UserLocale | null {
-    if (raw == null) return null;
-    const normalized = raw.trim().toLowerCase();
-    if (!normalized) return null;
-    if (normalized.startsWith("zh")) return new UserLocale("zh-Hans");
-    if (normalized.startsWith("en")) return new UserLocale("en-US");
-    return null;
-  }
+	/**
+	 * Parse a raw locale string. Recognises ISO codes (`zh`, `zh-CN`,
+	 * `zh-Hans`, `en`, `en-US`) and short aliases. Returns null when the
+	 * input is empty or outside the supported set so callers can decide
+	 * whether to fall back to {@link UserLocale.default} or skip emitting a
+	 * directive entirely.
+	 */
+	static fromString(raw: string | null | undefined): UserLocale | null {
+		if (raw == null) return null;
+		const normalized = raw.trim().toLowerCase();
+		if (!normalized) return null;
+		if (normalized.startsWith("zh")) return new UserLocale("zh-Hans");
+		if (normalized.startsWith("en")) return new UserLocale("en-US");
+		return null;
+	}
 
-  isChinese(): boolean {
-    return this.code === "zh-Hans";
-  }
+	isChinese(): boolean {
+		return this.code === "zh-Hans";
+	}
 
-  isEnglish(): boolean {
-    return this.code === "en-US";
-  }
+	isEnglish(): boolean {
+		return this.code === "en-US";
+	}
 
-  /**
-   * Convenience check for "is the raw locale string Chinese". Equivalent to
-   * `UserLocale.fromString(raw)?.isChinese() ?? false` and exists because
-   * that one-liner was duplicated across many entry points before. Prefer
-   * this over calling {@link fromString} when the caller only needs a
-   * boolean and is not going to hold onto the `UserLocale` instance.
-   */
-  static isChineseCode(raw: string | null | undefined): boolean {
-    return UserLocale.fromString(raw)?.isChinese() ?? false;
-  }
+	/**
+	 * Convenience check for "is the raw locale string Chinese". Equivalent to
+	 * `UserLocale.fromString(raw)?.isChinese() ?? false` and exists because
+	 * that one-liner was duplicated across many entry points before. Prefer
+	 * this over calling {@link fromString} when the caller only needs a
+	 * boolean and is not going to hold onto the `UserLocale` instance.
+	 */
+	static isChineseCode(raw: string | null | undefined): boolean {
+		return UserLocale.fromString(raw)?.isChinese() ?? false;
+	}
 
-  /**
-   * Convenience check for "is the raw locale string English". See
-   * {@link isChineseCode} for rationale.
-   */
-  static isEnglishCode(raw: string | null | undefined): boolean {
-    return UserLocale.fromString(raw)?.isEnglish() ?? false;
-  }
+	/**
+	 * Convenience check for "is the raw locale string English". See
+	 * {@link isChineseCode} for rationale.
+	 */
+	static isEnglishCode(raw: string | null | undefined): boolean {
+		return UserLocale.fromString(raw)?.isEnglish() ?? false;
+	}
 
-  /**
-   * Stable label used inside LLM-facing directives. Always English so the
-   * directive itself is unambiguous to the model regardless of the locale
-   * it is naming.
-   */
-  promptLabel(): string {
-    switch (this.code) {
-      case "zh-Hans":
-        return "Simplified Chinese";
-      case "en-US":
-        return "English";
-    }
-  }
+	/**
+	 * Stable label used inside LLM-facing directives. Always English so the
+	 * directive itself is unambiguous to the model regardless of the locale
+	 * it is naming.
+	 */
+	promptLabel(): string {
+		switch (this.code) {
+			case "zh-Hans":
+				return "Simplified Chinese";
+			case "en-US":
+				return "English";
+		}
+	}
 
-  equals(other: UserLocale | null | undefined): boolean {
-    return other != null && this.code === other.code;
-  }
+	equals(other: UserLocale | null | undefined): boolean {
+		return other != null && this.code === other.code;
+	}
 
-  toString(): string {
-    return this.code;
-  }
+	toString(): string {
+		return this.code;
+	}
 
-  toJSON(): LocaleCode {
-    return this.code;
-  }
+	toJSON(): LocaleCode {
+		return this.code;
+	}
 }

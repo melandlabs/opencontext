@@ -15,89 +15,89 @@ import { DEBUG_WHATSAPP } from "./debug";
 const MODULE_ID = Math.random().toString(36).slice(2, 8);
 
 class WhatsAppClientRegistry implements ClientRegistry {
-  private clients: Map<string, WASocket> = new Map();
+	private clients: Map<string, WASocket> = new Map();
 
-  /**
-   * Register a socket for a specific account. Idempotent — if a socket is already
-   * registered for this accountId, skip the registration to avoid overwriting the
-   * existing socket (which may be owned by the self-listener).
-   */
-  registerClient(sessionKey: string, client: WASocket): void {
-    const existing = this.clients.get(sessionKey);
-    if (existing && existing !== client) {
-      if (DEBUG_WHATSAPP) {
-        console.log(
-          `[WhatsAppClientRegistry] SKIP REGISTER: sessionKey=${sessionKey} already has socket (new sock.user=${client.user?.id}, existing sock.user=${existing.user?.id}), not overwriting`,
-        );
-      }
-      return;
-    }
-    this.clients.set(sessionKey, client);
-  }
+	/**
+	 * Register a socket for a specific account. Idempotent — if a socket is already
+	 * registered for this accountId, skip the registration to avoid overwriting the
+	 * existing socket (which may be owned by the self-listener).
+	 */
+	registerClient(sessionKey: string, client: WASocket): void {
+		const existing = this.clients.get(sessionKey);
+		if (existing && existing !== client) {
+			if (DEBUG_WHATSAPP) {
+				console.log(
+					`[WhatsAppClientRegistry] SKIP REGISTER: sessionKey=${sessionKey} already has socket (new sock.user=${client.user?.id}, existing sock.user=${existing.user?.id}), not overwriting`,
+				);
+			}
+			return;
+		}
+		this.clients.set(sessionKey, client);
+	}
 
-  /**
-   * Unregister a socket
-   */
-  unregisterClient(sessionKey: string): void {
-    if (!this.clients.has(sessionKey)) return;
-    if (DEBUG_WHATSAPP) {
-      console.log(
-        `[WhatsAppClientRegistry] UNREGISTER instance=${MODULE_ID} sessionKey=${sessionKey} (before keys=${[...this.clients.keys()]})`,
-      );
-    }
-    this.clients.delete(sessionKey);
-  }
+	/**
+	 * Unregister a socket
+	 */
+	unregisterClient(sessionKey: string): void {
+		if (!this.clients.has(sessionKey)) return;
+		if (DEBUG_WHATSAPP) {
+			console.log(
+				`[WhatsAppClientRegistry] UNREGISTER instance=${MODULE_ID} sessionKey=${sessionKey} (before keys=${[...this.clients.keys()]})`,
+			);
+		}
+		this.clients.delete(sessionKey);
+	}
 
-  /**
-   * Get a socket by account ID
-   */
-  getClientBySessionKey(sessionKey: string): WASocket | undefined {
-    return this.clients.get(sessionKey);
-  }
+	/**
+	 * Get a socket by account ID
+	 */
+	getClientBySessionKey(sessionKey: string): WASocket | undefined {
+		return this.clients.get(sessionKey);
+	}
 
-  /**
-   * Get all registered sockets
-   */
-  getAll(): Map<string, WASocket> {
-    return new Map(this.clients);
-  }
+	/**
+	 * Get all registered sockets
+	 */
+	getAll(): Map<string, WASocket> {
+		return new Map(this.clients);
+	}
 
-  /**
-   * Check if a socket is registered
-   */
-  has(sessionKey: string): boolean {
-    return this.clients.has(sessionKey);
-  }
+	/**
+	 * Check if a socket is registered
+	 */
+	has(sessionKey: string): boolean {
+		return this.clients.has(sessionKey);
+	}
 
-  /**
-   * Clear all sockets
-   */
-  clear(): void {
-    this.clients.clear();
-  }
+	/**
+	 * Clear all sockets
+	 */
+	clear(): void {
+		this.clients.clear();
+	}
 
-  // ---- Backward-compatible aliases for web code ----
+	// ---- Backward-compatible aliases for web code ----
 
-  /**
-   * @deprecated Use registerClient instead
-   */
-  register(accountId: string, sock: WASocket): void {
-    this.registerClient(accountId, sock);
-  }
+	/**
+	 * @deprecated Use registerClient instead
+	 */
+	register(accountId: string, sock: WASocket): void {
+		this.registerClient(accountId, sock);
+	}
 
-  /**
-   * @deprecated Use getClientBySessionKey instead
-   */
-  get(accountId: string): WASocket | undefined {
-    return this.getClientBySessionKey(accountId);
-  }
+	/**
+	 * @deprecated Use getClientBySessionKey instead
+	 */
+	get(accountId: string): WASocket | undefined {
+		return this.getClientBySessionKey(accountId);
+	}
 
-  /**
-   * @deprecated Use unregisterClient instead
-   */
-  unregister(accountId: string): void {
-    this.unregisterClient(accountId);
-  }
+	/**
+	 * @deprecated Use unregisterClient instead
+	 */
+	unregister(accountId: string): void {
+		this.unregisterClient(accountId);
+	}
 }
 
 export { WhatsAppClientRegistry };

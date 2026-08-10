@@ -16,21 +16,21 @@
 import type { MemoryRecord } from "./contracts";
 
 export interface MemoryRecordRetrievalOptions {
-  /**
-   * When false (default), records whose `deprecatedAt` is set are excluded.
-   * Set true to keep deprecated records in the result.
-   */
-  includeDeprecated?: boolean;
+	/**
+	 * When false (default), records whose `deprecatedAt` is set are excluded.
+	 * Set true to keep deprecated records in the result.
+	 */
+	includeDeprecated?: boolean;
 }
 
 export interface MemoryRecordRetrievalResult {
-  records: MemoryRecord[];
-  /**
-   * Number of records that were hidden because they were deprecated and
-   * `includeDeprecated` was false (or unset). Useful for observability:
-   * a non-zero count combined with `includeDeprecated: true` should match.
-   */
-  hiddenDeprecatedCount: number;
+	records: MemoryRecord[];
+	/**
+	 * Number of records that were hidden because they were deprecated and
+	 * `includeDeprecated` was false (or unset). Useful for observability:
+	 * a non-zero count combined with `includeDeprecated: true` should match.
+	 */
+	hiddenDeprecatedCount: number;
 }
 
 /**
@@ -41,27 +41,27 @@ export interface MemoryRecordRetrievalResult {
  * is a new array; the input is not mutated.
  */
 export function filterDeprecatedRecords(
-  records: MemoryRecord[],
-  options: MemoryRecordRetrievalOptions = {},
+	records: MemoryRecord[],
+	options: MemoryRecordRetrievalOptions = {},
 ): MemoryRecordRetrievalResult {
-  const includeDeprecated = options.includeDeprecated === true;
+	const includeDeprecated = options.includeDeprecated === true;
 
-  if (includeDeprecated) {
-    return {
-      records: [...records],
-      hiddenDeprecatedCount: 0,
-    };
-  }
+	if (includeDeprecated) {
+		return {
+			records: [...records],
+			hiddenDeprecatedCount: 0,
+		};
+	}
 
-  const out: MemoryRecord[] = [];
-  let hiddenDeprecatedCount = 0;
-  for (const record of records) {
-    if (record.deprecatedAt !== undefined && record.deprecatedAt !== null) {
-      hiddenDeprecatedCount += 1;
-      continue;
-    }
-    out.push(record);
-  }
+	const out: MemoryRecord[] = [];
+	let hiddenDeprecatedCount = 0;
+	for (const record of records) {
+		if (record.deprecatedAt !== undefined && record.deprecatedAt !== null) {
+			hiddenDeprecatedCount += 1;
+			continue;
+		}
+		out.push(record);
+	}
 
-  return { records: out, hiddenDeprecatedCount };
+	return { records: out, hiddenDeprecatedCount };
 }

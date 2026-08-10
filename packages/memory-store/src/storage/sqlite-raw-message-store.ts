@@ -14,56 +14,56 @@ import { isRawMessageChromaEnabled } from "./chroma-memory-index";
 let manager: SQLiteRawMessageManager | null = null;
 
 export function isSQLiteRawMessageStorageAvailable(
-  env?: MemoryStoreEnv,
+	env?: MemoryStoreEnv,
 ): boolean {
-  return resolveEnv(env).isTauriMode();
+	return resolveEnv(env).isTauriMode();
 }
 
 export async function getSQLiteRawMessageManager(
-  env?: MemoryStoreEnv,
+	env?: MemoryStoreEnv,
 ): Promise<SQLiteRawMessageManager> {
-  const e = resolveEnv(env);
-  if (!e.isTauriMode()) {
-    throw new Error(
-      "SQLite raw message storage is only available in Tauri mode.",
-    );
-  }
+	const e = resolveEnv(env);
+	if (!e.isTauriMode()) {
+		throw new Error(
+			"SQLite raw message storage is only available in Tauri mode.",
+		);
+	}
 
-  if (!manager) {
-    const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
-    mkdirSync(dirname(dbPath), { recursive: true });
-    manager = new SQLiteRawMessageManager({
-      dbPath,
-      enableVectorSearch: !isRawMessageChromaEnabled(),
-    });
-    await manager.init();
-  }
+	if (!manager) {
+		const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
+		mkdirSync(dirname(dbPath), { recursive: true });
+		manager = new SQLiteRawMessageManager({
+			dbPath,
+			enableVectorSearch: !isRawMessageChromaEnabled(),
+		});
+		await manager.init();
+	}
 
-  return manager;
+	return manager;
 }
 
 export async function closeSQLiteRawMessageManager(): Promise<void> {
-  if (!manager) {
-    return;
-  }
-  await manager.close();
-  manager = null;
+	if (!manager) {
+		return;
+	}
+	await manager.close();
+	manager = null;
 }
 
 /**
  * Test-only: reset the singleton. Used by vitest between test cases.
  */
 export function __resetSQLiteRawMessageManagerForTests(): void {
-  manager = null;
+	manager = null;
 }
 
 function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
-  if (env) return env;
-  return {
-    isTauriMode: () =>
-      process.env.IS_TAURI === "true" ||
-      typeof process.env.TAURI_MODE === "string",
-    getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
-    getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
-  };
+	if (env) return env;
+	return {
+		isTauriMode: () =>
+			process.env.IS_TAURI === "true" ||
+			typeof process.env.TAURI_MODE === "string",
+		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
+		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
+	};
 }

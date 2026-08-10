@@ -6,11 +6,11 @@ Phase 5 of the [runtime/UI split plan](../../docs/split-runtime-ui.md) — curre
 ships only the leaf pieces of `apps/web/lib/loop` that have no DB / agent /
 integration dependencies:
 
-| Subpath                | Source                          | Notes                                              |
-| ---------------------- | ------------------------------- | -------------------------------------------------- |
-| `@opencontext/loop`      | barrel                          | Re-exports the subpaths below                      |
-| `@opencontext/loop/paths`| `apps/web/lib/loop/paths.ts`    | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate` |
-| `@opencontext/loop/cli-path` | `apps/web/lib/loop/cli-path.ts` | Resolves absolute path to the `loop-cli.mjs` shim |
+| Subpath                         | Source                             | Notes                                                                        |
+| ------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+| `@opencontext/loop`             | barrel                             | Re-exports the subpaths below                                                |
+| `@opencontext/loop/paths`       | `apps/web/lib/loop/paths.ts`       | `LOOP_HOME`, `LOOP_PATHS`, `ensureDirs`, `migrate`                           |
+| `@opencontext/loop/cli-path`    | `apps/web/lib/loop/cli-path.ts`    | Resolves absolute path to the `loop-cli.mjs` shim                            |
 | `@opencontext/loop/preferences` | `apps/web/lib/loop/preferences.ts` | `readPreferences`, `writePreferences` (depends on `@opencontext/loop/paths`) |
 
 The bigger pieces (`store.ts`, `runner.ts`, `tick.ts`, `brief.ts`, `wrap.ts`,

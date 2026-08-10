@@ -21,11 +21,11 @@ pnpm add @opencontext/memory-store
 import { createMemoryStore } from "@opencontext/memory-store";
 
 const store = await createMemoryStore({
-  db: { getDb: () => drizzleDb() },
-  env: { isTauriMode: () => false },
-  unified: {
-    embedQuery: async ({ query }) => myEmbed(query),
-  },
+	db: { getDb: () => drizzleDb() },
+	env: { isTauriMode: () => false },
+	unified: {
+		embedQuery: async ({ query }) => myEmbed(query),
+	},
 });
 
 await store.getRawMessageManager();
@@ -34,11 +34,11 @@ const hits = await store.searchUnifiedMemory({ userId, query });
 
 ## Entry points
 
-| Import | What you get |
-| --- | --- |
-| `@opencontext/memory-store` | `createMemoryStore(config)` facade |
+| Import                           | What you get                                    |
+| -------------------------------- | ----------------------------------------------- |
+| `@opencontext/memory-store`      | `createMemoryStore(config)` facade              |
 | `@opencontext/memory-store/http` | `startHttpServer(options)` — Hono app on a port |
-| `@opencontext/memory-store/mcp` | `startMcpServer()` — stdio MCP server |
+| `@opencontext/memory-store/mcp`  | `startMcpServer()` — stdio MCP server           |
 
 CLI bins ship with the package:
 
@@ -49,20 +49,20 @@ openloomi-memory-mcp
 
 ## Configuration matrix
 
-| Key | Required | Description |
-| --- | --- | --- |
-| `db.getDb()` | yes for persistence | Drizzle DB handle factory |
-| `db.tables.rawMessages` / `db.tables.memorySummaries` | yes for postgres backend | Drizzle table references owned by the host |
-| `env.isTauriMode()` | yes | selects sqlite vs postgres backend |
-| `env.getTauriDbPath()` / `env.getTauriDataDir()` | for Tauri | where to place the SQLite files |
-| `vector.backend` | one of `sqlite-vec` or `chroma` | vector index backend (auto-detected if omitted) |
-| `vector.sqliteVec.dbPath` | when backend = sqlite-vec | sqlite-vec DB path |
-| `vector.chroma.url` | when backend = chroma | chroma server URL |
-| `unified.embedQuery` | yes for unified search | query embedder |
-| `unified.searchKnowledge` | optional | RAG over uploaded documents |
-| `unified.searchInsights` | optional | semantic search over extracted insights |
-| `unified.searchRawMessagesAnn` | optional | postgres-side ANN over `raw_messages` (database fallback) |
-| `logger` | optional | `console`-shaped logger; defaults to `console` |
+| Key                                                   | Required                        | Description                                               |
+| ----------------------------------------------------- | ------------------------------- | --------------------------------------------------------- |
+| `db.getDb()`                                          | yes for persistence             | Drizzle DB handle factory                                 |
+| `db.tables.rawMessages` / `db.tables.memorySummaries` | yes for postgres backend        | Drizzle table references owned by the host                |
+| `env.isTauriMode()`                                   | yes                             | selects sqlite vs postgres backend                        |
+| `env.getTauriDbPath()` / `env.getTauriDataDir()`      | for Tauri                       | where to place the SQLite files                           |
+| `vector.backend`                                      | one of `sqlite-vec` or `chroma` | vector index backend (auto-detected if omitted)           |
+| `vector.sqliteVec.dbPath`                             | when backend = sqlite-vec       | sqlite-vec DB path                                        |
+| `vector.chroma.url`                                   | when backend = chroma           | chroma server URL                                         |
+| `unified.embedQuery`                                  | yes for unified search          | query embedder                                            |
+| `unified.searchKnowledge`                             | optional                        | RAG over uploaded documents                               |
+| `unified.searchInsights`                              | optional                        | semantic search over extracted insights                   |
+| `unified.searchRawMessagesAnn`                        | optional                        | postgres-side ANN over `raw_messages` (database fallback) |
+| `logger`                                              | optional                        | `console`-shaped logger; defaults to `console`            |
 
 If any of `unified.embedQuery`, `unified.searchKnowledge`, `unified.searchInsights`,
 or `unified.searchRawMessagesAnn` are absent, the corresponding source in
@@ -78,36 +78,41 @@ See `src/config.ts` for the full type surface.
 ```ts
 import { drizzle } from "drizzle-orm/postgres-js";
 import {
-  createMemoryStore,
-  registerPostgresFactory,
-  type PostgresRawMessageManagerLike,
+	createMemoryStore,
+	registerPostgresFactory,
+	type PostgresRawMessageManagerLike,
 } from "@opencontext/memory-store";
 import { myPostgresRawMessageManager } from "./postgres-raw-message-store";
 import * as schema from "./schema";
 
 registerPostgresFactory<typeof myPostgresRawMessageManager>(
-  async () => myPostgresRawMessageManager as unknown as PostgresRawMessageManagerLike,
+	async () =>
+		myPostgresRawMessageManager as unknown as PostgresRawMessageManagerLike,
 );
 
 const db = drizzle(process.env.DATABASE_URL!, { schema });
 
 const store = await createMemoryStore({
-  db: {
-    getDb: () => db,
-    tables: {
-      rawMessages: schema.rawMessages,
-      memorySummaries: schema.memorySummaries,
-    },
-  },
-  env: { isTauriMode: () => false },
-  unified: {
-    embedQuery: async ({ query }) => myEmbedder.embedQuery(query),
-    searchInsights: mySearchInsights,
-    searchKnowledge: mySearchKnowledge,
-    searchRawMessagesAnn: async ({
-      userId, queryEmbedding, limit, threshold, botId,
-    }) => myAnnSearch({ userId, queryEmbedding, limit, threshold, botId }),
-  },
+	db: {
+		getDb: () => db,
+		tables: {
+			rawMessages: schema.rawMessages,
+			memorySummaries: schema.memorySummaries,
+		},
+	},
+	env: { isTauriMode: () => false },
+	unified: {
+		embedQuery: async ({ query }) => myEmbedder.embedQuery(query),
+		searchInsights: mySearchInsights,
+		searchKnowledge: mySearchKnowledge,
+		searchRawMessagesAnn: async ({
+			userId,
+			queryEmbedding,
+			limit,
+			threshold,
+			botId,
+		}) => myAnnSearch({ userId, queryEmbedding, limit, threshold, botId }),
+	},
 });
 ```
 
@@ -115,18 +120,18 @@ const store = await createMemoryStore({
 
 ```ts
 const store = await createMemoryStore({
-  env: {
-    isTauriMode: () => true,
-    getTauriDataDir: () => appDataDir(),
-    getTauriDbPath: () => `${appDataDir()}/memory.sqlite`,
-  },
-  vector: {
-    backend: "sqlite-vec",
-    sqliteVec: { dbPath: `${appDataDir()}/vectors.sqlite` },
-  },
-  unified: {
-    embedQuery: async ({ query }) => localOnnxEmbedder.embed(query),
-  },
+	env: {
+		isTauriMode: () => true,
+		getTauriDataDir: () => appDataDir(),
+		getTauriDbPath: () => `${appDataDir()}/memory.sqlite`,
+	},
+	vector: {
+		backend: "sqlite-vec",
+		sqliteVec: { dbPath: `${appDataDir()}/vectors.sqlite` },
+	},
+	unified: {
+		embedQuery: async ({ query }) => localOnnxEmbedder.embed(query),
+	},
 });
 ```
 
@@ -134,16 +139,16 @@ const store = await createMemoryStore({
 
 ```ts
 const store = await createMemoryStore({
-  env: { isTauriMode: () => false },
-  vector: {
-    backend: "chroma",
-    chroma: {
-      url: process.env.CHROMA_URL ?? "http://127.0.0.1:8000",
-      rawMessagesCollection: "openloomi_raw_messages",
-      insightsCollection: "openloomi_insights",
-    },
-  },
-  unified: { embedQuery: myEmbedder },
+	env: { isTauriMode: () => false },
+	vector: {
+		backend: "chroma",
+		chroma: {
+			url: process.env.CHROMA_URL ?? "http://127.0.0.1:8000",
+			rawMessagesCollection: "openloomi_raw_messages",
+			insightsCollection: "openloomi_insights",
+		},
+	},
+	unified: { embedQuery: myEmbedder },
 });
 ```
 
@@ -160,29 +165,38 @@ You don't need to wire all of them; the ones you omit just emit a warning:
 import { createUnifiedSearch } from "@opencontext/memory-store/unified-search";
 
 const search = createUnifiedSearch({
-  embedQuery: async ({ userId, query, authToken }) =>
-    embedder.embed(query, { userId, authToken }),
+	embedQuery: async ({ userId, query, authToken }) =>
+		embedder.embed(query, { userId, authToken }),
 
-  searchRawMessagesAnn: async ({
-    userId, queryEmbedding, limit, threshold, botId,
-  }) => db.rawMessages.searchAnn({
-    userId, embedding: queryEmbedding, limit, threshold, botId,
-  }),
+	searchRawMessagesAnn: async ({
+		userId,
+		queryEmbedding,
+		limit,
+		threshold,
+		botId,
+	}) =>
+		db.rawMessages.searchAnn({
+			userId,
+			embedding: queryEmbedding,
+			limit,
+			threshold,
+			botId,
+		}),
 
-  searchInsights: async ({ userId, query, limit, threshold, botIds }) =>
-    insightIndex.search({ userId, query, limit, threshold, botIds }),
+	searchInsights: async ({ userId, query, limit, threshold, botIds }) =>
+		insightIndex.search({ userId, query, limit, threshold, botIds }),
 
-  searchKnowledge: async ({ userId, query, options, authToken }) =>
-    ragIndex.search({ userId, query, ...options, authToken }),
+	searchKnowledge: async ({ userId, query, options, authToken }) =>
+		ragIndex.search({ userId, query, ...options, authToken }),
 });
 
 const result = await search.searchUnifiedMemory({
-  userId: "u-1",
-  query: "what changed since yesterday?",
-  sources: ["memory", "insights", "knowledge"],
-  limit: 10,
-  threshold: 0.7,
-  botIds: ["bot-42"],
+	userId: "u-1",
+	query: "what changed since yesterday?",
+	sources: ["memory", "insights", "knowledge"],
+	limit: 10,
+	threshold: 0.7,
+	botIds: ["bot-42"],
 });
 
 // result.results: UnifiedMemorySearchResult[]
@@ -216,12 +230,12 @@ registering the factory is mandatory.
 import { startHttpServer } from "@opencontext/memory-store/http";
 
 const { url, port, stop } = await startHttpServer({
-  port: 7421,
-  host: "127.0.0.1",
-  // MemoryStoreConfig passthrough:
-  env: { isTauriMode: () => false },
-  vector: { backend: "chroma", chroma: { url: process.env.CHROMA_URL! } },
-  unified: { embedQuery: myEmbedder },
+	port: 7421,
+	host: "127.0.0.1",
+	// MemoryStoreConfig passthrough:
+	env: { isTauriMode: () => false },
+	vector: { backend: "chroma", chroma: { url: process.env.CHROMA_URL! } },
+	unified: { embedQuery: myEmbedder },
 });
 
 console.log(`listening at ${url}`);
@@ -236,12 +250,12 @@ MEMORY_HTTP_HOST=0.0.0.0 MEMORY_HTTP_PORT=7421 openloomi-memory-http
 
 Endpoints:
 
-| Method + path | Body |
-| --- | --- |
-| `GET  /health` | — |
-| `POST /v1/search` | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds? }` |
-| `POST /v1/raw-messages` | `{ userId, messages: RawMessage[] }` |
-| `GET  /v1/raw-messages/:id?userId=...` | — |
+| Method + path                          | Body                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| `GET  /health`                         | —                                                                        |
+| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds? }` |
+| `POST /v1/raw-messages`                | `{ userId, messages: RawMessage[] }`                                     |
+| `GET  /v1/raw-messages/:id?userId=...` | —                                                                        |
 
 For container / LAN deployment, put it behind a reverse proxy:
 
@@ -261,26 +275,26 @@ openloomi-memory-mcp
 
 Tools exposed over stdio:
 
-| Tool | Required args |
-| --- | --- |
-| `memory.health` | — |
-| `memory.searchUnified` | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds` |
-| `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, ... }` |
-| `memory.getRawMessage` | `userId`, `messageId` |
+| Tool                     | Required args                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `memory.health`          | —                                                                                    |
+| `memory.searchUnified`   | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds` |
+| `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, ... }`                       |
+| `memory.getRawMessage`   | `userId`, `messageId`                                                                |
 
 #### Claude Desktop (`claude_desktop_config.json`)
 
 ```json
 {
-  "mcpServers": {
-    "openloomi-memory": {
-      "command": "npx",
-      "args": ["-y", "@opencontext/memory-store", "memory-mcp"],
-      "env": {
-        "DATABASE_URL": "postgres://user:pass@host:5432/openloomi"
-      }
-    }
-  }
+	"mcpServers": {
+		"openloomi-memory": {
+			"command": "npx",
+			"args": ["-y", "@opencontext/memory-store", "memory-mcp"],
+			"env": {
+				"DATABASE_URL": "postgres://user:pass@host:5432/openloomi"
+			}
+		}
+	}
 }
 ```
 
@@ -288,14 +302,14 @@ For local dev against this monorepo, point at the built CLI directly:
 
 ```json
 {
-  "mcpServers": {
-    "openloomi-memory": {
-      "command": "node",
-      "args": [
-        "/path/to/openloomi/packages/memory-store/dist/server/cli-mcp.js"
-      ]
-    }
-  }
+	"mcpServers": {
+		"openloomi-memory": {
+			"command": "node",
+			"args": [
+				"/path/to/openloomi/packages/memory-store/dist/server/cli-mcp.js"
+			]
+		}
+	}
 }
 ```
 
@@ -306,11 +320,11 @@ Same shape — Cursor reads `mcpServers` from its MCP settings
 
 ```json
 {
-  "mcpServers": {
-    "openloomi-memory": {
-      "command": "openloomi-memory-mcp"
-    }
-  }
+	"mcpServers": {
+		"openloomi-memory": {
+			"command": "openloomi-memory-mcp"
+		}
+	}
 }
 ```
 
@@ -319,19 +333,19 @@ editor. Tool calls appear in the chat like any other MCP tool.
 
 ## Subpath exports
 
-| Subpath | Contents |
-| --- | --- |
-| `@opencontext/memory-store` | `createMemoryStore`, top-level types |
-| `@opencontext/memory-store/http` | `startHttpServer`, `StartedHttpServer` |
-| `@opencontext/memory-store/mcp` | `startMcpServer` |
-| `@opencontext/memory-store/unified-search` | `createUnifiedSearch(deps)` factory + result types |
-| `@opencontext/memory-store/raw-message-store` | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
-| `@opencontext/memory-store/sqlite-raw-message-store` | SQLite-vec raw-message manager (Tauri / desktop) |
-| `@opencontext/memory-store/postgres-raw-message-factory` | `registerPostgresFactory`, `resolvePostgresFactory` |
-| `@opencontext/memory-store/sqlite-vector-index` | Direct sqlite-vec insight index helpers |
-| `@opencontext/memory-store/chroma-memory-index` | Direct chroma upsert / search helpers |
-| `@opencontext/memory-store/memory-graph-write-policy` | `resolveMemoryGraphWritePolicy`, allowlist gating |
-| `@opencontext/memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy` |
+| Subpath                                                    | Contents                                                                        |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `@opencontext/memory-store`                                | `createMemoryStore`, top-level types                                            |
+| `@opencontext/memory-store/http`                           | `startHttpServer`, `StartedHttpServer`                                          |
+| `@opencontext/memory-store/mcp`                            | `startMcpServer`                                                                |
+| `@opencontext/memory-store/unified-search`                 | `createUnifiedSearch(deps)` factory + result types                              |
+| `@opencontext/memory-store/raw-message-store`              | `createRawMessageStore`, `getRawMessageManager`, `isRawMessageStorageAvailable` |
+| `@opencontext/memory-store/sqlite-raw-message-store`       | SQLite-vec raw-message manager (Tauri / desktop)                                |
+| `@opencontext/memory-store/postgres-raw-message-factory`   | `registerPostgresFactory`, `resolvePostgresFactory`                             |
+| `@opencontext/memory-store/sqlite-vector-index`            | Direct sqlite-vec insight index helpers                                         |
+| `@opencontext/memory-store/chroma-memory-index`            | Direct chroma upsert / search helpers                                           |
+| `@opencontext/memory-store/memory-graph-write-policy`      | `resolveMemoryGraphWritePolicy`, allowlist gating                               |
+| `@opencontext/memory-store/memory-graph-correction-policy` | `resolveMemoryGraphCorrectionPolicy`                                            |
 
 ## Behaviour notes
 

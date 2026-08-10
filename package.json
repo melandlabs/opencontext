@@ -1,6 +1,6 @@
 {
   "name": "opencontext-monorepo",
-  "version": "0.10.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "opencontext — open-source runtime substrate for agentic applications. A temporal context graph, 4-verb memory API, retrieval-augmented generation primitives, and a 27-platform integration mesh.",

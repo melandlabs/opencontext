@@ -9,23 +9,23 @@ export const RAW_MESSAGES_SCHEMA_VERSION = 2;
  * safe to call on databases created by older versions of the schema.
  */
 function addColumnIfMissing(
-  db: Database.Database,
-  table: string,
-  column: string,
-  definition: string,
+	db: Database.Database,
+	table: string,
+	column: string,
+	definition: string,
 ): void {
-  const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
-    name: string;
-  }>;
-  if (rows.some((row) => row.name === column)) return;
-  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+	const rows = db.prepare(`PRAGMA table_info(${table})`).all() as Array<{
+		name: string;
+	}>;
+	if (rows.some((row) => row.name === column)) return;
+	db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
 }
 
 export function initializeRawMessageSchema(db: Database.Database): void {
-  db.pragma("journal_mode = WAL");
-  db.pragma("busy_timeout = 30000");
+	db.pragma("journal_mode = WAL");
+	db.pragma("busy_timeout = 30000");
 
-  db.exec(`
+	db.exec(`
     CREATE TABLE IF NOT EXISTS raw_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       message_id TEXT UNIQUE NOT NULL,
@@ -116,15 +116,15 @@ export function initializeRawMessageSchema(db: Database.Database): void {
       ON memory_summaries(user_id, summary_tier);
   `);
 
-  // --- v2: deprecation columns ---
-  // `deprecated_at` is non-null only on records superseded by a higher-tier
-  // summary. `deprecation_reason` is a short tag like "summarized_into:<id>".
-  // `superseded_by_summary_id` lets retrieval follow the chain back to the
-  // canonical summary when a deprecated record is requested explicitly.
-  addColumnIfMissing(db, "raw_messages", "deprecated_at", "INTEGER");
-  addColumnIfMissing(db, "raw_messages", "deprecation_reason", "TEXT");
-  addColumnIfMissing(db, "raw_messages", "superseded_by_summary_id", "TEXT");
-  db.exec(`
+	// --- v2: deprecation columns ---
+	// `deprecated_at` is non-null only on records superseded by a higher-tier
+	// summary. `deprecation_reason` is a short tag like "summarized_into:<id>".
+	// `superseded_by_summary_id` lets retrieval follow the chain back to the
+	// canonical summary when a deprecated record is requested explicitly.
+	addColumnIfMissing(db, "raw_messages", "deprecated_at", "INTEGER");
+	addColumnIfMissing(db, "raw_messages", "deprecation_reason", "TEXT");
+	addColumnIfMissing(db, "raw_messages", "superseded_by_summary_id", "TEXT");
+	db.exec(`
     CREATE INDEX IF NOT EXISTS idx_raw_messages_active_user
       ON raw_messages(user_id, memory_stage, deprecated_at)
       WHERE deprecated_at IS NULL;

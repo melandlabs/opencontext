@@ -1,6 +1,6 @@
-# Contributing to opencontext
+# Contributing to OpenContext
 
-Thanks for your interest in `opencontext` — the runtime substrate for
+Thanks for your interest in `OpenContext` — the runtime substrate for
 agentic applications. This document is the canonical entry point for
 contributors.
 
@@ -16,7 +16,7 @@ contributors.
 ## Repository layout
 
 ```
-opencontext/
+OpenContext/
 ├── apps/                       # Example host applications (web, cli, …)
 ├── packages/                   # Publishable libraries (@context/*)
 │   ├── ai/                     # AI SDK wrappers, MCP server, memory consolidation

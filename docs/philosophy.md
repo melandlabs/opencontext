@@ -1,6 +1,6 @@
 # Philosophy
 
-This document explains the *why* behind the shape of opencontext. The
+This document explains the _why_ behind the shape of opencontext. The
 [README](../README.md) and [architecture doc](./architecture.md)
 describe what the system is and how it works. This one explains the
 choices that made it look the way it does.
@@ -62,7 +62,7 @@ does not answer:
 - "Was this true when the user said it, or has it since been retracted?"
 
 These are temporal questions. They are also the questions that
-*matter* — a personal assistant that does not know the user's
+_matter_ — a personal assistant that does not know the user's
 preferences changed last week is not useful.
 
 The temporal context graph records, per fact: when it became true,
@@ -111,7 +111,7 @@ runtime. They depend on different toolchains. They attract different
 contributors.
 
 The runtime (memory, RAG, agent, integrations, scheduling) is what
-*other* projects want to embed. It has nothing to do with the UI.
+_other_ projects want to embed. It has nothing to do with the UI.
 Keeping them in the same monorepo meant:
 
 - Every UI change touched the runtime's release process.

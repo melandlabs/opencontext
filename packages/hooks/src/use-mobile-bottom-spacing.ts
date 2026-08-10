@@ -5,70 +5,70 @@ import { useEffect, useState } from "react";
  * Directly measures actual height of bottom navigation bar
  */
 export function useMobileBottomSpacing(): number {
-  const [spacing, setSpacing] = useState(80); // Default: sufficiently large value
+	const [spacing, setSpacing] = useState(80); // Default: sufficiently large value
 
-  useEffect(() => {
-    const calculateSpacing = () => {
-      // Try to find mobile bottom navigation bar
-      const nav = document.querySelector(
-        'nav[aria-label*="navigation"], nav[aria-label*="Navigation"]',
-      );
-      if (!nav) {
-        // Navigation bar not found, use conservative estimate
-        const safeAreaBottom = getSafeAreaInsetBottom();
-        setSpacing(60 + safeAreaBottom);
-        return;
-      }
+	useEffect(() => {
+		const calculateSpacing = () => {
+			// Try to find mobile bottom navigation bar
+			const nav = document.querySelector(
+				'nav[aria-label*="navigation"], nav[aria-label*="Navigation"]',
+			);
+			if (!nav) {
+				// Navigation bar not found, use conservative estimate
+				const safeAreaBottom = getSafeAreaInsetBottom();
+				setSpacing(60 + safeAreaBottom);
+				return;
+			}
 
-      // Get actual height of navigation bar
-      const rect = nav.getBoundingClientRect();
-      const navHeight = rect.height;
+			// Get actual height of navigation bar
+			const rect = nav.getBoundingClientRect();
+			const navHeight = rect.height;
 
-      // Total spacing = actual navigation bar height + additional buffer
-      const totalSpacing = navHeight + 8;
+			// Total spacing = actual navigation bar height + additional buffer
+			const totalSpacing = navHeight + 8;
 
-      setSpacing(totalSpacing);
-    };
+			setSpacing(totalSpacing);
+		};
 
-    // Delayed execution to ensure DOM is rendered
-    const timer = setTimeout(calculateSpacing, 100);
+		// Delayed execution to ensure DOM is rendered
+		const timer = setTimeout(calculateSpacing, 100);
 
-    // Listen for window size changes (e.g., device rotation)
-    window.addEventListener("resize", calculateSpacing);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", calculateSpacing);
-    };
-  }, []);
+		// Listen for window size changes (e.g., device rotation)
+		window.addEventListener("resize", calculateSpacing);
+		return () => {
+			clearTimeout(timer);
+			window.removeEventListener("resize", calculateSpacing);
+		};
+	}, []);
 
-  return spacing;
+	return spacing;
 }
 
 /**
  * Get safe-area-inset-bottom value
  */
 function getSafeAreaInsetBottom(): number {
-  if (typeof window === "undefined") return 0;
+	if (typeof window === "undefined") return 0;
 
-  // Create a temporary element to measure safe-area-inset-bottom
-  const div = document.createElement("div");
-  div.style.position = "fixed";
-  div.style.left = "0";
-  div.style.bottom = "0";
-  div.style.width = "0";
-  div.style.height = "0";
-  div.style.paddingBottom = "env(safe-area-inset-bottom, 0px)";
-  div.style.visibility = "hidden";
-  div.style.pointerEvents = "none";
+	// Create a temporary element to measure safe-area-inset-bottom
+	const div = document.createElement("div");
+	div.style.position = "fixed";
+	div.style.left = "0";
+	div.style.bottom = "0";
+	div.style.width = "0";
+	div.style.height = "0";
+	div.style.paddingBottom = "env(safe-area-inset-bottom, 0px)";
+	div.style.visibility = "hidden";
+	div.style.pointerEvents = "none";
 
-  document.body.appendChild(div);
+	document.body.appendChild(div);
 
-  // Get computed padding-bottom value
-  const computedStyle = window.getComputedStyle(div);
-  const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
+	// Get computed padding-bottom value
+	const computedStyle = window.getComputedStyle(div);
+	const paddingBottom = Number.parseFloat(computedStyle.paddingBottom) || 0;
 
-  // Cleanup temporary element
-  document.body.removeChild(div);
+	// Cleanup temporary element
+	document.body.removeChild(div);
 
-  return paddingBottom;
+	return paddingBottom;
 }

@@ -18,11 +18,11 @@
  */
 
 import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-  copyFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+	copyFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -30,97 +30,97 @@ import { dirname, join, resolve } from "node:path";
 export const LOOP_HOME = join(homedir(), ".openloomi", "loop");
 
 export const LOOP_PATHS = {
-  home: LOOP_HOME,
-  signals: join(LOOP_HOME, "signals.jsonl"),
-  decisions: join(LOOP_HOME, "decisions.json"),
-  status: join(LOOP_HOME, "status.json"),
-  brief: join(LOOP_HOME, "brief.json"),
-  wrap: join(LOOP_HOME, "wrap.json"),
-  connectors: join(LOOP_HOME, "connectors.json"),
-  config: join(LOOP_HOME, "config.json"),
-  mutes: join(LOOP_HOME, "mutes.json"),
-  migrated: join(LOOP_HOME, "migrated.json"),
-  log: join(LOOP_HOME, "loop.log"),
-  inbox: join(LOOP_HOME, "inbox"),
-  /** Per-connector lastSyncAt — read by watcher, written after each pass. */
-  syncState: join(LOOP_HOME, "sync-state.json"),
-  /**
-   * User-defined decision types (label / icon / actionKind). Per-user
-   * extension to the closed `DecisionType` union — see `lib/loop/custom-types.ts`.
-   */
-  customTypes: join(LOOP_HOME, "custom-types.json"),
-  /**
-   * User-defined signal channels (Composio-backed pullers). Per-user
-   * extension to the FALLBACK_CONNECTORS list — see `lib/loop/custom-channels.ts`.
-   */
-  customChannels: join(LOOP_HOME, "custom-channels.json"),
-  /**
-   * User-defined deterministic classifier rules. Per-user extension to the
-   * hard-coded rules in `classify.ts` and the agentic prompt's §5
-   * classifier list — see `lib/loop/classifier-rules.ts`. Rules take
-   * priority over the LLM's natural-language classification (server-side
-   * enforcement after the agentic tick).
-   */
-  classifierRules: join(LOOP_HOME, "classifier-rules.json"),
-  /**
-   * Activation state machine cache (Issue #351). Atomically written by
-   * `lib/loop/activation.ts` so the Tauri pet watcher can poll progress
-   * (`uninitialized → setup_pending → runtime_ready → source_pending →
-   * check_pending → decision_pending → activated`) without an HTTP
-   * round-trip back into the Next.js server.
-   */
-  activationState: join(LOOP_HOME, "activation_state.json"),
-  /**
-   * SP-4 — daily OS-notification counter. Persisted separately from
-   * `config.json` so the budget write path doesn't race with
-   * `writePreferences`. Holds `{ day, count }` keyed by the
-   * user-local YYYY-MM-DD string (matches `briefTimeToCron` so the
-   * budget rolls over at the same wall-clock midnight the briefs do).
-   * Missing file → treated as `{ day: "", count: 0 }`.
-   */
-  attention: join(LOOP_HOME, "attention.json"),
+	home: LOOP_HOME,
+	signals: join(LOOP_HOME, "signals.jsonl"),
+	decisions: join(LOOP_HOME, "decisions.json"),
+	status: join(LOOP_HOME, "status.json"),
+	brief: join(LOOP_HOME, "brief.json"),
+	wrap: join(LOOP_HOME, "wrap.json"),
+	connectors: join(LOOP_HOME, "connectors.json"),
+	config: join(LOOP_HOME, "config.json"),
+	mutes: join(LOOP_HOME, "mutes.json"),
+	migrated: join(LOOP_HOME, "migrated.json"),
+	log: join(LOOP_HOME, "loop.log"),
+	inbox: join(LOOP_HOME, "inbox"),
+	/** Per-connector lastSyncAt — read by watcher, written after each pass. */
+	syncState: join(LOOP_HOME, "sync-state.json"),
+	/**
+	 * User-defined decision types (label / icon / actionKind). Per-user
+	 * extension to the closed `DecisionType` union — see `lib/loop/custom-types.ts`.
+	 */
+	customTypes: join(LOOP_HOME, "custom-types.json"),
+	/**
+	 * User-defined signal channels (Composio-backed pullers). Per-user
+	 * extension to the FALLBACK_CONNECTORS list — see `lib/loop/custom-channels.ts`.
+	 */
+	customChannels: join(LOOP_HOME, "custom-channels.json"),
+	/**
+	 * User-defined deterministic classifier rules. Per-user extension to the
+	 * hard-coded rules in `classify.ts` and the agentic prompt's §5
+	 * classifier list — see `lib/loop/classifier-rules.ts`. Rules take
+	 * priority over the LLM's natural-language classification (server-side
+	 * enforcement after the agentic tick).
+	 */
+	classifierRules: join(LOOP_HOME, "classifier-rules.json"),
+	/**
+	 * Activation state machine cache (Issue #351). Atomically written by
+	 * `lib/loop/activation.ts` so the Tauri pet watcher can poll progress
+	 * (`uninitialized → setup_pending → runtime_ready → source_pending →
+	 * check_pending → decision_pending → activated`) without an HTTP
+	 * round-trip back into the Next.js server.
+	 */
+	activationState: join(LOOP_HOME, "activation_state.json"),
+	/**
+	 * SP-4 — daily OS-notification counter. Persisted separately from
+	 * `config.json` so the budget write path doesn't race with
+	 * `writePreferences`. Holds `{ day, count }` keyed by the
+	 * user-local YYYY-MM-DD string (matches `briefTimeToCron` so the
+	 * budget rolls over at the same wall-clock midnight the briefs do).
+	 * Missing file → treated as `{ day: "", count: 0 }`.
+	 */
+	attention: join(LOOP_HOME, "attention.json"),
 } as const;
 
 export function ensureDirs(): void {
-  mkdirSync(LOOP_PATHS.home, { recursive: true });
-  mkdirSync(join(LOOP_PATHS.inbox, ".processed"), { recursive: true });
-  mkdirSync(join(LOOP_PATHS.inbox, ".failed"), { recursive: true });
+	mkdirSync(LOOP_PATHS.home, { recursive: true });
+	mkdirSync(join(LOOP_PATHS.inbox, ".processed"), { recursive: true });
+	mkdirSync(join(LOOP_PATHS.inbox, ".failed"), { recursive: true });
 }
 
 interface MigrationSource {
-  signals: string;
-  decisions: string;
+	signals: string;
+	decisions: string;
 }
 
 function legacySourceCandidates(): MigrationSource[] {
-  const out: MigrationSource[] = [];
-  // Walk up the current working dir looking for skills/openloomi-loop/data.
-  // Covers `cd apps/web && node ...` and `cd /path/to/openloomi && node ...`.
-  const cwd = process.cwd();
-  const probes = [
-    cwd,
-    resolve(cwd, ".."),
-    resolve(cwd, "../.."),
-    resolve(cwd, "../../.."),
-    resolve(cwd, "../../../.."),
-  ];
-  for (const dir of probes) {
-    const dataDir = join(dir, "skills", "openloomi-loop", "data");
-    if (existsSync(join(dataDir, "decisions.json"))) {
-      out.push({
-        signals: join(dataDir, "signals.jsonl"),
-        decisions: join(dataDir, "decisions.json"),
-      });
-    }
-  }
-  return out;
+	const out: MigrationSource[] = [];
+	// Walk up the current working dir looking for skills/openloomi-loop/data.
+	// Covers `cd apps/web && node ...` and `cd /path/to/openloomi && node ...`.
+	const cwd = process.cwd();
+	const probes = [
+		cwd,
+		resolve(cwd, ".."),
+		resolve(cwd, "../.."),
+		resolve(cwd, "../../.."),
+		resolve(cwd, "../../../.."),
+	];
+	for (const dir of probes) {
+		const dataDir = join(dir, "skills", "openloomi-loop", "data");
+		if (existsSync(join(dataDir, "decisions.json"))) {
+			out.push({
+				signals: join(dataDir, "signals.jsonl"),
+				decisions: join(dataDir, "decisions.json"),
+			});
+		}
+	}
+	return out;
 }
 
 interface MigratedMarker {
-  migratedAt: string;
-  sources: { signals: string; decisions: string }[];
-  signalsCopied: number;
-  decisionsCopied: number;
+	migratedAt: string;
+	sources: { signals: string; decisions: string }[];
+	signalsCopied: number;
+	decisionsCopied: number;
 }
 
 /**
@@ -129,87 +129,87 @@ interface MigratedMarker {
  * files; users who want to reclaim space can rm -rf them after verifying.
  */
 export function migrate(): MigratedMarker | null {
-  ensureDirs();
-  if (existsSync(LOOP_PATHS.migrated)) {
-    try {
-      return JSON.parse(
-        readFileSync(LOOP_PATHS.migrated, "utf8"),
-      ) as MigratedMarker;
-    } catch {
-      // corrupted marker — re-migrate
-    }
-  }
-  const sources = legacySourceCandidates();
-  if (sources.length === 0) return null;
+	ensureDirs();
+	if (existsSync(LOOP_PATHS.migrated)) {
+		try {
+			return JSON.parse(
+				readFileSync(LOOP_PATHS.migrated, "utf8"),
+			) as MigratedMarker;
+		} catch {
+			// corrupted marker — re-migrate
+		}
+	}
+	const sources = legacySourceCandidates();
+	if (sources.length === 0) return null;
 
-  let signalsCopied = 0;
-  let decisionsCopied = 0;
-  for (const src of sources) {
-    if (existsSync(src.signals)) {
-      const target = LOOP_PATHS.signals;
-      if (!existsSync(target)) {
-        try {
-          copyFileSync(src.signals, target);
-          signalsCopied = countLines(src.signals);
-        } catch (e) {
-          console.warn("[loop.migrate] failed to copy signals:", e);
-        }
-      }
-    }
-    if (existsSync(src.decisions)) {
-      const target = LOOP_PATHS.decisions;
-      if (!existsSync(target)) {
-        try {
-          copyFileSync(src.decisions, target);
-          decisionsCopied = countDecisionLines(src.decisions);
-        } catch (e) {
-          console.warn("[loop.migrate] failed to copy decisions:", e);
-        }
-      }
-    }
-  }
-  const marker: MigratedMarker = {
-    migratedAt: new Date().toISOString(),
-    sources: sources.map((s) => ({
-      signals: s.signals,
-      decisions: s.decisions,
-    })),
-    signalsCopied,
-    decisionsCopied,
-  };
-  try {
-    writeFileSync(LOOP_PATHS.migrated, JSON.stringify(marker, null, 2));
-    console.log(
-      `[loop.migrate] copied ${signalsCopied} signals + ${decisionsCopied} decisions from ${sources.length} legacy source(s)`,
-    );
-  } catch (e) {
-    console.warn("[loop.migrate] failed to write marker:", e);
-  }
-  return marker;
+	let signalsCopied = 0;
+	let decisionsCopied = 0;
+	for (const src of sources) {
+		if (existsSync(src.signals)) {
+			const target = LOOP_PATHS.signals;
+			if (!existsSync(target)) {
+				try {
+					copyFileSync(src.signals, target);
+					signalsCopied = countLines(src.signals);
+				} catch (e) {
+					console.warn("[loop.migrate] failed to copy signals:", e);
+				}
+			}
+		}
+		if (existsSync(src.decisions)) {
+			const target = LOOP_PATHS.decisions;
+			if (!existsSync(target)) {
+				try {
+					copyFileSync(src.decisions, target);
+					decisionsCopied = countDecisionLines(src.decisions);
+				} catch (e) {
+					console.warn("[loop.migrate] failed to copy decisions:", e);
+				}
+			}
+		}
+	}
+	const marker: MigratedMarker = {
+		migratedAt: new Date().toISOString(),
+		sources: sources.map((s) => ({
+			signals: s.signals,
+			decisions: s.decisions,
+		})),
+		signalsCopied,
+		decisionsCopied,
+	};
+	try {
+		writeFileSync(LOOP_PATHS.migrated, JSON.stringify(marker, null, 2));
+		console.log(
+			`[loop.migrate] copied ${signalsCopied} signals + ${decisionsCopied} decisions from ${sources.length} legacy source(s)`,
+		);
+	} catch (e) {
+		console.warn("[loop.migrate] failed to write marker:", e);
+	}
+	return marker;
 }
 
 function countLines(p: string): number {
-  try {
-    return readFileSync(p, "utf8").split("\n").filter(Boolean).length;
-  } catch {
-    return 0;
-  }
+	try {
+		return readFileSync(p, "utf8").split("\n").filter(Boolean).length;
+	} catch {
+		return 0;
+	}
 }
 
 function countDecisionLines(p: string): number {
-  try {
-    const d = JSON.parse(readFileSync(p, "utf8"));
-    return (
-      (Array.isArray(d.pending) ? d.pending.length : 0) +
-      (Array.isArray(d.done) ? d.done.length : 0) +
-      (Array.isArray(d.dismissed) ? d.dismissed.length : 0)
-    );
-  } catch {
-    return 0;
-  }
+	try {
+		const d = JSON.parse(readFileSync(p, "utf8"));
+		return (
+			(Array.isArray(d.pending) ? d.pending.length : 0) +
+			(Array.isArray(d.done) ? d.done.length : 0) +
+			(Array.isArray(d.dismissed) ? d.dismissed.length : 0)
+		);
+	} catch {
+		return 0;
+	}
 }
 
 /** Resolve a directory and ensure it exists. Used by adjacent helpers. */
 export function ensureParent(p: string): void {
-  mkdirSync(dirname(p), { recursive: true });
+	mkdirSync(dirname(p), { recursive: true });
 }

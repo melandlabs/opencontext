@@ -23,63 +23,63 @@ export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "openloomi-chat:";
  * factories) can pass either the IndexedDB `RawMessage` or this shape. */
 // biome-ignore lint/suspicious/noExplicitAny: structural mirror of `@opencontext/indexeddb/storage`'s `RawMessage`.
 export interface RawMessage {
-  id?: number;
-  messageId: string;
-  platform: string;
-  botId: string;
-  userId: string;
-  channel?: string;
-  person?: string;
-  timestamp: number;
-  content: string;
-  attachments?: Array<{
-    name: string;
-    url: string;
-    contentType?: string;
-    sizeBytes?: number;
-  }>;
-  embedding?: number[];
-  embeddingModel?: string;
-  embeddingContentHash?: string;
-  embeddingDimensions?: number;
-  embeddingUpdatedAt?: number;
-  // biome-ignore lint/suspicious/noExplicitAny: Preserve the public raw metadata contract.
-  metadata?: Record<string, any>;
-  createdAt: number;
-  memoryStage?: "short" | "mid" | "long";
-  accessCount?: number;
-  lastAccessAt?: number;
-  importanceScore?: number;
-  archivedAt?: number;
-  isPinned?: boolean;
-  summaryRefId?: string;
-  deprecatedAt?: number;
-  deprecationReason?: string;
-  supersededBySummaryId?: string;
+	id?: number;
+	messageId: string;
+	platform: string;
+	botId: string;
+	userId: string;
+	channel?: string;
+	person?: string;
+	timestamp: number;
+	content: string;
+	attachments?: Array<{
+		name: string;
+		url: string;
+		contentType?: string;
+		sizeBytes?: number;
+	}>;
+	embedding?: number[];
+	embeddingModel?: string;
+	embeddingContentHash?: string;
+	embeddingDimensions?: number;
+	embeddingUpdatedAt?: number;
+	// biome-ignore lint/suspicious/noExplicitAny: Preserve the public raw metadata contract.
+	metadata?: Record<string, any>;
+	createdAt: number;
+	memoryStage?: "short" | "mid" | "long";
+	accessCount?: number;
+	lastAccessAt?: number;
+	importanceScore?: number;
+	archivedAt?: number;
+	isPinned?: boolean;
+	summaryRefId?: string;
+	deprecatedAt?: number;
+	deprecationReason?: string;
+	supersededBySummaryId?: string;
 }
 
 function normalizeTimestampToMs(value: number | undefined): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  if ((value as number) < 1e11) {
-    return Math.floor((value as number) * 1000);
-  }
-  return Math.floor(value as number);
+	if (!Number.isFinite(value)) {
+		return 0;
+	}
+	if ((value as number) < 1e11) {
+		return Math.floor((value as number) * 1000);
+	}
+	return Math.floor(value as number);
 }
 
 /** Convert a RawMessage to a MemoryRecord for embedding. Local copy of the
  * helper that previously lived in `@opencontext/indexeddb/embedding` and pulled
  * in browser-only modules. */
 export function rawMessageToMemoryRecord(message: RawMessage): MemoryRecord {
-  return {
-    id: message.messageId,
-    userId: message.userId,
-    timestamp: normalizeTimestampToMs(message.timestamp),
-    text: message.archivedAt ? undefined : message.content,
-    mediaRefs: message.attachments?.map((item) => item.url).filter(Boolean),
-    embedding: message.embedding,
-    embeddingModel: message.embeddingModel,
-    embeddingContentHash: message.embeddingContentHash,
-  } as unknown as MemoryRecord;
+	return {
+		id: message.messageId,
+		userId: message.userId,
+		timestamp: normalizeTimestampToMs(message.timestamp),
+		text: message.archivedAt ? undefined : message.content,
+		mediaRefs: message.attachments?.map((item) => item.url).filter(Boolean),
+		embedding: message.embedding,
+		embeddingModel: message.embeddingModel,
+		embeddingContentHash: message.embeddingContentHash,
+	} as unknown as MemoryRecord;
 }

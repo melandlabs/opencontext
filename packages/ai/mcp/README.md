@@ -15,12 +15,12 @@ Then point the runtime at the built stdio entrypoint:
 
 ```json
 {
-  "mcpServers": {
-    "openloomi-local": {
-      "command": "node",
-      "args": ["/path/to/openloomi/packages/ai/mcp/dist/cli.js"]
-    }
-  }
+	"mcpServers": {
+		"openloomi-local": {
+			"command": "node",
+			"args": ["/path/to/openloomi/packages/ai/mcp/dist/cli.js"]
+		}
+	}
 }
 ```
 

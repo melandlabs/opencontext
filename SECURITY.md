@@ -2,9 +2,9 @@
 
 ## Supported Versions
 
-| Version | Supported |
-| ------- | --------- |
-| 0.10.x  | ✅ Active |
+| Version | Supported      |
+| ------- | -------------- |
+| 0.10.x  | ✅ Active      |
 | < 0.10  | ❌ End of life |
 
 ## Reporting a Vulnerability

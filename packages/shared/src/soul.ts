@@ -5,13 +5,13 @@
  */
 
 export interface SoulPreset {
-  id: string;
-  /** i18n key, e.g. common.soulPreset.default */
-  titleKey: string;
-  /** Short description i18n key, e.g. common.soulPresetDescriptions.default */
-  descriptionKey: string;
-  /** Full prompt text, consistent with aiSoulPrompt persisted in API; default presets use English as canonical, actual display/save uses getDefaultPrompt(locale) */
-  prompt: string;
+	id: string;
+	/** i18n key, e.g. common.soulPreset.default */
+	titleKey: string;
+	/** Short description i18n key, e.g. common.soulPresetDescriptions.default */
+	descriptionKey: string;
+	/** Full prompt text, consistent with aiSoulPrompt persisted in API; default presets use English as canonical, actual display/save uses getDefaultPrompt(locale) */
+	prompt: string;
 }
 
 /** Default preset English prompt (canonical, used for SOUL_PRESETS and matching) */
@@ -95,9 +95,9 @@ export const DEFAULT_PROMPT_ZH = `你是 openloomi —— 面向创始人与经�
  * @param locale Current language, e.g. "zh-Hans" | "en-US"
  */
 export function getDefaultPrompt(locale: string): string {
-  const lang = (locale || "").toLowerCase();
-  if (lang.startsWith("zh")) return DEFAULT_PROMPT_ZH;
-  return DEFAULT_PROMPT_EN;
+	const lang = (locale || "").toLowerCase();
+	if (lang.startsWith("zh")) return DEFAULT_PROMPT_ZH;
+	return DEFAULT_PROMPT_EN;
 }
 
 /** Strategist */
@@ -290,11 +290,11 @@ const CALM_PROMPT_ZH = `你是 openloomi 的稳定器模式 —— 在混乱中�
 
 /** Bilingual prompts for each preset (excluding custom), used for getting text by language and matching current aiSoulPrompt */
 const PRESET_PROMPTS: Record<string, { en: string; zh: string }> = {
-  default: { en: DEFAULT_PROMPT_EN, zh: DEFAULT_PROMPT_ZH },
-  strategist: { en: STRATEGIST_PROMPT_EN, zh: STRATEGIST_PROMPT_ZH },
-  executor: { en: EXECUTOR_PROMPT_EN, zh: EXECUTOR_PROMPT_ZH },
-  connector: { en: CONNECTOR_PROMPT_EN, zh: CONNECTOR_PROMPT_ZH },
-  calm: { en: CALM_PROMPT_EN, zh: CALM_PROMPT_ZH },
+	default: { en: DEFAULT_PROMPT_EN, zh: DEFAULT_PROMPT_ZH },
+	strategist: { en: STRATEGIST_PROMPT_EN, zh: STRATEGIST_PROMPT_ZH },
+	executor: { en: EXECUTOR_PROMPT_EN, zh: EXECUTOR_PROMPT_ZH },
+	connector: { en: CONNECTOR_PROMPT_EN, zh: CONNECTOR_PROMPT_ZH },
+	calm: { en: CALM_PROMPT_EN, zh: CALM_PROMPT_ZH },
 };
 
 /**
@@ -303,44 +303,44 @@ const PRESET_PROMPTS: Record<string, { en: string; zh: string }> = {
  * @param locale Current language, e.g. "zh-Hans" | "en-US"
  */
 export function getPresetPrompt(presetId: string, locale: string): string {
-  const pair = PRESET_PROMPTS[presetId];
-  if (!pair) return "";
-  const lang = (locale || "").toLowerCase();
-  return lang.startsWith("zh") ? pair.zh : pair.en;
+	const pair = PRESET_PROMPTS[presetId];
+	if (!pair) return "";
+	const lang = (locale || "").toLowerCase();
+	return lang.startsWith("zh") ? pair.zh : pair.en;
 }
 
 /** 5 presets (excluding custom): default, strategist, executor, connector, calm */
 export const SOUL_PRESETS: SoulPreset[] = [
-  {
-    id: "default",
-    titleKey: "common.soulPreset.default",
-    descriptionKey: "common.soulPresetDescriptions.default",
-    prompt: DEFAULT_PROMPT_EN,
-  },
-  {
-    id: "strategist",
-    titleKey: "common.soulPreset.strategist",
-    descriptionKey: "common.soulPresetDescriptions.strategist",
-    prompt: STRATEGIST_PROMPT_EN,
-  },
-  {
-    id: "executor",
-    titleKey: "common.soulPreset.executor",
-    descriptionKey: "common.soulPresetDescriptions.executor",
-    prompt: EXECUTOR_PROMPT_EN,
-  },
-  {
-    id: "connector",
-    titleKey: "common.soulPreset.connector",
-    descriptionKey: "common.soulPresetDescriptions.connector",
-    prompt: CONNECTOR_PROMPT_EN,
-  },
-  {
-    id: "calm",
-    titleKey: "common.soulPreset.calm",
-    descriptionKey: "common.soulPresetDescriptions.calm",
-    prompt: CALM_PROMPT_EN,
-  },
+	{
+		id: "default",
+		titleKey: "common.soulPreset.default",
+		descriptionKey: "common.soulPresetDescriptions.default",
+		prompt: DEFAULT_PROMPT_EN,
+	},
+	{
+		id: "strategist",
+		titleKey: "common.soulPreset.strategist",
+		descriptionKey: "common.soulPresetDescriptions.strategist",
+		prompt: STRATEGIST_PROMPT_EN,
+	},
+	{
+		id: "executor",
+		titleKey: "common.soulPreset.executor",
+		descriptionKey: "common.soulPresetDescriptions.executor",
+		prompt: EXECUTOR_PROMPT_EN,
+	},
+	{
+		id: "connector",
+		titleKey: "common.soulPreset.connector",
+		descriptionKey: "common.soulPresetDescriptions.connector",
+		prompt: CONNECTOR_PROMPT_EN,
+	},
+	{
+		id: "calm",
+		titleKey: "common.soulPreset.calm",
+		descriptionKey: "common.soulPresetDescriptions.calm",
+		prompt: CALM_PROMPT_EN,
+	},
 ];
 
 /** Custom card id, not in this array */
@@ -351,13 +351,13 @@ export const SOUL_PRESET_CUSTOM_ID = "custom" as const;
  * All presets support EN/ZH bilingual, match on either side counts as selecting that preset
  */
 export function getSoulPresetByPrompt(prompt: string): SoulPreset | undefined {
-  if (!prompt || typeof prompt !== "string") return undefined;
-  const trimmed = prompt.trim();
-  for (const preset of SOUL_PRESETS) {
-    const pair = PRESET_PROMPTS[preset.id];
-    if (pair && (trimmed === pair.en || trimmed === pair.zh)) return preset;
-  }
-  return SOUL_PRESETS.find((p) => p.prompt === trimmed);
+	if (!prompt || typeof prompt !== "string") return undefined;
+	const trimmed = prompt.trim();
+	for (const preset of SOUL_PRESETS) {
+		const pair = PRESET_PROMPTS[preset.id];
+		if (pair && (trimmed === pair.en || trimmed === pair.zh)) return preset;
+	}
+	return SOUL_PRESETS.find((p) => p.prompt === trimmed);
 }
 
 /**
@@ -365,9 +365,9 @@ export function getSoulPresetByPrompt(prompt: string): SoulPreset | undefined {
  * When not selected (empty or unset), defaults to "default"
  */
 export function getSelectedSoulPresetId(prompt: string): string {
-  if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
-    return "default";
-  }
-  const preset = getSoulPresetByPrompt(prompt);
-  return preset ? preset.id : SOUL_PRESET_CUSTOM_ID;
+	if (!prompt || typeof prompt !== "string" || !prompt.trim()) {
+		return "default";
+	}
+	const preset = getSoulPresetByPrompt(prompt);
+	return preset ? preset.id : SOUL_PRESET_CUSTOM_ID;
 }

@@ -5,21 +5,21 @@
  */
 
 function hasTauriRuntime(): boolean {
-  return typeof window !== "undefined" && "__TAURI__" in window;
+	return typeof window !== "undefined" && "__TAURI__" in window;
 }
 
 function hasTauriEnv(): boolean {
-  return (
-    typeof process !== "undefined" &&
-    (typeof process.env.TAURI_MODE === "string" ||
-      process.env.IS_TAURI === "true")
-  );
+	return (
+		typeof process !== "undefined" &&
+		(typeof process.env.TAURI_MODE === "string" ||
+			process.env.IS_TAURI === "true")
+	);
 }
 
 export function isTauriMode(): boolean {
-  return hasTauriRuntime() || hasTauriEnv();
+	return hasTauriRuntime() || hasTauriEnv();
 }
 
 export function isServerMode(): boolean {
-  return !isTauriMode();
+	return !isTauriMode();
 }

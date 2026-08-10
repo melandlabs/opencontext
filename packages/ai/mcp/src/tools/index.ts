@@ -8,16 +8,16 @@ import { registerMemoryTools } from "./memory";
 import { registerStatusTools } from "./status";
 
 export interface OpenLoomiToolContext {
-  client: OpenLoomiClient;
-  authToken: OpenLoomiAuthToken;
+	client: OpenLoomiClient;
+	authToken: OpenLoomiAuthToken;
 }
 
 export function registerOpenLoomiTools(
-  server: McpServer,
-  context: OpenLoomiToolContext,
+	server: McpServer,
+	context: OpenLoomiToolContext,
 ): void {
-  registerStatusTools(server, context);
-  registerMemoryTools(server, context);
-  registerConnectorTools(server, context);
-  registerLoopTools(server, context);
+	registerStatusTools(server, context);
+	registerMemoryTools(server, context);
+	registerConnectorTools(server, context);
+	registerLoopTools(server, context);
 }

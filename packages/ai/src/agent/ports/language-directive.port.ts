@@ -19,5 +19,5 @@ import type { UserLocale } from "@opencontext/shared";
 export type DirectiveChannel = "conversational" | "artifact";
 
 export interface LanguageDirectiveBuilder {
-  buildDirective(locale: UserLocale | null, channel: DirectiveChannel): string;
+	buildDirective(locale: UserLocale | null, channel: DirectiveChannel): string;
 }

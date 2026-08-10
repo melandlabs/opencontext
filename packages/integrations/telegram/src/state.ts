@@ -7,55 +7,55 @@
 
 /** Calculate exponential backoff delay and whether to give up. */
 export function calculateBackoffDelay(
-  attempts: number,
-  baseMs: number,
-  maxAttempts: number,
+	attempts: number,
+	baseMs: number,
+	maxAttempts: number,
 ): { delayMs: number; shouldGiveUp: boolean } {
-  const shouldGiveUp = attempts >= maxAttempts;
-  if (shouldGiveUp) {
-    return { delayMs: 0, shouldGiveUp: true };
-  }
-  const delayMs = baseMs * 2 ** attempts;
-  return { delayMs, shouldGiveUp: false };
+	const shouldGiveUp = attempts >= maxAttempts;
+	if (shouldGiveUp) {
+		return { delayMs: 0, shouldGiveUp: true };
+	}
+	const delayMs = baseMs * 2 ** attempts;
+	return { delayMs, shouldGiveUp: false };
 }
 
 /** Determine whether a connection is stale based on last event time. */
 export function isConnectionStale(
-  lastEventTime: number,
-  now: number,
-  staleThresholdMs: number,
+	lastEventTime: number,
+	now: number,
+	staleThresholdMs: number,
 ): boolean {
-  const elapsed = now - lastEventTime;
-  return elapsed > staleThresholdMs;
+	const elapsed = now - lastEventTime;
+	return elapsed > staleThresholdMs;
 }
 
 /** Map UpdateConnectionState numeric codes to human-readable strings. */
 export function resolveConnectionState(stateCode: number | string): string {
-  const stateMap: Record<number, string> = {
-    0: "connecting",
-    1: "connected",
-    2: "disconnected",
-    "-1": "connectionLost",
-  };
-  return stateMap[stateCode as number] || `unknown(${stateCode})`;
+	const stateMap: Record<number, string> = {
+		0: "connecting",
+		1: "connected",
+		2: "disconnected",
+		"-1": "connectionLost",
+	};
+	return stateMap[stateCode as number] || `unknown(${stateCode})`;
 }
 
 /** Decide whether an incoming message should be processed (idempotent + dedup). */
 export function shouldProcessMessage(
-  msgId: number,
-  lastProcessedId: number,
-  ownSentIds: Set<number>,
+	msgId: number,
+	lastProcessedId: number,
+	ownSentIds: Set<number>,
 ): boolean {
-  if (msgId <= lastProcessedId) return false;
-  if (ownSentIds.has(msgId)) return false;
-  return true;
+	if (msgId <= lastProcessedId) return false;
+	if (ownSentIds.has(msgId)) return false;
+	return true;
 }
 
 /** Evict oldest entries from own-sent message ID set when cap is exceeded. */
 export function pruneOwnSentIds(set: Set<number>, maxSize: number): void {
-  if (set.size <= maxSize) return;
-  const oldest = set.values().next().value;
-  if (oldest !== undefined) {
-    set.delete(oldest);
-  }
+	if (set.size <= maxSize) return;
+	const oldest = set.values().next().value;
+	if (oldest !== undefined) {
+		set.delete(oldest);
+	}
 }

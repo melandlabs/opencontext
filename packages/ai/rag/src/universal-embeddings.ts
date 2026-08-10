@@ -1,7 +1,7 @@
 import {
-  getConfiguredEmbeddingProvider,
-  type EmbeddingProvider,
-  type EmbeddingProviderFactoryOptions,
+	getConfiguredEmbeddingProvider,
+	type EmbeddingProvider,
+	type EmbeddingProviderFactoryOptions,
 } from "./embedding-provider";
 
 /**
@@ -11,30 +11,30 @@ import {
  * embedding implementation is selected through the provider abstraction.
  */
 export class UniversalEmbeddings implements EmbeddingProvider {
-  private provider: EmbeddingProvider;
+	private provider: EmbeddingProvider;
 
-  constructor(
-    userAuthToken?: string,
-    provider?: EmbeddingProvider,
-    options: Omit<EmbeddingProviderFactoryOptions, "userAuthToken"> = {},
-  ) {
-    this.provider =
-      provider ?? getConfiguredEmbeddingProvider({ ...options, userAuthToken });
-  }
+	constructor(
+		userAuthToken?: string,
+		provider?: EmbeddingProvider,
+		options: Omit<EmbeddingProviderFactoryOptions, "userAuthToken"> = {},
+	) {
+		this.provider =
+			provider ?? getConfiguredEmbeddingProvider({ ...options, userAuthToken });
+	}
 
-  async embedDocuments(texts: string[]): Promise<number[][]> {
-    return this.provider.embedDocuments(texts);
-  }
+	async embedDocuments(texts: string[]): Promise<number[][]> {
+		return this.provider.embedDocuments(texts);
+	}
 
-  async embedQuery(text: string): Promise<number[]> {
-    return this.provider.embedQuery(text);
-  }
+	async embedQuery(text: string): Promise<number[]> {
+		return this.provider.embedQuery(text);
+	}
 
-  getModelName(): string {
-    return this.provider.getModelName();
-  }
+	getModelName(): string {
+		return this.provider.getModelName();
+	}
 
-  getDimensions(): number | undefined {
-    return this.provider.getDimensions();
-  }
+	getDimensions(): number | undefined {
+		return this.provider.getDimensions();
+	}
 }

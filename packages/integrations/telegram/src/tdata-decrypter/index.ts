@@ -18,43 +18,43 @@ export { readTdfFile, parseRawTdf, TDF_MAGIC } from "./tdf";
 export type { RawTdfFile } from "./tdf";
 
 export {
-  createLocalKey,
-  createLegacyLocalKey,
-  decryptLocal,
-  aesDecryptLocal,
-  prepareAesOldMtp,
+	createLocalKey,
+	createLegacyLocalKey,
+	decryptLocal,
+	aesDecryptLocal,
+	prepareAesOldMtp,
 } from "./crypto";
 
 export {
-  readQtInt32,
-  readQtUint32,
-  readQtInt64,
-  readQtUint64,
-  readQtByteArray,
-  readQtUtf8,
-  readBytes,
-  readQtInteger,
+	readQtInt32,
+	readQtUint32,
+	readQtInt64,
+	readQtUint64,
+	readQtByteArray,
+	readQtUtf8,
+	readBytes,
+	readQtInteger,
 } from "./qt";
 
 export type { ReadResult } from "./qt";
 
 export {
-  decryptSettingsTdf,
-  decryptKeyDataTdf,
-  readKeyDataAccounts,
+	decryptSettingsTdf,
+	decryptKeyDataTdf,
+	readKeyDataAccounts,
 } from "./storage";
 
 export {
-  readSettingsBlocks,
-  readSettingsBlock,
-  SettingsBlocks,
+	readSettingsBlocks,
+	readSettingsBlock,
+	SettingsBlocks,
 } from "./settings";
 
 // Re-export errors
 export {
-  TdfParserError,
-  WrongMagicTdfParserError,
-  WrongHashsumTdfParserError,
+	TdfParserError,
+	WrongMagicTdfParserError,
+	WrongHashsumTdfParserError,
 } from "./tdf";
 
 export { CryptoException } from "./crypto";
@@ -65,64 +65,64 @@ export { CryptoException } from "./crypto";
  * @returns Auth key data
  */
 export async function extractAuthKey(tdataPath: string): Promise<{
-  success: boolean;
-  userId?: number;
-  dcId?: number;
-  authKey?: string;
-  error?: string;
+	success: boolean;
+	userId?: number;
+	dcId?: number;
+	authKey?: string;
+	error?: string;
 }> {
-  try {
-    const { TdataReader } = await import("./decrypter");
+	try {
+		const { TdataReader } = await import("./decrypter");
 
-    // Normalize path
-    let path = tdataPath;
-    if (!path.endsWith("tdata")) {
-      const tdataDir = require("node:path").join(tdataPath, "tdata");
-      if (require("node:fs").existsSync(tdataDir)) {
-        path = tdataDir;
-      }
-    }
+		// Normalize path
+		let path = tdataPath;
+		if (!path.endsWith("tdata")) {
+			const tdataDir = require("node:path").join(tdataPath, "tdata");
+			if (require("node:fs").existsSync(tdataDir)) {
+				path = tdataDir;
+			}
+		}
 
-    const reader = new TdataReader(path);
-    const result = reader.read();
+		const reader = new TdataReader(path);
+		const result = reader.read();
 
-    if (!result.accounts || result.accounts.size === 0) {
-      return {
-        success: false,
-        error:
-          "No accounts found in tdata. Please make sure you're logged into Telegram Desktop.",
-      };
-    }
+		if (!result.accounts || result.accounts.size === 0) {
+			return {
+				success: false,
+				error:
+					"No accounts found in tdata. Please make sure you're logged into Telegram Desktop.",
+			};
+		}
 
-    // Get first account
-    const firstAccount = result.accounts.values().next().value;
-    if (!firstAccount) {
-      return {
-        success: false,
-        error: "No accounts found in tdata.",
-      };
-    }
+		// Get first account
+		const firstAccount = result.accounts.values().next().value;
+		if (!firstAccount) {
+			return {
+				success: false,
+				error: "No accounts found in tdata.",
+			};
+		}
 
-    const { mtpData } = firstAccount;
-    const authKeyBytes = mtpData.keys.get(mtpData.currentDcId);
+		const { mtpData } = firstAccount;
+		const authKeyBytes = mtpData.keys.get(mtpData.currentDcId);
 
-    if (!authKeyBytes) {
-      return {
-        success: false,
-        error: `No auth key found for DC ${mtpData.currentDcId}`,
-      };
-    }
+		if (!authKeyBytes) {
+			return {
+				success: false,
+				error: `No auth key found for DC ${mtpData.currentDcId}`,
+			};
+		}
 
-    return {
-      success: true,
-      userId: mtpData.userId,
-      dcId: mtpData.currentDcId,
-      authKey: authKeyBytes.toString("hex"),
-    };
-  } catch (error) {
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
+		return {
+			success: true,
+			userId: mtpData.userId,
+			dcId: mtpData.currentDcId,
+			authKey: authKeyBytes.toString("hex"),
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : String(error),
+		};
+	}
 }

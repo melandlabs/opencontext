@@ -222,16 +222,16 @@ report for review or logging:
 
 ```ts
 const diagnostics = buildMemoryRelationPipelineDiagnostics({
-  records,
-  now,
-  selectors: {
-    getId: (record) => record.id,
-    getTimestamp: (record) => record.timestamp,
-    getText: (record) => record.text,
-    getRelationGroup: (record) => record.metadata?.relationGroup,
-    getRelationValue: (record) => record.metadata?.relationValue,
-    getRelationScope: (record) => record.metadata?.relationScope,
-  },
+	records,
+	now,
+	selectors: {
+		getId: (record) => record.id,
+		getTimestamp: (record) => record.timestamp,
+		getText: (record) => record.text,
+		getRelationGroup: (record) => record.metadata?.relationGroup,
+		getRelationValue: (record) => record.metadata?.relationValue,
+		getRelationScope: (record) => record.metadata?.relationScope,
+	},
 });
 const report = buildMemoryConsolidationDiagnosticsReport(diagnostics);
 ```

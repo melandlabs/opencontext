@@ -10,37 +10,40 @@
  * (e.g. a raw platform slug from an untrusted API response).
  */
 export const INTEGRATION_IDS = [
-  "telegram",
-  "whatsapp",
-  "slack",
-  "discord",
-  "gmail",
-  "outlook",
-  "linkedin",
-  "instagram",
-  "twitter",
-  "google_calendar",
-  "google_meet",
-  "outlook_calendar",
-  "teams",
-  "facebook_messenger",
-  "google_drive",
-  "google_docs",
-  "hubspot",
-  "notion",
-  "github",
-  "asana",
-  "jira",
-  "linear",
-  "imessage",
-  "feishu",
-  "dingtalk",
-  "qqbot",
-  "weixin",
+	"telegram",
+	"whatsapp",
+	"slack",
+	"discord",
+	"gmail",
+	"outlook",
+	"linkedin",
+	"instagram",
+	"twitter",
+	"google_calendar",
+	"google_meet",
+	"outlook_calendar",
+	"teams",
+	"facebook_messenger",
+	"google_drive",
+	"google_docs",
+	"hubspot",
+	"notion",
+	"github",
+	"asana",
+	"jira",
+	"linear",
+	"imessage",
+	"feishu",
+	"dingtalk",
+	"qqbot",
+	"weixin",
 ] as const;
 
 export type IntegrationId = (typeof INTEGRATION_IDS)[number];
 
 export function isIntegrationId(value: unknown): value is IntegrationId {
-  return typeof value === "string" && (INTEGRATION_IDS as readonly string[]).includes(value);
+	return (
+		typeof value === "string" &&
+		(INTEGRATION_IDS as readonly string[]).includes(value)
+	);
 }

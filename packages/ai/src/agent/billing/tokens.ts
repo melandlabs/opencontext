@@ -1,8 +1,8 @@
 import type { ModelType } from "./model-pricing";
 import {
-  calculateInputCredits,
-  calculateOutputCredits,
-  calculateTotalCredits,
+	calculateInputCredits,
+	calculateOutputCredits,
+	calculateTotalCredits,
 } from "./model-pricing";
 
 // Re-export estimateTokens from shared
@@ -20,14 +20,14 @@ export const OUTPUT_TOKENS_PER_CREDIT = 7.5;
  * @returns Number of credits required
  */
 export function getInputCredits(
-  inputTokens: number,
-  model?: ModelType,
+	inputTokens: number,
+	model?: ModelType,
 ): number {
-  if (model && model !== "default") {
-    return calculateInputCredits(inputTokens, model);
-  }
-  // Legacy calculation for default model
-  return inputTokens / INPUT_TOKENS_PER_CREDIT;
+	if (model && model !== "default") {
+		return calculateInputCredits(inputTokens, model);
+	}
+	// Legacy calculation for default model
+	return inputTokens / INPUT_TOKENS_PER_CREDIT;
 }
 
 /**
@@ -37,14 +37,14 @@ export function getInputCredits(
  * @returns Number of credits required
  */
 export function getOutputCredits(
-  outputTokens: number,
-  model?: ModelType,
+	outputTokens: number,
+	model?: ModelType,
 ): number {
-  if (model && model !== "default") {
-    return calculateOutputCredits(outputTokens, model);
-  }
-  // Legacy calculation for default model
-  return outputTokens / OUTPUT_TOKENS_PER_CREDIT;
+	if (model && model !== "default") {
+		return calculateOutputCredits(outputTokens, model);
+	}
+	// Legacy calculation for default model
+	return outputTokens / OUTPUT_TOKENS_PER_CREDIT;
 }
 
 /**
@@ -55,33 +55,33 @@ export function getOutputCredits(
  * @returns Total credits required
  */
 export function getTotalCredits(
-  inputTokens: number,
-  outputTokens: number,
-  model?: ModelType,
+	inputTokens: number,
+	outputTokens: number,
+	model?: ModelType,
 ): number {
-  if (model && model !== "default") {
-    return calculateTotalCredits(inputTokens, outputTokens, model);
-  }
-  // Legacy calculation for default model
-  return (
-    inputTokens / INPUT_TOKENS_PER_CREDIT +
-    outputTokens / OUTPUT_TOKENS_PER_CREDIT
-  );
+	if (model && model !== "default") {
+		return calculateTotalCredits(inputTokens, outputTokens, model);
+	}
+	// Legacy calculation for default model
+	return (
+		inputTokens / INPUT_TOKENS_PER_CREDIT +
+		outputTokens / OUTPUT_TOKENS_PER_CREDIT
+	);
 }
 
 // Re-export model pricing types and utilities
 export type { ModelType, PromptCacheStats } from "./model-pricing";
 export {
-  MODEL_PRICING,
-  getModelPricing,
-  getModelMultiplier,
-  CREDIT_VALUE_USD,
-  calculateImageCredits,
-  getImageModelPricing,
-  IMAGE_MODEL_PRICING,
-  getCanonicalImageModel,
-  CACHE_WRITE_5M_MULTIPLIER,
-  CACHE_WRITE_1H_MULTIPLIER,
-  CACHE_READ_MULTIPLIER,
-  calculatePromptCacheStats,
+	MODEL_PRICING,
+	getModelPricing,
+	getModelMultiplier,
+	CREDIT_VALUE_USD,
+	calculateImageCredits,
+	getImageModelPricing,
+	IMAGE_MODEL_PRICING,
+	getCanonicalImageModel,
+	CACHE_WRITE_5M_MULTIPLIER,
+	CACHE_WRITE_1H_MULTIPLIER,
+	CACHE_READ_MULTIPLIER,
+	calculatePromptCacheStats,
 } from "./model-pricing";

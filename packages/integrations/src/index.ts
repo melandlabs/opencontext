@@ -11,15 +11,15 @@
 
 // Re-export core interfaces
 export type {
-  IntegrationContext,
-  CredentialStore,
-  AuthProvider,
-  SessionStore,
-  FileIngester,
-  ConfigProvider,
-  ClientRegistry,
-  BaileysAuthStateProvider,
-  InboundMessageHandler,
+	IntegrationContext,
+	CredentialStore,
+	AuthProvider,
+	SessionStore,
+	FileIngester,
+	ConfigProvider,
+	ClientRegistry,
+	BaileysAuthStateProvider,
+	InboundMessageHandler,
 } from "./core/index.js";
 
 export type { AIHandler, AIHandlerOptions } from "./core/ai-handler.js";

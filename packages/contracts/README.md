@@ -10,13 +10,13 @@ consume it; neither sub-project owns it.
 
 ## Contents
 
-| Sub-path | What it defines | Used by |
-|---|---|---|
-| `@opencontext/contracts` (root) | barrel — re-exports everything | everyone |
-| `@opencontext/contracts/user-type` | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES` | auth, db, integrations, UI route groups |
-| `@opencontext/contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` | integrations, UI hooks, route handlers |
-| `@opencontext/contracts/errors` | `AuthErrorCode` enum | auth, UI forms, route handlers |
-| `@opencontext/contracts/schemas` | `UserTypeSchema`, `IntegrationIdSchema` (zod) | runtime parsers, UI form validation |
+| Sub-path                                | What it defines                                                                               | Used by                                 |
+| --------------------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `@opencontext/contracts` (root)         | barrel — re-exports everything                                                                | everyone                                |
+| `@opencontext/contracts/user-type`      | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES`  | auth, db, integrations, UI route groups |
+| `@opencontext/contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` | integrations, UI hooks, route handlers  |
+| `@opencontext/contracts/errors`         | `AuthErrorCode` enum                                                                          | auth, UI forms, route handlers          |
+| `@opencontext/contracts/schemas`        | `UserTypeSchema`, `IntegrationIdSchema` (zod)                                                 | runtime parsers, UI form validation     |
 
 ## Why this exists
 
