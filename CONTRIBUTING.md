@@ -15,7 +15,7 @@ contributors.
 ## Repository layout
 
 ```
-OpenContext/
+opencontext/
 ├── apps/                       # Example host applications (web, cli, …)
 ├── packages/                   # Publishable libraries (@context/*)
 │   ├── ai/                     # AI SDK wrappers, MCP server, memory consolidation
