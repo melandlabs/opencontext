@@ -4,8 +4,7 @@ export interface OwnerScope {
 	tenantId?: string;
 }
 
-export type MemoryApplicabilityScope =
-	"global" | "task" | "conversation" | "channel" | "project" | "custom";
+export type MemoryApplicabilityScope = "global" | "task" | "conversation" | "channel" | "project" | "custom";
 
 export interface MemoryApplicabilityContext {
 	scope: MemoryApplicabilityScope;
@@ -17,11 +16,15 @@ export interface MemoryApplicabilityContext {
 
 export type MemoryGraphNodeType = "raw" | "summary" | "artifact";
 
-export type MemoryGraphRelationKind =
-	"support" | "compete" | "related" | "supersede";
+export type MemoryGraphRelationKind = "support" | "compete" | "related" | "supersede";
 
 export type MemoryClusterLifecycleStatus =
-	"forming" | "active" | "stable" | "decaying" | "superseded" | "audit-only";
+	| "forming"
+	| "active"
+	| "stable"
+	| "decaying"
+	| "superseded"
+	| "audit-only";
 
 export type MemoryGraphVisibility = "default" | "deprecated" | "audit-only";
 
@@ -174,8 +177,7 @@ export interface MemoryGraphOperationHistoryStore {
 	}): Promise<MemoryGraphOperation[]>;
 }
 
-export type MemoryGraphStoreWithOperationHistory = MemoryGraphStore &
-	MemoryGraphOperationHistoryStore;
+export type MemoryGraphStoreWithOperationHistory = MemoryGraphStore & MemoryGraphOperationHistoryStore;
 
 export interface GraphInteractionInput {
 	ownerScope: OwnerScope;
@@ -216,9 +218,7 @@ export interface ClusterLifecyclePolicyResult {
 }
 
 export interface ClusterLifecyclePolicy {
-	evaluate(
-		input: ClusterLifecyclePolicyInput,
-	): Promise<ClusterLifecyclePolicyResult>;
+	evaluate(input: ClusterLifecyclePolicyInput): Promise<ClusterLifecyclePolicyResult>;
 }
 
 export interface MemoryGraphConsolidationInput {
@@ -258,9 +258,7 @@ export interface MemoryGraphConsolidationPlan {
 }
 
 export interface MemoryConsolidationPlanner {
-	plan(
-		input: MemoryGraphConsolidationInput,
-	): Promise<MemoryGraphConsolidationPlan>;
+	plan(input: MemoryGraphConsolidationInput): Promise<MemoryGraphConsolidationPlan>;
 }
 
 export type GraphRetrievalVisibilityMode = "default" | "audit" | "conflict";

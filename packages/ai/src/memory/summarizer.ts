@@ -1,8 +1,4 @@
-import type {
-	MemoryGroup,
-	MemorySummarizer,
-	MemorySummaryDraft,
-} from "./contracts";
+import type { MemoryGroup, MemorySummarizer, MemorySummaryDraft } from "./contracts";
 
 const STOP_WORDS = new Set([
 	"the",
@@ -76,9 +72,7 @@ function timestampToIsoDay(timestamp: number): string {
 
 export class RuleBasedMemorySummarizer implements MemorySummarizer {
 	async summarizeGroup(group: MemoryGroup): Promise<MemorySummaryDraft> {
-		const sortedRecords = [...group.records].sort(
-			(a, b) => a.timestamp - b.timestamp,
-		);
+		const sortedRecords = [...group.records].sort((a, b) => a.timestamp - b.timestamp);
 		const texts = sortedRecords
 			.map((record) => record.text ?? "")
 			.map((text) => normalizeWhitespace(text))

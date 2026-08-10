@@ -27,14 +27,7 @@ interface Token {
 interface StyleSpan {
 	start: number;
 	end: number;
-	style:
-		| "bold"
-		| "italic"
-		| "strikethrough"
-		| "code"
-		| "code_block"
-		| "blockquote"
-		| "spoiler";
+	style: "bold" | "italic" | "strikethrough" | "code" | "code_block" | "blockquote" | "spoiler";
 }
 
 interface LinkSpan {
@@ -526,10 +519,7 @@ function markdownToIR(
 	const finalLen = Math.max(trimmedLen, codeBlockEnd);
 
 	return {
-		text:
-			finalLen === state.text.length
-				? state.text
-				: state.text.slice(0, finalLen),
+		text: finalLen === state.text.length ? state.text : state.text.slice(0, finalLen),
 		styles: mergeStyleSpans(clampStyleSpans(state.styles, finalLen)),
 		links: clampLinkSpans(state.links, finalLen),
 	};
@@ -617,9 +607,7 @@ function renderMarkdownWithMarkers(
 	const content = ir.text;
 	if (!content) return "";
 
-	const styled = sortStyleSpans(
-		ir.styles.filter((s) => Boolean(markers[s.style])),
-	);
+	const styled = sortStyleSpans(ir.styles.filter((s) => Boolean(markers[s.style])));
 
 	const boundaries = new Set<number>();
 	boundaries.add(0);
@@ -713,10 +701,7 @@ function renderMarkdownWithMarkers(
 				if (a.end !== b.end) return b.end - a.end;
 				if (a.kind !== b.kind) return a.kind === "link" ? -1 : 1;
 				if (a.kind === "style" && b.kind === "style") {
-					return (
-						(STYLE_RANK.get(a.style ?? "bold") ?? 0) -
-						(STYLE_RANK.get(b.style ?? "bold") ?? 0)
-					);
+					return (STYLE_RANK.get(a.style ?? "bold") ?? 0) - (STYLE_RANK.get(b.style ?? "bold") ?? 0);
 				}
 				return a.index - b.index;
 			});
@@ -736,32 +721,25 @@ function renderMarkdownWithMarkers(
 
 // ─── Public API ──────────────────────────────────────────────────────────────
 
-const TELEGRAM_STYLE_MARKERS: Record<string, { open: string; close: string }> =
-	{
-		bold: { open: "<b>", close: "</b>" },
-		italic: { open: "<i>", close: "</i>" },
-		strikethrough: { open: "<s>", close: "</s>" },
-		code: { open: "<code>", close: "</code>" },
-		code_block: { open: "<pre><code>", close: "</code></pre>" },
-		spoiler: { open: "<tg-spoiler>", close: "</tg-spoiler>" },
-		blockquote: { open: "<blockquote>", close: "</blockquote>" },
-	};
+const TELEGRAM_STYLE_MARKERS: Record<string, { open: string; close: string }> = {
+	bold: { open: "<b>", close: "</b>" },
+	italic: { open: "<i>", close: "</i>" },
+	strikethrough: { open: "<s>", close: "</s>" },
+	code: { open: "<code>", close: "</code>" },
+	code_block: { open: "<pre><code>", close: "</code></pre>" },
+	spoiler: { open: "<tg-spoiler>", close: "</tg-spoiler>" },
+	blockquote: { open: "<blockquote>", close: "</blockquote>" },
+};
 
 function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
+	return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function escapeHtmlAttr(text: string): string {
 	return escapeHtml(text).replace(/"/g, "&quot;");
 }
 
-function buildTelegramLink(
-	link: LinkSpan,
-	text: string,
-): RenderLinkResult | null {
+function buildTelegramLink(link: LinkSpan, text: string): RenderLinkResult | null {
 	const href = link.href.trim();
 	if (!href || link.start === link.end) return null;
 	return {
@@ -790,10 +768,7 @@ export function markdownToTelegramHtml(markdown: string): string {
 			buildLink: buildTelegramLink,
 		});
 	} catch (err) {
-		console.error(
-			"[Telegram Markdown] Conversion failed, falling back to plain text:",
-			err,
-		);
+		console.error("[Telegram Markdown] Conversion failed, falling back to plain text:", err);
 		// Fallback: escape HTML chars so the raw markdown is at least readable
 		return escapeHtml(markdown);
 	}

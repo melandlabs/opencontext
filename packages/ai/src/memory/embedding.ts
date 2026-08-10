@@ -1,22 +1,12 @@
 import type { MemoryRecord } from "./contracts";
 
-export const MEMORY_RECORD_EMBEDDING_TEXT_VERSION =
-	"memory-record-embedding-text-v1";
+export const MEMORY_RECORD_EMBEDDING_TEXT_VERSION = "memory-record-embedding-text-v1";
 
 const DEFAULT_MAX_TEXT_LENGTH = 8_000;
 
 export type MemoryRecordEmbeddingTextInput = Partial<
 	Record<
-		keyof Pick<
-			MemoryRecord,
-			| "id"
-			| "timestamp"
-			| "text"
-			| "mediaRefs"
-			| "tier"
-			| "dimensions"
-			| "metadata"
-		>,
+		keyof Pick<MemoryRecord, "id" | "timestamp" | "text" | "mediaRefs" | "tier" | "dimensions" | "metadata">,
 		unknown
 	>
 >;
@@ -84,11 +74,7 @@ function flattenValue(value: unknown, depth = 0): string[] {
 		});
 }
 
-function appendSection(
-	sections: string[],
-	label: string,
-	value: unknown,
-): void {
+function appendSection(sections: string[], label: string, value: unknown): void {
 	const flattened = flattenValue(value);
 	if (flattened.length === 0) {
 		return;
@@ -140,10 +126,7 @@ export function buildMemoryRecordEmbeddingText(
 	appendSection(sections, "Dimensions", record.dimensions);
 	appendSection(sections, "Metadata", record.metadata);
 
-	return truncateAtBoundary(
-		sections.join("\n"),
-		options.maxLength ?? DEFAULT_MAX_TEXT_LENGTH,
-	);
+	return truncateAtBoundary(sections.join("\n"), options.maxLength ?? DEFAULT_MAX_TEXT_LENGTH);
 }
 
 export function buildMemoryRecordEmbeddingDocument(

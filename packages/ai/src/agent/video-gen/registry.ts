@@ -5,11 +5,7 @@
  */
 
 import type { VideoGenProvider } from "./base";
-import type {
-	VideoCapabilities,
-	VideoGenerationRequest,
-	VideoGenerationResponse,
-} from "./types";
+import type { VideoCapabilities, VideoGenerationRequest, VideoGenerationResponse } from "./types";
 
 const providers = new Map<string, VideoGenProvider>();
 
@@ -17,9 +13,7 @@ export function registerVideoGenProvider(provider: VideoGenProvider): void {
 	providers.set(provider.name, provider);
 }
 
-export function getVideoGenProvider(
-	name: string,
-): VideoGenProvider | undefined {
+export function getVideoGenProvider(name: string): VideoGenProvider | undefined {
 	return providers.get(name);
 }
 
@@ -36,12 +30,9 @@ export function getDefaultVideoGenProvider(): VideoGenProvider | undefined {
 	return undefined;
 }
 
-export async function generateVideo(
-	request: VideoGenerationRequest,
-): Promise<VideoGenerationResponse> {
+export async function generateVideo(request: VideoGenerationRequest): Promise<VideoGenerationResponse> {
 	const modelName = request.model || "openai";
-	const provider =
-		getVideoGenProvider(modelName) || getDefaultVideoGenProvider();
+	const provider = getVideoGenProvider(modelName) || getDefaultVideoGenProvider();
 
 	if (!provider) {
 		return {
@@ -60,9 +51,7 @@ export async function generateVideo(
 	return provider.generate(request);
 }
 
-export function getVideoGenProviderCapabilities(
-	name: string,
-): VideoCapabilities | null {
+export function getVideoGenProviderCapabilities(name: string): VideoCapabilities | null {
 	const provider = getVideoGenProvider(name);
 	if (!provider) {
 		return null;

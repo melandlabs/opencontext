@@ -249,8 +249,7 @@ export const CODEX_METADATA: AgentProviderMetadata = {
 	type: "codex",
 	name: "Codex CLI",
 	version: "1.0.0",
-	description:
-		"OpenAI Codex CLI integration. Uses OpenAI models through the codex command-line tool.",
+	description: "OpenAI Codex CLI integration. Uses OpenAI models through the codex command-line tool.",
 	configSchema: CODEX_CONFIG_SCHEMA,
 	builtin: true,
 	supportsPlan: true,
@@ -268,8 +267,7 @@ export const DEEPAGENTS_METADATA: AgentProviderMetadata = {
 	type: "deepagents",
 	name: "DeepAgents",
 	version: "1.0.0",
-	description:
-		"DeepAgents.js framework integration using LangGraph. Supports multiple LLM providers.",
+	description: "DeepAgents.js framework integration using LangGraph. Supports multiple LLM providers.",
 	configSchema: DEEPAGENTS_CONFIG_SCHEMA,
 	builtin: true,
 	supportsPlan: true,

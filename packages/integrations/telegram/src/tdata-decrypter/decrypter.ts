@@ -36,11 +36,7 @@ function fileKeyToStr(fileKey: Buffer): string {
  * Compute data name key from dataname string
  */
 function computeDataNameKey(dataName: string): string {
-	const fileKey = crypto
-		.createHash("md5")
-		.update(dataName, "utf8")
-		.digest()
-		.subarray(0, 8);
+	const fileKey = crypto.createHash("md5").update(dataName, "utf8").digest().subarray(0, 8);
 	return fileKeyToStr(fileKey);
 }
 
@@ -223,11 +219,7 @@ export class TdataReader {
 		// Read accounts
 		const accounts = new Map<number, ParsedAccount>();
 		for (const accountIndex of accountIndexes) {
-			const reader = new AccountReader(
-				this.basePath,
-				accountIndex,
-				this.dataName,
-			);
+			const reader = new AccountReader(this.basePath, accountIndex, this.dataName);
 			const account = reader.read(localKey);
 			accounts.set(accountIndex, account);
 		}
@@ -243,10 +235,7 @@ export class TdataReader {
 		const keyDataPath = path.join(this.basePath, keyDataName);
 
 		const keyDataTdf = readTdfFile(keyDataPath);
-		const [localKey, infoDecrypted] = decryptKeyDataTdf(
-			Buffer.from(passcode),
-			keyDataTdf,
-		);
+		const [localKey, infoDecrypted] = decryptKeyDataTdf(Buffer.from(passcode), keyDataTdf);
 		const [accountIndexes, _] = readKeyDataAccounts(infoDecrypted);
 
 		return [localKey, accountIndexes];

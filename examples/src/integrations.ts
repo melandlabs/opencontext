@@ -17,10 +17,7 @@
 import type { Message, Messages } from "@melandlabs/integrations-channels";
 import type { ExtractedMessageInfo } from "@melandlabs/integrations-channels/sources/types";
 import { ComposioClient } from "@melandlabs/integrations-composio";
-import {
-	type ContactMeta,
-	isTelegramContactMeta,
-} from "@melandlabs/integrations/contacts";
+import { type ContactMeta, isTelegramContactMeta } from "@melandlabs/integrations/contacts";
 import {
 	createMinimalContext,
 	noopAuthProvider,
@@ -30,11 +27,7 @@ import {
 	noopFileIngester,
 	noopSessionStore,
 } from "@melandlabs/integrations/core";
-import {
-	buildSnippet,
-	cleanEmailForLLM,
-	htmlToPlainText,
-} from "@melandlabs/integrations/utils";
+import { buildSnippet, cleanEmailForLLM, htmlToPlainText } from "@melandlabs/integrations/utils";
 
 import * as asana from "@melandlabs/integrations-asana";
 import * as calendar from "@melandlabs/integrations-calendar";
@@ -63,26 +56,11 @@ import { makeCheck, makeCheckWithSkip, runSection } from "./_helpers.ts";
 // shallow entry (the `./adapter` etc. subpaths bypass the broken top-level
 // imports where applicable).
 const lazyPackages: Array<[string, string]> = [
-	[
-		"@melandlabs/integrations-feishu",
-		"feishu — upstream @larksuiteoapi/node-sdk has no ESM exports",
-	],
-	[
-		"@melandlabs/integrations-telegram",
-		"telegram — upstream `telegram` npm package has no ESM exports",
-	],
-	[
-		"@melandlabs/integrations-weixin",
-		"weixin — upstream @tencent-weixin/openclaw-weixin has no ESM exports",
-	],
-	[
-		"@melandlabs/integrations-whatsapp",
-		"whatsapp — upstream @whiskeysockets/baileys has no ESM exports",
-	],
-	[
-		"@melandlabs/integrations-x",
-		"x — upstream @xdevplatform/xdk has no ESM exports",
-	],
+	["@melandlabs/integrations-feishu", "feishu — upstream @larksuiteoapi/node-sdk has no ESM exports"],
+	["@melandlabs/integrations-telegram", "telegram — upstream `telegram` npm package has no ESM exports"],
+	["@melandlabs/integrations-weixin", "weixin — upstream @tencent-weixin/openclaw-weixin has no ESM exports"],
+	["@melandlabs/integrations-whatsapp", "whatsapp — upstream @whiskeysockets/baileys has no ESM exports"],
+	["@melandlabs/integrations-x", "x — upstream @xdevplatform/xdk has no ESM exports"],
 ];
 
 export default async function testIntegrations() {
@@ -100,15 +78,9 @@ export default async function testIntegrations() {
 				noopSessionStore,
 			].length === 6,
 		);
-		check(
-			"createMinimalContext is a function",
-			typeof createMinimalContext === "function",
-		);
+		check("createMinimalContext is a function", typeof createMinimalContext === "function");
 
-		check(
-			"isTelegramContactMeta is a function",
-			typeof isTelegramContactMeta === "function",
-		);
+		check("isTelegramContactMeta is a function", typeof isTelegramContactMeta === "function");
 		const probe = isTelegramContactMeta({
 			source: "telegram",
 			id: "1",
@@ -116,14 +88,8 @@ export default async function testIntegrations() {
 		check("isTelegramContactMeta returns boolean", typeof probe === "boolean");
 
 		check("buildSnippet is a function", typeof buildSnippet === "function");
-		check(
-			"cleanEmailForLLM is a function",
-			typeof cleanEmailForLLM === "function",
-		);
-		check(
-			"htmlToPlainText is a function",
-			typeof htmlToPlainText === "function",
-		);
+		check("cleanEmailForLLM is a function", typeof cleanEmailForLLM === "function");
+		check("htmlToPlainText is a function", typeof htmlToPlainText === "function");
 
 		const _t: Message = { source: "x", id: "1" } as Message;
 		const _ts: Messages = [_t];
@@ -139,73 +105,26 @@ export default async function testIntegrations() {
 
 	await runSection("@melandlabs/integrations-runtime", async () => {
 		const check = makeCheck("integrations-runtime");
-		const exported = Object.keys(integrationsRuntime).filter(
-			(k) => !k.startsWith("_"),
-		);
+		const exported = Object.keys(integrationsRuntime).filter((k) => !k.startsWith("_"));
 		check("module exports symbols", exported.length > 0);
 	});
 
 	const leaves: Array<[string, Record<string, unknown>]> = [
-		[
-			"@melandlabs/integrations-asana",
-			asana as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-calendar",
-			calendar as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-channels",
-			channels as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-composio",
-			composio as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-dingtalk",
-			dingtalk as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-facebook-messenger",
-			facebookMessenger as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-gmail",
-			gmail as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-google-docs",
-			googleDocs as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-google-meet",
-			googleMeet as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-hubspot",
-			hubspot as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-imessage",
-			imessage as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-instagram",
-			instagram as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-jira",
-			jira as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-linkedin",
-			linkedin as unknown as Record<string, unknown>,
-		],
-		[
-			"@melandlabs/integrations-qqbot",
-			qqbot as unknown as Record<string, unknown>,
-		],
+		["@melandlabs/integrations-asana", asana as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-calendar", calendar as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-channels", channels as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-composio", composio as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-dingtalk", dingtalk as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-facebook-messenger", facebookMessenger as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-gmail", gmail as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-google-docs", googleDocs as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-google-meet", googleMeet as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-hubspot", hubspot as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-imessage", imessage as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-instagram", instagram as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-jira", jira as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-linkedin", linkedin as unknown as Record<string, unknown>],
+		["@melandlabs/integrations-qqbot", qqbot as unknown as Record<string, unknown>],
 	];
 	for (const [name, mod] of leaves) {
 		await runSection(name, async () => {
@@ -217,19 +136,13 @@ export default async function testIntegrations() {
 
 	for (const [name, reason] of lazyPackages) {
 		await runSection(name, async () => {
-			const { check, skip } = makeCheckWithSkip(
-				name.replace("@melandlabs/", ""),
-			);
+			const { check, skip } = makeCheckWithSkip(name.replace("@melandlabs/", ""));
 			try {
 				const mod = (await import(name)) as unknown as Record<string, unknown>;
 				const exported = Object.keys(mod).filter((k) => !k.startsWith("_"));
 				check("module loads and exports symbols", exported.length > 0);
 			} catch (err) {
-				skip(
-					"module loads",
-					reason,
-					`import failed: ${(err as Error).message}`,
-				);
+				skip("module loads", reason, `import failed: ${(err as Error).message}`);
 			}
 		});
 	}

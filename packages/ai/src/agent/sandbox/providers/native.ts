@@ -8,18 +8,9 @@
 import { spawn } from "node:child_process";
 import { extname } from "node:path";
 
-import type {
-	SandboxExecOptions,
-	SandboxExecResult,
-	ScriptOptions,
-} from "../types";
+import type { SandboxExecOptions, SandboxExecResult, ScriptOptions } from "../types";
 
-import {
-	BaseSandboxProvider,
-	defineSandboxPlugin,
-	detectRuntime,
-	getNativeConfigSchema,
-} from "../plugin";
+import { BaseSandboxProvider, defineSandboxPlugin, detectRuntime, getNativeConfigSchema } from "../plugin";
 
 import type { SandboxPlugin, SandboxProviderMetadata } from "../types";
 
@@ -53,8 +44,7 @@ export class NativeProvider extends BaseSandboxProvider {
 		const startTime = Date.now();
 		const { command, args = [], cwd, env, timeout } = options;
 
-		const _execTimeout =
-			timeout || (this.config.defaultTimeout as number) || 120000;
+		const _execTimeout = timeout || (this.config.defaultTimeout as number) || 120000;
 		const workDir = cwd || process.cwd();
 
 		return new Promise((resolve) => {
@@ -107,11 +97,7 @@ export class NativeProvider extends BaseSandboxProvider {
 		});
 	}
 
-	async runScript(
-		filePath: string,
-		workDir: string,
-		options?: ScriptOptions,
-	): Promise<SandboxExecResult> {
+	async runScript(filePath: string, workDir: string, options?: ScriptOptions): Promise<SandboxExecResult> {
 		const ext = extname(filePath).toLowerCase();
 		const { runtime } = detectRuntime(filePath);
 
@@ -157,10 +143,7 @@ export class NativeProvider extends BaseSandboxProvider {
 		});
 	}
 
-	private async installPackages(
-		filePath: string,
-		packages: string[],
-	): Promise<void> {
+	private async installPackages(filePath: string, packages: string[]): Promise<void> {
 		const ext = extname(filePath).toLowerCase();
 
 		let installCommand: string;

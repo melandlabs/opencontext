@@ -194,10 +194,7 @@ export function readSettingsBlock(
 /**
  * Read all settings blocks from buffer
  */
-export function readSettingsBlocks(
-	version: number,
-	buffer: Buffer,
-): Map<SettingsBlocks, unknown> {
+export function readSettingsBlocks(version: number, buffer: Buffer): Map<SettingsBlocks, unknown> {
 	const blocks = new Map<SettingsBlocks, unknown>();
 	let offset = 0;
 
@@ -206,12 +203,7 @@ export function readSettingsBlocks(
 			const blockId = readQtInt32(buffer, offset) as SettingsBlocks;
 			offset += 4;
 
-			const { value, newOffset } = readSettingsBlock(
-				version,
-				buffer,
-				offset,
-				blockId,
-			);
+			const { value, newOffset } = readSettingsBlock(version, buffer, offset, blockId);
 			offset = newOffset;
 
 			blocks.set(blockId, value);

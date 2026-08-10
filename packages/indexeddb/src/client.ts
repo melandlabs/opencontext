@@ -98,18 +98,14 @@ function normalizeTimestampToMs(value: number | undefined): number | undefined {
 	return Math.floor(value as number);
 }
 
-function toRawSourceItem(
-	message: RawMessage,
-): RawMessage & { sourceType: "raw" } {
+function toRawSourceItem(message: RawMessage): RawMessage & { sourceType: "raw" } {
 	return {
 		...message,
 		sourceType: "raw",
 	};
 }
 
-function toSummarySourceItem(
-	summary: MemorySummaryRecord,
-): MemorySummaryRecord & { sourceType: "summary" } {
+function toSummarySourceItem(summary: MemorySummaryRecord): MemorySummaryRecord & { sourceType: "summary" } {
 	return {
 		...summary,
 		sourceType: "summary",
@@ -152,16 +148,9 @@ export async function storeRawMessagesFromInsight(
 }> {
 	if (shouldUseRawMessageApiStorage()) {
 		try {
-			return await sqliteStoreRawMessagesFromInsight(
-				userId,
-				messages,
-				graphEvolution,
-			);
+			return await sqliteStoreRawMessagesFromInsight(userId, messages, graphEvolution);
 		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to store messages, falling back to IndexedDB:",
-				error,
-			);
+			console.warn("[Client Raw Messages API] Failed to store messages, falling back to IndexedDB:", error);
 		}
 	}
 
@@ -199,19 +188,12 @@ export async function storeRawMessagesFromInsight(
 /**
  * Query raw messages from IndexedDB
  */
-export async function queryRawMessages(
-	query: RawMessageQuery,
-): Promise<RawMessageQueryResultItem[]> {
+export async function queryRawMessages(query: RawMessageQuery): Promise<RawMessageQueryResultItem[]> {
 	if (shouldUseRawMessageApiStorage()) {
 		try {
-			return (await sqliteQueryRawMessages(
-				query,
-			)) as RawMessageQueryResultItem[];
+			return (await sqliteQueryRawMessages(query)) as RawMessageQueryResultItem[];
 		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to query messages, falling back to IndexedDB:",
-				error,
-			);
+			console.warn("[Client Raw Messages API] Failed to query messages, falling back to IndexedDB:", error);
 		}
 	}
 
@@ -239,8 +221,7 @@ export async function queryRawMessagesWithFallback(
 	query: RawMessageQuery,
 ): Promise<RawMessageQueryResultItem[]> {
 	const pageSize = query.pageSize ?? query.limit ?? 50;
-	const minRaw =
-		query.minRawResultsWithoutFallback ?? query.pageSize ?? query.limit ?? 50;
+	const minRaw = query.minRawResultsWithoutFallback ?? query.pageSize ?? query.limit ?? 50;
 
 	try {
 		const manager = await getManager();
@@ -298,9 +279,7 @@ export async function queryRawMessagesWithFallback(
 				});
 			}
 
-			const rawMaybe = (
-				item.record.metadata as Record<string, unknown> | undefined
-			)?.__rawMessage;
+			const rawMaybe = (item.record.metadata as Record<string, unknown> | undefined)?.__rawMessage;
 			if (rawMaybe && typeof rawMaybe === "object") {
 				// Preferred path: return exact stored raw object for downstream compatibility.
 				return toRawSourceItem(rawMaybe as RawMessage);
@@ -334,9 +313,7 @@ export async function queryRawMessagesWithFallback(
 				embeddingContentHash: item.record.embeddingContentHash,
 				embeddingDimensions: item.record.embeddingDimensions,
 				embeddingUpdatedAt: item.record.embeddingUpdatedAt,
-				metadata:
-					(item.record.metadata as Record<string, unknown> | undefined) ??
-					undefined,
+				metadata: (item.record.metadata as Record<string, unknown> | undefined) ?? undefined,
 				createdAt: item.record.timestamp,
 				memoryStage: item.record.tier,
 				accessCount: item.record.accessCount,
@@ -349,10 +326,7 @@ export async function queryRawMessagesWithFallback(
 
 		return items.slice(0, pageSize);
 	} catch (error) {
-		console.error(
-			"[Client IndexedDB] Failed to query messages with fallback:",
-			error,
-		);
+		console.error("[Client IndexedDB] Failed to query messages with fallback:", error);
 		return [];
 	}
 }
@@ -361,9 +335,7 @@ export async function queryRawMessagesWithFallback(
  * Query raw messages grouped by time period (day, week, month)
  * Returns grouped messages with user-friendly date labels (Today, Yesterday, etc.)
  */
-export async function queryRawMessagesGrouped(
-	query: RawMessageQuery,
-): Promise<Record<string, RawMessage[]>> {
+export async function queryRawMessagesGrouped(query: RawMessageQuery): Promise<Record<string, RawMessage[]>> {
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteQueryRawMessagesGrouped(query);
@@ -380,10 +352,7 @@ export async function queryRawMessagesGrouped(
 		const manager = await getManager();
 		return await manager.queryMessagesGrouped(query);
 	} catch (error) {
-		console.error(
-			"[Client IndexedDB] Failed to query grouped messages:",
-			error,
-		);
+		console.error("[Client IndexedDB] Failed to query grouped messages:", error);
 		return {};
 	}
 }
@@ -402,10 +371,7 @@ export async function getRawMessagesStats(): Promise<{
 		try {
 			return await sqliteGetRawMessagesStats();
 		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to get stats, falling back to IndexedDB:",
-				error,
-			);
+			console.warn("[Client Raw Messages API] Failed to get stats, falling back to IndexedDB:", error);
 		}
 	}
 
@@ -487,10 +453,7 @@ export async function runMemoryForgettingCycleForUser(
 			graphLifecycle: result.graphLifecycle,
 		};
 	} catch (error) {
-		console.error(
-			"[Client IndexedDB] Failed to run memory forgetting cycle:",
-			error,
-		);
+		console.error("[Client IndexedDB] Failed to run memory forgetting cycle:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : String(error),
@@ -568,9 +531,7 @@ export async function searchRawMessagesSemanticallyForUser(
 /**
  * Format raw messages for AI consumption
  */
-export function formatRawMessagesForAI(
-	messages: Array<RawMessage | RawMessageQueryResultItem>,
-): string {
+export function formatRawMessagesForAI(messages: Array<RawMessage | RawMessageQueryResultItem>): string {
 	if (messages.length === 0) {
 		return "No raw messages found.";
 	}
@@ -580,9 +541,7 @@ export function formatRawMessagesForAI(
 			const summary = msg as MemorySummaryRecord & { sourceType: "summary" };
 			const date = new Date(summary.endTimestamp);
 			const keywordsText =
-				summary.keywords && summary.keywords.length > 0
-					? `\nKeywords: ${summary.keywords.join(", ")}`
-					: "";
+				summary.keywords && summary.keywords.length > 0 ? `\nKeywords: ${summary.keywords.join(", ")}` : "";
 			const keyPointsText =
 				summary.keyPoints && summary.keyPoints.length > 0
 					? `\nKey Points: ${summary.keyPoints.join(" | ")}`
@@ -599,18 +558,13 @@ export function formatRawMessagesForAI(
 
 		// Timestamp
 		if (rawMessage.timestamp) {
-			const rawTimestamp =
-				rawMessage.timestamp < 1e11
-					? rawMessage.timestamp * 1000
-					: rawMessage.timestamp;
+			const rawTimestamp = rawMessage.timestamp < 1e11 ? rawMessage.timestamp * 1000 : rawMessage.timestamp;
 			const date = new Date(rawTimestamp);
 			parts.push(`[${date.toLocaleString()}]`);
 		}
 
 		// Platform & Channel
-		parts.push(
-			`${rawMessage.platform}${rawMessage.channel ? ` - ${rawMessage.channel}` : ""}`,
-		);
+		parts.push(`${rawMessage.platform}${rawMessage.channel ? ` - ${rawMessage.channel}` : ""}`);
 
 		// Person
 		if (rawMessage.person) {
@@ -622,9 +576,7 @@ export function formatRawMessagesForAI(
 
 		// Attachments
 		if (rawMessage.attachments && rawMessage.attachments.length > 0) {
-			parts.push(
-				`\nAttachments: ${rawMessage.attachments.map((a) => a.name).join(", ")}`,
-			);
+			parts.push(`\nAttachments: ${rawMessage.attachments.map((a) => a.name).join(", ")}`);
 		}
 
 		return parts.join(" ");
@@ -659,10 +611,7 @@ export async function sendRawMessagesToServer(
 			stored: data.stored || messages.length,
 		};
 	} catch (error) {
-		console.error(
-			"[Client IndexedDB] Failed to send messages to server:",
-			error,
-		);
+		console.error("[Client IndexedDB] Failed to send messages to server:", error);
 		return {
 			success: false,
 			stored: 0,
@@ -734,9 +683,7 @@ async function getReact() {
 		try {
 			React = await import("react");
 		} catch {
-			throw new Error(
-				"React is required for useRawMessages hook. Please ensure 'react' is installed.",
-			);
+			throw new Error("React is required for useRawMessages hook. Please ensure 'react' is installed.");
 		}
 	}
 	return React;
@@ -775,10 +722,7 @@ export async function useRawMessages() {
 	}, []);
 
 	const storeMessages = react.useCallback(
-		async (
-			userId: string,
-			messages: Parameters<typeof storeRawMessagesFromInsight>[1],
-		) => {
+		async (userId: string, messages: Parameters<typeof storeRawMessagesFromInsight>[1]) => {
 			const result = await storeRawMessagesFromInsight(userId, messages);
 			if (result.success) {
 				// Reload stats after storing

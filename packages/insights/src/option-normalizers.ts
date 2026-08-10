@@ -72,21 +72,13 @@ function sanitizeValue(input: string | null | undefined) {
 	return String(input ?? "").trim();
 }
 
-function selectPreferredLabel(
-	current: string,
-	candidate: string,
-	priorities: string[],
-) {
+function selectPreferredLabel(current: string, candidate: string, priorities: string[]) {
 	if (!current) return candidate;
 	if (priorities.length === 0) return current;
 
 	const normalize = (value: string) => value.toLowerCase();
-	const currentIndex = priorities.findIndex(
-		(item) => normalize(item) === normalize(current),
-	);
-	const candidateIndex = priorities.findIndex(
-		(item) => normalize(item) === normalize(candidate),
-	);
+	const currentIndex = priorities.findIndex((item) => normalize(item) === normalize(current));
+	const candidateIndex = priorities.findIndex((item) => normalize(item) === normalize(candidate));
 
 	if (candidateIndex === -1) return current;
 	if (currentIndex === -1) return candidate;
@@ -103,9 +95,7 @@ function normalizeWithGroups(
 
 	const formatted = formatLabel ? formatLabel(sanitized) : sanitized;
 	const lower = sanitized.toLowerCase();
-	const group = groups.find((entry) =>
-		entry.aliases.some((alias) => alias.toLowerCase() === lower),
-	);
+	const group = groups.find((entry) => entry.aliases.some((alias) => alias.toLowerCase() === lower));
 
 	if (!group) {
 		return {
@@ -137,21 +127,15 @@ function humanizePlatform(value: string) {
 		.join(" ");
 }
 
-export function normalizeImportanceOption(
-	value: string | null | undefined,
-): NormalizedOption | null {
+export function normalizeImportanceOption(value: string | null | undefined): NormalizedOption | null {
 	return normalizeWithGroups(value, IMPORTANCE_GROUPS, capitalizeWord);
 }
 
-export function normalizeUrgencyOption(
-	value: string | null | undefined,
-): NormalizedOption | null {
+export function normalizeUrgencyOption(value: string | null | undefined): NormalizedOption | null {
 	return normalizeWithGroups(value, URGENCY_GROUPS, capitalizeWord);
 }
 
-export function normalizePlatformOption(
-	value: string | null | undefined,
-): NormalizedOption | null {
+export function normalizePlatformOption(value: string | null | undefined): NormalizedOption | null {
 	const sanitized = sanitizeValue(value);
 	if (!sanitized) return null;
 
@@ -162,9 +146,7 @@ export function normalizePlatformOption(
 	const preferred = PLATFORM_LABELS[slug];
 	const humanized = humanizePlatform(sanitized);
 	const label = preferred ?? humanized;
-	const priorities = preferred
-		? [preferred, humanized, sanitized]
-		: [humanized, sanitized];
+	const priorities = preferred ? [preferred, humanized, sanitized] : [humanized, sanitized];
 
 	return {
 		key,
@@ -173,9 +155,7 @@ export function normalizePlatformOption(
 	};
 }
 
-export function normalizeBasicOption(
-	value: string | null | undefined,
-): NormalizedOption | null {
+export function normalizeBasicOption(value: string | null | undefined): NormalizedOption | null {
 	const sanitized = sanitizeValue(value);
 	if (!sanitized) return null;
 	return {
@@ -188,10 +168,7 @@ export function dedupeOptions(
 	values: Array<string | null | undefined>,
 	normalizer: (value: string | null | undefined) => NormalizedOption | null,
 ) {
-	const normalizedMap = new Map<
-		string,
-		{ label: string; priorities: string[] }
-	>();
+	const normalizedMap = new Map<string, { label: string; priorities: string[] }>();
 
 	for (const value of values) {
 		const normalized = normalizer(value);
@@ -206,10 +183,7 @@ export function dedupeOptions(
 			continue;
 		}
 
-		const priorities =
-			existing.priorities.length > 0
-				? existing.priorities
-				: (normalized.priorities ?? []);
+		const priorities = existing.priorities.length > 0 ? existing.priorities : (normalized.priorities ?? []);
 
 		const bestLabel =
 			priorities.length > 0

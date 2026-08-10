@@ -1,10 +1,6 @@
-import type {
-	SemanticMemoryArtifactRollbackMetadata,
-	SemanticMemoryArtifactStatus,
-} from "./persistence";
+import type { SemanticMemoryArtifactRollbackMetadata, SemanticMemoryArtifactStatus } from "./persistence";
 
-export type SemanticMemoryRevisionStatus =
-	"active" | "deprecated" | "conflicted";
+export type SemanticMemoryRevisionStatus = "active" | "deprecated" | "conflicted";
 
 export type SemanticMemoryRevisionReasonCode =
 	| "active_memory"
@@ -183,12 +179,7 @@ function revisionStatusReasonCode(
 	revisionStatus: SemanticMemoryRevisionStatus,
 	artifactStatus: SemanticMemoryArtifactStatus | undefined,
 ): SemanticMemoryRevisionReasonCode {
-	if (
-		artifactStatus &&
-		!["draft", "consolidated", "deprecated", "conflicted"].includes(
-			artifactStatus,
-		)
-	) {
+	if (artifactStatus && !["draft", "consolidated", "deprecated", "conflicted"].includes(artifactStatus)) {
 		return "unknown_artifact_status";
 	}
 
@@ -225,9 +216,7 @@ function relationSourceRecordIds(
 	oldMemory: SemanticMemoryRevisionStatusSignal,
 	newMemory: SemanticMemoryRevisionStatusSignal,
 ): string[] {
-	return [
-		...new Set([...oldMemory.sourceRecordIds, ...newMemory.sourceRecordIds]),
-	];
+	return [...new Set([...oldMemory.sourceRecordIds, ...newMemory.sourceRecordIds])];
 }
 
 function uniqueReasonCodes(
@@ -246,16 +235,9 @@ function latestTimestamp(timestamps: number[]): number | undefined {
 	return Math.max(...validTimestamps);
 }
 
-function recentEvidenceCount(
-	timestamps: number[],
-	now: number,
-	recentWindowMs: number,
-): number {
+function recentEvidenceCount(timestamps: number[], now: number, recentWindowMs: number): number {
 	return timestamps.filter(
-		(timestamp) =>
-			Number.isFinite(timestamp) &&
-			timestamp <= now &&
-			now - timestamp <= recentWindowMs,
+		(timestamp) => Number.isFinite(timestamp) && timestamp <= now && now - timestamp <= recentWindowMs,
 	).length;
 }
 
@@ -277,9 +259,7 @@ function competitionScore(input: {
 	recencyScore: number;
 }): number {
 	return clamp01(
-		0.5 * input.confidence +
-			0.35 * clamp01(input.recentEvidenceCount / 3) +
-			0.15 * input.recencyScore,
+		0.5 * input.confidence + 0.35 * clamp01(input.recentEvidenceCount / 3) + 0.15 * input.recencyScore,
 	);
 }
 
@@ -331,23 +311,16 @@ export function buildSemanticMemoryRevisionExplanationReport(
 			reasonCodes: [...diagnostic.reasonCodes],
 			metadata: diagnostic.metadata ? { ...diagnostic.metadata } : undefined,
 		})) ?? [];
-	const leadingArtifactId =
-		input.competitionDiagnostics?.summary.leadingArtifactId;
+	const leadingArtifactId = input.competitionDiagnostics?.summary.leadingArtifactId;
 
 	return {
 		summary: {
 			memoryCount: memories.length,
 			relationCount: relations.length,
 			competitionDiagnosticCount: competitionDiagnostics.length,
-			activeCount: memories.filter(
-				(memory) => memory.revisionStatus === "active",
-			).length,
-			deprecatedCount: memories.filter(
-				(memory) => memory.revisionStatus === "deprecated",
-			).length,
-			conflictedCount: memories.filter(
-				(memory) => memory.revisionStatus === "conflicted",
-			).length,
+			activeCount: memories.filter((memory) => memory.revisionStatus === "active").length,
+			deprecatedCount: memories.filter((memory) => memory.revisionStatus === "deprecated").length,
+			conflictedCount: memories.filter((memory) => memory.revisionStatus === "conflicted").length,
 			leadingArtifactId,
 		},
 		memories,
@@ -358,26 +331,18 @@ export function buildSemanticMemoryRevisionExplanationReport(
 			...(input.relationPlan?.reasonCodes ?? []),
 			...(input.competitionDiagnostics?.reasonCodes ?? []),
 		]),
-		metadata:
-			input.metadata ??
-			input.competitionDiagnostics?.metadata ??
-			input.relationPlan?.metadata,
+		metadata: input.metadata ?? input.competitionDiagnostics?.metadata ?? input.relationPlan?.metadata,
 	};
 }
 
 export function buildSemanticMemoryRevisionRelationPlan(
 	input: SemanticMemoryRevisionRelationInput,
 ): SemanticMemoryRevisionRelationPlan {
-	const sourceRecordIds = relationSourceRecordIds(
-		input.oldMemory,
-		input.newMemory,
-	);
+	const sourceRecordIds = relationSourceRecordIds(input.oldMemory, input.newMemory);
 	const confidence = relationConfidence(input.oldMemory, input.newMemory);
 	const rollback = copyRollback(input.rollback);
 	const metadata = input.metadata ? { ...input.metadata } : undefined;
-	const relationReasonCodes = [
-		...(input.reasonCodes ?? []),
-	] as SemanticMemoryRevisionReasonCode[];
+	const relationReasonCodes = [...(input.reasonCodes ?? [])] as SemanticMemoryRevisionReasonCode[];
 	const relations: SemanticMemoryRevisionRelation[] = [
 		{
 			type: "supersedes",
@@ -405,11 +370,7 @@ export function buildSemanticMemoryRevisionRelationPlan(
 		oldArtifactId: input.oldMemory.artifactId,
 		newArtifactId: input.newMemory.artifactId,
 		relations,
-		reasonCodes: [
-			"supersedes_memory",
-			"deprecated_by_memory",
-			...relationReasonCodes,
-		],
+		reasonCodes: ["supersedes_memory", "deprecated_by_memory", ...relationReasonCodes],
 		rollback: copyRollback(input.rollback),
 		metadata: input.metadata ? { ...input.metadata } : undefined,
 	};
@@ -418,22 +379,12 @@ export function buildSemanticMemoryRevisionRelationPlan(
 export function buildSemanticMemoryRevisionCompetitionDiagnostics(
 	input: BuildSemanticMemoryRevisionCompetitionDiagnosticsInput,
 ): SemanticMemoryRevisionCompetitionDiagnostics {
-	const recentWindowMs = Math.max(
-		1,
-		input.recentWindowMs ?? DEFAULT_RECENT_WINDOW_MS,
-	);
-	const minRecentEvidence = Math.max(
-		1,
-		Math.floor(input.minRecentEvidence ?? 2),
-	);
+	const recentWindowMs = Math.max(1, input.recentWindowMs ?? DEFAULT_RECENT_WINDOW_MS);
+	const minRecentEvidence = Math.max(1, Math.floor(input.minRecentEvidence ?? 2));
 	const scoredDiagnostics = input.candidates
 		.map((candidate) => {
 			const latest = latestTimestamp(candidate.evidenceTimestamps);
-			const recentCount = recentEvidenceCount(
-				candidate.evidenceTimestamps,
-				input.now,
-				recentWindowMs,
-			);
+			const recentCount = recentEvidenceCount(candidate.evidenceTimestamps, input.now, recentWindowMs);
 			const recency = recencyScore(latest, input.now, recentWindowMs);
 			const score = competitionScore({
 				confidence: candidate.memory.confidence,
@@ -473,19 +424,11 @@ export function buildSemanticMemoryRevisionCompetitionDiagnostics(
 	const leadingArtifactId = scoredDiagnostics[0]?.artifactId;
 	const diagnostics = scoredDiagnostics.map((diagnostic) => ({
 		...diagnostic,
-		role:
-			diagnostic.artifactId === leadingArtifactId
-				? ("leading" as const)
-				: ("competing" as const),
+		role: diagnostic.artifactId === leadingArtifactId ? ("leading" as const) : ("competing" as const),
 		reasonCodes:
 			diagnostic.artifactId === leadingArtifactId
 				? diagnostic.reasonCodes
-				: [
-						...new Set([
-							...diagnostic.reasonCodes,
-							"older_competing_memory" as const,
-						]),
-					],
+				: [...new Set([...diagnostic.reasonCodes, "older_competing_memory" as const])],
 	}));
 
 	return {
@@ -498,9 +441,7 @@ export function buildSemanticMemoryRevisionCompetitionDiagnostics(
 			minRecentEvidence,
 		},
 		diagnostics,
-		reasonCodes: [
-			...new Set(diagnostics.flatMap((diagnostic) => diagnostic.reasonCodes)),
-		],
+		reasonCodes: [...new Set(diagnostics.flatMap((diagnostic) => diagnostic.reasonCodes))],
 		metadata: input.metadata ? { ...input.metadata } : undefined,
 	};
 }

@@ -53,9 +53,7 @@ export function getConfiguredEmbeddingProvider(
 	});
 }
 
-export function getConfiguredEmbeddingModelName(
-	options: EmbeddingProviderFactoryOptions = {},
-): string {
+export function getConfiguredEmbeddingModelName(options: EmbeddingProviderFactoryOptions = {}): string {
 	const provider = options.providerType ?? getEmbeddingProviderType();
 	if (provider === "local") {
 		return (
@@ -69,9 +67,7 @@ export function getConfiguredEmbeddingModelName(
 }
 
 export function getEmbeddingProviderType(): EmbeddingProviderType {
-	const provider = (process.env.EMBEDDING_PROVIDER || "cloud")
-		.trim()
-		.toLowerCase();
+	const provider = (process.env.EMBEDDING_PROVIDER || "cloud").trim().toLowerCase();
 
 	return provider === "local" ? "local" : "cloud";
 }
@@ -132,8 +128,7 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 			headers.Authorization = `Bearer ${this.apiKey}`;
 
 			if (this.baseURL.includes("openrouter.ai")) {
-				headers["HTTP-Referer"] =
-					process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai";
+				headers["HTTP-Referer"] = process.env.NEXT_PUBLIC_APP_URL || "https://opencontext.ai";
 				headers["X-Title"] = "OpenContext AI";
 			}
 		} else if (this.userAuthToken) {
@@ -161,9 +156,7 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 		const data = await response.json();
 
 		if (!data.data || !Array.isArray(data.data)) {
-			throw new Error(
-				"Invalid response format from embeddings API. Expected data.data array.",
-			);
+			throw new Error("Invalid response format from embeddings API. Expected data.data array.");
 		}
 
 		const sortedData = data.data.sort((a: any, b: any) => a.index - b.index);

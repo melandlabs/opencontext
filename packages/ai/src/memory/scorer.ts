@@ -24,9 +24,7 @@ function inferImportanceFromText(text: string | undefined): number {
 		return 0;
 	}
 	const lower = text.toLowerCase();
-	const hits = IMPORTANCE_KEYWORDS.filter((keyword) =>
-		lower.includes(keyword),
-	).length;
+	const hits = IMPORTANCE_KEYWORDS.filter((keyword) => lower.includes(keyword)).length;
 	// Cap inference noise quickly.
 	return clamp01(hits / 4);
 }
@@ -48,21 +46,14 @@ export class DefaultMemoryRecordScorer implements MemoryRecordScorer {
 
 		const providedImportance = record.importanceScore ?? 0;
 		const inferredImportance = inferImportanceFromText(record.text);
-		const importanceScore = clamp01(
-			Math.max(providedImportance, inferredImportance),
-		);
+		const importanceScore = clamp01(Math.max(providedImportance, inferredImportance));
 
-		const mediaScore =
-			record.mediaRefs && record.mediaRefs.length > 0 ? 0.7 : 0.25;
+		const mediaScore = record.mediaRefs && record.mediaRefs.length > 0 ? 0.7 : 0.25;
 
 		const pinnedBoost = record.isPinned ? 0.3 : 0;
 
 		return clamp01(
-			0.35 * recencyScore +
-				0.3 * accessScore +
-				0.25 * importanceScore +
-				0.1 * mediaScore +
-				pinnedBoost,
+			0.35 * recencyScore + 0.3 * accessScore + 0.25 * importanceScore + 0.1 * mediaScore + pinnedBoost,
 		);
 	}
 }

@@ -11,10 +11,7 @@ type PlatformId = string;
 /**
  * Define filter condition types supported by each platform
  */
-export const PLATFORM_FILTER_SUPPORT: Record<
-	PlatformId,
-	InsightFilterCondition["kind"][]
-> = {
+export const PLATFORM_FILTER_SUPPORT: Record<PlatformId, InsightFilterCondition["kind"][]> = {
 	// Platforms with channel/group concept
 	slack: [
 		"importance",
@@ -388,9 +385,7 @@ export const PLATFORM_FILTER_SUPPORT: Record<
 /**
  * Get all fields supported by user connected platforms
  */
-export function getSupportedFilterFields(
-	connectedPlatforms: PlatformId[],
-): InsightFilterCondition["kind"][] {
+export function getSupportedFilterFields(connectedPlatforms: PlatformId[]): InsightFilterCondition["kind"][] {
 	if (connectedPlatforms.length === 0) {
 		// If no platform connected, return all fields (common fields)
 		return [
@@ -429,9 +424,7 @@ export function isFieldSupportedByAllPlatforms(
 	connectedPlatforms: PlatformId[],
 ): boolean {
 	if (connectedPlatforms.length === 0) return true;
-	return connectedPlatforms.every(
-		(platform) => PLATFORM_FILTER_SUPPORT[platform]?.includes(field) ?? false,
-	);
+	return connectedPlatforms.every((platform) => PLATFORM_FILTER_SUPPORT[platform]?.includes(field) ?? false);
 }
 
 /**

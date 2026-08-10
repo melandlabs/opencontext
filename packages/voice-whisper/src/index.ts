@@ -57,10 +57,7 @@ async function readProviderError(response: Response): Promise<string> {
 	}
 }
 
-function createRequestSignal(
-	signal: AbortSignal | undefined,
-	timeoutMs: number,
-) {
+function createRequestSignal(signal: AbortSignal | undefined, timeoutMs: number) {
 	const controller = new AbortController();
 	const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 	const abortFromInput = () => controller.abort();
@@ -101,9 +98,7 @@ export class WhisperPlugin {
 		return this.enabled && Boolean(this.apiKey?.trim());
 	}
 
-	public async transcribe(
-		input: WhisperTranscriptionInput,
-	): Promise<WhisperTranscriptionResult> {
+	public async transcribe(input: WhisperTranscriptionInput): Promise<WhisperTranscriptionResult> {
 		if (!this.enabled) {
 			throw new Error("Speech-to-text is disabled.");
 		}
@@ -113,8 +108,7 @@ export class WhisperPlugin {
 			throw new Error("OPENAI_API_KEY is not configured for audio APIs.");
 		}
 
-		const model =
-			input.model?.trim() || this.model || DEFAULT_TRANSCRIPTION_MODEL;
+		const model = input.model?.trim() || this.model || DEFAULT_TRANSCRIPTION_MODEL;
 		const formData = new FormData();
 		formData.append("file", input.file, input.filename || "voice-input.wav");
 		formData.append("model", model);
@@ -126,30 +120,21 @@ export class WhisperPlugin {
 		if (input.prompt?.trim()) {
 			formData.append("prompt", input.prompt.trim());
 		}
-		if (
-			typeof input.temperature === "number" &&
-			Number.isFinite(input.temperature)
-		) {
+		if (typeof input.temperature === "number" && Number.isFinite(input.temperature)) {
 			formData.append("temperature", input.temperature.toString());
 		}
 
-		const { signal, cleanup } = createRequestSignal(
-			input.signal,
-			this.timeoutMs,
-		);
+		const { signal, cleanup } = createRequestSignal(input.signal, this.timeoutMs);
 
 		try {
-			const response = await fetch(
-				`${normalizeAudioBaseUrl(this.baseUrl)}/audio/transcriptions`,
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-					},
-					body: formData,
-					signal,
+			const response = await fetch(`${normalizeAudioBaseUrl(this.baseUrl)}/audio/transcriptions`, {
+				method: "POST",
+				headers: {
+					Authorization: `Bearer ${apiKey}`,
 				},
-			);
+				body: formData,
+				signal,
+			});
 
 			if (!response.ok) {
 				throw new Error(await readProviderError(response));

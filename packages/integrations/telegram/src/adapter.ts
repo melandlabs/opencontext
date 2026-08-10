@@ -6,16 +6,8 @@
  */
 
 import { MessagePlatformAdapter } from "@melandlabs/integrations-channels";
-import type {
-	At,
-	Image,
-	Message,
-	Messages,
-} from "@melandlabs/integrations-channels";
-import type {
-	MessageEvent,
-	MessageTarget,
-} from "@melandlabs/integrations-channels";
+import type { At, Image, Message, Messages } from "@melandlabs/integrations-channels";
+import type { MessageEvent, MessageTarget } from "@melandlabs/integrations-channels";
 import {
 	type DialogInfo,
 	type ExtractedMessageInfo,
@@ -23,15 +15,9 @@ import {
 	isEmptyMessage,
 	timeBeforeHours,
 } from "@melandlabs/integrations-channels/sources/types";
-import type {
-	ContactMeta,
-	TelegramContactMeta,
-} from "@melandlabs/integrations/contacts";
+import type { ContactMeta, TelegramContactMeta } from "@melandlabs/integrations/contacts";
 import { isTelegramContactMeta } from "@melandlabs/integrations/contacts";
-import type {
-	ClientRegistry,
-	FileIngester,
-} from "@melandlabs/integrations/core";
+import type { ClientRegistry, FileIngester } from "@melandlabs/integrations/core";
 import type { Attachment } from "@melandlabs/shared";
 import bigInt, { type BigInteger } from "big-integer";
 import { TelegramClient } from "telegram";
@@ -60,11 +46,7 @@ export const SEND_MESSAGE_TIMEOUT_MS = 30_000; // 30 seconds for sending a messa
  * Wraps a promise with a timeout. If the promise doesn't resolve within the timeout,
  * the promise is rejected with a timeout error.
  */
-export function withTimeout<T>(
-	promise: Promise<T>,
-	ms: number,
-	operationName: string,
-): Promise<T> {
+export function withTimeout<T>(promise: Promise<T>, ms: number, operationName: string): Promise<T> {
 	return new Promise((resolve, reject) => {
 		const timer = setTimeout(() => {
 			reject(new Error(`${operationName} timed out after ${ms}ms`));
@@ -151,8 +133,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		let sharedClient: TelegramClient | undefined;
 
 		if (!opts?.botToken && sessionKey && clientRegistry) {
-			sharedClient = clientRegistry.getClientBySessionKey(sessionKey) as
-				TelegramClient | undefined;
+			sharedClient = clientRegistry.getClientBySessionKey(sessionKey) as TelegramClient | undefined;
 		}
 
 		if (sharedClient) {
@@ -206,17 +187,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 						`[Bot ${this.botId}] [telegram] Shared client disconnected, falling back to independent connection`,
 					);
 					this._isSharedClient = false;
-					this.client = new TelegramClient(
-						this.session,
-						this.appId,
-						this.appHash,
-						{
-							connectionRetries: 10,
-							timeout: 60,
-							requestRetries: 5,
-							floodSleepThreshold: 60,
-						},
-					);
+					this.client = new TelegramClient(this.session, this.appId, this.appHash, {
+						connectionRetries: 10,
+						timeout: 60,
+						requestRetries: 5,
+						floodSleepThreshold: 60,
+					});
 				} else {
 					return;
 				}
@@ -228,22 +204,15 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					});
 				} else {
 					await this.client.start({
-						phoneNumber: async () =>
-							await this.prompt("Please enter your phone number: "),
-						password: async () =>
-							await this.prompt("Please enter your password: "),
-						phoneCode: async () =>
-							await this.prompt("Please enter the verification code: "),
-						onError: (err) =>
-							console.error(`[Bot ${this.botId}] [telegram] Login error:`, err),
+						phoneNumber: async () => await this.prompt("Please enter your phone number: "),
+						password: async () => await this.prompt("Please enter your password: "),
+						phoneCode: async () => await this.prompt("Please enter the verification code: "),
+						onError: (err) => console.error(`[Bot ${this.botId}] [telegram] Login error:`, err),
 					});
 				}
 			}
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Telegram connection error:`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Telegram connection error:`, error);
 			throw error;
 		}
 	}
@@ -254,10 +223,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	 */
 	async disconnect(): Promise<undefined> {
 		if (this._isSharedClient) {
-			if (DEBUG)
-				console.log(
-					`[Bot ${this.botId}] [telegram] Using shared client, skipping disconnect`,
-				);
+			if (DEBUG) console.log(`[Bot ${this.botId}] [telegram] Using shared client, skipping disconnect`);
 			return undefined;
 		}
 		if (this.client?.connected) {
@@ -294,9 +260,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		}
 
 		const shouldRefresh =
-			force ||
-			this.dialogs.length === 0 ||
-			Date.now() - this.dialogsFetchedAt > this.cacheTTL;
+			force || this.dialogs.length === 0 || Date.now() - this.dialogsFetchedAt > this.cacheTTL;
 
 		if (!shouldRefresh) {
 			return;
@@ -315,15 +279,9 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 			const idStr = dialog.id.toString();
 			const type =
-				dialog.isUser === true
-					? "private"
-					: dialog.isChannel || dialog.isGroup
-						? "group"
-						: "unknown";
+				dialog.isUser === true ? "private" : dialog.isChannel || dialog.isGroup ? "group" : "unknown";
 			const resolvedName =
-				dialog.name && dialog.name.trim().length > 0
-					? dialog.name
-					: this.getChatName(dialog.entity);
+				dialog.name && dialog.name.trim().length > 0 ? dialog.name : this.getChatName(dialog.entity);
 
 			const metadata = this.buildMetadataFromEntity(idStr, dialog.entity);
 			nextDialogs.push({
@@ -380,10 +338,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		}
 	}
 
-	private buildMetadataFromEntity(
-		id: string,
-		entity: Entity,
-	): TelegramContactMeta | null {
+	private buildMetadataFromEntity(id: string, entity: Entity): TelegramContactMeta | null {
 		if (entity instanceof Api.User) {
 			const firstName = entity.firstName ?? null;
 			const lastName = entity.lastName ?? null;
@@ -396,9 +351,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				platform: "telegram",
 				peerId: id,
 				peerType: "user",
-				accessHash: entity.accessHash
-					? entity.accessHash.toString()
-					: undefined,
+				accessHash: entity.accessHash ? entity.accessHash.toString() : undefined,
 				username: entity.username ?? null,
 				firstName,
 				lastName,
@@ -411,9 +364,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				platform: "telegram",
 				peerId: id,
 				peerType: "channel",
-				accessHash: entity.accessHash
-					? entity.accessHash.toString()
-					: undefined,
+				accessHash: entity.accessHash ? entity.accessHash.toString() : undefined,
 				username: entity.username ?? null,
 				displayName: entity.title || null,
 			};
@@ -502,19 +453,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			this.addToCache(cache, id, entity);
 			return entity;
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Error fetching entity ${id}:`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Error fetching entity ${id}:`, error);
 			return null;
 		}
 	}
 
-	async sendMessage(
-		target: MessageTarget,
-		id: string,
-		message: string,
-	): Promise<void> {
+	async sendMessage(target: MessageTarget, id: string, message: string): Promise<void> {
 		await this.sendMessages(target, id, [message as unknown as Message]);
 	}
 
@@ -524,11 +468,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	 * @param messages - Message chain to send as reply
 	 * @param quoteOrigin - Whether to quote the original message (default: false)
 	 */
-	async sendMessages(
-		target: MessageTarget,
-		id: string,
-		messages: Messages,
-	): Promise<void> {
+	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			if (!this.client.connected) {
 				await withTimeout(
@@ -542,8 +482,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				return;
 			}
 
-			const { textParts, images, unsupported } =
-				this.partitionMessages(messages);
+			const { textParts, images, unsupported } = this.partitionMessages(messages);
 			if (unsupported.length > 0) {
 				throw this.createAdapterError(
 					"sendMessages",
@@ -555,11 +494,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		});
 	}
 
-	async replyMessages(
-		event: MessageEvent,
-		messages: Messages,
-		quoteOrigin = false,
-	): Promise<void> {
+	async replyMessages(event: MessageEvent, messages: Messages, quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			if (!this.client.connected) {
 				await withTimeout(
@@ -573,10 +508,8 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				return;
 			}
 
-			const id =
-				event.targetType === "group" ? event.sender.group.id : event.sender.id;
-			const { textParts, images, unsupported } =
-				this.partitionMessages(messages);
+			const id = event.targetType === "group" ? event.sender.group.id : event.sender.id;
+			const { textParts, images, unsupported } = this.partitionMessages(messages);
 			if (unsupported.length > 0) {
 				throw this.createAdapterError(
 					"replyMessages",
@@ -584,12 +517,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					`Telegram reply does not support message content: ${unsupported.join(", ")}`,
 				);
 			}
-			await this.dispatchMessages(
-				"replyMessages",
-				id.toString(),
-				textParts,
-				images,
-			);
+			await this.dispatchMessages("replyMessages", id.toString(), textParts, images);
 		});
 	}
 
@@ -614,9 +542,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		if (!this.asyncIteratorState.isInitialized) {
 			// Load all valid dialogs (filter out invalid entries without entity/ID)
 			const allDialogs = await this.client.getDialogs();
-			this.asyncIteratorState.dialogs = allDialogs.filter(
-				(dialog) => dialog.entity && dialog.id,
-			);
+			this.asyncIteratorState.dialogs = allDialogs.filter((dialog) => dialog.entity && dialog.id);
 			// Reset traversal starting point (first dialog, first message on first call)
 			this.asyncIteratorState.currentDialogIndex = 0;
 			this.asyncIteratorState.currentMessageIndex = 0;
@@ -629,8 +555,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					`[Bot ${this.botId}] [telegram] Batch fetch initialization complete: ${this.asyncIteratorState.dialogs.length} valid dialogs`,
 				);
 			if (this.asyncIteratorState.dialogs.length === 0) {
-				if (DEBUG)
-					console.log(`[Bot ${this.botId}] No valid dialogs to process`);
+				if (DEBUG) console.log(`[Bot ${this.botId}] No valid dialogs to process`);
 				this.asyncIteratorState.isInitialized = false;
 				this.asyncIteratorState.currentDialogIndex = 0;
 				this.asyncIteratorState.currentMessageIndex = 0;
@@ -638,24 +563,18 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			}
 		}
 
-		let { currentDialogIndex, currentMessageIndex, offsetDate } =
-			this.asyncIteratorState;
+		let { currentDialogIndex, currentMessageIndex, offsetDate } = this.asyncIteratorState;
 
 		const targetDialogs = this.asyncIteratorState.dialogs;
 
 		const MIN_MESSAGES_PER_DIALOG = 5;
 		const REQUEST_DELAY_MS = 150; // Delay between requests to avoid triggering Telegram rate limits
 
-		for (
-			let dialogIdx = currentDialogIndex;
-			dialogIdx < targetDialogs.length;
-			dialogIdx++
-		) {
+		for (let dialogIdx = currentDialogIndex; dialogIdx < targetDialogs.length; dialogIdx++) {
 			const dialog = targetDialogs[dialogIdx];
 			try {
 				if (!this.client.connected) {
-					if (DEBUG)
-						console.log("[Telegram] Client not connected, connecting...");
+					if (DEBUG) console.log("[Telegram] Client not connected, connecting...");
 					await this.client.connect();
 					await delay(500);
 				}
@@ -710,10 +629,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 				// If fewer than MIN_MESSAGES_PER_DIALOG messages fetched from this dialog, try fetching more history
 				// If 0 messages fetched initially, no need to fetch more
-				if (
-					dialogMessageCount < MIN_MESSAGES_PER_DIALOG &&
-					rawMessages.length > 0
-				) {
+				if (dialogMessageCount < MIN_MESSAGES_PER_DIALOG && rawMessages.length > 0) {
 					const neededCount = MIN_MESSAGES_PER_DIALOG - dialogMessageCount;
 					if (DEBUG)
 						console.log(
@@ -725,12 +641,9 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 					// Fetch more messages without time filter
 					try {
-						const additionalMessages = await this.client.getMessages(
-							dialog.id,
-							{
-								limit: neededCount,
-							},
-						);
+						const additionalMessages = await this.client.getMessages(dialog.id, {
+							limit: neededCount,
+						});
 
 						// Process additional messages
 						for (const rawMsg of additionalMessages) {
@@ -741,8 +654,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 								dialogMessageCount++;
 								if (extractedMessages.length >= maxMessageChunkCount) {
 									this.asyncIteratorState.currentDialogIndex = dialogIdx;
-									this.asyncIteratorState.currentMessageIndex =
-										rawMessages.length;
+									this.asyncIteratorState.currentMessageIndex = rawMessages.length;
 									if (DEBUG)
 										console.log(
 											`[Bot ${this.botId}] Batch full (${maxMessageChunkCount}), continue from dialog ${dialog.id}`,
@@ -772,10 +684,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				this.asyncIteratorState.currentDialogIndex = dialogIdx + 1; // Next time start from next dialog
 			} catch (error) {
 				// Single dialog processing failed: skip this dialog, avoid affecting overall traversal
-				console.error(
-					`[Bot ${this.botId}] Failed to process dialog ${dialog.id}:`,
-					error,
-				);
+				console.error(`[Bot ${this.botId}] Failed to process dialog ${dialog.id}:`, error);
 				this.asyncIteratorState.currentDialogIndex = dialogIdx + 1; // Skip current dialog next time
 				this.asyncIteratorState.currentMessageIndex = 0;
 			}
@@ -810,10 +719,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		const extractedMessages: ExtractedMessageInfo[] = [];
 		const dialogs = await this.client.getDialogs({});
 
-		if (DEBUG)
-			console.log(
-				`[Bot ${this.botId}] [telegram] Fetched ${dialogs.length} dialogs`,
-			);
+		if (DEBUG) console.log(`[Bot ${this.botId}] [telegram] Fetched ${dialogs.length} dialogs`);
 
 		let dialogIndex = 0;
 		const REQUEST_DELAY_MS = 150; // Delay between each request
@@ -844,10 +750,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 			// No more latest messages before the cutoffDate.
 			// TODO: fix the hardcode pinned message group 10
-			if (
-				(messages.length === 0 && dialogIndex >= 10) ||
-				dialogIndex >= maxDialogCount
-			) {
+			if ((messages.length === 0 && dialogIndex >= 10) || dialogIndex >= maxDialogCount) {
 				break;
 			}
 			dialogIndex += 1;
@@ -875,9 +778,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	}
 
 	async getChatsByDays(days = 1): Promise<ExtractedMessageInfo[]> {
-		const cutoffDate = Math.floor(
-			(Date.now() - days * 24 * 60 * 60 * 1000) / 1000,
-		);
+		const cutoffDate = Math.floor((Date.now() - days * 24 * 60 * 60 * 1000) / 1000);
 		return await this.getChatsByTime(cutoffDate);
 	}
 
@@ -928,17 +829,11 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			let sender: Entity | null = null;
 			if (chatType === "channel" || chatType === "group") {
 				if (message.fromId) {
-					sender = await this.getEntityWithCache(
-						this.senderCache,
-						message.fromId,
-					);
+					sender = await this.getEntityWithCache(this.senderCache, message.fromId);
 				}
 			} else {
 				if (message.senderId) {
-					sender = await this.getEntityWithCache(
-						this.senderCache,
-						message.senderId,
-					);
+					sender = await this.getEntityWithCache(this.senderCache, message.senderId);
 				}
 			}
 
@@ -951,9 +846,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				sender:
 					chatType === "private"
 						? (senderName ?? chatName)
-						: (senderName ??
-							chatUserName ??
-							`anonymous user ${message.senderId}`),
+						: (senderName ?? chatUserName ?? `anonymous user ${message.senderId}`),
 				chatName: chatName,
 				chatType: chatType,
 				text: message.message || "",
@@ -963,10 +856,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			};
 
 			if (msgInfo.sender.includes("anonymous user") && message.senderId) {
-				sender = await this.getEntityWithCache(
-					this.senderCache,
-					message.senderId,
-				);
+				sender = await this.getEntityWithCache(this.senderCache, message.senderId);
 				const senderName = this.getSenderName(sender);
 				if (senderName) {
 					msgInfo.sender = senderName;
@@ -980,36 +870,23 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					const quotedMsgList = await this.client.getMessages(message.peerId, {
 						ids: message.replyToMsgId,
 					});
-					if (
-						quotedMsgList.length > 0 &&
-						quotedMsgList[0] instanceof Api.Message
-					) {
-						quoted = await this.extractMessageInfo(
-							quotedMsgList[0],
-							depth + 1,
-							maxDepth,
-						);
+					if (quotedMsgList.length > 0 && quotedMsgList[0] instanceof Api.Message) {
+						quoted = await this.extractMessageInfo(quotedMsgList[0], depth + 1, maxDepth);
 					}
 				} catch (error) {}
 			}
 			const result = isEmptyMessage(quoted) ? msgInfo : { ...msgInfo, quoted };
 			// Only add attachments to non-referenced messages, as they may be added repeatedly.
-			const attachments =
-				depth === 0 ? await this.extractAttachmentsFromMessage(message) : [];
+			const attachments = depth === 0 ? await this.extractAttachmentsFromMessage(message) : [];
 			return attachments.length > 0 ? { ...result, attachments } : result;
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Error extracting message info:`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Error extracting message info:`, error);
 			return null;
 		}
 	}
 
 	// Determine the type of chat
-	private determineChatType(
-		chat: Entity,
-	): "private" | "group" | "channel" | "unknown" {
+	private determineChatType(chat: Entity): "private" | "group" | "channel" | "unknown" {
 		if (chat instanceof Api.User) return "private";
 		if (chat instanceof Api.Chat) return "group";
 		if (chat instanceof Api.Channel) return "channel";
@@ -1030,9 +907,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			if (chat.title) return chat.title;
 			const chatId = chat.id?.toString();
 			if (chatId) {
-				console.warn(
-					`[Bot ${this.botId}] [telegram] Chat ${chatId} missing title, using ID as fallback`,
-				);
+				console.warn(`[Bot ${this.botId}] [telegram] Chat ${chatId} missing title, using ID as fallback`);
 				return `Chat ${chatId}`;
 			}
 			return "Unnamed Chat";
@@ -1051,10 +926,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			return "Unnamed Chat";
 		}
 		// Unknown entity type - log for debugging
-		console.warn(
-			`[Bot ${this.botId}] [telegram] Unknown entity type in getChatName:`,
-			chat?.className,
-		);
+		console.warn(`[Bot ${this.botId}] [telegram] Unknown entity type in getChatName:`, chat?.className);
 		return "Unknown Chat";
 	}
 
@@ -1138,10 +1010,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					return filename;
 				}
 			} catch (error) {
-				console.warn(
-					`[Bot ${this.botId}] [telegram] Failed to parse filename from URL`,
-					error,
-				);
+				console.warn(`[Bot ${this.botId}] [telegram] Failed to parse filename from URL`, error);
 			}
 		}
 
@@ -1153,9 +1022,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			return null;
 		}
 
-		const base64String = image.base64.includes(",")
-			? image.base64.split(",").pop()
-			: image.base64;
+		const base64String = image.base64.includes(",") ? image.base64.split(",").pop() : image.base64;
 
 		if (!base64String) {
 			return null;
@@ -1164,17 +1031,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		try {
 			return Buffer.from(base64String, "base64");
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Failed to decode base64 image payload`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Failed to decode base64 image payload`, error);
 			return null;
 		}
 	}
 
-	private async downloadMediaBuffer(
-		message: Api.Message,
-	): Promise<Buffer | null> {
+	private async downloadMediaBuffer(message: Api.Message): Promise<Buffer | null> {
 		try {
 			const result = await this.client.downloadMedia(message);
 			if (!result) return null;
@@ -1187,17 +1049,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			}
 			return null;
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Failed to download media buffer`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Failed to download media buffer`, error);
 			return null;
 		}
 	}
 
-	private async extractAttachmentsFromMessage(
-		message: Api.Message,
-	): Promise<Attachment[]> {
+	private async extractAttachmentsFromMessage(message: Api.Message): Promise<Attachment[]> {
 		if (!this.ownerUserId || !this.ownerUserType) {
 			return [];
 		}
@@ -1208,11 +1065,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 		const attachments: Attachment[] = [];
 
-		const pushAttachment = async (
-			buffer: Buffer,
-			fileName: string,
-			mimeType: string,
-		) => {
+		const pushAttachment = async (buffer: Buffer, fileName: string, mimeType: string) => {
 			if (!this.ownerUserId || !this.ownerUserType) {
 				return;
 			}
@@ -1294,9 +1147,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		return attachments;
 	}
 
-	private async resolveTelegramFile(
-		image: Image,
-	): Promise<string | CustomFile> {
+	private async resolveTelegramFile(image: Image): Promise<string | CustomFile> {
 		if (image.base64) {
 			const buffer = this.decodeBase64Payload(image);
 			if (buffer) {
@@ -1313,18 +1164,14 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			return image.url;
 		}
 
-		throw new Error(
-			"Unable to resolve Telegram file source from image payload",
-		);
+		throw new Error("Unable to resolve Telegram file source from image payload");
 	}
 
 	/**
 	 * Build InputPeer based on contactId and metadata
 	 * If metadata lacks accessHash, will try to resolve entity from Telegram API
 	 */
-	private async buildInputPeerFromMetadata(
-		contactId: string,
-	): Promise<Api.TypeInputPeer> {
+	private async buildInputPeerFromMetadata(contactId: string): Promise<Api.TypeInputPeer> {
 		const metadata = this.contactMetadata[contactId];
 
 		if (!metadata) {
@@ -1361,11 +1208,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			// Negative ID is actually channel/supergroup, not regular chat
 			if (peerId.isNegative()) {
 				// Negative ID needs to be handled as channel, try to resolve if no accessHash
-				return await this.resolveEntityToInputPeer(
-					contactId,
-					peerId,
-					"channel",
-				);
+				return await this.resolveEntityToInputPeer(contactId, peerId, "channel");
 			}
 			return new Api.InputPeerChat({
 				chatId: peerId,
@@ -1405,9 +1248,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			// Build corresponding InputPeer based on entity type
 			if (entity instanceof Api.User) {
 				const userId = entity.id.valueOf();
-				const accessHash = entity.accessHash
-					? bigInt(entity.accessHash)
-					: bigInt(0);
+				const accessHash = entity.accessHash ? bigInt(entity.accessHash) : bigInt(0);
 				const inputPeer = new Api.InputPeerUser({
 					userId: bigInt(userId),
 					accessHash,
@@ -1417,9 +1258,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 			if (entity instanceof Api.Channel) {
 				const channelId = entity.id.valueOf();
-				const accessHash = entity.accessHash
-					? bigInt(entity.accessHash)
-					: bigInt(0);
+				const accessHash = entity.accessHash ? bigInt(entity.accessHash) : bigInt(0);
 				const inputPeer = new Api.InputPeerChannel({
 					channelId: bigInt(channelId),
 					accessHash,
@@ -1437,10 +1276,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 			throw new Error(`Unsupported entity type for contactId: ${contactId}`);
 		} catch (error) {
-			console.error(
-				`[Bot ${this.botId}] [telegram] Failed to resolve entity for ${contactId}:`,
-				error,
-			);
+			console.error(`[Bot ${this.botId}] [telegram] Failed to resolve entity for ${contactId}:`, error);
 			throw new Error(
 				`Cannot resolve Telegram peer for ${contactId}. The contact may not exist or may not be accessible.`,
 			);
@@ -1472,9 +1308,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				`[Bot ${this.botId}] Telegram client.sendMessage()`,
 			);
 			if (DEBUG) {
-				console.log(
-					`[Bot ${this.botId}] [telegram] Message sent successfully to ${peer}`,
-				);
+				console.log(`[Bot ${this.botId}] [telegram] Message sent successfully to ${peer}`);
 			}
 			return;
 		}
@@ -1488,10 +1322,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			try {
 				fileLike = await this.resolveTelegramFile(image);
 			} catch (error) {
-				console.error(
-					`[Bot ${this.botId}] [telegram] Failed to resolve file for upload`,
-					error,
-				);
+				console.error(`[Bot ${this.botId}] [telegram] Failed to resolve file for upload`, error);
 				throw this.toAdapterError(operation, error, {
 					fallbackCode: "invalid_request_error",
 				});
@@ -1516,9 +1347,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			}
 
 			if (DEBUG) {
-				console.log(
-					`[Bot ${this.botId}] [telegram] File sent successfully to ${peer}`,
-				);
+				console.log(`[Bot ${this.botId}] [telegram] File sent successfully to ${peer}`);
 			}
 		}
 
@@ -1532,9 +1361,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				`[Bot ${this.botId}] Telegram client.sendMessage()`,
 			);
 			if (DEBUG) {
-				console.log(
-					`[Bot ${this.botId}] [telegram] Caption message sent successfully to ${peer}`,
-				);
+				console.log(`[Bot ${this.botId}] [telegram] Caption message sent successfully to ${peer}`);
 			}
 		}
 	}
@@ -1558,9 +1385,7 @@ export function opencontextMessageToTgText(message: Message): string {
 		return `@${message.target}`;
 	}
 	if ("nodes" in message) {
-		return message.nodes
-			.map((node) => opencontextMessageToTgText(node as unknown as Message))
-			.join("");
+		return message.nodes.map((node) => opencontextMessageToTgText(node as unknown as Message)).join("");
 	}
 	return "";
 }
@@ -1591,10 +1416,7 @@ export function tgMessageToopencontextMessage(message: Api.Message): Messages {
 	if (message.entities) {
 		for (const entity of message.entities) {
 			if (entity instanceof Api.MessageEntityMention) {
-				const mentionText = message.message.substr(
-					entity.offset,
-					entity.length,
-				);
+				const mentionText = message.message.substr(entity.offset, entity.length);
 				messages.push({ target: mentionText.replace("@", "") } as At);
 			}
 		}

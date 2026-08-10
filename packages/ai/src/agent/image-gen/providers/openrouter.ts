@@ -102,17 +102,11 @@ export class OpenRouterImageGenProvider extends ImageGenProvider {
 		return OPENROUTER_CAPABILITIES;
 	}
 
-	async generate(
-		request: ImageGenerationRequest,
-	): Promise<ImageGenerationResponse> {
+	async generate(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
 		const model = request.model || this.model;
 		const imageCount = normalizeImageCount(request.imageCount ?? request.n);
 		const modality = this.routeModality(request);
-		const creditsUsed = calculateImageCredits(
-			model,
-			imageCount,
-			qualityForBilling(request.quality),
-		);
+		const creditsUsed = calculateImageCredits(model, imageCount, qualityForBilling(request.quality));
 
 		if (!this.apiKey?.trim()) {
 			return failure({
@@ -127,26 +121,16 @@ export class OpenRouterImageGenProvider extends ImageGenProvider {
 		}
 
 		try {
-			const response = await fetch(
-				buildImagesUrl(this.baseUrl, this.imageGenerationUrl),
-				{
-					method: "POST",
-					headers: buildHeaders({
-						apiKey: this.apiKey,
-						referer: this.referer,
-						title: this.title,
-					}),
-					body: JSON.stringify(
-						buildPayload(
-							request,
-							model,
-							imageCount,
-							this.referenceImageDataUrls(request),
-						),
-					),
-					signal: AbortSignal.timeout(this.timeoutMs),
-				},
-			);
+			const response = await fetch(buildImagesUrl(this.baseUrl, this.imageGenerationUrl), {
+				method: "POST",
+				headers: buildHeaders({
+					apiKey: this.apiKey,
+					referer: this.referer,
+					title: this.title,
+				}),
+				body: JSON.stringify(buildPayload(request, model, imageCount, this.referenceImageDataUrls(request))),
+				signal: AbortSignal.timeout(this.timeoutMs),
+			});
 
 			const text = await response.text();
 			const parsed = parseJson<OpenRouterImageResponse>(text);
@@ -158,9 +142,7 @@ export class OpenRouterImageGenProvider extends ImageGenProvider {
 					imageCount,
 					modality,
 					creditsUsed,
-					error:
-						parsed?.error?.message ||
-						`OpenRouter image API error ${response.status}: ${text}`,
+					error: parsed?.error?.message || `OpenRouter image API error ${response.status}: ${text}`,
 					errorType: mapStatusToErrorType(response.status),
 				});
 			}
@@ -194,18 +176,14 @@ export class OpenRouterImageGenProvider extends ImageGenProvider {
 				creditsUsed,
 			};
 		} catch (error) {
-			const isTimeout =
-				error instanceof DOMException && error.name === "TimeoutError";
+			const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
 			return failure({
 				model,
 				prompt: request.prompt,
 				imageCount,
 				modality,
 				creditsUsed,
-				error:
-					error instanceof Error
-						? error.message
-						: "OpenRouter image generation failed",
+				error: error instanceof Error ? error.message : "OpenRouter image generation failed",
 				errorType: isTimeout ? "timeout" : "unknown_error",
 			});
 		}
@@ -312,9 +290,7 @@ function failure(args: {
 	};
 }
 
-function mapStatusToErrorType(
-	status: number,
-): ImageGenerationResponse["errorType"] {
+function mapStatusToErrorType(status: number): ImageGenerationResponse["errorType"] {
 	if (status === 401 || status === 403) return "configuration_error";
 	if (status === 429) return "rate_limit";
 	if (status >= 500) return "provider_error";
@@ -342,9 +318,7 @@ function parseJson<T>(text: string): T | null {
 	}
 }
 
-function normalizeOptionalString(
-	value: string | null | undefined,
-): string | undefined {
+function normalizeOptionalString(value: string | null | undefined): string | undefined {
 	if (!value) return undefined;
 	const trimmed = value.trim();
 	return trimmed.length > 0 ? trimmed : undefined;
@@ -355,15 +329,11 @@ function normalizeImageCount(value: unknown): number {
 	return Math.max(1, Math.min(4, Math.floor(value)));
 }
 
-function qualityForBilling(
-	quality: ImageGenerationQuality | undefined,
-): "standard" | "hd" {
+function qualityForBilling(quality: ImageGenerationQuality | undefined): "standard" | "hd" {
 	return quality === "high" || quality === "hd" ? "hd" : "standard";
 }
 
-function mimeTypeForOutputFormat(
-	outputFormat?: ImageGenerationOutputFormat,
-): string {
+function mimeTypeForOutputFormat(outputFormat?: ImageGenerationOutputFormat): string {
 	switch (outputFormat) {
 		case "jpeg":
 			return "image/jpeg";
@@ -378,7 +348,5 @@ function stripDataUrlPrefix(value: string): string {
 	const marker = ";base64,";
 	const trimmed = value.trim();
 	const markerIndex = trimmed.indexOf(marker);
-	return markerIndex >= 0
-		? trimmed.slice(markerIndex + marker.length)
-		: trimmed;
+	return markerIndex >= 0 ? trimmed.slice(markerIndex + marker.length) : trimmed;
 }

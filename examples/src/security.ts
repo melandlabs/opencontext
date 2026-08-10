@@ -6,12 +6,7 @@
  * the crypto helpers exist as classes/functions.
  */
 
-import {
-	KeyManager,
-	TokenEncryption,
-	isTrustedStorageUrl,
-	validateUrlForSSRF,
-} from "@melandlabs/security";
+import { KeyManager, TokenEncryption, isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/security";
 import { makeCheck, runSection } from "./_helpers.ts";
 
 export default async function testSecurity() {
@@ -19,14 +14,8 @@ export default async function testSecurity() {
 		const check = makeCheck("security");
 		check("TokenEncryption is a class", typeof TokenEncryption === "function");
 		check("KeyManager is a class", typeof KeyManager === "function");
-		check(
-			"isTrustedStorageUrl is a function",
-			typeof isTrustedStorageUrl === "function",
-		);
-		check(
-			"validateUrlForSSRF is a function",
-			typeof validateUrlForSSRF === "function",
-		);
+		check("isTrustedStorageUrl is a function", typeof isTrustedStorageUrl === "function");
+		check("validateUrlForSSRF is a function", typeof validateUrlForSSRF === "function");
 
 		// Pure checks — these don't touch network.
 		try {

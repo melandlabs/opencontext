@@ -126,29 +126,14 @@ const COMMON_KEYWORD_RULES: KeywordRule[] = [
 
 	// Funding and investment
 	{
-		keywords: [
-			"funding",
-			"raise",
-			"investment",
-			"investor",
-			"Series A",
-			"Series B",
-			"VC",
-		],
+		keywords: ["funding", "raise", "investment", "investor", "Series A", "Series B", "VC"],
 		category: "Funding",
 		importance: "medium",
 	},
 
 	// Partnerships and acquisitions
 	{
-		keywords: [
-			"partnership",
-			"acquisition",
-			"acquire",
-			"merger",
-			"deal",
-			"strategic",
-		],
+		keywords: ["partnership", "acquisition", "acquire", "merger", "deal", "strategic"],
 		category: "Partnerships",
 		importance: "medium",
 	},
@@ -162,28 +147,14 @@ const COMMON_KEYWORD_RULES: KeywordRule[] = [
 
 	// HR and recruiting
 	{
-		keywords: [
-			"hiring",
-			"recruit",
-			"job opening",
-			"position",
-			"role",
-			"join our team",
-		],
+		keywords: ["hiring", "recruit", "job opening", "position", "role", "join our team"],
 		category: "HR & Recruiting",
 		importance: "low",
 	},
 
 	// Meetings and events
 	{
-		keywords: [
-			"conference",
-			"summit",
-			"webinar",
-			"workshop",
-			"meetup",
-			"event",
-		],
+		keywords: ["conference", "summit", "webinar", "workshop", "meetup", "event"],
 		category: "Meetings",
 		importance: "low",
 	},
@@ -206,9 +177,7 @@ const COMMON_KEYWORD_RULES: KeywordRule[] = [
 /**
  * Extract tag configuration from subscription metadata
  */
-export function getTagConfig(
-	subscription: RssSubscription,
-): RssTagConfig | null {
+export function getTagConfig(subscription: RssSubscription): RssTagConfig | null {
 	const metadata = subscription as unknown as {
 		tagConfig?: RssTagConfig;
 	};
@@ -246,8 +215,7 @@ function extractFromMetadata(item: InsertRssItem): {
 	}
 
 	// Extract from subscriptionCategory
-	const subscriptionCategory = metadata.subscriptionCategory as
-		string | undefined;
+	const subscriptionCategory = metadata.subscriptionCategory as string | undefined;
 	if (subscriptionCategory) {
 		const category = mapRssCategoryToSystem(subscriptionCategory);
 		if (category) {
@@ -274,11 +242,7 @@ function mapRssCategoryToSystem(rssCategory: string): RssCategory | null {
 	const normalized = rssCategory.toLowerCase();
 
 	// Technology R&D
-	if (
-		normalized.includes("tech") ||
-		normalized.includes("developer") ||
-		normalized.includes("engineering")
-	) {
+	if (normalized.includes("tech") || normalized.includes("developer") || normalized.includes("engineering")) {
 		return "R&D";
 	}
 
@@ -298,11 +262,7 @@ function mapRssCategoryToSystem(rssCategory: string): RssCategory | null {
 	}
 
 	// Recruiting
-	if (
-		normalized.includes("jobs") ||
-		normalized.includes("careers") ||
-		normalized.includes("hiring")
-	) {
+	if (normalized.includes("jobs") || normalized.includes("careers") || normalized.includes("hiring")) {
 		return "HR & Recruiting";
 	}
 
@@ -321,30 +281,20 @@ function inferCategoryFromFeedTitle(feedTitle: string): RssCategory | null {
 	const normalized = feedTitle.toLowerCase();
 
 	// Security advisory
-	if (
-		normalized.includes("security") ||
-		normalized.includes("advisory") ||
-		normalized.includes("cve")
-	) {
+	if (normalized.includes("security") || normalized.includes("advisory") || normalized.includes("cve")) {
 		return "Security";
 	}
 
 	// Tech blog
 	if (
 		normalized.includes("blog") &&
-		(normalized.includes("engineering") ||
-			normalized.includes("developer") ||
-			normalized.includes("tech"))
+		(normalized.includes("engineering") || normalized.includes("developer") || normalized.includes("tech"))
 	) {
 		return "R&D";
 	}
 
 	// Recruiting
-	if (
-		normalized.includes("jobs") ||
-		normalized.includes("careers") ||
-		normalized.includes("recruiting")
-	) {
+	if (normalized.includes("jobs") || normalized.includes("careers") || normalized.includes("recruiting")) {
 		return "HR & Recruiting";
 	}
 
@@ -369,9 +319,7 @@ function extractFromKeywords(
 	const matchedKeywords: string[] = [];
 
 	// Search text: title + summary
-	const searchText = [item.title || "", item.summary || "", item.content || ""]
-		.join(" ")
-		.toLowerCase();
+	const searchText = [item.title || "", item.summary || "", item.content || ""].join(" ").toLowerCase();
 
 	// Matching rules
 	for (const rule of rules) {
@@ -401,10 +349,7 @@ function extractFromKeywords(
  */
 function extractTopKeywords(item: InsertRssItem): string[] {
 	const keywords: string[] = [];
-	const text = [item.title, item.summary]
-		.filter(Boolean)
-		.join(" ")
-		.toLowerCase();
+	const text = [item.title, item.summary].filter(Boolean).join(" ").toLowerCase();
 
 	// Simple word extraction: identify capitalized words, technical terms, etc.
 	// Using simple rules here; more sophisticated NLP could be used
@@ -438,10 +383,7 @@ function extractTopKeywords(item: InsertRssItem): string[] {
 /**
  * Main function: extract tags for RSS articles
  */
-export function extractRssTags(
-	item: InsertRssItem,
-	subscription: RssSubscription,
-): RssTags {
+export function extractRssTags(item: InsertRssItem, subscription: RssSubscription): RssTags {
 	// 1. Get subscription-level configuration
 	const tagConfig = getTagConfig(subscription);
 
@@ -517,9 +459,7 @@ export function extractRssTags(
  * Update subscription tag configuration
  * This function returns the metadata fields that need to be updated
  */
-export function buildTagConfigMetadata(
-	config: RssTagConfig,
-): Record<string, unknown> {
+export function buildTagConfigMetadata(config: RssTagConfig): Record<string, unknown> {
 	return {
 		tagConfig: config,
 	};

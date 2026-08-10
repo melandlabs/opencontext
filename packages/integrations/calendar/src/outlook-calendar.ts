@@ -8,9 +8,7 @@ type UpdateIntegrationAccountOptions = {
 	credentials: Record<string, unknown>;
 };
 
-async function updateIntegrationAccount(
-	_options: UpdateIntegrationAccountOptions,
-): Promise<void> {
+async function updateIntegrationAccount(_options: UpdateIntegrationAccountOptions): Promise<void> {
 	// Stub: persist credentials to the integration account record.
 	// In the application, this calls the real DB update.
 }
@@ -95,20 +93,14 @@ export class OutlookCalendarAdapter {
 
 	private async refreshToken() {
 		if (!this.credentials.refreshToken) {
-			throw new AppError(
-				"unauthorized:api",
-				"Outlook Calendar refresh token missing. Please reconnect.",
-			);
+			throw new AppError("unauthorized:api", "Outlook Calendar refresh token missing. Please reconnect.");
 		}
 
 		const clientId = process.env.OUTLOOK_CALENDAR_CLIENT_ID;
 		const clientSecret = process.env.OUTLOOK_CALENDAR_CLIENT_SECRET;
 
 		if (!clientId || !clientSecret) {
-			throw new AppError(
-				"bad_request:api",
-				"Outlook Calendar OAuth is not configured.",
-			);
+			throw new AppError("bad_request:api", "Outlook Calendar OAuth is not configured.");
 		}
 
 		const params = new URLSearchParams({
@@ -117,8 +109,7 @@ export class OutlookCalendarAdapter {
 			grant_type: "refresh_token",
 			refresh_token: this.credentials.refreshToken,
 			scope:
-				process.env.OUTLOOK_CALENDAR_SCOPE ??
-				"offline_access User.Read Calendars.Read Calendars.ReadWrite",
+				process.env.OUTLOOK_CALENDAR_SCOPE ?? "offline_access User.Read Calendars.Read Calendars.ReadWrite",
 		});
 
 		const response = await fetch(TOKEN_URL, {
@@ -137,18 +128,13 @@ export class OutlookCalendarAdapter {
 		};
 
 		if (!response.ok || !body.access_token) {
-			throw new AppError(
-				"unauthorized:api",
-				body?.error ?? "Failed to refresh Outlook Calendar token",
-			);
+			throw new AppError("unauthorized:api", body?.error ?? "Failed to refresh Outlook Calendar token");
 		}
 
 		this.credentials.accessToken = body.access_token;
-		this.credentials.refreshToken =
-			body.refresh_token ?? this.credentials.refreshToken ?? null;
+		this.credentials.refreshToken = body.refresh_token ?? this.credentials.refreshToken ?? null;
 		this.credentials.scope = body.scope ?? this.credentials.scope ?? null;
-		this.credentials.tokenType =
-			body.token_type ?? this.credentials.tokenType ?? null;
+		this.credentials.tokenType = body.token_type ?? this.credentials.tokenType ?? null;
 		this.credentials.expiresAt = body.expires_in
 			? Date.now() + body.expires_in * 1000
 			: (this.credentials.expiresAt ?? null);
@@ -172,10 +158,7 @@ export class OutlookCalendarAdapter {
 	private async graphFetch<T>(path: string): Promise<T> {
 		await this.refreshIfNeeded();
 		if (!this.credentials.accessToken) {
-			throw new AppError(
-				"unauthorized:api",
-				"Outlook Calendar access token missing.",
-			);
+			throw new AppError("unauthorized:api", "Outlook Calendar access token missing.");
 		}
 
 		const response = await fetch(`${GRAPH_BASE}${path}`, {
@@ -218,9 +201,9 @@ export class OutlookCalendarAdapter {
 		params.set("$orderby", "lastModifiedDateTime desc");
 		params.set("$filter", filter);
 
-		const events = await this.graphFetch<
-			GraphListResponse<OutlookCalendarEvent>
-		>(`/me/events?${params.toString()}`);
+		const events = await this.graphFetch<GraphListResponse<OutlookCalendarEvent>>(
+			`/me/events?${params.toString()}`,
+		);
 		return events.value ?? [];
 	}
 
@@ -239,10 +222,7 @@ export class OutlookCalendarAdapter {
 	}): Promise<OutlookCalendarEvent> {
 		await this.refreshIfNeeded();
 		if (!this.credentials.accessToken) {
-			throw new AppError(
-				"unauthorized:api",
-				"Outlook Calendar access token missing.",
-			);
+			throw new AppError("unauthorized:api", "Outlook Calendar access token missing.");
 		}
 
 		const response = await fetch(`${GRAPH_BASE}/me/events`, {

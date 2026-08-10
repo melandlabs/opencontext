@@ -17,14 +17,9 @@ export default async function testSearch() {
 
 		const maybeSearch = (search as Record<string, unknown>).search;
 		check("search function is exported", typeof maybeSearch === "function");
-		check(
-			"search.needsRealTimeInfo is a function",
-			typeof search.needsRealTimeInfo === "function",
-		);
+		check("search.needsRealTimeInfo is a function", typeof search.needsRealTimeInfo === "function");
 
-		const realTime = search.needsRealTimeInfo(
-			"What's the weather in Tokyo right now?",
-		);
+		const realTime = search.needsRealTimeInfo("What's the weather in Tokyo right now?");
 		check("needsRealTimeInfo returns boolean", typeof realTime === "boolean");
 	});
 }

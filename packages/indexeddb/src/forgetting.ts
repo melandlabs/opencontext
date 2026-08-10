@@ -3,10 +3,7 @@ import type {
 	MemoryGraphSnapshot,
 	OwnerScope,
 } from "../../ai/memory-consolidation/src/graph-contracts";
-import {
-	applicabilityEquivalent,
-	sameOwnerScope,
-} from "../../ai/memory-consolidation/src/graph-evolution";
+import { applicabilityEquivalent, sameOwnerScope } from "../../ai/memory-consolidation/src/graph-evolution";
 import { applicabilityMatchesTrustedContexts } from "../../ai/memory-consolidation/src/graph-retrieval";
 import type { MemoryConsolidationRuntimeRelationKeys } from "../../ai/memory-consolidation/src/runtime";
 import type {
@@ -35,10 +32,7 @@ import {
 import { isMemorySummaryPublicationPending } from "../../ai/src/memory/summary-publication";
 import { cosineSimilarity } from "./embedding";
 import type { MemoryStage, MemorySummaryRecord, RawMessage } from "./manager";
-import {
-	applicabilityFromMessage,
-	ownerScopeFromMessage,
-} from "./memory-graph-evolution";
+import { applicabilityFromMessage, ownerScopeFromMessage } from "./memory-graph-evolution";
 import {
 	type MemoryGraphLifecycleRuntimeResult,
 	type RawMessageGraphLifecycleOptions,
@@ -191,9 +185,7 @@ export async function materializeMemoryGraphNodeIds(input: {
 	applicabilityContexts?: MemoryApplicabilityContext[];
 }): Promise<MemorySearchHit[] | undefined> {
 	const nodeIds = [...new Set(input.nodeIds)];
-	const nodesById = new Map(
-		input.snapshot.nodes.map((node) => [node.id, node]),
-	);
+	const nodesById = new Map(input.snapshot.nodes.map((node) => [node.id, node]));
 	const nodes = nodeIds.map((nodeId) => nodesById.get(nodeId));
 	const applicabilityNow = input.snapshot.capturedAt ?? Date.now();
 	if (
@@ -211,15 +203,11 @@ export async function materializeMemoryGraphNodeIds(input: {
 		return undefined;
 	}
 
-	const rawIds = nodes.flatMap((node) =>
-		node?.type === "raw" ? [node.id] : [],
-	);
+	const rawIds = nodes.flatMap((node) => (node?.type === "raw" ? [node.id] : []));
 	const summaryIds = nodes.flatMap((node) =>
 		node?.type === "summary" || node?.type === "artifact" ? [node.id] : [],
 	);
-	const raws = await Promise.all(
-		rawIds.map((nodeId) => input.manager.getMessageById(nodeId)),
-	);
+	const raws = await Promise.all(rawIds.map((nodeId) => input.manager.getMessageById(nodeId)));
 	const rawsById = new Map<string, RawMessage>();
 	for (const [index, raw] of raws.entries()) {
 		const rawId = rawIds[index];
@@ -230,10 +218,7 @@ export async function materializeMemoryGraphNodeIds(input: {
 			raw.messageId !== rawId ||
 			!sameOwnerScope(ownerScopeFromMessage(raw), input.ownerScope) ||
 			rawNode?.type !== "raw" ||
-			!applicabilityEquivalent(
-				applicabilityFromMessage(raw),
-				rawNode.applicability,
-			) ||
+			!applicabilityEquivalent(applicabilityFromMessage(raw), rawNode.applicability) ||
 			!applicabilityMatchesTrustedContexts(
 				applicabilityFromMessage(raw),
 				input.applicabilityContexts ?? [],
@@ -367,9 +352,7 @@ function hasMoreByLength<T>(items: T[], pageSize: number): MemoryPageResult<T> {
 	};
 }
 
-export function createIndexedDBMemoryStorageAdapter(
-	manager: RawMessageStorage,
-): MemoryStorageAdapter {
+export function createIndexedDBMemoryStorageAdapter(manager: RawMessageStorage): MemoryStorageAdapter {
 	const deprecationManager = manager;
 	return {
 		async acquireLock(input) {
@@ -487,14 +470,8 @@ export function createIndexedDBMemoryStorageAdapter(
 				manager.queryMessages({
 					userId: query.userId,
 					keywords: query.keywords,
-					startTime:
-						query.startTime === undefined
-							? undefined
-							: normalizeTimestampFromMs(query.startTime),
-					endTime:
-						query.endTime === undefined
-							? undefined
-							: normalizeTimestampFromMs(query.endTime),
+					startTime: query.startTime === undefined ? undefined : normalizeTimestampFromMs(query.startTime),
+					endTime: query.endTime === undefined ? undefined : normalizeTimestampFromMs(query.endTime),
 					offset,
 					pageSize: batchSize,
 					reverse: query.reverse ?? true,
@@ -502,25 +479,14 @@ export function createIndexedDBMemoryStorageAdapter(
 					includeDeprecated: query.includeDeprecated,
 					memoryStages: query.tiers as MemoryStage[] | undefined,
 					platform:
-						typeof query.dimensions?.platform === "string"
-							? String(query.dimensions.platform)
-							: undefined,
+						typeof query.dimensions?.platform === "string" ? String(query.dimensions.platform) : undefined,
 					channel:
-						typeof query.dimensions?.channel === "string"
-							? String(query.dimensions.channel)
-							: undefined,
-					person:
-						typeof query.dimensions?.person === "string"
-							? String(query.dimensions.person)
-							: undefined,
-					botId:
-						typeof query.dimensions?.botId === "string"
-							? String(query.dimensions.botId)
-							: undefined,
+						typeof query.dimensions?.channel === "string" ? String(query.dimensions.channel) : undefined,
+					person: typeof query.dimensions?.person === "string" ? String(query.dimensions.person) : undefined,
+					botId: typeof query.dimensions?.botId === "string" ? String(query.dimensions.botId) : undefined,
 				});
 			const filtersOwnerScope =
-				query.dimensions?.workspaceId !== undefined ||
-				query.dimensions?.tenantId !== undefined;
+				query.dimensions?.workspaceId !== undefined || query.dimensions?.tenantId !== undefined;
 			if (!filtersOwnerScope) {
 				const raw = await queryPage(query.offset, pageSize + 1);
 				return hasMoreByLength(raw.map(toMemoryRecord), pageSize);
@@ -534,9 +500,7 @@ export function createIndexedDBMemoryStorageAdapter(
 			while (scopedRecords.length < targetCount) {
 				const batch = await queryPage(storageOffset, storagePageSize);
 				scopedRecords.push(
-					...batch
-						.map(toMemoryRecord)
-						.filter((record) => dimensionMatches(record, query.dimensions)),
+					...batch.map(toMemoryRecord).filter((record) => dimensionMatches(record, query.dimensions)),
 				);
 				if (batch.length < storagePageSize) break;
 				storageOffset += batch.length;
@@ -551,21 +515,12 @@ export function createIndexedDBMemoryStorageAdapter(
 			const limit = clampSemanticLimit(query.limit);
 			const threshold = clampSemanticThreshold(query.threshold);
 			const platform =
-				typeof query.dimensions?.platform === "string"
-					? String(query.dimensions.platform)
-					: undefined;
+				typeof query.dimensions?.platform === "string" ? String(query.dimensions.platform) : undefined;
 			const channel =
-				typeof query.dimensions?.channel === "string"
-					? String(query.dimensions.channel)
-					: undefined;
+				typeof query.dimensions?.channel === "string" ? String(query.dimensions.channel) : undefined;
 			const person =
-				typeof query.dimensions?.person === "string"
-					? String(query.dimensions.person)
-					: undefined;
-			const botId =
-				typeof query.dimensions?.botId === "string"
-					? String(query.dimensions.botId)
-					: undefined;
+				typeof query.dimensions?.person === "string" ? String(query.dimensions.person) : undefined;
+			const botId = typeof query.dimensions?.botId === "string" ? String(query.dimensions.botId) : undefined;
 
 			const nativeManager = manager as NativeSemanticSearchManager;
 			if (typeof nativeManager.searchMessagesSemantically === "function") {
@@ -582,35 +537,25 @@ export function createIndexedDBMemoryStorageAdapter(
 					botId,
 					channel,
 					person,
-					startTime:
-						query.startTime === undefined
-							? undefined
-							: normalizeTimestampFromMs(query.startTime),
-					endTime:
-						query.endTime === undefined
-							? undefined
-							: normalizeTimestampFromMs(query.endTime),
+					startTime: query.startTime === undefined ? undefined : normalizeTimestampFromMs(query.startTime),
+					endTime: query.endTime === undefined ? undefined : normalizeTimestampFromMs(query.endTime),
 				});
 
 				return nativeResults
-					.map((result): MemorySemanticRecallHit => ({
-						record: toMemoryRecord(result.message),
-						similarity: result.similarity,
-					}))
+					.map(
+						(result): MemorySemanticRecallHit => ({
+							record: toMemoryRecord(result.message),
+							similarity: result.similarity,
+						}),
+					)
 					.filter((hit) => {
-						if (
-							!query.includeDeprecated &&
-							hit.record.deprecatedAt !== undefined
-						) {
+						if (!query.includeDeprecated && hit.record.deprecatedAt !== undefined) {
 							return false;
 						}
 						if (query.tiers && !query.tiers.includes(hit.record.tier)) {
 							return false;
 						}
-						return (
-							timeMatches(hit.record, query) &&
-							dimensionMatches(hit.record, query.dimensions)
-						);
+						return timeMatches(hit.record, query) && dimensionMatches(hit.record, query.dimensions);
 					})
 					.slice(0, limit);
 			}
@@ -627,14 +572,8 @@ export function createIndexedDBMemoryStorageAdapter(
 				botId,
 				channel,
 				person,
-				startTime:
-					query.startTime === undefined
-						? undefined
-						: normalizeTimestampFromMs(query.startTime),
-				endTime:
-					query.endTime === undefined
-						? undefined
-						: normalizeTimestampFromMs(query.endTime),
+				startTime: query.startTime === undefined ? undefined : normalizeTimestampFromMs(query.startTime),
+				endTime: query.endTime === undefined ? undefined : normalizeTimestampFromMs(query.endTime),
 			});
 
 			return raw
@@ -642,10 +581,7 @@ export function createIndexedDBMemoryStorageAdapter(
 					if (!message.embedding || message.embedding.length === 0) {
 						return null;
 					}
-					const similarity = cosineSimilarity(
-						query.queryEmbedding,
-						message.embedding,
-					);
+					const similarity = cosineSimilarity(query.queryEmbedding, message.embedding);
 					if (!Number.isFinite(similarity) || similarity < threshold) {
 						return null;
 					}
@@ -681,19 +617,12 @@ export function createIndexedDBMemoryStorageAdapter(
 					summaryTiers: query.summaryTiers,
 					dimensions: query.dimensions,
 				});
-				published.push(
-					...batch.filter(
-						(summary) => !isMemorySummaryPublicationPending(summary),
-					),
-				);
+				published.push(...batch.filter((summary) => !isMemorySummaryPublicationPending(summary)));
 				if (batch.length < storagePageSize) break;
 				storageOffset += batch.length;
 			}
 
-			return hasMoreByLength(
-				published.slice(requestedOffset).map(toMemorySummary),
-				pageSize,
-			);
+			return hasMoreByLength(published.slice(requestedOffset).map(toMemorySummary), pageSize);
 		},
 
 		async markRecordsAccessed(input) {
@@ -762,10 +691,7 @@ export async function runMemoryForgettingCycle(
 ): Promise<RunMemoryForgettingCycleResult> {
 	// Build engine with IndexedDB-backed adapter; policy can be overridden by caller.
 	const storage = createIndexedDBMemoryStorageAdapter(manager);
-	const now =
-		options?.shadowDiagnostics === undefined
-			? options?.now
-			: (options.now ?? Date.now());
+	const now = options?.shadowDiagnostics === undefined ? options?.now : (options.now ?? Date.now());
 	if (options?.graphLifecycle?.enabled === true) {
 		const graphLifecycle = await runMemoryGraphLifecycleCycle({
 			manager,
@@ -778,20 +704,11 @@ export async function runMemoryForgettingCycle(
 			now,
 		});
 		let hardDeletedRecords = 0;
-		if (
-			!graphLifecycle.dryRun &&
-			options.hardDeleteArchivedOlderThan !== undefined
-		) {
-			hardDeletedRecords = await manager.hardDeleteArchived(
-				options.hardDeleteArchivedOlderThan,
-				userId,
-			);
+		if (!graphLifecycle.dryRun && options.hardDeleteArchivedOlderThan !== undefined) {
+			hardDeletedRecords = await manager.hardDeleteArchived(options.hardDeleteArchivedOlderThan, userId);
 		}
 		return {
-			status:
-				graphLifecycle.status === "skipped-locked"
-					? "skipped_locked"
-					: "success",
+			status: graphLifecycle.status === "skipped-locked" ? "skipped_locked" : "success",
 			dryRun: graphLifecycle.dryRun,
 			userId,
 			startedAt: now ?? Date.now(),
@@ -809,14 +726,15 @@ export async function runMemoryForgettingCycle(
 		storage,
 		policy: options?.policy,
 	});
-	let shadowDiagnostics:
-		MemoryConsolidationShadowDiagnosticsRunResult | undefined;
+	let shadowDiagnostics: MemoryConsolidationShadowDiagnosticsRunResult | undefined;
 
 	if (options?.shadowDiagnostics) {
-		const { buildMemoryConsolidationRuntimeRecordSelectors } =
-			await import("../../ai/memory-consolidation/src/runtime");
-		const { runMemoryConsolidationShadowDiagnostics } =
-			await import("../../ai/memory-consolidation/src/shadow");
+		const { buildMemoryConsolidationRuntimeRecordSelectors } = await import(
+			"../../ai/memory-consolidation/src/runtime"
+		);
+		const { runMemoryConsolidationShadowDiagnostics } = await import(
+			"../../ai/memory-consolidation/src/shadow"
+		);
 		const shadowOptions = options.shadowDiagnostics;
 		shadowDiagnostics = await runMemoryConsolidationShadowDiagnostics({
 			enabled: shadowOptions.enabled,
@@ -859,10 +777,7 @@ export async function runMemoryForgettingCycle(
 	// - transition/archive daily
 	// - irreversible hard-delete on a slower cadence
 	if (!options?.dryRun && options?.hardDeleteArchivedOlderThan !== undefined) {
-		hardDeletedRecords = await manager.hardDeleteArchived(
-			options.hardDeleteArchivedOlderThan,
-			userId,
-		);
+		hardDeletedRecords = await manager.hardDeleteArchived(options.hardDeleteArchivedOlderThan, userId);
 	}
 
 	return {

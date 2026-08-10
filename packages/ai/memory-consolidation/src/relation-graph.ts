@@ -1,7 +1,4 @@
-import type {
-	MemoryEvidenceCluster,
-	MemoryEvidenceRecord,
-} from "./evidence-cluster";
+import type { MemoryEvidenceCluster, MemoryEvidenceRecord } from "./evidence-cluster";
 
 export type MemoryRelationKind = "support" | "compete" | "related";
 
@@ -34,8 +31,7 @@ export interface MemoryRelationGraphThresholds {
 }
 
 export type MemoryGraphClusterStatus = "tentative" | "stable" | "contested";
-export type MemoryGraphClusterLifecycleStatus =
-	MemoryGraphClusterStatus | "consolidated";
+export type MemoryGraphClusterLifecycleStatus = MemoryGraphClusterStatus | "consolidated";
 
 export interface MemoryRelationGraphEdgeSignal {
 	id: string;
@@ -109,19 +105,13 @@ function resolveThresholds(
 	thresholds: Partial<MemoryRelationGraphThresholds> | undefined,
 ): MemoryRelationGraphThresholds {
 	return {
-		supportThreshold:
-			thresholds?.supportThreshold ?? DEFAULT_THRESHOLDS.supportThreshold,
-		competeThreshold:
-			thresholds?.competeThreshold ?? DEFAULT_THRESHOLDS.competeThreshold,
-		stableSupportScore:
-			thresholds?.stableSupportScore ?? DEFAULT_THRESHOLDS.stableSupportScore,
+		supportThreshold: thresholds?.supportThreshold ?? DEFAULT_THRESHOLDS.supportThreshold,
+		competeThreshold: thresholds?.competeThreshold ?? DEFAULT_THRESHOLDS.competeThreshold,
+		stableSupportScore: thresholds?.stableSupportScore ?? DEFAULT_THRESHOLDS.stableSupportScore,
 		relationDecayHalfLifeMs:
-			thresholds?.relationDecayHalfLifeMs ??
-			DEFAULT_THRESHOLDS.relationDecayHalfLifeMs,
-		evidenceBoost:
-			thresholds?.evidenceBoost ?? DEFAULT_THRESHOLDS.evidenceBoost,
-		activationBoost:
-			thresholds?.activationBoost ?? DEFAULT_THRESHOLDS.activationBoost,
+			thresholds?.relationDecayHalfLifeMs ?? DEFAULT_THRESHOLDS.relationDecayHalfLifeMs,
+		evidenceBoost: thresholds?.evidenceBoost ?? DEFAULT_THRESHOLDS.evidenceBoost,
+		activationBoost: thresholds?.activationBoost ?? DEFAULT_THRESHOLDS.activationBoost,
 	};
 }
 
@@ -147,13 +137,9 @@ function resolveNodes(
 	records: MemoryEvidenceRecord[],
 	nodes: MemoryTraceNode[] | undefined,
 ): MemoryTraceNode[] {
-	const nodesByRecordId = new Map(
-		(nodes ?? []).map((node) => [node.recordId, node]),
-	);
+	const nodesByRecordId = new Map((nodes ?? []).map((node) => [node.recordId, node]));
 
-	return records.map(
-		(record) => nodesByRecordId.get(record.id) ?? nodeFromRecord(record),
-	);
+	return records.map((record) => nodesByRecordId.get(record.id) ?? nodeFromRecord(record));
 }
 
 function decayWeight(
@@ -185,9 +171,7 @@ function effectiveWeight(
 	);
 
 	return clamp01(
-		decayedWeight +
-			evidenceCount * thresholds.evidenceBoost +
-			activationCount * thresholds.activationBoost,
+		decayedWeight + evidenceCount * thresholds.evidenceBoost + activationCount * thresholds.activationBoost,
 	);
 }
 
@@ -246,10 +230,7 @@ function competitionKey(clusterIds: string[]): string {
 		: `competition:${stableKeyParts(clusterIds).join("|")}`;
 }
 
-function groupByRoot(
-	ids: string[],
-	disjointSet: DisjointSet,
-): Map<string, string[]> {
+function groupByRoot(ids: string[], disjointSet: DisjointSet): Map<string, string[]> {
 	const grouped = new Map<string, string[]>();
 
 	for (const id of ids) {
@@ -266,9 +247,7 @@ export function assignMemoryRelationGraph(
 	input: AssignMemoryRelationGraphInput,
 ): MemoryRelationGraphAssignment {
 	const thresholds = resolveThresholds(input.thresholds);
-	const recordsById = new Map(
-		input.records.map((record) => [record.id, record]),
-	);
+	const recordsById = new Map(input.records.map((record) => [record.id, record]));
 	const nodes = resolveNodes(input.records, input.nodes);
 	const nodesByRecordId = new Map(nodes.map((node) => [node.recordId, node]));
 	const recordIds = nodes.map((node) => node.recordId);
@@ -301,30 +280,23 @@ export function assignMemoryRelationGraph(
 	const clusters = [...groupedRecords.values()].map((recordIdsInCluster) => {
 		const recordIdSet = new Set(recordIdsInCluster);
 		const supportEdges = strongSupportEdges.filter(
-			(edge) =>
-				recordIdSet.has(edge.fromRecordId) && recordIdSet.has(edge.toRecordId),
+			(edge) => recordIdSet.has(edge.fromRecordId) && recordIdSet.has(edge.toRecordId),
 		);
 		const relatedEdges = edgeSignals.filter(
 			(edge) =>
 				edge.relation === "related" &&
 				recordsById.has(edge.fromRecordId) &&
 				recordsById.has(edge.toRecordId) &&
-				(recordIdSet.has(edge.fromRecordId) ||
-					recordIdSet.has(edge.toRecordId)),
+				(recordIdSet.has(edge.fromRecordId) || recordIdSet.has(edge.toRecordId)),
 		);
 		const supportScore = mean(supportEdges.map((edge) => edge.effectiveWeight));
 		const latestTimestamp = Math.max(
 			...recordIdsInCluster.map(
-				(recordId) =>
-					nodesByRecordId.get(recordId)!.timestamp ??
-					recordsById.get(recordId)!.timestamp,
+				(recordId) => nodesByRecordId.get(recordId)!.timestamp ?? recordsById.get(recordId)!.timestamp,
 			),
 		);
 		const status: MemoryGraphClusterStatus =
-			recordIdsInCluster.length > 1 &&
-			supportScore >= thresholds.stableSupportScore
-				? "stable"
-				: "tentative";
+			recordIdsInCluster.length > 1 && supportScore >= thresholds.stableSupportScore ? "stable" : "tentative";
 
 		return {
 			clusterId: clusterId(recordIdsInCluster),
@@ -352,8 +324,7 @@ export function assignMemoryRelationGraph(
 			edge.effectiveWeight >= thresholds.competeThreshold &&
 			clusterByRecordId.has(edge.fromRecordId) &&
 			clusterByRecordId.has(edge.toRecordId) &&
-			clusterByRecordId.get(edge.fromRecordId) !==
-				clusterByRecordId.get(edge.toRecordId),
+			clusterByRecordId.get(edge.fromRecordId) !== clusterByRecordId.get(edge.toRecordId),
 	);
 
 	for (const edge of strongCompeteEdges) {
@@ -364,27 +335,25 @@ export function assignMemoryRelationGraph(
 	}
 
 	const groupedClusters = groupByRoot(clusterIds, clusterDisjointSet);
-	const competitionGroups = [...groupedClusters.values()].map(
-		(clusterIdsInGroup) => {
-			const clusterIdSet = new Set(clusterIdsInGroup);
-			const competeEdges = strongCompeteEdges.filter((edge) => {
-				const fromClusterId = clusterByRecordId.get(edge.fromRecordId);
-				const toClusterId = clusterByRecordId.get(edge.toRecordId);
-				return (
-					fromClusterId !== undefined &&
-					toClusterId !== undefined &&
-					clusterIdSet.has(fromClusterId) &&
-					clusterIdSet.has(toClusterId)
-				);
-			});
+	const competitionGroups = [...groupedClusters.values()].map((clusterIdsInGroup) => {
+		const clusterIdSet = new Set(clusterIdsInGroup);
+		const competeEdges = strongCompeteEdges.filter((edge) => {
+			const fromClusterId = clusterByRecordId.get(edge.fromRecordId);
+			const toClusterId = clusterByRecordId.get(edge.toRecordId);
+			return (
+				fromClusterId !== undefined &&
+				toClusterId !== undefined &&
+				clusterIdSet.has(fromClusterId) &&
+				clusterIdSet.has(toClusterId)
+			);
+		});
 
-			return {
-				competitionKey: competitionKey(clusterIdsInGroup),
-				clusterIds: clusterIdsInGroup,
-				competeEdgeIds: competeEdges.map((edge) => edge.id),
-			};
-		},
-	);
+		return {
+			competitionKey: competitionKey(clusterIdsInGroup),
+			clusterIds: clusterIdsInGroup,
+			competeEdgeIds: competeEdges.map((edge) => edge.id),
+		};
+	});
 
 	const clusterCompetitionKeys = Object.fromEntries(
 		competitionGroups.flatMap((group) =>
@@ -393,15 +362,11 @@ export function assignMemoryRelationGraph(
 	);
 	const recordClusterKeys = Object.fromEntries(clusterByRecordId.entries());
 	const contestedClusterIds = new Set(
-		competitionGroups
-			.filter((group) => group.clusterIds.length > 1)
-			.flatMap((group) => group.clusterIds),
+		competitionGroups.filter((group) => group.clusterIds.length > 1).flatMap((group) => group.clusterIds),
 	);
 	const clustersWithCompetitionStatus = clusters.map((cluster) => ({
 		...cluster,
-		status: contestedClusterIds.has(cluster.clusterId)
-			? ("contested" as const)
-			: cluster.status,
+		status: contestedClusterIds.has(cluster.clusterId) ? ("contested" as const) : cluster.status,
 	}));
 
 	return {

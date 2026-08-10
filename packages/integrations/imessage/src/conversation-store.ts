@@ -75,12 +75,7 @@ class IMessageConversationStore {
 		}));
 	}
 
-	addMessage(
-		userId: string,
-		channelId: string,
-		role: "user" | "assistant",
-		content: string,
-	): void {
+	addMessage(userId: string, channelId: string, role: "user" | "assistant", content: string): void {
 		const userKey = this.getUserKey(userId);
 		this.ensureLoaded(userKey, channelId);
 
@@ -91,13 +86,7 @@ class IMessageConversationStore {
 		};
 
 		this.cache.get(userKey)?.get(channelId)?.push(message);
-		saveChannelMessage(
-			this.memoryDir,
-			this.PREFIX,
-			userKey,
-			channelId,
-			message,
-		);
+		saveChannelMessage(this.memoryDir, this.PREFIX, userKey, channelId, message);
 	}
 
 	clearConversation(userId: string, channelId: string): void {
@@ -106,12 +95,7 @@ class IMessageConversationStore {
 
 		this.cache.get(userKey)?.get(channelId)?.splice(0);
 		this.loadedPairs.delete(pk);
-		clearChannelConversationFromAllDays(
-			this.memoryDir,
-			this.PREFIX,
-			userKey,
-			channelId,
-		);
+		clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, userKey, channelId);
 	}
 
 	private clearExpiredConversations(): void {
@@ -127,12 +111,7 @@ class IMessageConversationStore {
 				if (now - lastMsg.timestamp > expiryMs) {
 					channels.delete(channelId);
 					changed = true;
-					clearChannelConversationFromAllDays(
-						this.memoryDir,
-						this.PREFIX,
-						userKey,
-						channelId,
-					);
+					clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, userKey, channelId);
 				}
 			}
 			if (channels.size === 0) {
@@ -150,10 +129,7 @@ class IMessageConversationStore {
 
 	private startCleanupInterval(): void {
 		if (this.cleanupInterval) return;
-		this.cleanupInterval = setInterval(
-			() => this.clearExpiredConversations(),
-			60 * 60 * 1000,
-		);
+		this.cleanupInterval = setInterval(() => this.clearExpiredConversations(), 60 * 60 * 1000);
 	}
 
 	stopCleanupInterval(): void {

@@ -256,10 +256,7 @@ export const BASE_OUTPUT_TOKENS_PER_CREDIT = 3;
  * @param model Model type
  * @returns Number of credits required
  */
-export function calculateInputCredits(
-	tokens: number,
-	model: ModelType = "default",
-): number {
+export function calculateInputCredits(tokens: number, model: ModelType = "default"): number {
 	const pricing = MODEL_PRICING[model] || MODEL_PRICING.default;
 	const costUsd = (tokens / 1_000_000) * pricing.inputPricePerMillion;
 	return costUsd / CREDIT_VALUE_USD;
@@ -271,10 +268,7 @@ export function calculateInputCredits(
  * @param model Model type
  * @returns Number of credits required
  */
-export function calculateOutputCredits(
-	tokens: number,
-	model: ModelType = "default",
-): number {
+export function calculateOutputCredits(tokens: number, model: ModelType = "default"): number {
 	const pricing = MODEL_PRICING[model] || MODEL_PRICING.default;
 	const costUsd = (tokens / 1_000_000) * pricing.outputPricePerMillion;
 	return costUsd / CREDIT_VALUE_USD;
@@ -292,10 +286,7 @@ export function calculateTotalCredits(
 	outputTokens: number,
 	model: ModelType = "default",
 ): number {
-	return (
-		calculateInputCredits(inputTokens, model) +
-		calculateOutputCredits(outputTokens, model)
-	);
+	return calculateInputCredits(inputTokens, model) + calculateOutputCredits(outputTokens, model);
 }
 
 /**
@@ -316,13 +307,8 @@ export function getModelMultiplier(model: ModelType = "default"): number {
 	const defaultPricing = MODEL_PRICING.default;
 	const modelPricing = MODEL_PRICING[model] || defaultPricing;
 
-	const defaultAvg =
-		(defaultPricing.inputPricePerMillion +
-			defaultPricing.outputPricePerMillion) /
-		2;
-	const modelAvg =
-		(modelPricing.inputPricePerMillion + modelPricing.outputPricePerMillion) /
-		2;
+	const defaultAvg = (defaultPricing.inputPricePerMillion + defaultPricing.outputPricePerMillion) / 2;
+	const modelAvg = (modelPricing.inputPricePerMillion + modelPricing.outputPricePerMillion) / 2;
 
 	return modelAvg / defaultAvg;
 }
@@ -364,12 +350,8 @@ export const AUDIO_MODEL_PRICING: Record<
  * @param model Model name (default: whisper-1)
  * @returns Credits required
  */
-export function calculateTranscriptionCredits(
-	durationSeconds: number,
-	model = "whisper-1",
-): number {
-	const pricing =
-		AUDIO_MODEL_PRICING[model] || AUDIO_MODEL_PRICING["whisper-1"];
+export function calculateTranscriptionCredits(durationSeconds: number, model = "whisper-1"): number {
+	const pricing = AUDIO_MODEL_PRICING[model] || AUDIO_MODEL_PRICING["whisper-1"];
 	const minutes = durationSeconds / 60;
 	return Math.ceil(minutes * pricing.creditsPerUnit);
 }
@@ -380,10 +362,7 @@ export function calculateTranscriptionCredits(
  * @param model Model name (default: tts-1)
  * @returns Credits required
  */
-export function calculateTTSCredits(
-	characterCount: number,
-	model = "tts-1",
-): number {
+export function calculateTTSCredits(characterCount: number, model = "tts-1"): number {
 	const pricing = AUDIO_MODEL_PRICING[model] || AUDIO_MODEL_PRICING["tts-1"];
 	return Math.ceil(characterCount * pricing.creditsPerUnit);
 }
@@ -549,10 +528,7 @@ export const VIDEO_MODEL_ALIASES: Record<string, string> = {
  * Credits per second of video generated
  * 1 credit ≈ $0.0000667 (USD) based on CREDIT_VALUE_USD
  */
-export const VIDEO_MODEL_PRICING: Record<
-	string,
-	{ creditsPerSecond: number; description: string }
-> = {
+export const VIDEO_MODEL_PRICING: Record<string, { creditsPerSecond: number; description: string }> = {
 	// OpenRouter Video Models
 	// Pricing based on OpenRouter market rates (approximate)
 	// 1 credit ≈ $0.0000667 (USD)
@@ -612,10 +588,7 @@ export function getCanonicalVideoModel(model: string): string {
  * @param durationSeconds Duration of video in seconds
  * @returns Credits required (rounded up)
  */
-export function calculateVideoCredits(
-	model: string,
-	durationSeconds: number,
-): number {
+export function calculateVideoCredits(model: string, durationSeconds: number): number {
 	const canonical = getCanonicalVideoModel(model);
 	const pricing = VIDEO_MODEL_PRICING[canonical] || VIDEO_MODEL_PRICING.default;
 	return Math.ceil(durationSeconds * pricing.creditsPerSecond);
@@ -690,17 +663,14 @@ export function calculatePromptCacheStats(
 	} = usage;
 
 	// Total input tokens = non-cached + cache write + cache read
-	const totalInputTokens =
-		inputTokens + cacheCreationInputTokens + cacheReadInputTokens;
+	const totalInputTokens = inputTokens + cacheCreationInputTokens + cacheReadInputTokens;
 
 	// Cache hit rate: proportion of input served from cache
-	const cacheHitRate =
-		totalInputTokens > 0 ? cacheReadInputTokens / totalInputTokens : 0;
+	const cacheHitRate = totalInputTokens > 0 ? cacheReadInputTokens / totalInputTokens : 0;
 
 	// Hypothetical cost without caching: all input at full price
 	const creditsWithoutCache =
-		calculateInputCredits(totalInputTokens, model) +
-		calculateOutputCredits(outputTokens, model);
+		calculateInputCredits(totalInputTokens, model) + calculateOutputCredits(outputTokens, model);
 
 	// Separate 1h and 5m cache write costs (different pricing tiers)
 	// Remainder (tokens not accounted for by 1h/5m breakdown) uses the
@@ -711,12 +681,9 @@ export function calculatePromptCacheStats(
 		cacheCreationInputTokens - cacheCreation1hTokens - cacheCreation5mTokens,
 	);
 	const cacheWriteCredits =
-		calculateInputCredits(cacheCreation1hTokens, model) *
-			CACHE_WRITE_1H_MULTIPLIER +
-		calculateInputCredits(cacheCreation5mTokens, model) *
-			CACHE_WRITE_5M_MULTIPLIER +
-		calculateInputCredits(remainderWriteTokens, model) *
-			CACHE_WRITE_5M_MULTIPLIER;
+		calculateInputCredits(cacheCreation1hTokens, model) * CACHE_WRITE_1H_MULTIPLIER +
+		calculateInputCredits(cacheCreation5mTokens, model) * CACHE_WRITE_5M_MULTIPLIER +
+		calculateInputCredits(remainderWriteTokens, model) * CACHE_WRITE_5M_MULTIPLIER;
 
 	const creditsWithCache =
 		calculateInputCredits(inputTokens, model) +
@@ -741,16 +708,9 @@ export function calculatePromptCacheStats(
 /**
  * Legacy backward compatibility: calculate credits using simple ratio
  */
-export function calculateCreditsLegacy(
-	inputTokens: number,
-	outputTokens: number,
-	model?: ModelType,
-): number {
+export function calculateCreditsLegacy(inputTokens: number, outputTokens: number, model?: ModelType): number {
 	if (model && model !== "default") {
 		return calculateTotalCredits(inputTokens, outputTokens, model);
 	}
-	return (
-		inputTokens / BASE_INPUT_TOKENS_PER_CREDIT +
-		outputTokens / BASE_OUTPUT_TOKENS_PER_CREDIT
-	);
+	return inputTokens / BASE_INPUT_TOKENS_PER_CREDIT + outputTokens / BASE_OUTPUT_TOKENS_PER_CREDIT;
 }

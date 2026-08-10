@@ -1,10 +1,4 @@
-export type ErrorType =
-	| "bad_request"
-	| "unauthorized"
-	| "forbidden"
-	| "not_found"
-	| "rate_limit"
-	| "offline";
+export type ErrorType = "bad_request" | "unauthorized" | "forbidden" | "not_found" | "rate_limit" | "offline";
 
 export type Surface =
 	| "chat"
@@ -97,10 +91,7 @@ export class AppError extends Error {
 	}
 }
 
-export function getMessageByErrorCode(
-	errorCode: ErrorCode,
-	cause?: string,
-): string {
+export function getMessageByErrorCode(errorCode: ErrorCode, cause?: string): string {
 	if (errorCode.includes("database")) {
 		return "An error occurred while executing a database query.";
 	}
@@ -114,10 +105,7 @@ export function getMessageByErrorCode(
 		case "forbidden:auth":
 			return "Your account does not have access to this feature.";
 		case "unauthorized:x_token_expired":
-			return (
-				cause ||
-				"X access token expired. Please reconnect X in Settings > Integrations."
-			);
+			return cause || "X access token expired. Please reconnect X in Settings > Integrations.";
 
 		case "rate_limit:chat":
 			return cause

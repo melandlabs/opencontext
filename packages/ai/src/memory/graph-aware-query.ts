@@ -5,10 +5,7 @@ import type {
 	MemoryGraphSnapshot,
 	OwnerScope,
 } from "@melandlabs/memory-consolidation/graph-contracts";
-import {
-	applicabilityEquivalent,
-	sameOwnerScope,
-} from "../../memory-consolidation/src/graph-evolution";
+import { applicabilityEquivalent, sameOwnerScope } from "../../memory-consolidation/src/graph-evolution";
 import { applicabilityMatchesTrustedContexts } from "../../memory-consolidation/src/graph-retrieval";
 import type {
 	MemorySearchGraphRetrievalDiagnostic,
@@ -37,10 +34,8 @@ export interface MemoryQueryGraphRetrievalOptions {
 	retriever?: GraphAwareRetriever;
 	snapshotProvider?: (
 		input: MemoryQueryGraphRetrievalSnapshotInput,
-	) =>
-		Promise<MemoryGraphSnapshot | undefined> | MemoryGraphSnapshot | undefined;
-	ownerScope?:
-		OwnerScope | ((query: MemoryQueryGraphRetrievalQuery) => OwnerScope);
+	) => Promise<MemoryGraphSnapshot | undefined> | MemoryGraphSnapshot | undefined;
+	ownerScope?: OwnerScope | ((query: MemoryQueryGraphRetrievalQuery) => OwnerScope);
 	/**
 	 * Trusted server-derived request scopes. Missing or empty is global-only.
 	 */
@@ -66,11 +61,8 @@ function defaultHitToNodeId(hit: MemorySearchHit): string {
 	}
 
 	const metadata = hit.record.metadata;
-	const metadataGraphNodeId =
-		metadata?.graphNodeId ?? metadata?.memoryGraphNodeId;
-	return typeof metadataGraphNodeId === "string"
-		? metadataGraphNodeId
-		: hit.record.id;
+	const metadataGraphNodeId = metadata?.graphNodeId ?? metadata?.memoryGraphNodeId;
+	return typeof metadataGraphNodeId === "string" ? metadataGraphNodeId : hit.record.id;
 }
 
 function resolveOwnerScope(
@@ -95,37 +87,24 @@ function optionalString(value: unknown): string | undefined {
 	return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-function storedApplicability(
-	hit: MemorySearchHit,
-): MemoryApplicabilityContext | undefined {
+function storedApplicability(hit: MemorySearchHit): MemoryApplicabilityContext | undefined {
 	if (hit.sourceType === "summary") return undefined;
 	const stored = hit.record.metadata?.memoryApplicability;
 	if (isRecord(stored) && typeof stored.scope === "string") {
-		const allowedScopes = new Set([
-			"global",
-			"task",
-			"conversation",
-			"channel",
-			"project",
-			"custom",
-		]);
+		const allowedScopes = new Set(["global", "task", "conversation", "channel", "project", "custom"]);
 		if (allowedScopes.has(stored.scope)) {
 			return {
 				scope: stored.scope as MemoryApplicabilityContext["scope"],
 				key: optionalString(stored.key),
-				validFrom:
-					typeof stored.validFrom === "number" ? stored.validFrom : undefined,
-				validUntil:
-					typeof stored.validUntil === "number" ? stored.validUntil : undefined,
+				validFrom: typeof stored.validFrom === "number" ? stored.validFrom : undefined,
+				validUntil: typeof stored.validUntil === "number" ? stored.validUntil : undefined,
 			};
 		}
 	}
 
 	const channel = optionalString(hit.record.dimensions?.channel);
 	const platform = optionalString(hit.record.dimensions?.platform);
-	return channel
-		? { scope: "channel", key: `${platform ?? ""}:${channel}` }
-		: { scope: "global" };
+	return channel ? { scope: "channel", key: `${platform ?? ""}:${channel}` } : { scope: "global" };
 }
 
 function applicabilityFilteredHitNodePairs(input: {
@@ -133,36 +112,23 @@ function applicabilityFilteredHitNodePairs(input: {
 	snapshot?: MemoryGraphSnapshot;
 	trustedContexts: MemoryApplicabilityContext[];
 }): Array<{ hit: MemorySearchHit; nodeId: string; index: number }> {
-	const nodesById = new Map(
-		input.snapshot?.nodes.map((node) => [node.id, node]) ?? [],
-	);
+	const nodesById = new Map(input.snapshot?.nodes.map((node) => [node.id, node]) ?? []);
 	const now = input.snapshot?.capturedAt ?? Date.now();
 	return input.pairs.filter((pair) => {
 		const node = nodesById.get(pair.nodeId);
 		if (node) {
-			return applicabilityMatchesTrustedContexts(
-				node.applicability,
-				input.trustedContexts,
-				now,
-			);
+			return applicabilityMatchesTrustedContexts(node.applicability, input.trustedContexts, now);
 		}
 		if (pair.hit.sourceType === "summary") {
 			// Summary persistence has no applicability field; without a graph node,
 			// its scope cannot be proven and must fail closed.
 			return false;
 		}
-		return applicabilityMatchesTrustedContexts(
-			storedApplicability(pair.hit),
-			input.trustedContexts,
-			now,
-		);
+		return applicabilityMatchesTrustedContexts(storedApplicability(pair.hit), input.trustedContexts, now);
 	});
 }
 
-function queryMatchesOwnerScope(
-	query: MemoryQueryGraphRetrievalQuery,
-	ownerScope: OwnerScope,
-): boolean {
+function queryMatchesOwnerScope(query: MemoryQueryGraphRetrievalQuery, ownerScope: OwnerScope): boolean {
 	if (query.userId !== ownerScope.userId) return false;
 	const workspaceId = optionalString(query.dimensions?.workspaceId);
 	const tenantId = optionalString(query.dimensions?.tenantId);
@@ -173,21 +139,13 @@ function queryMatchesOwnerScope(
 }
 
 function hitOwnerScope(hit: MemorySearchHit): OwnerScope {
-	const dimensions =
-		hit.sourceType === "raw" ? hit.record.dimensions : hit.summary.dimensions;
-	const storedScope =
-		hit.sourceType === "raw"
-			? hit.record.metadata?.memoryOwnerScope
-			: undefined;
+	const dimensions = hit.sourceType === "raw" ? hit.record.dimensions : hit.summary.dimensions;
+	const storedScope = hit.sourceType === "raw" ? hit.record.metadata?.memoryOwnerScope : undefined;
 	const scopedMetadata = isRecord(storedScope) ? storedScope : undefined;
 	return {
 		userId: hit.sourceType === "raw" ? hit.record.userId : hit.summary.userId,
-		workspaceId:
-			optionalString(scopedMetadata?.workspaceId) ??
-			optionalString(dimensions?.workspaceId),
-		tenantId:
-			optionalString(scopedMetadata?.tenantId) ??
-			optionalString(dimensions?.tenantId),
+		workspaceId: optionalString(scopedMetadata?.workspaceId) ?? optionalString(dimensions?.workspaceId),
+		tenantId: optionalString(scopedMetadata?.tenantId) ?? optionalString(dimensions?.tenantId),
 	};
 }
 
@@ -208,18 +166,10 @@ function persistedHitMatchesSnapshot(input: {
 		if (typeof graphRevision !== "string" || graphRevision.length === 0) {
 			return true;
 		}
-		return (
-			input.hit.summary.dimensions?.__opencontextMemoryPublicationRevision ===
-			graphRevision
-		);
+		return input.hit.summary.dimensions?.__opencontextMemoryPublicationRevision === graphRevision;
 	}
 	if (input.hit.sourceType !== "raw") return false;
-	if (
-		!applicabilityEquivalent(
-			storedApplicability(input.hit),
-			input.node.applicability,
-		)
-	) {
+	if (!applicabilityEquivalent(storedApplicability(input.hit), input.node.applicability)) {
 		return false;
 	}
 
@@ -239,8 +189,7 @@ function materializedHitMatchesSnapshot(input: {
 	if (input.hit.record.deprecatedAt === undefined) return true;
 	return (
 		input.query.includeDeprecated === true ||
-		(input.query.conflictSensitive === true &&
-			input.node.visibility === "audit-only")
+		(input.query.conflictSensitive === true && input.node.visibility === "audit-only")
 	);
 }
 function graphCoveredBaselineNodeIds(input: {
@@ -280,18 +229,13 @@ function graphOrderedHits(input: {
 		ownerScope: input.ownerScope,
 		baselineNodeIds: input.hitNodePairs.map((pair) => pair.nodeId),
 	});
-	const rankedNodeIds = new Set(
-		input.result.rankedNodeIds.filter((nodeId) => coveredNodeIds.has(nodeId)),
-	);
+	const rankedNodeIds = new Set(input.result.rankedNodeIds.filter((nodeId) => coveredNodeIds.has(nodeId)));
 	const hiddenNodeIds = new Set([
-		...input.result.hiddenDeprecatedNodeIds.filter((nodeId) =>
-			coveredNodeIds.has(nodeId),
-		),
+		...input.result.hiddenDeprecatedNodeIds.filter((nodeId) => coveredNodeIds.has(nodeId)),
 		...input.snapshot.nodes
 			.filter(
 				(node) =>
-					coveredNodeIds.has(node.id) &&
-					shouldHideGraphVisibility(node.visibility, input.includeDeprecated),
+					coveredNodeIds.has(node.id) && shouldHideGraphVisibility(node.visibility, input.includeDeprecated),
 			)
 			.map((node) => node.id),
 	]);
@@ -464,10 +408,7 @@ export async function applyGraphAwareRetrieval(input: {
 			return graphNoOp({
 				baselineHits: preliminaryBaselineHits,
 				pageSize: input.pageSize,
-				reasonCodes: [
-					"graph_retrieval_snapshot_unavailable",
-					"graph_retrieval_global_only_without_snapshot",
-				],
+				reasonCodes: ["graph_retrieval_snapshot_unavailable", "graph_retrieval_global_only_without_snapshot"],
 			});
 		}
 		if (!sameOwnerScope(snapshot.ownerScope, ownerScope)) {
@@ -491,9 +432,7 @@ export async function applyGraphAwareRetrieval(input: {
 				reasonCodes: ["graph_retrieval_no_applicable_baseline_node_ids"],
 			});
 		}
-		const snapshotNodesById = new Map(
-			snapshot.nodes.map((node) => [node.id, node]),
-		);
+		const snapshotNodesById = new Map(snapshot.nodes.map((node) => [node.id, node]));
 		const consistentBaselinePairs = hitNodePairs.filter((pair) => {
 			const node = snapshotNodesById.get(pair.nodeId);
 			if (!sameOwnerScope(hitOwnerScope(pair.hit), ownerScope)) return false;
@@ -508,13 +447,10 @@ export async function applyGraphAwareRetrieval(input: {
 		const safeBaselinePairs = consistentBaselinePairs.filter((pair) => {
 			const node = snapshotNodesById.get(pair.nodeId);
 			if (!node) return true;
-			return (
-				input.query.includeDeprecated === true || node.visibility === "default"
-			);
+			return input.query.includeDeprecated === true || node.visibility === "default";
 		});
 		safeBaselineHits = safeBaselinePairs.map((pair) => pair.hit);
-		const baselineSnapshotMismatch =
-			consistentBaselinePairs.length !== hitNodePairs.length;
+		const baselineSnapshotMismatch = consistentBaselinePairs.length !== hitNodePairs.length;
 		if (baselineSnapshotMismatch) {
 			return graphNoOp({
 				baselineHits: safeBaselineHits,
@@ -557,11 +493,7 @@ export async function applyGraphAwareRetrieval(input: {
 			return (
 				node !== undefined &&
 				sameOwnerScope(node.ownerScope, ownerScope) &&
-				applicabilityMatchesTrustedContexts(
-					node.applicability,
-					trustedContexts,
-					applicabilityNow,
-				)
+				applicabilityMatchesTrustedContexts(node.applicability, trustedContexts, applicabilityNow)
 			);
 		};
 		if (
@@ -569,9 +501,7 @@ export async function applyGraphAwareRetrieval(input: {
 				(trail) =>
 					!sameOwnerScope(trail.ownerScope, ownerScope) ||
 					!graphNodeMatchesApplicability(trail.nodeId) ||
-					trail.sourceNodeIds.some(
-						(nodeId) => !graphNodeMatchesApplicability(nodeId),
-					),
+					trail.sourceNodeIds.some((nodeId) => !graphNodeMatchesApplicability(nodeId)),
 			)
 		) {
 			return graphNoOp({
@@ -581,14 +511,10 @@ export async function applyGraphAwareRetrieval(input: {
 			});
 		}
 
-		const provenanceNodeIds = new Set(
-			result.auditTrail?.map((trail) => trail.nodeId) ?? [],
-		);
+		const provenanceNodeIds = new Set(result.auditTrail?.map((trail) => trail.nodeId) ?? []);
 		const conflictAlternativeNodeIds = new Set(
 			result.auditTrail
-				?.filter((trail) =>
-					trail.reasonCodes.includes("competing_alternative_provenance"),
-				)
+				?.filter((trail) => trail.reasonCodes.includes("competing_alternative_provenance"))
 				.map((trail) => trail.nodeId) ?? [],
 		);
 		result.rankedNodeIds = result.rankedNodeIds.filter((nodeId) => {
@@ -598,15 +524,12 @@ export async function applyGraphAwareRetrieval(input: {
 			return (
 				input.query.includeDeprecated === true ||
 				visibility === "default" ||
-				(visibilityMode === "conflict" &&
-					conflictAlternativeNodeIds.has(nodeId))
+				(visibilityMode === "conflict" && conflictAlternativeNodeIds.has(nodeId))
 			);
 		});
 		const conflictExpandedNodeIds =
 			visibilityMode === "conflict"
-				? result.rankedNodeIds.filter(
-						(nodeId) => !baselineNodeIds.includes(nodeId),
-					)
+				? result.rankedNodeIds.filter((nodeId) => !baselineNodeIds.includes(nodeId))
 				: [];
 		const requiresProvenance =
 			visibilityMode === "audit" ||
@@ -617,9 +540,7 @@ export async function applyGraphAwareRetrieval(input: {
 		if (
 			requiresProvenance &&
 			((result.auditTrail?.length ?? 0) === 0 ||
-				conflictExpandedNodeIds.some(
-					(nodeId) => !provenanceNodeIds.has(nodeId),
-				))
+				conflictExpandedNodeIds.some((nodeId) => !provenanceNodeIds.has(nodeId)))
 		) {
 			return graphNoOp({
 				baselineHits: safeBaselineHits,
@@ -629,25 +550,17 @@ export async function applyGraphAwareRetrieval(input: {
 		}
 		const requiredNodeIds = uniqueNodeIds([
 			...result.rankedNodeIds,
-			...(input.query.includeDeprecated === true
-				? auditSourceNodeIds(result)
-				: []),
+			...(input.query.includeDeprecated === true ? auditSourceNodeIds(result) : []),
 		]);
-		if (
-			requiredNodeIds.some((nodeId) => !graphNodeMatchesApplicability(nodeId))
-		) {
+		if (requiredNodeIds.some((nodeId) => !graphNodeMatchesApplicability(nodeId))) {
 			return graphNoOp({
 				baselineHits: safeBaselineHits,
 				pageSize: input.pageSize,
 				reasonCodes: ["graph_retrieval_applicability_scope_mismatch"],
 			});
 		}
-		const materializedNodeIds = new Set(
-			hitNodePairs.map((pair) => pair.nodeId),
-		);
-		const missingNodeIds = requiredNodeIds.filter(
-			(nodeId) => !materializedNodeIds.has(nodeId),
-		);
+		const materializedNodeIds = new Set(hitNodePairs.map((pair) => pair.nodeId));
+		const missingNodeIds = requiredNodeIds.filter((nodeId) => !materializedNodeIds.has(nodeId));
 		let materializedHits: MemorySearchHit[] = [];
 		if (missingNodeIds.length > 0) {
 			if (!options.materializeNodeIds) {
@@ -747,10 +660,6 @@ function uniqueNodeIds(values: string[]): string[] {
 	return [...new Set(values)];
 }
 
-function auditSourceNodeIds(
-	result: MemorySearchGraphRetrievalResult,
-): string[] {
-	return uniqueNodeIds(
-		result.auditTrail?.flatMap((trail) => trail.sourceNodeIds) ?? [],
-	);
+function auditSourceNodeIds(result: MemorySearchGraphRetrievalResult): string[] {
+	return uniqueNodeIds(result.auditTrail?.flatMap((trail) => trail.sourceNodeIds) ?? []);
 }

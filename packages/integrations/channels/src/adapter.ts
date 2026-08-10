@@ -23,11 +23,7 @@ export abstract class MessagePlatformAdapter {
 		this.botAccountId = 0; // To be set during initialization
 	}
 
-	async sendMessage(
-		target: MessageTarget,
-		id: string,
-		message: string,
-	): Promise<void> {
+	async sendMessage(target: MessageTarget, id: string, message: string): Promise<void> {
 		await this.sendMessages(target, id, [message]);
 	}
 
@@ -37,11 +33,7 @@ export abstract class MessagePlatformAdapter {
 	 * @param id - Target ID
 	 * @param message - Message chain to send
 	 */
-	async sendMessages(
-		target: MessageTarget,
-		id: string,
-		messages: Messages,
-	): Promise<void> {
+	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		throw new Error("Method not implemented");
 	}
 
@@ -51,11 +43,7 @@ export abstract class MessagePlatformAdapter {
 	 * @param messages - Message chain to send as reply
 	 * @param quoteOrigin - Whether to quote the original message (default: false)
 	 */
-	async replyMessages(
-		event: MessageEvent,
-		messages: Messages,
-		quoteOrigin = false,
-	): Promise<void> {
+	async replyMessages(event: MessageEvent, messages: Messages, quoteOrigin = false): Promise<void> {
 		throw new Error("Method not implemented");
 	}
 
@@ -84,12 +72,7 @@ export abstract class MessagePlatformAdapter {
 			request_id?: string;
 		},
 	): PlatformAdapterError {
-		return toPlatformAdapterError(
-			this.getAdapterName(),
-			operation,
-			error,
-			opts,
-		);
+		return toPlatformAdapterError(this.getAdapterName(), operation, error, opts);
 	}
 
 	protected createAdapterError(
@@ -98,21 +81,11 @@ export abstract class MessagePlatformAdapter {
 		message: string,
 		opts?: { request_id?: string; cause?: unknown },
 	): PlatformAdapterError {
-		return createPlatformAdapterError(
-			this.getAdapterName(),
-			operation,
-			code,
-			message,
-			opts,
-		);
+		return createPlatformAdapterError(this.getAdapterName(), operation, code, message, opts);
 	}
 
 	private getAdapterName(): string {
-		return (
-			this.name ||
-			this.constructor.name.replace(/Adapter$/, "") ||
-			"message-platform"
-		);
+		return this.name || this.constructor.name.replace(/Adapter$/, "") || "message-platform";
 	}
 
 	/**
@@ -120,10 +93,7 @@ export abstract class MessagePlatformAdapter {
 	 * @param target - Type of event to listen for
 	 * @param callback - Callback function to handle the event
 	 */
-	registerListener<T extends MessageTarget>(
-		target: T,
-		handler: MessageHandler<T>,
-	): this {
+	registerListener<T extends MessageTarget>(target: T, handler: MessageHandler<T>): this {
 		this.listeners.set(target, handler);
 		return this;
 	}

@@ -9,14 +9,7 @@
  * exists, it is migrated to the per-day structure on first access and then deleted.
  */
 
-import {
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	readdirSync,
-	rmSync,
-	writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export interface ConversationMessage {
@@ -49,11 +42,7 @@ function ensurePrefixDir(memoryDir: string, prefix: string): string {
 	return dir;
 }
 
-function getDayFilePath(
-	memoryDir: string,
-	prefix: string,
-	date: string,
-): string {
+function getDayFilePath(memoryDir: string, prefix: string, date: string): string {
 	return join(ensurePrefixDir(memoryDir, prefix), `${date}.json`);
 }
 
@@ -78,11 +67,7 @@ export function loadConversations<T>(memoryDir: string, prefix: string): T {
  * @deprecated Internal only. Use the public API methods instead.
  * Writes directly to the old flat `{prefix}-conversations.json` file.
  */
-export function saveConversations<T>(
-	memoryDir: string,
-	prefix: string,
-	data: T,
-): void {
+export function saveConversations<T>(memoryDir: string, prefix: string, data: T): void {
 	const filePath = join(memoryDir, `${prefix}-conversations.json`);
 	try {
 		ensureMemoryDir(memoryDir);
@@ -134,18 +119,14 @@ function migrateLegacyFile(memoryDir: string, prefix: string): void {
 
 		for (const [dateStr, dayData] of migratedDays) {
 			const filePath = getDayFilePath(memoryDir, prefix, dateStr);
-			const existing: DayFileData = existsSync(filePath)
-				? JSON.parse(readFileSync(filePath, "utf-8"))
-				: {};
+			const existing: DayFileData = existsSync(filePath) ? JSON.parse(readFileSync(filePath, "utf-8")) : {};
 
 			// Merge: deep merge per userKey + accountId
 			for (const [userKey, accounts] of Object.entries(dayData)) {
 				if (!existing[userKey]) existing[userKey] = {};
 				for (const [accountId, msgs] of Object.entries(accounts)) {
 					if (!existing[userKey][accountId]) existing[userKey][accountId] = [];
-					const seenTimestamps = new Set(
-						existing[userKey][accountId].map((m) => m.timestamp),
-					);
+					const seenTimestamps = new Set(existing[userKey][accountId].map((m) => m.timestamp));
 					for (const msg of msgs) {
 						if (!seenTimestamps.has(msg.timestamp)) {
 							existing[userKey][accountId].push(msg);
@@ -166,11 +147,7 @@ function migrateLegacyFile(memoryDir: string, prefix: string): void {
 /**
  * Reads a specific day's file, returning empty object if absent or on error.
  */
-function readDayFile(
-	memoryDir: string,
-	prefix: string,
-	date: string,
-): DayFileData {
+function readDayFile(memoryDir: string, prefix: string, date: string): DayFileData {
 	const filePath = getDayFilePath(memoryDir, prefix, date);
 	try {
 		if (existsSync(filePath)) {
@@ -184,12 +161,7 @@ function readDayFile(
 /**
  * Writes a specific day's file, creating the prefix directory if needed.
  */
-function writeDayFile(
-	memoryDir: string,
-	prefix: string,
-	date: string,
-	data: DayFileData,
-): void {
+function writeDayFile(memoryDir: string, prefix: string, date: string, data: DayFileData): void {
 	const filePath = getDayFilePath(memoryDir, prefix, date);
 	try {
 		writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
@@ -275,9 +247,7 @@ export function loadDay(
 		return Object.values(accounts).flat();
 	}
 
-	return Object.values(dayData).flatMap((accounts) =>
-		Object.values(accounts).flat(),
-	);
+	return Object.values(dayData).flatMap((accounts) => Object.values(accounts).flat());
 }
 
 /**
@@ -380,11 +350,7 @@ export function rewriteDayWithout(
 /**
  * Removes all data for a specific userKey across all day files.
  */
-export function clearAllForUser(
-	memoryDir: string,
-	prefix: string,
-	userKey: string,
-): void {
+export function clearAllForUser(memoryDir: string, prefix: string, userKey: string): void {
 	ensureMigrated(memoryDir, prefix);
 	const days = listAvailableDays(memoryDir, prefix);
 	for (const date of days) {
@@ -404,11 +370,7 @@ export function clearAllForUser(
  * Removes all data for userKeys that start with a given prefix across all day files.
  * Useful when userKey encodes multiple levels (e.g. Telegram's "telegram:self-chat:userId:").
  */
-export function clearAllForUserPrefix(
-	memoryDir: string,
-	prefix: string,
-	userKeyPrefix: string,
-): void {
+export function clearAllForUserPrefix(memoryDir: string, prefix: string, userKeyPrefix: string): void {
 	ensureMigrated(memoryDir, prefix);
 	const days = listAvailableDays(memoryDir, prefix);
 	for (const date of days) {
@@ -498,12 +460,10 @@ export function saveCompactionSummary(
 		// Remove all messages for this conversation in this day
 		if (dayData[userKey]?.[accountId]) {
 			// Keep only messages outside the compacted range
-			dayData[userKey][accountId] = dayData[userKey][accountId].filter(
-				(msg) => {
-					const msgDate = new Date(msg.timestamp).toISOString().split("T")[0];
-					return msgDate < compactedRangeStart || msgDate > compactedRangeEnd;
-				},
-			);
+			dayData[userKey][accountId] = dayData[userKey][accountId].filter((msg) => {
+				const msgDate = new Date(msg.timestamp).toISOString().split("T")[0];
+				return msgDate < compactedRangeStart || msgDate > compactedRangeEnd;
+			});
 
 			// Append the summary message
 			dayData[userKey][accountId].push(summaryMsg as ConversationMessage);
@@ -529,10 +489,7 @@ export function saveCompactionSummary(
  * Builds the memory directory path for a specific channel.
  * Uses proper path.join to handle cross-platform path separators.
  */
-export function getChannelMemoryDir(
-	memoryDir: string,
-	platform: string,
-): string {
+export function getChannelMemoryDir(memoryDir: string, platform: string): string {
 	return join(memoryDir, "channels", platform);
 }
 
@@ -582,11 +539,7 @@ export function clearChannelConversationFromAllDays(
 /**
  * Clears all conversations for a user within a channel.
  */
-export function clearAllChannelForUser(
-	memoryDir: string,
-	platform: string,
-	userKey: string,
-): void {
+export function clearAllChannelForUser(memoryDir: string, platform: string, userKey: string): void {
 	const channelDir = getChannelMemoryDir(memoryDir, platform);
 	clearAllForUser(channelDir, platform, userKey);
 }
@@ -594,11 +547,7 @@ export function clearAllChannelForUser(
 /**
  * Clears all conversations for userKeys that start with a given prefix within a channel.
  */
-export function clearChannelForUserPrefix(
-	memoryDir: string,
-	platform: string,
-	userKeyPrefix: string,
-): void {
+export function clearChannelForUserPrefix(memoryDir: string, platform: string, userKeyPrefix: string): void {
 	const channelDir = getChannelMemoryDir(memoryDir, platform);
 	clearAllForUserPrefix(channelDir, platform, userKeyPrefix);
 }

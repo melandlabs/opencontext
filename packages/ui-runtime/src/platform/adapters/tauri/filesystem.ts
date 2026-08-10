@@ -1,12 +1,7 @@
 import { join } from "@tauri-apps/api/path";
 import { save } from "@tauri-apps/plugin-dialog";
 import { readDir, readFile, stat, writeFile } from "@tauri-apps/plugin-fs";
-import type {
-	DirEntry,
-	ListDirectoryOptions,
-	PlatformFileSystem,
-	SaveFileOptions,
-} from "../../filesystem";
+import type { DirEntry, ListDirectoryOptions, PlatformFileSystem, SaveFileOptions } from "../../filesystem";
 
 function normalizePath(p: string): string {
 	// Tauri uses platform-native separators on Windows; collapse to forward
@@ -42,10 +37,7 @@ export class TauriFileSystem implements PlatformFileSystem {
 		return new Uint8Array(bytes);
 	}
 
-	async listDirectory(
-		path: string,
-		options?: ListDirectoryOptions,
-	): Promise<DirEntry[]> {
+	async listDirectory(path: string, options?: ListDirectoryOptions): Promise<DirEntry[]> {
 		const recursive = options?.recursive ?? false;
 		const exts = toExtList(options?.ext);
 		const out: DirEntry[] = [];
@@ -53,12 +45,7 @@ export class TauriFileSystem implements PlatformFileSystem {
 		return out;
 	}
 
-	private async walk(
-		base: string,
-		recursive: boolean,
-		exts: string[],
-		out: DirEntry[],
-	): Promise<void> {
+	private async walk(base: string, recursive: boolean, exts: string[], out: DirEntry[]): Promise<void> {
 		const entries = await readDir(base);
 		for (const entry of entries) {
 			const childPath = await join(base, entry.name);

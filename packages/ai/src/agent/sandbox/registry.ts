@@ -66,10 +66,7 @@ class SandboxRegistry {
 		return provider;
 	}
 
-	async getInstance(
-		type: string,
-		config?: Record<string, unknown>,
-	): Promise<ISandboxProvider> {
+	async getInstance(type: string, config?: Record<string, unknown>): Promise<ISandboxProvider> {
 		const existing = this.instances.get(type);
 		if (existing && existing.state === "ready") {
 			existing.lastUsedAt = new Date();
@@ -98,8 +95,7 @@ class SandboxRegistry {
 			instance.state = "ready";
 		} catch (error) {
 			instance.state = "error";
-			instance.error =
-				error instanceof Error ? error : new Error(String(error));
+			instance.error = error instanceof Error ? error : new Error(String(error));
 			throw error;
 		}
 
@@ -139,10 +135,8 @@ class SandboxRegistry {
 		}
 
 		const sorted = available.sort((a, b) => {
-			const priorityA =
-				PROVIDER_PRIORITY[a as keyof typeof PROVIDER_PRIORITY] || 0;
-			const priorityB =
-				PROVIDER_PRIORITY[b as keyof typeof PROVIDER_PRIORITY] || 0;
+			const priorityA = PROVIDER_PRIORITY[a as keyof typeof PROVIDER_PRIORITY] || 0;
+			const priorityB = PROVIDER_PRIORITY[b as keyof typeof PROVIDER_PRIORITY] || 0;
 			return priorityB - priorityA;
 		});
 
@@ -168,9 +162,7 @@ class SandboxRegistry {
 		const bestType = await this.getBestAvailable();
 
 		if (!bestType) {
-			throw new Error(
-				"No sandbox providers available. Please ensure at least one provider is installed.",
-			);
+			throw new Error("No sandbox providers available. Please ensure at least one provider is installed.");
 		}
 
 		const provider = await this.getInstance(bestType);
@@ -199,9 +191,7 @@ export function registerSandboxProvider(plugin: SandboxPlugin): void {
 	registry.register(plugin);
 }
 
-export function createSandboxProvider(
-	config: SandboxProviderConfig,
-): ISandboxProvider {
+export function createSandboxProvider(config: SandboxProviderConfig): ISandboxProvider {
 	const registry = getSandboxRegistry();
 	return registry.create(config);
 }

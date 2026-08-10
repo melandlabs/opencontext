@@ -89,8 +89,7 @@ export function useLocalStorage<T>(
 		(value: T | ((prev: T) => T)) => {
 			try {
 				// Allow value to be a function so we have same API as useState
-				const valueToStore =
-					value instanceof Function ? value(valueRef.current) : value;
+				const valueToStore = value instanceof Function ? value(valueRef.current) : value;
 
 				// Mark that we're updating to prevent storage event handler from reacting
 				isUpdating.current = true;

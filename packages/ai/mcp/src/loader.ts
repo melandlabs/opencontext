@@ -21,10 +21,7 @@ interface McpFileCacheEntry {
 // Module-level file cache for MCP configs (5 minute TTL for safety).
 const mcpFileCache = new Map<string, McpFileCacheEntry>();
 
-function getCachedMcpConfig(
-	configPath: string,
-	mtimeMs: number,
-): Record<string, McpServerConfig> | null {
+function getCachedMcpConfig(configPath: string, mtimeMs: number): Record<string, McpServerConfig> | null {
 	const cached = mcpFileCache.get(configPath);
 	if (!cached || cached.mtimeMs !== mtimeMs || cached.expiresAt < Date.now()) {
 		return null;
@@ -63,8 +60,7 @@ export interface McpSSEServerConfig {
 	headers?: Record<string, string>;
 }
 
-export type McpServerConfig =
-	McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
+export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig | McpSSEServerConfig;
 
 /**
  * Get the MCP config path (default: ~/.opencontext/mcp.json)
@@ -144,9 +140,7 @@ export interface McpConfig {
  * @param mcpConfig Optional config to control loading
  * @returns Record of server name to config
  */
-export async function loadMcpServers(
-	mcpConfig?: McpConfig,
-): Promise<Record<string, McpServerConfig>> {
+export async function loadMcpServers(mcpConfig?: McpConfig): Promise<Record<string, McpServerConfig>> {
 	if (mcpConfig && !mcpConfig.enabled) {
 		return {};
 	}

@@ -26,43 +26,28 @@ export interface CreateMemoryQueryApiInput {
 }
 
 export interface MemoryQueryApi {
-	queryWithFallback(
-		input: QueryWithFallbackInput,
-	): Promise<MemorySearchWithFallbackResult>;
-	semanticRecall(
-		input: MemorySemanticRecallQuery,
-	): Promise<MemorySemanticRecallResult>;
+	queryWithFallback(input: QueryWithFallbackInput): Promise<MemorySearchWithFallbackResult>;
+	semanticRecall(input: MemorySemanticRecallQuery): Promise<MemorySemanticRecallResult>;
 }
 
-function resolvePageSize(
-	input: QueryWithFallbackInput,
-	defaultPageSize: number,
-) {
+function resolvePageSize(input: QueryWithFallbackInput, defaultPageSize: number) {
 	return input.pageSize ?? input.limit ?? defaultPageSize;
 }
 
-export function createMemoryQueryApi(
-	input: CreateMemoryQueryApiInput,
-): MemoryQueryApi {
+export function createMemoryQueryApi(input: CreateMemoryQueryApiInput): MemoryQueryApi {
 	const defaultPageSize = input.defaultPageSize ?? 50;
 	const markRawAccessOnRead = input.markRawAccessOnRead ?? true;
 
 	return {
 		async semanticRecall(recallInput: MemorySemanticRecallQuery) {
-			if (
-				recallInput.queryEmbedding.length === 0 ||
-				!input.storage.semanticRecallRaw
-			) {
+			if (recallInput.queryEmbedding.length === 0 || !input.storage.semanticRecallRaw) {
 				return {
 					items: [],
 					rawCount: 0,
 				};
 			}
 
-			const limit = Math.max(
-				1,
-				Math.floor(recallInput.limit ?? defaultPageSize),
-			);
+			const limit = Math.max(1, Math.floor(recallInput.limit ?? defaultPageSize));
 			const hits = await input.storage.semanticRecallRaw({
 				...recallInput,
 				limit,
@@ -133,9 +118,7 @@ export function createMemoryQueryApi(
 				summaryHasMore = summaryResult.hasMore;
 			}
 
-			const merged = [...rawHits, ...summaryHits].sort(
-				(a, b) => b.timestamp - a.timestamp,
-			);
+			const merged = [...rawHits, ...summaryHits].sort((a, b) => b.timestamp - a.timestamp);
 			const graphApplication = await applyGraphAwareRetrieval({
 				options: input.graphRetrieval,
 				query: queryInput,
@@ -150,9 +133,7 @@ export function createMemoryQueryApi(
 				queryInput.conflictSensitive !== true &&
 				input.storage.markRecordsAccessed
 			) {
-				const rawIds = items
-					.filter((hit) => hit.sourceType === "raw")
-					.map((hit) => hit.record.id);
+				const rawIds = items.filter((hit) => hit.sourceType === "raw").map((hit) => hit.record.id);
 				if (rawIds.length > 0) {
 					await input.storage.markRecordsAccessed({
 						userId: queryInput.userId,
@@ -166,11 +147,8 @@ export function createMemoryQueryApi(
 				items,
 				rawCount: rawHits.length,
 				summaryCount: summaryHits.length,
-				hasMore:
-					rawResult.hasMore || summaryHasMore || merged.length > pageSize,
-				...(graphApplication
-					? { graphRetrieval: graphApplication.diagnostic }
-					: {}),
+				hasMore: rawResult.hasMore || summaryHasMore || merged.length > pageSize,
+				...(graphApplication ? { graphRetrieval: graphApplication.diagnostic } : {}),
 			};
 		},
 	};

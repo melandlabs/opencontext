@@ -97,17 +97,11 @@ export class OpenAIImageGenProvider extends ImageGenProvider {
 		return OPENAI_CAPABILITIES;
 	}
 
-	async generate(
-		request: ImageGenerationRequest,
-	): Promise<ImageGenerationResponse> {
+	async generate(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
 		const model = request.model || this.model;
 		const imageCount = normalizeImageCount(request.imageCount ?? request.n);
 		const modality = this.routeModality(request);
-		const creditsUsed = calculateImageCredits(
-			model,
-			imageCount,
-			qualityForBilling(request.quality),
-		);
+		const creditsUsed = calculateImageCredits(model, imageCount, qualityForBilling(request.quality));
 
 		if (!this.apiKey?.trim()) {
 			return failure({
@@ -121,8 +115,7 @@ export class OpenAIImageGenProvider extends ImageGenProvider {
 			});
 		}
 
-		const referenceFiles =
-			modality === "image" ? this.referenceImageFiles(request) : [];
+		const referenceFiles = modality === "image" ? this.referenceImageFiles(request) : [];
 		if (modality === "image" && referenceFiles.length === 0) {
 			return failure({
 				model,
@@ -130,8 +123,7 @@ export class OpenAIImageGenProvider extends ImageGenProvider {
 				imageCount,
 				modality,
 				creditsUsed,
-				error:
-					"OpenAI reference image generation requires base64/data URL reference images.",
+				error: "OpenAI reference image generation requires base64/data URL reference images.",
 				errorType: "validation_error",
 			});
 		}
@@ -170,9 +162,7 @@ export class OpenAIImageGenProvider extends ImageGenProvider {
 					imageCount,
 					modality,
 					creditsUsed,
-					error:
-						parsed?.error?.message ||
-						`OpenAI image API error ${response.status}: ${text}`,
+					error: parsed?.error?.message || `OpenAI image API error ${response.status}: ${text}`,
 					errorType: mapStatusToErrorType(response.status, parsed?.error?.type),
 				});
 			}
@@ -206,18 +196,14 @@ export class OpenAIImageGenProvider extends ImageGenProvider {
 				creditsUsed,
 			};
 		} catch (error) {
-			const isTimeout =
-				error instanceof DOMException && error.name === "TimeoutError";
+			const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
 			return failure({
 				model,
 				prompt: request.prompt,
 				imageCount,
 				modality,
 				creditsUsed,
-				error:
-					error instanceof Error
-						? error.message
-						: "OpenAI image generation failed",
+				error: error instanceof Error ? error.message : "OpenAI image generation failed",
 				errorType: isTimeout ? "timeout" : "unknown_error",
 			});
 		}
@@ -245,10 +231,7 @@ function buildPayload(
 	}
 
 	if (usesLegacyImageResponseFormat(model) && request.responseFormat) {
-		payload.response_format =
-			request.responseFormat === "data_url"
-				? "b64_json"
-				: request.responseFormat;
+		payload.response_format = request.responseFormat === "data_url" ? "b64_json" : request.responseFormat;
 	}
 
 	return payload;
@@ -291,17 +274,12 @@ function buildImagesUrl(baseUrl: string, imageGenerationUrl?: string): string {
 		: `${normalized}/v1/images/generations`;
 }
 
-function buildImageEditsUrl(
-	baseUrl: string,
-	imageGenerationUrl?: string,
-): string {
+function buildImageEditsUrl(baseUrl: string, imageGenerationUrl?: string): string {
 	const direct = normalizeOptionalString(imageGenerationUrl);
 	if (direct) return direct;
 
 	const normalized = baseUrl.replace(/\/+$/, "");
-	return normalized.endsWith("/v1")
-		? `${normalized}/images/edits`
-		: `${normalized}/v1/images/edits`;
+	return normalized.endsWith("/v1") ? `${normalized}/images/edits` : `${normalized}/v1/images/edits`;
 }
 
 function usesLegacyImageResponseFormat(model: string): boolean {
@@ -359,10 +337,7 @@ function failure(args: {
 	};
 }
 
-function mapStatusToErrorType(
-	status: number,
-	providerType?: string,
-): ImageGenerationResponse["errorType"] {
+function mapStatusToErrorType(status: number, providerType?: string): ImageGenerationResponse["errorType"] {
 	if (status === 401 || status === 403) return "configuration_error";
 	if (status === 429) return "rate_limit";
 	if (providerType?.includes("safety")) return "safety_blocked";
@@ -378,9 +353,7 @@ function parseJson<T>(text: string): T | null {
 	}
 }
 
-function normalizeOptionalString(
-	value: string | null | undefined,
-): string | undefined {
+function normalizeOptionalString(value: string | null | undefined): string | undefined {
 	if (!value) return undefined;
 	const trimmed = value.trim();
 	return trimmed.length > 0 ? trimmed : undefined;
@@ -391,15 +364,11 @@ function normalizeImageCount(value: unknown): number {
 	return Math.max(1, Math.min(4, Math.floor(value)));
 }
 
-function qualityForBilling(
-	quality: ImageGenerationQuality | undefined,
-): "standard" | "hd" {
+function qualityForBilling(quality: ImageGenerationQuality | undefined): "standard" | "hd" {
 	return quality === "high" || quality === "hd" ? "hd" : "standard";
 }
 
-function mimeTypeForOutputFormat(
-	outputFormat?: ImageGenerationOutputFormat,
-): string {
+function mimeTypeForOutputFormat(outputFormat?: ImageGenerationOutputFormat): string {
 	switch (outputFormat) {
 		case "jpeg":
 			return "image/jpeg";
@@ -414,7 +383,5 @@ function stripDataUrlPrefix(value: string): string {
 	const marker = ";base64,";
 	const trimmed = value.trim();
 	const markerIndex = trimmed.indexOf(marker);
-	return markerIndex >= 0
-		? trimmed.slice(markerIndex + marker.length)
-		: trimmed;
+	return markerIndex >= 0 ? trimmed.slice(markerIndex + marker.length) : trimmed;
 }

@@ -1,20 +1,13 @@
-import {
-	RuntimeInstructionSchema,
-	formatRuntimeInstruction,
-} from "../runtime-instructions";
+import { RuntimeInstructionSchema, formatRuntimeInstruction } from "../runtime-instructions";
 import type { RuntimeInstructionTransportPort } from "../runtime-instructions/ports";
-import type {
-	RuntimeDeliveryReceipt,
-	RuntimeInstruction,
-} from "../runtime-instructions/types";
+import type { RuntimeDeliveryReceipt, RuntimeInstruction } from "../runtime-instructions/types";
 import type { AgentSupplementalInput } from "../types";
-import {
-	type AgentSupplementalInputQueue,
-	AgentSupplementalInputQueueError,
-} from "./queue";
+import { type AgentSupplementalInputQueue, AgentSupplementalInputQueueError } from "./queue";
 
 export type SupplementalInputRuntimeTransportErrorCode =
-	"invalid_run_epoch" | "interrupt_unavailable" | "interrupt_failed";
+	| "invalid_run_epoch"
+	| "interrupt_unavailable"
+	| "interrupt_failed";
 
 export class SupplementalInputRuntimeTransportError extends Error {
 	constructor(
@@ -87,17 +80,12 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 				`Instruction targets Runtime Session ${instruction.targetSessionId}, not ${this.runtimeSessionId}`,
 			);
 		}
-		if (
-			instruction.expiresAt !== undefined &&
-			Date.parse(instruction.expiresAt) <= this.now().getTime()
-		) {
+		if (instruction.expiresAt !== undefined && Date.parse(instruction.expiresAt) <= this.now().getTime()) {
 			return this.rejected(instruction.id, "Runtime Instruction has expired");
 		}
 
 		const identity = instructionRevisionIdentity(instruction);
-		const acceptedIdentity = this.acceptedInstructionIdentities.get(
-			instruction.id,
-		);
+		const acceptedIdentity = this.acceptedInstructionIdentities.get(instruction.id);
 		if (acceptedIdentity !== undefined && acceptedIdentity !== identity) {
 			return this.rejected(
 				instruction.id,
@@ -105,18 +93,12 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 			);
 		}
 		if (acceptedIdentity === identity && isInterruptControl(instruction)) {
-			return this.queued(
-				instruction.id,
-				"Interrupting lifecycle instruction was already accepted",
-			);
+			return this.queued(instruction.id, "Interrupting lifecycle instruction was already accepted");
 		}
 
 		const activeRunEpoch = this.queue.getRunEpoch();
 		const attemptedRunEpoch = this.instructionRunEpochs.get(instruction.id);
-		if (
-			attemptedRunEpoch !== undefined &&
-			attemptedRunEpoch !== activeRunEpoch
-		) {
+		if (attemptedRunEpoch !== undefined && attemptedRunEpoch !== activeRunEpoch) {
 			return this.rejected(
 				instruction.id,
 				`Instruction is fenced to runEpoch ${attemptedRunEpoch}, not active runEpoch ${activeRunEpoch}`,
@@ -135,9 +117,7 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 				}
 				if (options.interruptControl !== false) {
 					await this.interrupt({
-						reason:
-							instruction.payload.reason ??
-							`Apply ${instruction.kind} lifecycle transition`,
+						reason: instruction.payload.reason ?? `Apply ${instruction.kind} lifecycle transition`,
 						expectedRunEpoch,
 					});
 				}
@@ -151,8 +131,7 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 					content: formatRuntimeInstruction(instruction),
 					createdAt: instruction.issuedAt,
 					runEpoch: this.queue.getRunEpoch(),
-					intent:
-						instruction.deliveryMode === "next_boundary" ? "inform" : "steer",
+					intent: instruction.deliveryMode === "next_boundary" ? "inform" : "steer",
 				},
 				{ requestInterrupt: options.interruptSteer },
 			);
@@ -232,24 +211,14 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 		try {
 			return this.queue.advanceRunEpoch(input);
 		} catch (error) {
-			if (
-				error instanceof AgentSupplementalInputQueueError &&
-				error.code === "epoch_mismatch"
-			) {
-				throw new SupplementalInputRuntimeTransportError(
-					"invalid_run_epoch",
-					error.message,
-					error,
-				);
+			if (error instanceof AgentSupplementalInputQueueError && error.code === "epoch_mismatch") {
+				throw new SupplementalInputRuntimeTransportError("invalid_run_epoch", error.message, error);
 			}
 			throw error;
 		}
 	}
 
-	private queued(
-		instructionId: string,
-		reason?: string,
-	): RuntimeDeliveryReceipt {
+	private queued(instructionId: string, reason?: string): RuntimeDeliveryReceipt {
 		return {
 			instructionId,
 			runtimeSessionId: this.runtimeSessionId,
@@ -259,10 +228,7 @@ export class SupplementalInputRuntimeInstructionTransport implements RuntimeInst
 		};
 	}
 
-	private rejected(
-		instructionId: string,
-		reason: string,
-	): RuntimeDeliveryReceipt {
+	private rejected(instructionId: string, reason: string): RuntimeDeliveryReceipt {
 		return {
 			instructionId,
 			runtimeSessionId: this.runtimeSessionId,
@@ -287,18 +253,12 @@ function instructionIdFrom(candidate: unknown): string {
 }
 
 function instructionRevisionIdentity(instruction: RuntimeInstruction): string {
-	return [
-		instruction.goalId ?? "no-goal",
-		instruction.goalRevision?.toString() ?? "no-revision",
-	].join(":");
+	return [instruction.goalId ?? "no-goal", instruction.goalRevision?.toString() ?? "no-revision"].join(":");
 }
 
 function isInterruptControl(
 	instruction: RuntimeInstruction,
-): instruction is Extract<
-	RuntimeInstruction,
-	{ kind: "control.interrupt" | "goal.pause" | "goal.cancel" }
-> {
+): instruction is Extract<RuntimeInstruction, { kind: "control.interrupt" | "goal.pause" | "goal.cancel" }> {
 	return (
 		instruction.kind === "control.interrupt" ||
 		instruction.kind === "goal.pause" ||

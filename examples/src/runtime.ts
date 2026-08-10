@@ -18,14 +18,8 @@ import { makeCheck, runSection } from "./_helpers.ts";
 export default async function testRuntime() {
 	await runSection("@melandlabs/loop", async () => {
 		const check = makeCheck("loop");
-		check(
-			"readPreferences is a function",
-			typeof loop.readPreferences === "function",
-		);
-		check(
-			"writePreferences is a function",
-			typeof loop.writePreferences === "function",
-		);
+		check("readPreferences is a function", typeof loop.readPreferences === "function");
+		check("writePreferences is a function", typeof loop.writePreferences === "function");
 		const exported = Object.keys(loop).filter((k) => !k.startsWith("_"));
 		check("loop exports additional symbols", exported.length >= 2);
 	});
@@ -34,16 +28,11 @@ export default async function testRuntime() {
 		const check = makeCheck("hooks");
 		// Hooks are named `use*`. Count them as a sanity check.
 		const hookNames = Object.keys(hooks).filter((k) => k.startsWith("use"));
-		check(
-			"hooks module exports at least one use* function",
-			hookNames.length >= 1,
-		);
+		check("hooks module exports at least one use* function", hookNames.length >= 1);
 		// Each use* export should be a function (the hook itself).
 		check(
 			"every use* export is a function",
-			hookNames.every(
-				(n) => typeof (hooks as Record<string, unknown>)[n] === "function",
-			),
+			hookNames.every((n) => typeof (hooks as Record<string, unknown>)[n] === "function"),
 		);
 	});
 
@@ -63,29 +52,11 @@ export default async function testRuntime() {
 		const check = makeCheck("env-config");
 		// isDevelopmentEnvironment / isProductionEnvironment are precomputed
 		// booleans derived from NODE_ENV, not functions.
-		check(
-			"isDevelopmentEnvironment is exported",
-			"isDevelopmentEnvironment" in envConfig,
-		);
-		check(
-			"isProductionEnvironment is exported",
-			"isProductionEnvironment" in envConfig,
-		);
-		check(
-			"isDevelopmentEnvironment is a boolean",
-			typeof envConfig.isDevelopmentEnvironment === "boolean",
-		);
-		check(
-			"isProductionEnvironment is a boolean",
-			typeof envConfig.isProductionEnvironment === "boolean",
-		);
-		check(
-			"isServerMode is a function",
-			typeof envConfig.isServerMode === "function",
-		);
-		check(
-			"isTauriMode is a function",
-			typeof envConfig.isTauriMode === "function",
-		);
+		check("isDevelopmentEnvironment is exported", "isDevelopmentEnvironment" in envConfig);
+		check("isProductionEnvironment is exported", "isProductionEnvironment" in envConfig);
+		check("isDevelopmentEnvironment is a boolean", typeof envConfig.isDevelopmentEnvironment === "boolean");
+		check("isProductionEnvironment is a boolean", typeof envConfig.isProductionEnvironment === "boolean");
+		check("isServerMode is a function", typeof envConfig.isServerMode === "function");
+		check("isTauriMode is a function", typeof envConfig.isTauriMode === "function");
 	});
 }

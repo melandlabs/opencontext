@@ -37,17 +37,12 @@ const sections: Array<[string, () => Promise<void>]> = [
 	["storage (storage, sqlite, indexeddb)", testStorage],
 	["security", testSecurity],
 	["utilities (audit, config, db, insights, shared, i18n, api)", testUtilities],
-	[
-		"integrations (umbrella + 21 leaves + rss + integrations-runtime)",
-		testIntegrations,
-	],
+	["integrations (umbrella + 21 leaves + rss + integrations-runtime)", testIntegrations],
 	["voice (kokoro, whisper)", testVoice],
 ];
 
 async function main() {
-	console.log(
-		`[smoke] running ${sections.length} section(s) against published @melandlabs/* packages`,
-	);
+	console.log(`[smoke] running ${sections.length} section(s) against published @melandlabs/* packages`);
 	for (const [label, fn] of sections) {
 		try {
 			await fn();

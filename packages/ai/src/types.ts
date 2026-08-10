@@ -9,8 +9,7 @@
 // Provider States
 // ============================================================================
 
-export type ProviderState =
-	"uninitialized" | "initializing" | "ready" | "error" | "stopping" | "stopped";
+export type ProviderState = "uninitialized" | "initializing" | "ready" | "error" | "stopping" | "stopped";
 
 // ============================================================================
 // Provider Events
@@ -175,10 +174,7 @@ export interface ProviderInstance<TProvider extends IProvider = IProvider> {
 /**
  * Plugin definition for providers
  */
-export interface ProviderPlugin<
-	TProvider extends IProvider = IProvider,
-	TConfig = Record<string, unknown>,
-> {
+export interface ProviderPlugin<TProvider extends IProvider = IProvider, TConfig = Record<string, unknown>> {
 	/** Plugin metadata */
 	metadata: ProviderMetadata;
 	/** Factory function to create provider instances */
@@ -278,8 +274,6 @@ export interface IProviderRegistry<
 export function defineProviderPlugin<
 	TProvider extends IProvider = IProvider,
 	TConfig = Record<string, unknown>,
->(
-	plugin: ProviderPlugin<TProvider, TConfig>,
-): ProviderPlugin<TProvider, TConfig> {
+>(plugin: ProviderPlugin<TProvider, TConfig>): ProviderPlugin<TProvider, TConfig> {
 	return plugin;
 }

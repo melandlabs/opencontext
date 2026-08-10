@@ -40,11 +40,8 @@ export interface StartedHttpServer {
 	stop(): Promise<void>;
 }
 
-export async function startHttpServer(
-	options: StartHttpServerOptions = {},
-): Promise<StartedHttpServer> {
-	const port =
-		options.port ?? Number.parseInt(process.env.MEMORY_HTTP_PORT ?? "7421", 10);
+export async function startHttpServer(options: StartHttpServerOptions = {}): Promise<StartedHttpServer> {
+	const port = options.port ?? Number.parseInt(process.env.MEMORY_HTTP_PORT ?? "7421", 10);
 	const host = options.host ?? process.env.MEMORY_HTTP_HOST ?? "127.0.0.1";
 
 	const rawStore = createRawMessageStore({
@@ -54,9 +51,7 @@ export async function startHttpServer(
 
 	const app = new Hono();
 
-	app.get("/health", (c) =>
-		c.json({ ok: true, store: "memory", ts: Date.now() }),
-	);
+	app.get("/health", (c) => c.json({ ok: true, store: "memory", ts: Date.now() }));
 
 	app.post("/v1/search", async (c) => {
 		const body = await c.req.json().catch(() => ({}));

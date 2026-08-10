@@ -102,18 +102,10 @@ function standaloneCandidates(): string[] {
 	// monorepo relative to `process.cwd()` and try the most common
 	// `.next/standalone` roots.
 	const cwd = process.cwd();
-	const probes = [
-		cwd,
-		resolve(cwd, ".."),
-		resolve(cwd, "../.."),
-		resolve(cwd, "../../.."),
-	];
+	const probes = [cwd, resolve(cwd, ".."), resolve(cwd, "../.."), resolve(cwd, "../../..")];
 	const roots: string[] = [];
 	for (const probe of probes) {
-		roots.push(
-			join(probe, ".next", "standalone", "apps", "web"),
-			join(probe, ".next", "standalone"),
-		);
+		roots.push(join(probe, ".next", "standalone", "apps", "web"), join(probe, ".next", "standalone"));
 	}
 	return roots;
 }
@@ -123,18 +115,10 @@ function devCandidates(): string[] {
 	// dev (`pnpm --filter web dev`), CLI invocation from the monorepo
 	// root, and any IDE-launched child process.
 	const cwd = process.cwd();
-	const probes = [
-		cwd,
-		resolve(cwd, ".."),
-		resolve(cwd, "../.."),
-		resolve(cwd, "../../.."),
-	];
+	const probes = [cwd, resolve(cwd, ".."), resolve(cwd, "../.."), resolve(cwd, "../../..")];
 	const roots: string[] = [];
 	for (const probe of probes) {
-		roots.push(
-			join(probe, "apps", "web", "scripts"),
-			join(probe, "apps", "web"),
-		);
+		roots.push(join(probe, "apps", "web", "scripts"), join(probe, "apps", "web"));
 	}
 	return roots;
 }
@@ -150,8 +134,7 @@ function selfRelativeCandidates(): string[] {
 		// the file from its on-disk path, so the chain below is stable.
 		// We don't actually use fileURLToPath at the top level because
 		// older Next.js compilers can rewrite `import.meta.url`.
-		const importMetaUrl =
-			typeof import.meta !== "undefined" ? import.meta.url : "";
+		const importMetaUrl = typeof import.meta !== "undefined" ? import.meta.url : "";
 		const here = importMetaUrl ? fileURLToPath(importMetaUrl) : __filename;
 		const hereDir = dirname(here);
 		const webDir = resolve(hereDir, "..", "..");
@@ -178,8 +161,7 @@ interface ResolveOptions {
  */
 export function resolveLoopCli(opts: ResolveOptions = {}): string | null {
 	const found =
-		process.env.OPENCONTEXT_LOOP_CLI &&
-		(opts.dryRun || isLoopCliFile(process.env.OPENCONTEXT_LOOP_CLI))
+		process.env.OPENCONTEXT_LOOP_CLI && (opts.dryRun || isLoopCliFile(process.env.OPENCONTEXT_LOOP_CLI))
 			? [{ path: process.env.OPENCONTEXT_LOOP_CLI, from: "env" }]
 			: [];
 	if (found.length) return found[0].path;

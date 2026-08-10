@@ -37,18 +37,13 @@ export class KeyManager {
 
 		const envKey = process.env.ENCRYPTION_KEY;
 		if (!envKey) {
-			throw new Error(
-				"No encryption key available. Set ENCRYPTION_KEY environment variable.",
-			);
+			throw new Error("No encryption key available. Set ENCRYPTION_KEY environment variable.");
 		}
 
 		this.masterKey = Buffer.from(envKey);
 		if (this.masterKey.length !== 32) {
 			// If not a valid Fernet key (32 bytes), derive using PBKDF2
-			this.masterKey = this.deriveKey(
-				this.masterKey,
-				Buffer.from("opencontext-master-salt"),
-			);
+			this.masterKey = this.deriveKey(this.masterKey, Buffer.from("opencontext-master-salt"));
 		}
 
 		return this.masterKey;
@@ -58,13 +53,7 @@ export class KeyManager {
 	 * Derives a key from password using PBKDF2
 	 */
 	private deriveKey(password: Buffer, salt: Buffer): Buffer {
-		return crypto.pbkdf2Sync(
-			password,
-			salt,
-			PBKDF2_ITERATIONS,
-			KEY_LENGTH,
-			"sha256",
-		);
+		return crypto.pbkdf2Sync(password, salt, PBKDF2_ITERATIONS, KEY_LENGTH, "sha256");
 	}
 
 	/**
@@ -149,11 +138,7 @@ export class KeyManager {
 	 * @param version - The key version used for encryption
 	 * @returns The decrypted plaintext
 	 */
-	public decryptWithAccountKey(
-		encryptedData: string,
-		accountId: string,
-		version = 1,
-	): string {
+	public decryptWithAccountKey(encryptedData: string, accountId: string, version = 1): string {
 		const { key } = this.deriveAccountKey(accountId, version);
 
 		const Fernet = require("fernet");
@@ -179,10 +164,7 @@ export class KeyManager {
 	 * @param currentVersion - The current key version
 	 * @returns The new key version and its identifier
 	 */
-	public rotateAccountKey(
-		accountId: string,
-		currentVersion: number,
-	): { newVersion: number; keyId: string } {
+	public rotateAccountKey(accountId: string, currentVersion: number): { newVersion: number; keyId: string } {
 		const newVersion = currentVersion + 1;
 		const { keyId } = this.deriveAccountKey(accountId, newVersion);
 		return { newVersion, keyId };
@@ -208,10 +190,6 @@ export function encryptWithAccountKey(
 /**
  * Convenience function to decrypt with account key
  */
-export function decryptWithAccountKey(
-	encryptedData: string,
-	accountId: string,
-	version?: number,
-): string {
+export function decryptWithAccountKey(encryptedData: string, accountId: string, version?: number): string {
 	return keyManager.decryptWithAccountKey(encryptedData, accountId, version);
 }

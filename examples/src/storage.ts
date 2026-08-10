@@ -15,10 +15,7 @@ import { makeCheck, runSection } from "./_helpers.ts";
 export default async function testStorage() {
 	await runSection("@melandlabs/storage", async () => {
 		const check = makeCheck("storage");
-		check(
-			"LocalStorageProvider is a class",
-			typeof storage.LocalStorageProvider === "function",
-		);
+		check("LocalStorageProvider is a class", typeof storage.LocalStorageProvider === "function");
 		const exported = Object.keys(storage).filter((k) => !k.startsWith("_"));
 		check("storage exports at least 1 symbol", exported.length >= 1);
 
@@ -28,18 +25,9 @@ export default async function testStorage() {
 		// is therefore stale; consumers should rely on the main entry plus
 		// `./local` and `./provider` subpaths which do resolve.
 		try {
-			const adapters = (await import("@melandlabs/storage/adapters")) as Record<
-				string,
-				unknown
-			>;
-			check(
-				"storage/adapters exposes uploadToLocalFs",
-				typeof adapters.uploadToLocalFs === "function",
-			);
-			check(
-				"storage/adapters exposes uploadToVercelBlob",
-				typeof adapters.uploadToVercelBlob === "function",
-			);
+			const adapters = (await import("@melandlabs/storage/adapters")) as Record<string, unknown>;
+			check("storage/adapters exposes uploadToLocalFs", typeof adapters.uploadToLocalFs === "function");
+			check("storage/adapters exposes uploadToVercelBlob", typeof adapters.uploadToVercelBlob === "function");
 		} catch (err) {
 			check(
 				"storage/adapters loads (known issue: stale exports path)",
@@ -51,10 +39,7 @@ export default async function testStorage() {
 
 	await runSection("@melandlabs/sqlite", async () => {
 		const check = makeCheck("sqlite");
-		check(
-			"SQLiteRawMessageManager is a class",
-			typeof sqlite.SQLiteRawMessageManager === "function",
-		);
+		check("SQLiteRawMessageManager is a class", typeof sqlite.SQLiteRawMessageManager === "function");
 		check(
 			"initializeRawMessageSchema is a function",
 			typeof sqlite.initializeRawMessageSchema === "function",

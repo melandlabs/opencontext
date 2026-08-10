@@ -45,10 +45,7 @@ function hasTag(
 	return result.metricTags?.includes(tag) ?? false;
 }
 
-function containsAny(
-	actual: string[],
-	expected: string[] | undefined,
-): boolean {
+function containsAny(actual: string[], expected: string[] | undefined): boolean {
 	return (expected ?? []).some((key) => actual.includes(key));
 }
 
@@ -60,9 +57,7 @@ function containsAll(actual: string[], expected: string[] | undefined): number {
 	return expected.every((key) => actual.includes(key)) ? 1 : 0;
 }
 
-function expectedPreserved(
-	result: MemoryConsolidationEvalScenarioResult,
-): number {
+function expectedPreserved(result: MemoryConsolidationEvalScenarioResult): number {
 	return result.expectedPreservedClusterKey &&
 		result.preservedClusterKeys.includes(result.expectedPreservedClusterKey)
 		? 1
@@ -71,14 +66,10 @@ function expectedPreserved(
 
 function promotionRate(
 	results: MemoryConsolidationEvalScenarioResult[],
-	keySelector: (
-		result: MemoryConsolidationEvalScenarioResult,
-	) => string[] | undefined,
+	keySelector: (result: MemoryConsolidationEvalScenarioResult) => string[] | undefined,
 ): number {
 	return mean(
-		results.map((result) =>
-			containsAny(result.preservedClusterKeys, keySelector(result)) ? 1 : 0,
-		),
+		results.map((result) => (containsAny(result.preservedClusterKeys, keySelector(result)) ? 1 : 0)),
 	);
 }
 
@@ -101,33 +92,19 @@ export function calculateMemoryConsolidationEvalMetrics(
 		(result) => result.expectedPreservedClusterKey !== undefined,
 	);
 	const noiseResults = results.filter((result) => hasTag(result, "noise"));
-	const temporaryOverrideResults = results.filter((result) =>
-		hasTag(result, "temporary-override"),
-	);
-	const adaptationResults = results.filter((result) =>
-		hasTag(result, "adaptation"),
-	);
-	const projectStateResults = results.filter((result) =>
-		hasTag(result, "project-state"),
-	);
-	const contestedResults = results.filter(
-		(result) => (result.expectedContestedClusterKeys?.length ?? 0) > 0,
-	);
+	const temporaryOverrideResults = results.filter((result) => hasTag(result, "temporary-override"));
+	const adaptationResults = results.filter((result) => hasTag(result, "adaptation"));
+	const projectStateResults = results.filter((result) => hasTag(result, "project-state"));
+	const contestedResults = results.filter((result) => (result.expectedContestedClusterKeys?.length ?? 0) > 0);
 	const decayResults = results.filter(
 		(result) =>
-			(result.decayedClusterKeys?.length ?? 0) > 0 ||
-			(result.expectedDecayedClusterKeys?.length ?? 0) > 0,
+			(result.decayedClusterKeys?.length ?? 0) > 0 || (result.expectedDecayedClusterKeys?.length ?? 0) > 0,
 	);
 
 	return {
 		scenarioCount: results.length,
-		expectedCandidateAccuracy: mean(
-			expectedCandidateResults.map(expectedPreserved),
-		),
-		noisePromotionRate: promotionRate(
-			noiseResults,
-			(result) => result.noiseClusterKeys,
-		),
+		expectedCandidateAccuracy: mean(expectedCandidateResults.map(expectedPreserved)),
+		noisePromotionRate: promotionRate(noiseResults, (result) => result.noiseClusterKeys),
 		temporaryOverrideLeakageRate: promotionRate(
 			temporaryOverrideResults,
 			(result) => result.temporaryClusterKeys,
@@ -136,10 +113,7 @@ export function calculateMemoryConsolidationEvalMetrics(
 		projectStateAccuracy: mean(projectStateResults.map(expectedPreserved)),
 		contestedClusterCoverage: mean(
 			contestedResults.map((result) =>
-				containsAll(
-					result.contestedClusterKeys ?? [],
-					result.expectedContestedClusterKeys,
-				),
+				containsAll(result.contestedClusterKeys ?? [], result.expectedContestedClusterKeys),
 			),
 		),
 		decayPrecisionProxy: mean(decayResults.map(decayPrecision)),

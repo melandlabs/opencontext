@@ -28,10 +28,7 @@ export function formatTimingError(error: unknown): string {
 
 	if (error instanceof Error) {
 		// Truncate long error messages to prevent log bloat
-		const message =
-			error.message.length > 200
-				? `${error.message.slice(0, 197)}...`
-				: error.message;
+		const message = error.message.length > 200 ? `${error.message.slice(0, 197)}...` : error.message;
 		return `${error.name}: ${message}`;
 	}
 
@@ -41,9 +38,7 @@ export function formatTimingError(error: unknown): string {
 
 	try {
 		const serialized = JSON.stringify(error);
-		return serialized.length > 200
-			? `${serialized.slice(0, 197)}...`
-			: serialized;
+		return serialized.length > 200 ? `${serialized.slice(0, 197)}...` : serialized;
 	} catch {
 		return "unknown";
 	}
@@ -55,9 +50,7 @@ export function formatTimingError(error: unknown): string {
  * Summary phases (like "imap_fetch_emails") are logged at all statuses,
  * while other phases are only logged for non-start events.
  */
-export function shouldLogTimingEvent(
-	options: ShouldLogTimingEventOptions,
-): boolean {
+export function shouldLogTimingEvent(options: ShouldLogTimingEventOptions): boolean {
 	const { phase, status, isSummaryPhase } = options;
 
 	// Never log start events except for summary phases

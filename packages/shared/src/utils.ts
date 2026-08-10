@@ -9,11 +9,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // ============ Network Utilities ============
 
-export async function fetchWithRetry(
-	url: string,
-	options: RequestInit = {},
-	retries = 2,
-): Promise<Response> {
+export async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 2): Promise<Response> {
 	let lastError: Error | undefined;
 
 	for (let i = 0; i <= retries; i++) {
@@ -101,13 +97,10 @@ export function getCurrentTimestamp() {
  * @param timestamp - Timestamp (can be second-level or millisecond-level)
  * @returns Normalized millisecond-level timestamp
  */
-export function normalizeTimestamp(
-	timestamp: number | string | null | undefined,
-): number {
+export function normalizeTimestamp(timestamp: number | string | null | undefined): number {
 	if (!timestamp) return Date.now();
 
-	const numTimestamp =
-		typeof timestamp === "string" ? Number.parseInt(timestamp, 10) : timestamp;
+	const numTimestamp = typeof timestamp === "string" ? Number.parseInt(timestamp, 10) : timestamp;
 
 	if (Number.isNaN(numTimestamp)) return Date.now();
 
@@ -140,13 +133,8 @@ export function formatBytes(bytes: number, decimals = 1): string {
 	const dm = decimals < 0 ? 0 : decimals;
 	const sizes = ["B", "KB", "MB", "GB", "TB"];
 
-	const index = Math.min(
-		Math.floor(Math.log(bytes) / Math.log(k)),
-		sizes.length - 1,
-	);
-	const formatted = Number.parseFloat(
-		(bytes / k ** index).toFixed(dm),
-	).toString();
+	const index = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
+	const formatted = Number.parseFloat((bytes / k ** index).toFixed(dm)).toString();
 
 	return `${formatted} ${sizes[index]}`;
 }
@@ -170,29 +158,19 @@ export function coerceDate(input: unknown): Date {
 	return new Date();
 }
 
-export function timeBeforeHours(
-	hours: number,
-	now: number = Date.now(),
-): number {
+export function timeBeforeHours(hours: number, now: number = Date.now()): number {
 	return Math.floor((now - hours * 60 * 60 * 1000) / 1000);
 }
 
-export function timeBeforeHoursMs(
-	hours: number,
-	now: number = Date.now(),
-): number {
+export function timeBeforeHoursMs(hours: number, now: number = Date.now()): number {
 	return now - hours * 60 * 60 * 1000;
 }
 
-export function timeBeforeMinutes(
-	minutes: number,
-	now: number = Date.now(),
-): number {
+export function timeBeforeMinutes(minutes: number, now: number = Date.now()): number {
 	return Math.floor((now - minutes * 60 * 1000) / 1000);
 }
 
-export const delay = (ms: number) =>
-	new Promise((resolve) => setTimeout(resolve, ms));
+export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ============ Tool Call Text Processing ============
 
@@ -203,14 +181,12 @@ export const delay = (ms: number) =>
  * The tool name can contain various characters including spaces, hyphens, underscores.
  * We use [^"'>]+ to match any characters except quotes and angle brackets.
  */
-const MALFORMED_TOOL_CALL_REGEX =
-	/<invoke name=("[^"]*"|'[^']*'|[^\s>]+)\s*>[\s\S]*?<\/invoke>/gi;
+const MALFORMED_TOOL_CALL_REGEX = /<invoke name=("[^"]*"|'[^']*'|[^\s>]+)\s*>[\s\S]*?<\/invoke>/gi;
 
 /**
  * Regex to match incomplete/malformed tool call opening tags
  */
-const MALFORMED_TOOL_CALL_START_REGEX =
-	/<invoke name=("[^"]*"|'[^']*'|[^\s>]+)\s*>(?![\s\S]*?<\/invoke>)/gi;
+const MALFORMED_TOOL_CALL_START_REGEX = /<invoke name=("[^"]*"|'[^']*'|[^\s>]+)\s*>(?![\s\S]*?<\/invoke>)/gi;
 
 /**
  * Detect if text contains a malformed tool call (Claude XML format output as text).
@@ -227,9 +203,7 @@ export function containsMalformedToolCall(text: string): boolean {
  * Extract malformed tool calls from text for potential reprocessing.
  * Returns an array of { toolName, fullMatch } objects.
  */
-export function extractMalformedToolCalls(
-	text: string,
-): Array<{ toolName: string; fullMatch: string }> {
+export function extractMalformedToolCalls(text: string): Array<{ toolName: string; fullMatch: string }> {
 	if (!text) return [];
 
 	const results: Array<{ toolName: string; fullMatch: string }> = [];
@@ -298,10 +272,7 @@ export function filterToolCallText(text: string): string {
 		if (/^\[TOOL_\s?(USE|RESULT)\s+\d+\/\d+\]/.test(trimmed)) {
 			// Check if this is a single-line tool result (marker + JSON on same line)
 			// If so, skip the entire line
-			const afterMarker = trimmed.replace(
-				/^\[TOOL_\s?(USE|RESULT)\s+\d+\/\d+\]\s*/,
-				"",
-			);
+			const afterMarker = trimmed.replace(/^\[TOOL_\s?(USE|RESULT)\s+\d+\/\d+\]\s*/, "");
 			if (afterMarker.startsWith("{")) {
 				i++;
 				continue;
@@ -375,22 +346,15 @@ export function filterToolCallText(text: string): string {
 				continue;
 			}
 			// Check if the content after the tool marker is JSON - if so, skip entirely
-			const afterToolMarker = trimmed.replace(
-				/^(?:Assistant:)?\[TOOL_\s?(USE|RESULT)\s+\d+\/\d+\]\s*/g,
-				"",
-			);
+			const afterToolMarker = trimmed.replace(/^(?:Assistant:)?\[TOOL_\s?(USE|RESULT)\s+\d+\/\d+\]\s*/g, "");
 			if (afterToolMarker.startsWith("{")) {
 				i++;
 				continue;
 			}
 			// Line has content after the tool marker - remove the tool portion and keep the content
-			const cleanedLine = trimmed
-				.replace(/Assistant:\[TOOL_\s?RESULT\s+\d+\/\d+\]/g, "")
-				.trim();
+			const cleanedLine = trimmed.replace(/Assistant:\[TOOL_\s?RESULT\s+\d+\/\d+\]/g, "").trim();
 			if (cleanedLine) {
-				result.push(
-					lines[i].replace(/Assistant:\[TOOL_\s?RESULT\s+\d+\/\d+\]/g, ""),
-				);
+				result.push(lines[i].replace(/Assistant:\[TOOL_\s?RESULT\s+\d+\/\d+\]/g, ""));
 			}
 			i++;
 			continue;
@@ -430,9 +394,7 @@ export function filterToolCallText(text: string): string {
 		// Pattern: starts with letter, contains multiple quoted strings with single letters between them
 		if (
 			/^.[^"]*"[a-zA-Z]"[^"]*"[^"]*"[^"]*$/.test(trimmed) &&
-			(trimmed.includes('"type"') ||
-				trimmed.includes('"text"') ||
-				trimmed.includes('"success"'))
+			(trimmed.includes('"type"') || trimmed.includes('"text"') || trimmed.includes('"success"'))
 		) {
 			i++;
 			continue;
@@ -505,9 +467,7 @@ const CLOUD_PREFIX = "cloud_";
  * where shadow users in Tauri mode use the cloud_<uuid> format while cloud stores raw UUIDs.
  */
 export function normalizeUserId(userId: string): string {
-	return userId.startsWith(CLOUD_PREFIX)
-		? userId.substring(CLOUD_PREFIX.length)
-		: userId;
+	return userId.startsWith(CLOUD_PREFIX) ? userId.substring(CLOUD_PREFIX.length) : userId;
 }
 
 /**

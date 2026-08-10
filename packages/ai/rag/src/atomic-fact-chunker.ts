@@ -36,9 +36,7 @@ export interface AtomicFactProvider {
 	 * Decompose text into atomic facts. The provider is responsible for any
 	 * sentence segmentation; the chunker treats `text` as opaque input.
 	 */
-	decompose(
-		text: string,
-	): Promise<Array<{ fact: string; confidence: number; sourceText?: string }>>;
+	decompose(text: string): Promise<Array<{ fact: string; confidence: number; sourceText?: string }>>;
 }
 
 export interface AtomicFactChunkerConfig {
@@ -142,15 +140,8 @@ export async function chunkAtomicFacts(
 	return out;
 }
 
-function fallbackFixed(
-	text: string,
-	config: AtomicFactChunkerConfig,
-	error: unknown,
-): AtomicFactChunk[] {
-	const reason =
-		error instanceof Error
-			? `${error.name}: ${error.message}`
-			: "unknown provider error";
+function fallbackFixed(text: string, config: AtomicFactChunkerConfig, error: unknown): AtomicFactChunk[] {
+	const reason = error instanceof Error ? `${error.name}: ${error.message}` : "unknown provider error";
 	const chunks = chunkText(text, config.fallbackOptions ?? {});
 	return chunks.map((chunk) => ({
 		text: chunk.content,

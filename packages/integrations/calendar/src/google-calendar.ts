@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-	type ComposioCredentials,
-	isComposioCredentials,
-} from "@melandlabs/integrations-composio";
+import { type ComposioCredentials, isComposioCredentials } from "@melandlabs/integrations-composio";
 import type { OAuth2Client } from "google-auth-library";
 import { type calendar_v3, google } from "googleapis";
 import { ComposioGoogleCalendarProxy } from "./composio-google-calendar";
@@ -40,9 +37,7 @@ type UpdateIntegrationAccountOptions = {
 	credentials: Record<string, unknown>;
 };
 
-async function updateIntegrationAccount(
-	_options: UpdateIntegrationAccountOptions,
-): Promise<void> {
+async function updateIntegrationAccount(_options: UpdateIntegrationAccountOptions): Promise<void> {
 	// Stub: persist credentials to the integration account record.
 	// In the application, this calls the real DB update.
 }
@@ -121,8 +116,7 @@ export class GoogleCalendarAdapter {
 		this.storedCredentials = options.credentials ?? {};
 
 		if (isComposioCredentials(this.storedCredentials)) {
-			const connectedAccountId =
-				this.storedCredentials.composioConnectedAccountId;
+			const connectedAccountId = this.storedCredentials.composioConnectedAccountId;
 			if (!connectedAccountId) {
 				throw new AppError(
 					"bad_request:api",
@@ -135,11 +129,8 @@ export class GoogleCalendarAdapter {
 			return;
 		}
 
-		const clientId =
-			process.env.GOOGLE_CALENDAR_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
-		const clientSecret =
-			process.env.GOOGLE_CALENDAR_CLIENT_SECRET ??
-			process.env.GOOGLE_CLIENT_SECRET;
+		const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID;
+		const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET;
 
 		if (!clientId || !clientSecret) {
 			throw new AppError(
@@ -197,14 +188,9 @@ export class GoogleCalendarAdapter {
 		this.storedCredentials = nextCredentials;
 	}
 
-	private async withCalendar<T>(
-		callback: (calendar: calendar_v3.Calendar) => Promise<T>,
-	): Promise<T> {
+	private async withCalendar<T>(callback: (calendar: calendar_v3.Calendar) => Promise<T>): Promise<T> {
 		if (!this.oauth2Client) {
-			throw new AppError(
-				"bad_request:api",
-				"Google Calendar OAuth client is not initialized.",
-			);
+			throw new AppError("bad_request:api", "Google Calendar OAuth client is not initialized.");
 		}
 
 		const calendar = google.calendar({
@@ -243,8 +229,7 @@ export class GoogleCalendarAdapter {
 		maxResults?: number;
 		orderBy?: "startTime" | "updated";
 	}): Promise<GoogleCalendarEvent[]> {
-		const calendarIds =
-			this.calendarIds.length > 0 ? this.calendarIds : ["primary"];
+		const calendarIds = this.calendarIds.length > 0 ? this.calendarIds : ["primary"];
 		const events: GoogleCalendarEvent[] = [];
 
 		for (const calendarId of calendarIds) {
@@ -300,8 +285,7 @@ export class GoogleCalendarAdapter {
 		createConference?: boolean;
 		sendUpdates?: "all" | "externalOnly" | "none";
 	}): Promise<GoogleCalendarEvent> {
-		const calendarId =
-			this.calendarIds.length > 0 ? this.calendarIds[0] : "primary";
+		const calendarId = this.calendarIds.length > 0 ? this.calendarIds[0] : "primary";
 
 		const requestBody = {
 			summary,
@@ -337,9 +321,7 @@ export class GoogleCalendarAdapter {
 						(await this.withCalendar((calendar) =>
 							calendar.events.insert({
 								calendarId,
-								conferenceDataVersion: createConference
-									? 1
-									: conferenceDataVersion,
+								conferenceDataVersion: createConference ? 1 : conferenceDataVersion,
 								sendUpdates,
 								requestBody,
 							}),
@@ -358,10 +340,7 @@ export class GoogleCalendarAdapter {
 	}
 }
 
-function toGoogleCalendarEvent(
-	item: any,
-	calendarId: string,
-): GoogleCalendarEvent | null {
+function toGoogleCalendarEvent(item: any, calendarId: string): GoogleCalendarEvent | null {
 	if (!item.id || item.status === "cancelled") return null;
 	const startDate = parseDate(item.start);
 	const endDate = parseDate(item.end);
@@ -391,14 +370,11 @@ function toGoogleCalendarEvent(
 		created: item.created ? new Date(item.created) : null,
 		updated: item.updated ? new Date(item.updated) : null,
 		status: item.status ?? null,
-		conferenceLink:
-			item.hangoutLink ?? item.conferenceData?.entryPoints?.[0]?.uri ?? null,
+		conferenceLink: item.hangoutLink ?? item.conferenceData?.entryPoints?.[0]?.uri ?? null,
 	};
 }
 
-function parseDate(
-	input: calendar_v3.Schema$EventDateTime | undefined | null,
-): {
+function parseDate(input: calendar_v3.Schema$EventDateTime | undefined | null): {
 	dateTime: Date;
 	isAllDay: boolean;
 	timeZone?: string | null;

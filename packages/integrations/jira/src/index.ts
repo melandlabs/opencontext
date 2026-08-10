@@ -101,8 +101,7 @@ export class JiraAdapter {
 	constructor(options: { credentials: JiraStoredCredentials }) {
 		this.storedCredentials = options.credentials ?? {};
 
-		this.instanceUrl =
-			this.storedCredentials.instanceUrl ?? "https://api.atlassian.com/ex/jira";
+		this.instanceUrl = this.storedCredentials.instanceUrl ?? "https://api.atlassian.com/ex/jira";
 
 		if (!this.storedCredentials.accessToken) {
 			throw new AppError(
@@ -120,10 +119,7 @@ export class JiraAdapter {
 		};
 	}
 
-	private async jiraRequest<T>(
-		endpoint: string,
-		options: RequestInit = {},
-	): Promise<T> {
+	private async jiraRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
 		const url = `${this.instanceUrl}/rest/api/3${endpoint}`;
 
 		const response = await fetch(url, {
@@ -241,14 +237,7 @@ export class JiraAdapter {
 		priority?: string;
 		assigneeId?: string;
 	}): Promise<{ key: string; id: string; self: string }> {
-		const {
-			projectKey,
-			summary,
-			description,
-			issueType,
-			priority,
-			assigneeId,
-		} = options;
+		const { projectKey, summary, description, issueType, priority, assigneeId } = options;
 
 		const issueBody: Record<string, unknown> = {
 			fields: {
@@ -297,10 +286,7 @@ export class JiraAdapter {
 	/**
 	 * Update issue status
 	 */
-	async transitionIssue(
-		issueKey: string,
-		transitionName: string,
-	): Promise<void> {
+	async transitionIssue(issueKey: string, transitionName: string): Promise<void> {
 		// First get available transitions
 		const transitions = await this.jiraRequest<{
 			transitions: Array<{ id: string; name: string }>;
@@ -311,10 +297,7 @@ export class JiraAdapter {
 		);
 
 		if (!transition) {
-			throw new AppError(
-				"bad_request:api",
-				`Transition "${transitionName}" not found for issue ${issueKey}`,
-			);
+			throw new AppError("bad_request:api", `Transition "${transitionName}" not found for issue ${issueKey}`);
 		}
 
 		await this.jiraRequest(`/issue/${issueKey}/transitions`, {
@@ -353,16 +336,11 @@ export class JiraAdapter {
 	/**
 	 * Format issue description to plain text
 	 */
-	static formatIssueDescription(
-		description?: JiraIssue["fields"]["description"],
-	): string {
+	static formatIssueDescription(description?: JiraIssue["fields"]["description"]): string {
 		if (!description?.content) return "";
 
 		return description.content
-			.map(
-				(paragraph) =>
-					paragraph.content?.map((text) => text.text || "").join("") || "",
-			)
+			.map((paragraph) => paragraph.content?.map((text) => text.text || "").join("") || "")
 			.join("\n\n");
 	}
 
@@ -381,10 +359,7 @@ export class JiraAdapter {
 		if (!body?.content) return "";
 
 		return body.content
-			.map(
-				(paragraph) =>
-					paragraph.content?.map((text) => text.text || "").join("") || "",
-			)
+			.map((paragraph) => paragraph.content?.map((text) => text.text || "").join("") || "")
 			.join("\n\n");
 	}
 }

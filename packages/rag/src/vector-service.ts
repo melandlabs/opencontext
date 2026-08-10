@@ -39,11 +39,7 @@ export interface SearchResult {
 export interface IVectorStore {
 	addChunk(chunk: DocumentChunk): Promise<void>;
 	addChunks(chunks: DocumentChunk[]): Promise<void>;
-	similaritySearch(
-		queryEmbedding: number[],
-		limit?: number,
-		userId?: string,
-	): Promise<VectorSearchResult[]>;
+	similaritySearch(queryEmbedding: number[], limit?: number, userId?: string): Promise<VectorSearchResult[]>;
 	deleteDocument(documentId: string): Promise<void>;
 	getDocumentCount(): Promise<number>;
 	getChunkCount(): Promise<number>;
@@ -99,9 +95,7 @@ export async function getVectorStore(): Promise<IVectorStore> {
 	const config = getConfig();
 
 	if (!config) {
-		throw new Error(
-			"Vector service not configured. Call configureVectorService() first.",
-		);
+		throw new Error("Vector service not configured. Call configureVectorService() first.");
 	}
 
 	return await config.getStore();
@@ -143,11 +137,7 @@ export async function searchVectorStore(
 ): Promise<SearchResult[]> {
 	const vectorStore = await getVectorStore();
 
-	const results = await vectorStore.similaritySearch(
-		queryEmbedding,
-		limit,
-		userId,
-	);
+	const results = await vectorStore.similaritySearch(queryEmbedding, limit, userId);
 
 	return results.map((r) => ({
 		content: r.content,
@@ -156,9 +146,7 @@ export async function searchVectorStore(
 	}));
 }
 
-export async function deleteDocumentFromVectorStore(
-	documentId: string,
-): Promise<void> {
+export async function deleteDocumentFromVectorStore(documentId: string): Promise<void> {
 	const vectorStore = await getVectorStore();
 	await vectorStore.deleteDocument(documentId);
 	console.log(`✅ Deleted document ${documentId} from vector store`);

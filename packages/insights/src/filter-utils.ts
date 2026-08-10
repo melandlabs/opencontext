@@ -39,16 +39,10 @@ function normalizeText(value: unknown) {
 }
 
 function normalizeList(values: string[] = []) {
-	return values
-		.map((value) => value.trim())
-		.filter((value) => value.length > 0);
+	return values.map((value) => value.trim()).filter((value) => value.length > 0);
 }
 
-function stringMatchesToken(
-	haystack: string,
-	needle: string,
-	caseSensitive: boolean,
-) {
+function stringMatchesToken(haystack: string, needle: string, caseSensitive: boolean) {
 	if (!caseSensitive) {
 		return haystack.toLowerCase().includes(needle.toLowerCase());
 	}
@@ -140,10 +134,7 @@ function collectKeywordFields(insight: InsightBase, fields: string[]) {
 
 function matchPlatformCondition(
 	insight: InsightBase,
-	condition: Extract<
-		InsightFilterDefinition["conditions"][number],
-		{ kind: "platform" }
-	>,
+	condition: Extract<InsightFilterDefinition["conditions"][number], { kind: "platform" }>,
 ) {
 	const needles = normalizeList(condition.values)
 		.map((value) => normalizePlatformOption(value)?.key)
@@ -151,27 +142,20 @@ function matchPlatformCondition(
 	if (needles.length === 0) {
 		return true;
 	}
-	const textBuckets = [
-		insight.platform,
-		...(insight.details ?? []).map((d) => d.platform),
-	]
+	const textBuckets = [insight.platform, ...(insight.details ?? []).map((d) => d.platform)]
 		.map((value) => normalizePlatformOption(value)?.key)
 		.filter((value): value is string => !!value);
 	if (textBuckets.length === 0) {
 		return false;
 	}
-	const comparator = (token: string) =>
-		textBuckets.some((chunk) => chunk.includes(token));
+	const comparator = (token: string) => textBuckets.some((chunk) => chunk.includes(token));
 
 	return needles.some(comparator);
 }
 
 function matchKeywordCondition(
 	insight: InsightBase,
-	condition: Extract<
-		InsightFilterDefinition["conditions"][number],
-		{ kind: "keyword" }
-	>,
+	condition: Extract<InsightFilterDefinition["conditions"][number], { kind: "keyword" }>,
 ) {
 	const needles = normalizeList(condition.values);
 	if (needles.length === 0) {
@@ -180,9 +164,7 @@ function matchKeywordCondition(
 
 	// Use condition.fields if provided, otherwise use DEFAULT_FIELDS_FOR_KEYWORDS
 	const fieldsToSearch =
-		condition.fields && condition.fields.length > 0
-			? condition.fields
-			: [...DEFAULT_FIELDS_FOR_KEYWORDS];
+		condition.fields && condition.fields.length > 0 ? condition.fields : [...DEFAULT_FIELDS_FOR_KEYWORDS];
 
 	const textBuckets = collectKeywordFields(insight, fieldsToSearch);
 	if (textBuckets.length === 0) {
@@ -190,19 +172,12 @@ function matchKeywordCondition(
 	}
 
 	const comparator = (token: string) =>
-		textBuckets.some((chunk) =>
-			chunk.toLowerCase().includes(token.toLowerCase()),
-		);
+		textBuckets.some((chunk) => chunk.toLowerCase().includes(token.toLowerCase()));
 
-	return condition.match === "all"
-		? needles.every(comparator)
-		: needles.some(comparator);
+	return condition.match === "all" ? needles.every(comparator) : needles.some(comparator);
 }
 
-function mentionsMe(
-	insight: InsightBase,
-	context: Pick<FilterMatchContext, "myNicknames">,
-) {
+function mentionsMe(insight: InsightBase, context: Pick<FilterMatchContext, "myNicknames">) {
 	const mentionFlag = (insight as { hasMyNickname?: boolean }).hasMyNickname;
 	if (mentionFlag) return true;
 
@@ -226,10 +201,7 @@ function mentionsMe(
 }
 
 function getPeopleTargets(
-	condition: Extract<
-		InsightFilterDefinition["conditions"][number],
-		{ kind: "people" }
-	>,
+	condition: Extract<InsightFilterDefinition["conditions"][number], { kind: "people" }>,
 	context: FilterMatchContext,
 ) {
 	const explicit = normalizeList(condition.values);
@@ -273,9 +245,7 @@ export function insightMatchesFilterDefinition<T extends InsightBase>(
 	context: FilterMatchContext = {},
 ) {
 	const now = context.now ?? new Date();
-	const evaluate = (
-		condition: InsightFilterDefinition["conditions"][number],
-	) => {
+	const evaluate = (condition: InsightFilterDefinition["conditions"][number]) => {
 		switch (condition.kind) {
 			case "importance": {
 				const normalizedInsight = normalizeImportanceOption(insight.importance);
@@ -340,9 +310,7 @@ export function insightMatchesFilterDefinition<T extends InsightBase>(
 			case "task_label": {
 				const value = normalizeText(insight.taskLabel).toLowerCase();
 				if (!value) return false;
-				return normalizeList(condition.values).some((item) =>
-					item.toLowerCase().includes(value),
-				);
+				return normalizeList(condition.values).some((item) => item.toLowerCase().includes(value));
 			}
 			case "account": {
 				const value = normalizeText(insight.account);
@@ -353,13 +321,9 @@ export function insightMatchesFilterDefinition<T extends InsightBase>(
 			}
 			case "category": {
 				if (!Array.isArray(insight.categories)) return false;
-				const normalizedCategories = insight.categories.map((entry) =>
-					entry.toLowerCase(),
-				);
+				const normalizedCategories = insight.categories.map((entry) => entry.toLowerCase());
 				if (normalizedCategories.length === 0) return false;
-				const targets = normalizeList(condition.values).map((entry) =>
-					entry.toLowerCase(),
-				);
+				const targets = normalizeList(condition.values).map((entry) => entry.toLowerCase());
 				return targets.some((target) => normalizedCategories.includes(target));
 			}
 			case "people": {
@@ -373,28 +337,17 @@ export function insightMatchesFilterDefinition<T extends InsightBase>(
 				const values = getPeopleTargets(condition, context);
 				if (values.length === 0) return false;
 				const matcher = (token: string) =>
-					candidates.some((person) =>
-						stringMatchesToken(person, token, condition.caseSensitive ?? false),
-					);
-				return condition.match === "all"
-					? values.every(matcher)
-					: values.some(matcher);
+					candidates.some((person) => stringMatchesToken(person, token, condition.caseSensitive ?? false));
+				return condition.match === "all" ? values.every(matcher) : values.some(matcher);
 			}
 			case "groups": {
 				if (!Array.isArray(insight.groups) || insight.groups.length === 0) {
 					return false;
 				}
-				const normalizedGroups = insight.groups.map((entry) =>
-					entry.toLowerCase(),
-				);
-				const targets = normalizeList(condition.values).map((entry) =>
-					entry.toLowerCase(),
-				);
-				const matcher = (token: string) =>
-					normalizedGroups.some((group) => group.includes(token));
-				return condition.match === "all"
-					? targets.every(matcher)
-					: targets.some(matcher);
+				const normalizedGroups = insight.groups.map((entry) => entry.toLowerCase());
+				const targets = normalizeList(condition.values).map((entry) => entry.toLowerCase());
+				const matcher = (token: string) => normalizedGroups.some((group) => group.includes(token));
+				return condition.match === "all" ? targets.every(matcher) : targets.some(matcher);
 			}
 			case "platform":
 				return matchPlatformCondition(insight, condition);
@@ -404,8 +357,7 @@ export function insightMatchesFilterDefinition<T extends InsightBase>(
 				return mentionsMe(insight, context);
 			case "time_window": {
 				const timestamp = getInsightTimestamp(insight);
-				const threshold =
-					now.getTime() - condition.withinHours * 60 * 60 * 1000;
+				const threshold = now.getTime() - condition.withinHours * 60 * 60 * 1000;
 				return timestamp.getTime() >= threshold;
 			}
 			case "has_tasks":
@@ -453,26 +405,15 @@ export function insightMatchesFilter<T extends InsightBase>(
 	return false;
 }
 
-export function isFilterDefinition(
-	filter: InsightFilter,
-): filter is InsightFilterDefinition {
+export function isFilterDefinition(filter: InsightFilter): filter is InsightFilterDefinition {
 	return "conditions" in filter && "match" in filter && !("op" in filter);
 }
 
-export function isFilterBinaryExpr(
-	filter: InsightFilter,
-): filter is InsightFilterBinaryExpr {
-	return (
-		"op" in filter &&
-		filter.op !== "not" &&
-		"left" in filter &&
-		"right" in filter
-	);
+export function isFilterBinaryExpr(filter: InsightFilter): filter is InsightFilterBinaryExpr {
+	return "op" in filter && filter.op !== "not" && "left" in filter && "right" in filter;
 }
 
-export function isFilterNotExpr(
-	filter: InsightFilter,
-): filter is InsightFilterNotExpr {
+export function isFilterNotExpr(filter: InsightFilter): filter is InsightFilterNotExpr {
 	return "op" in filter && filter.op === "not" && "operand" in filter;
 }
 
@@ -509,9 +450,7 @@ function unionInsights<T extends InsightBase>(a: T[], b: T[]): T[] {
  * @returns Intersection array containing elements that exist in both arrays
  */
 function intersectInsights<T extends InsightBase>(a: T[], b: T[]): T[] {
-	const aKeyMap = new Map<string | number, T>(
-		a.map((item) => [getInsightKey(item), item]),
-	);
+	const aKeyMap = new Map<string | number, T>(a.map((item) => [getInsightKey(item), item]));
 	// Filter elements in 'b' that exist in 'a'
 	return b.filter((item) => aKeyMap.has(getInsightKey(item)));
 }
@@ -523,13 +462,8 @@ function intersectInsights<T extends InsightBase>(a: T[], b: T[]): T[] {
  * @param target - The target Insight array (subset to exclude)
  * @returns Complement array containing elements from the original array not present in the target array
  */
-function differenceInsights<T extends InsightBase>(
-	original: T[],
-	target: T[],
-): T[] {
-	const targetKeyMap = new Map<string | number, T>(
-		target.map((item) => [getInsightKey(item), item]),
-	);
+function differenceInsights<T extends InsightBase>(original: T[], target: T[]): T[] {
+	const targetKeyMap = new Map<string | number, T>(target.map((item) => [getInsightKey(item), item]));
 	// Filter elements in the original array that do not exist in the target array
 	return original.filter((item) => !targetKeyMap.has(getInsightKey(item)));
 }
@@ -549,9 +483,7 @@ function evaluateFilterExpr<T extends InsightBase>(
 ): T[] {
 	// Case 1: Atomic filter rule → Filter the array directly with the rule
 	if (!("op" in expr)) {
-		return insights.filter((item) =>
-			insightMatchesFilterDefinition(item, expr, context),
-		);
+		return insights.filter((item) => insightMatchesFilterDefinition(item, expr, context));
 	}
 
 	// Case 2: Unary operator (NOT) → Evaluate the operand result, then compute the complement
@@ -593,9 +525,7 @@ export function filterInsights<T extends InsightBase>(
 	return evaluateFilterExpr(insights, filter, context);
 }
 
-export function toInsightFilterResponse(
-	record: Record<string, any>,
-): InsightFilterResponse {
+export function toInsightFilterResponse(record: Record<string, any>): InsightFilterResponse {
 	return {
 		id: record.id,
 		userId: record.userId,

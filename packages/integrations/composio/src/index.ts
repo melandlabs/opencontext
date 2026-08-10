@@ -2,7 +2,8 @@ export const COMPOSIO_GOOGLE_CALENDAR_TOOLKIT = "googlecalendar";
 export const COMPOSIO_GOOGLE_MEET_TOOLKIT = "googlemeet";
 
 export type ComposioToolkitSlug =
-	typeof COMPOSIO_GOOGLE_CALENDAR_TOOLKIT | typeof COMPOSIO_GOOGLE_MEET_TOOLKIT;
+	| typeof COMPOSIO_GOOGLE_CALENDAR_TOOLKIT
+	| typeof COMPOSIO_GOOGLE_MEET_TOOLKIT;
 
 export type ComposioCredentials = {
 	provider?: "composio" | "google_oauth" | null;
@@ -149,24 +150,18 @@ export class ComposioClient {
 		callbackUrl: string;
 		authConfigId?: string | null;
 	}): Promise<ComposioConnectLink> {
-		const resolvedAuthConfigId =
-			authConfigId ?? (await this.resolveAuthConfigId(toolkitSlug));
-		const response = await this.request<Record<string, unknown>>(
-			"/connected_accounts/link",
-			{
-				method: "POST",
-				body: JSON.stringify({
-					auth_config_id: resolvedAuthConfigId,
-					user_id: userId,
-					callback_url: callbackUrl,
-				}),
-			},
-		);
+		const resolvedAuthConfigId = authConfigId ?? (await this.resolveAuthConfigId(toolkitSlug));
+		const response = await this.request<Record<string, unknown>>("/connected_accounts/link", {
+			method: "POST",
+			body: JSON.stringify({
+				auth_config_id: resolvedAuthConfigId,
+				user_id: userId,
+				callback_url: callbackUrl,
+			}),
+		});
 
 		const redirectUrl =
-			getString(response, "redirect_url") ??
-			getString(response, "redirectUrl") ??
-			getString(response, "url");
+			getString(response, "redirect_url") ?? getString(response, "redirectUrl") ?? getString(response, "url");
 
 		if (!redirectUrl) {
 			throw new ComposioIntegrationError(
@@ -178,13 +173,9 @@ export class ComposioClient {
 		return {
 			redirectUrl,
 			connectedAccountId:
-				getString(response, "connected_account_id") ??
-				getString(response, "connectedAccountId") ??
-				null,
-			linkToken:
-				getString(response, "link_token") ?? getString(response, "linkToken"),
-			expiresAt:
-				getString(response, "expires_at") ?? getString(response, "expiresAt"),
+				getString(response, "connected_account_id") ?? getString(response, "connectedAccountId") ?? null,
+			linkToken: getString(response, "link_token") ?? getString(response, "linkToken"),
+			expiresAt: getString(response, "expires_at") ?? getString(response, "expiresAt"),
 			authConfigId: resolvedAuthConfigId,
 		};
 	}
@@ -197,18 +188,15 @@ export class ComposioClient {
 	}
 
 	async proxy<T>(input: ProxyRequestInput): Promise<T> {
-		const response = await this.request<ComposioProxyResponse<T>>(
-			"/tools/execute/proxy",
-			{
-				method: "POST",
-				body: JSON.stringify({
-					connected_account_id: input.connectedAccountId,
-					endpoint: input.endpoint,
-					method: input.method,
-					body: input.body,
-				}),
-			},
-		);
+		const response = await this.request<ComposioProxyResponse<T>>("/tools/execute/proxy", {
+			method: "POST",
+			body: JSON.stringify({
+				connected_account_id: input.connectedAccountId,
+				endpoint: input.endpoint,
+				method: input.method,
+				body: input.body,
+			}),
+		});
 
 		const status = response.status ?? response.status_code;
 		if (status && status >= 400) {
@@ -235,27 +223,21 @@ export class ComposioClient {
 			toolkit_slug: toolkitSlug,
 			limit: "100",
 		});
-		const response = await this.request<ComposioAuthConfigResponse>(
-			`/auth_configs?${params.toString()}`,
-			{
-				method: "GET",
-			},
-		);
+		const response = await this.request<ComposioAuthConfigResponse>(`/auth_configs?${params.toString()}`, {
+			method: "GET",
+		});
 		return response.items ?? [];
 	}
 
 	private async createManagedOauthAuthConfig(toolkitSlug: ComposioToolkitSlug) {
-		const response = await this.request<ComposioAuthConfigResponse>(
-			"/auth_configs",
-			{
-				method: "POST",
-				body: JSON.stringify({
-					toolkit: {
-						slug: toolkitSlug,
-					},
-				}),
-			},
-		);
+		const response = await this.request<ComposioAuthConfigResponse>("/auth_configs", {
+			method: "POST",
+			body: JSON.stringify({
+				toolkit: {
+					slug: toolkitSlug,
+				},
+			}),
+		});
 
 		const id = response.auth_config?.id ?? response.id;
 		if (!id) {
@@ -292,31 +274,18 @@ export class ComposioClient {
 	}
 }
 
-export function isComposioConfigured(
-	env: Record<string, string | undefined> = process.env,
-) {
+export function isComposioConfigured(env: Record<string, string | undefined> = process.env) {
 	return Boolean(env.COMPOSIO_API_KEY);
 }
 
-export function isComposioCredentials(
-	credentials: ComposioCredentials | null | undefined,
-) {
-	return Boolean(
-		credentials?.provider === "composio" ||
-		credentials?.composioConnectedAccountId,
-	);
+export function isComposioCredentials(credentials: ComposioCredentials | null | undefined) {
+	return Boolean(credentials?.provider === "composio" || credentials?.composioConnectedAccountId);
 }
 
-function readAuthConfigIdFromEnv(
-	toolkitSlug: ComposioToolkitSlug,
-	env: Record<string, string | undefined>,
-) {
+function readAuthConfigIdFromEnv(toolkitSlug: ComposioToolkitSlug, env: Record<string, string | undefined>) {
 	const names =
 		toolkitSlug === COMPOSIO_GOOGLE_CALENDAR_TOOLKIT
-			? [
-					"COMPOSIO_GOOGLE_CALENDAR_AUTH_CONFIG_ID",
-					"COMPOSIO_CALENDAR_AUTH_CONFIG_ID",
-				]
+			? ["COMPOSIO_GOOGLE_CALENDAR_AUTH_CONFIG_ID", "COMPOSIO_CALENDAR_AUTH_CONFIG_ID"]
 			: ["COMPOSIO_GOOGLE_MEET_AUTH_CONFIG_ID", "COMPOSIO_MEET_AUTH_CONFIG_ID"];
 
 	for (const name of names) {
@@ -345,12 +314,7 @@ function getComposioErrorMessage(error: unknown) {
 	if (typeof error === "string") return error;
 	if (typeof error === "object") {
 		const record = error as Record<string, unknown>;
-		const message =
-			record.message ??
-			record.error ??
-			record.detail ??
-			record.details ??
-			record.title;
+		const message = record.message ?? record.error ?? record.detail ?? record.details ?? record.title;
 		if (typeof message === "string" && message.length > 0) {
 			return message;
 		}

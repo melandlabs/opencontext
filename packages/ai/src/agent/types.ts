@@ -439,8 +439,7 @@ export interface AgentOptions {
 	/** Abort controller for cancellation */
 	abortController?: AbortController;
 	/** Permission mode */
-	permissionMode?:
-		"default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
+	permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
 	/** Sandbox configuration for isolated execution */
 	sandbox?: SandboxConfig;
 	/** Image attachments for vision capabilities */

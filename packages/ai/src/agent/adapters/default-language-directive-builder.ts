@@ -17,10 +17,7 @@
 
 import type { UserLocale } from "@melandlabs/shared";
 
-import type {
-	DirectiveChannel,
-	LanguageDirectiveBuilder,
-} from "../ports/language-directive.port";
+import type { DirectiveChannel, LanguageDirectiveBuilder } from "../ports/language-directive.port";
 
 export class DefaultLanguageDirectiveBuilder implements LanguageDirectiveBuilder {
 	buildDirective(locale: UserLocale | null, channel: DirectiveChannel): string {

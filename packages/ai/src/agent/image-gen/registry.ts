@@ -1,9 +1,5 @@
 import type { ImageGenProvider } from "./base";
-import type {
-	ImageGenerationCapabilities,
-	ImageGenerationRequest,
-	ImageGenerationResponse,
-} from "./types";
+import type { ImageGenerationCapabilities, ImageGenerationRequest, ImageGenerationResponse } from "./types";
 
 const providers = new Map<string, ImageGenProvider>();
 
@@ -11,9 +7,7 @@ export function registerImageGenProvider(provider: ImageGenProvider): void {
 	providers.set(provider.name, provider);
 }
 
-export function getImageGenProvider(
-	name: string,
-): ImageGenProvider | undefined {
+export function getImageGenProvider(name: string): ImageGenProvider | undefined {
 	return providers.get(name);
 }
 
@@ -30,13 +24,9 @@ export function getDefaultImageGenProvider(): ImageGenProvider | undefined {
 	return undefined;
 }
 
-export async function generateImage(
-	request: ImageGenerationRequest,
-): Promise<ImageGenerationResponse> {
+export async function generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
 	const requestedProvider = normalizeProviderName(request.provider);
-	const provider = requestedProvider
-		? getImageGenProvider(requestedProvider)
-		: getDefaultImageGenProvider();
+	const provider = requestedProvider ? getImageGenProvider(requestedProvider) : getDefaultImageGenProvider();
 	const model = request.model || "unknown";
 	const imageCount = normalizeImageCount(request.imageCount ?? request.n);
 
@@ -46,10 +36,7 @@ export async function generateImage(
 			provider: requestedProvider || "unknown",
 			model,
 			prompt: request.prompt,
-			modality:
-				request.referenceImageUrls?.length || request.referenceImages?.length
-					? "image"
-					: "text",
+			modality: request.referenceImageUrls?.length || request.referenceImages?.length ? "image" : "text",
 			imageCount,
 			error: requestedProvider
 				? `Image generation provider not registered: ${requestedProvider}`
@@ -65,9 +52,7 @@ export async function generateImage(
 	});
 }
 
-export function getImageGenProviderCapabilities(
-	name: string,
-): ImageGenerationCapabilities | null {
+export function getImageGenProviderCapabilities(name: string): ImageGenerationCapabilities | null {
 	const provider = getImageGenProvider(name);
 	return provider ? provider.capabilities() : null;
 }

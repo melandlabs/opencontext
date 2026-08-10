@@ -10,9 +10,7 @@ type LanguageSettings = {
  * > none. The two write paths never overlap, so user changes and learning
  * cannot overwrite each other.
  */
-export function resolveAgentLanguage(
-	s: LanguageSettings | null | undefined,
-): string | null {
+export function resolveAgentLanguage(s: LanguageSettings | null | undefined): string | null {
 	if (!s) return null;
 	const explicit = (s.language ?? "").trim();
 	if (explicit) return explicit;

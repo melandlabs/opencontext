@@ -89,8 +89,7 @@ export async function extractAuthKey(tdataPath: string): Promise<{
 		if (!result.accounts || result.accounts.size === 0) {
 			return {
 				success: false,
-				error:
-					"No accounts found in tdata. Please make sure you're logged into Telegram Desktop.",
+				error: "No accounts found in tdata. Please make sure you're logged into Telegram Desktop.",
 			};
 		}
 

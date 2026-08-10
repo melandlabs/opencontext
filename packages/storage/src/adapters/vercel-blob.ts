@@ -6,8 +6,7 @@
 import { del, list, put } from "@vercel/blob";
 export type { Part } from "@vercel/blob";
 
-const VERCEL_BLOB_API_BASE =
-	process.env.VERCEL_BLOB_API_URL || "https://blob.vercel-storage.com";
+const VERCEL_BLOB_API_BASE = process.env.VERCEL_BLOB_API_URL || "https://blob.vercel-storage.com";
 
 function getBlobToken(): string {
 	return process.env.BLOB_READ_WRITE_TOKEN || "";
@@ -77,9 +76,7 @@ export async function deleteFromVercelBlob(url: string): Promise<void> {
 /**
  * List files in Vercel Blob
  */
-export async function listVercelBlobs(
-	prefix?: string,
-): Promise<BlobListResult[]> {
+export async function listVercelBlobs(prefix?: string): Promise<BlobListResult[]> {
 	const result = await list({ prefix });
 
 	return result.blobs.map((blob) => ({
@@ -116,9 +113,7 @@ export async function beginMultipartUpload(
 
 	if (!resp.ok) {
 		const err = await resp.text();
-		console.error(
-			`[Blob MPU] create failed: status=${resp.status} body=${err} pathname=${pathname}`,
-		);
+		console.error(`[Blob MPU] create failed: status=${resp.status} body=${err} pathname=${pathname}`);
 		throw new Error(`Failed to create multipart upload: ${resp.status} ${err}`);
 	}
 
@@ -189,9 +184,7 @@ export async function finishMultipartUpload(
 
 	if (!resp.ok) {
 		const err = await resp.text();
-		throw new Error(
-			`Failed to complete multipart upload: ${resp.status} ${err}`,
-		);
+		throw new Error(`Failed to complete multipart upload: ${resp.status} ${err}`);
 	}
 
 	const data = (await resp.json()) as {

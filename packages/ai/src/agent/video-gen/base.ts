@@ -20,9 +20,7 @@ export abstract class VideoGenProvider {
 	abstract defaultModel(): string | null;
 	abstract capabilities(): VideoCapabilities;
 
-	abstract generate(
-		request: VideoGenerationRequest,
-	): Promise<VideoGenerationResponse>;
+	abstract generate(request: VideoGenerationRequest): Promise<VideoGenerationResponse>;
 
 	protected routeModality(imageUrl?: string): "text" | "image" {
 		return imageUrl ? "image" : "text";

@@ -13,20 +13,14 @@ import { isRawMessageChromaEnabled } from "./chroma-memory-index";
 
 let manager: SQLiteRawMessageManager | null = null;
 
-export function isSQLiteRawMessageStorageAvailable(
-	env?: MemoryStoreEnv,
-): boolean {
+export function isSQLiteRawMessageStorageAvailable(env?: MemoryStoreEnv): boolean {
 	return resolveEnv(env).isTauriMode();
 }
 
-export async function getSQLiteRawMessageManager(
-	env?: MemoryStoreEnv,
-): Promise<SQLiteRawMessageManager> {
+export async function getSQLiteRawMessageManager(env?: MemoryStoreEnv): Promise<SQLiteRawMessageManager> {
 	const e = resolveEnv(env);
 	if (!e.isTauriMode()) {
-		throw new Error(
-			"SQLite raw message storage is only available in Tauri mode.",
-		);
+		throw new Error("SQLite raw message storage is only available in Tauri mode.");
 	}
 
 	if (!manager) {
@@ -60,9 +54,7 @@ export function __resetSQLiteRawMessageManagerForTests(): void {
 function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
 	if (env) return env;
 	return {
-		isTauriMode: () =>
-			process.env.IS_TAURI === "true" ||
-			typeof process.env.TAURI_MODE === "string",
+		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
 		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
 		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
 	};

@@ -14,14 +14,8 @@ import { makeCheck, runSection } from "./_helpers.ts";
 export default async function testAi() {
 	await runSection("@melandlabs/ai", async () => {
 		const check = makeCheck("ai");
-		check(
-			"getModelPricing is exported",
-			typeof ai.getModelPricing === "function",
-		);
-		check(
-			"calculateTotalCredits is exported",
-			typeof ai.calculateTotalCredits === "function",
-		);
+		check("getModelPricing is exported", typeof ai.getModelPricing === "function");
+		check("calculateTotalCredits is exported", typeof ai.calculateTotalCredits === "function");
 		const tokens = ai.estimateTokens("OpenContext is a runtime substrate.");
 		check("estimateTokens returns a finite number", Number.isFinite(tokens));
 		const pricing = ai.getModelPricing("gpt-4o-mini");
@@ -44,9 +38,7 @@ export default async function testAi() {
 		const exportedNames = Object.keys(mcp).filter((k) => !k.startsWith("_"));
 		check("mcp module exports symbols", exportedNames.length > 0);
 		// Server / transport symbols are class-shaped.
-		const classes = exportedNames.filter(
-			(k) => typeof mcp[k as keyof typeof mcp] === "function",
-		);
+		const classes = exportedNames.filter((k) => typeof mcp[k as keyof typeof mcp] === "function");
 		check("mcp exposes at least one class/constructor", classes.length > 0);
 	});
 }

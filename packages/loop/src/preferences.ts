@@ -12,8 +12,7 @@ import { LOOP_PATHS, ensureDirs, ensureParent } from "./paths";
  * empty. See issue #316 for the rationale behind giving "nothing to
  * dismiss" an actual module instead of a hard skip.
  */
-export type QuietDayFillerId =
-	"none" | "ai-news-digest" | "weather-calendar" | "memory-resurface";
+export type QuietDayFillerId = "none" | "ai-news-digest" | "weather-calendar" | "memory-resurface";
 
 /**
  * The shape persisted to `~/.opencontext/loop/config.json`. New
@@ -191,18 +190,14 @@ export function readPreferences(): LoopPreferences {
 		return { ...DEFAULT_LOOP_PREFERENCES };
 	}
 	try {
-		const raw = JSON.parse(
-			readFileSync(LOOP_PATHS.config, "utf8"),
-		) as Partial<LoopPreferences>;
+		const raw = JSON.parse(readFileSync(LOOP_PATHS.config, "utf8")) as Partial<LoopPreferences>;
 		return { ...DEFAULT_LOOP_PREFERENCES, ...(raw ?? {}) };
 	} catch {
 		return { ...DEFAULT_LOOP_PREFERENCES };
 	}
 }
 
-export function writePreferences(
-	patch: Partial<LoopPreferences>,
-): LoopPreferences {
+export function writePreferences(patch: Partial<LoopPreferences>): LoopPreferences {
 	ensureDirs();
 	const next: LoopPreferences = { ...readPreferences(), ...(patch ?? {}) };
 	ensureParent(LOOP_PATHS.config);
