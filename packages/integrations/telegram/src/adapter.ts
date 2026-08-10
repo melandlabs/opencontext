@@ -25,8 +25,8 @@ import type { TotalList } from "telegram/Helpers.js";
 import { CustomFile } from "telegram/client/uploads.js";
 import type { Entity } from "telegram/define.js";
 import { StringSession } from "telegram/sessions/index.js";
-import { Api } from "telegram/tl/index.js";
 import type { Dialog } from "telegram/tl/custom/dialog.js";
+import { Api } from "telegram/tl/index.js";
 import { markdownToTelegramHtml } from "./markdown";
 
 const DEBUG = process.env.DEBUG_TELEGRAM === "true";

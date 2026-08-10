@@ -2,11 +2,7 @@
 	"name": "@melandlabs/sqlite",
 	"version": "0.1.1",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -28,9 +24,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · sqlite module",
-	"keywords": [
-		"opencontext"
-	],
+	"keywords": ["opencontext"],
 	"dependencies": {
 		"@melandlabs/indexeddb": "workspace:*",
 		"better-sqlite3": "^11.10.0",

@@ -2,11 +2,7 @@
 	"name": "@melandlabs/i18n",
 	"version": "0.1.1",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -28,9 +24,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · i18n module",
-	"keywords": [
-		"opencontext"
-	],
+	"keywords": ["opencontext"],
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
 		"typescript": "^5.6.3"

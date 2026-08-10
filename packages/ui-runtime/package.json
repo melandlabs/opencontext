@@ -2,11 +2,7 @@
 	"name": "@melandlabs/ui-runtime",
 	"version": "0.1.0",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -31,12 +27,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "UI-side runtime primitives (Tauri platform detection, browser/Tauri filesystem adapters).",
-	"keywords": [
-		"opencontext",
-		"ui",
-		"tauri",
-		"platform"
-	],
+	"keywords": ["opencontext", "ui", "tauri", "platform"],
 	"dependencies": {
 		"@tauri-apps/api": "^2.11.0",
 		"@tauri-apps/plugin-dialog": "^2.7.1",
