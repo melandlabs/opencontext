@@ -10,19 +10,19 @@
  * lazily so the failure is reported per-check instead of aborting the run.
  */
 
-import { makeCheck, runSection } from "./_helpers.ts";
+import { makeCheck, makeCheckWithSkip, runSection } from "./_helpers.ts";
 
 export default async function testOpencontext() {
 	await runSection("@melandlabs/opencontext (facade)", async () => {
-		const check = makeCheck("opencontext");
+		const { check, skip } = makeCheckWithSkip("opencontext");
 
 		let mod: Record<string, unknown> | null = null;
 		try {
 			mod = (await import("@melandlabs/opencontext")) as unknown as Record<string, unknown>;
 		} catch (err) {
-			check(
-				"module loads (facade bundles CJS deps that fail under pure ESM)",
-				false,
+			skip(
+				"module loads",
+				"facade bundles CJS deps that fail under pure ESM",
 				`import failed: ${(err as Error).message}`,
 			);
 			return;
