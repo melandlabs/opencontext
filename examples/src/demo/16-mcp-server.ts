@@ -98,7 +98,7 @@ export default async function demoMcpServer() {
 			const findById = (id: number) => responses.find((r) => r.id === id);
 
 			const send = (msg: object) => {
-				child.stdin.write(JSON.stringify(msg) + "\n");
+				child.stdin.write(`${JSON.stringify(msg)}\n`);
 			};
 
 			const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -334,6 +334,7 @@ export default async function demoMcpServer() {
 				await wait(200);
 			}
 
+			// biome-ignore lint/performance/noDelete: `delete` is the only way to unset an env var; assigning `undefined` stores the string "undefined".
 			if (previousDbPath === undefined) delete process.env.MEMORY_STORE_DB_PATH;
 			else process.env.MEMORY_STORE_DB_PATH = previousDbPath;
 		});

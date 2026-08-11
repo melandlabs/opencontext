@@ -65,11 +65,6 @@
 		"node": ">=22"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": [
-			"better-sqlite3",
-			"protobufjs",
-			"sqlite-vec",
-			"sqlite3"
-		]
+		"onlyBuiltDependencies": ["better-sqlite3", "protobufjs", "sqlite-vec", "sqlite3"]
 	}
 }

@@ -2,11 +2,7 @@
 	"name": "@melandlabs/integrations-google-docs",
 	"version": "0.1.4",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -26,9 +22,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/google-docs module",
-	"keywords": [
-		"opencontext"
-	],
+	"keywords": ["opencontext"],
 	"dependencies": {
 		"googleapis": "^140.0.0",
 		"google-auth-library": "^9.0.0"

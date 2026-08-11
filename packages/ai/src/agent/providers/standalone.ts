@@ -24,18 +24,18 @@
 
 import { generateText } from "ai";
 
-import { createDynamicModel } from "../model/providers";
 import {
-	BaseAgent,
-	defineAgentPlugin,
-	STANDALONE_METADATA,
 	type AgentConfig,
 	type AgentMessage,
 	type AgentOptions,
 	type AgentProvider,
+	BaseAgent,
 	type ExecuteOptions,
 	type PlanOptions,
+	STANDALONE_METADATA,
+	defineAgentPlugin,
 } from "../index";
+import { createDynamicModel } from "../model/providers";
 
 /** Provider type discriminator. Matches `STANDALONE_METADATA.type`. */
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;

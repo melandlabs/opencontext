@@ -24,10 +24,10 @@
  * same pattern `demo/14-local-embedding.ts` uses.
  */
 
-import { startHttpServer } from "@melandlabs/memory-store/http";
 import { getConfiguredEmbeddingProvider } from "@melandlabs/ai-rag/embedding-provider";
-import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { cosineSimilarity } from "@melandlabs/ai-rag/embeddings";
+import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
+import { startHttpServer } from "@melandlabs/memory-store/http";
 import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
 const MODEL = "Xenova/all-MiniLM-L6-v2";
@@ -300,6 +300,7 @@ export default async function demoHttpServer() {
 						factory.constructor.name,
 					);
 				} finally {
+					// biome-ignore lint/performance/noDelete: `delete` is the only way to unset an env var; assigning `undefined` stores the string "undefined".
 					if (previous === undefined) delete process.env.EMBEDDING_PROVIDER;
 					else process.env.EMBEDDING_PROVIDER = previous;
 				}
@@ -307,6 +308,7 @@ export default async function demoHttpServer() {
 				await started.stop();
 			}
 		});
+		// biome-ignore lint/performance/noDelete: `delete` is the only way to unset an env var; assigning `undefined` stores the string "undefined".
 		if (previousDbPath === undefined) delete process.env.MEMORY_STORE_DB_PATH;
 		else process.env.MEMORY_STORE_DB_PATH = previousDbPath;
 	});
