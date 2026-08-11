@@ -23,7 +23,7 @@ jobs:
     # "changesets/action" step handles versioning, commit, and PR
     # creation; we only run `pnpm changeset publish` once that work
     # is done and we're pushing the resulting commit back to main.
-    if: ${{ github.event.head_commit.message != 'ci: skip publish' }}
+    if: "${{ github.event.head_commit.message != 'ci: skip publish' }}"
     permissions:
       contents: write
       pull-requests: write
