@@ -22,13 +22,13 @@
  *
  * If the local ONNX weights cannot be loaded (no network, no populated
  * HuggingFace cache) the inference-dependent checks skip cleanly — the
- * same pattern `demo/14-local-embedding.ts` uses.
+ * same pattern `14-local-embedding.ts` uses.
  */
 
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
+import { info, makeCheckWithSkip, runSection, withTmp } from "./_helpers.ts";
 
 interface McpResponse {
 	jsonrpc: "2.0";
@@ -46,7 +46,7 @@ export default async function demoMcpServer() {
 		// packages/opencontext, so a fresh `pnpm build` here is picked
 		// up automatically.
 		const bin = fileURLToPath(
-			new URL("../../node_modules/@melandlabs/opencontext/dist/cli/opencontext.js", import.meta.url),
+			new URL("../node_modules/@melandlabs/opencontext/dist/cli/opencontext.js", import.meta.url),
 		);
 
 		await withTmp("mcp-server", async (dir) => {

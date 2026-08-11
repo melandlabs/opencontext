@@ -24,7 +24,7 @@
 import { execFileSync } from "node:child_process";
 import * as path from "node:path";
 import { LOOP_PATHS } from "@melandlabs/loop";
-import { info, makeCheck, runSection, withTmp } from "../_helpers.ts";
+import { info, makeCheck, runSection, withTmp } from "./_helpers.ts";
 
 /** Runs in a child process whose $HOME is a scratch directory. */
 const CHILD = `

@@ -21,14 +21,14 @@
  *
  * If the local ONNX weights cannot be loaded (no network, no populated
  * HuggingFace cache) the inference-dependent checks skip cleanly — the
- * same pattern `demo/14-local-embedding.ts` uses.
+ * same pattern `14-local-embedding.ts` uses.
  */
 
 import { getConfiguredEmbeddingProvider } from "@melandlabs/ai-rag/embedding-provider";
 import { cosineSimilarity } from "@melandlabs/ai-rag/embeddings";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { startHttpServer } from "@melandlabs/memory-store/http";
-import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
+import { info, makeCheckWithSkip, runSection, withTmp } from "./_helpers.ts";
 
 const MODEL = "Xenova/all-MiniLM-L6-v2";
 

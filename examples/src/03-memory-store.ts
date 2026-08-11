@@ -22,7 +22,7 @@
  */
 
 import { createMemoryStore, createUnifiedSearch } from "@melandlabs/memory-store";
-import { info, makeCheck, runSection, withTmp } from "../_helpers.ts";
+import { info, makeCheck, runSection, withTmp } from "./_helpers.ts";
 
 export default async function demoMemoryStore() {
 	await runSection("demo: @melandlabs/memory-store", async () => {

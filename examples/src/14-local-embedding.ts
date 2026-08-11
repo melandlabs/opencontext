@@ -21,7 +21,7 @@
 import { getConfiguredEmbeddingProvider } from "@melandlabs/ai-rag/embedding-provider";
 import { cosineSimilarity } from "@melandlabs/ai-rag/embeddings";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
-import { info, makeCheckWithSkip, runSection } from "../_helpers.ts";
+import { info, makeCheckWithSkip, runSection } from "./_helpers.ts";
 
 const MODEL = "Xenova/all-MiniLM-L6-v2";
 const EXPECTED_DIMS = 384;

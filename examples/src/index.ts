@@ -22,24 +22,24 @@
  *     pnpm test
  */
 
-import demoFacade from "./demo/00-facade.ts";
-import demoRagChunk from "./demo/01-rag-chunk.ts";
-import demoRagVectorStore from "./demo/02-rag-vector-store.ts";
-import demoMemoryStore from "./demo/03-memory-store.ts";
-import demoAi from "./demo/04-ai.ts";
-import demoContracts from "./demo/05-contracts.ts";
-import demoLoop from "./demo/06-loop.ts";
-import demoEnvConfig from "./demo/07-env-config.ts";
-import demoCron from "./demo/08-cron.ts";
-import demoUiRuntime from "./demo/09-ui-runtime.ts";
-import demoStorage from "./demo/10-storage.ts";
-import demoSecurity from "./demo/11-security.ts";
-import demoSearch from "./demo/12-search.ts";
-import demoIntegrationsCore from "./demo/13-integrations-core.ts";
-import demoLocalEmbedding from "./demo/14-local-embedding.ts";
-import demoHttpServer from "./demo/15-http-server.ts";
-import demoMcpServer from "./demo/16-mcp-server.ts";
-import demoAiAgent from "./demo/17-ai-agent.ts";
+import demoFacade from "./00-facade.ts";
+import demoRagChunk from "./01-rag-chunk.ts";
+import demoRagVectorStore from "./02-rag-vector-store.ts";
+import demoMemoryStore from "./03-memory-store.ts";
+import demoAi from "./04-ai.ts";
+import demoContracts from "./05-contracts.ts";
+import demoLoop from "./06-loop.ts";
+import demoEnvConfig from "./07-env-config.ts";
+import demoCron from "./08-cron.ts";
+import demoUiRuntime from "./09-ui-runtime.ts";
+import demoStorage from "./10-storage.ts";
+import demoSecurity from "./11-security.ts";
+import demoSearch from "./12-search.ts";
+import demoIntegrationsCore from "./13-integrations-core.ts";
+import demoLocalEmbedding from "./14-local-embedding.ts";
+import demoHttpServer from "./15-http-server.ts";
+import demoMcpServer from "./16-mcp-server.ts";
+import demoAiAgent from "./17-ai-agent.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],

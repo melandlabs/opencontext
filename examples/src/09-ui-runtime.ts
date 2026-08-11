@@ -11,7 +11,7 @@
  */
 
 import { getPlatformKind, isBrowser, isClient, isTauri } from "@melandlabs/ui-runtime";
-import { info, makeCheck, runSection } from "../_helpers.ts";
+import { info, makeCheck, runSection } from "./_helpers.ts";
 
 export default async function demoUiRuntime() {
 	await runSection("demo: @melandlabs/ui-runtime", async () => {

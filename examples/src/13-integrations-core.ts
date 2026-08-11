@@ -15,7 +15,7 @@
 
 import { createMinimalContext } from "@melandlabs/integrations/core";
 import { buildSnippet, htmlToPlainText, stripQuotedText } from "@melandlabs/integrations/utils";
-import { info, makeCheck, runSection } from "../_helpers.ts";
+import { info, makeCheck, runSection } from "./_helpers.ts";
 
 export default async function demoIntegrationsCore() {
 	await runSection("demo: @melandlabs/integrations (core + utils)", async () => {

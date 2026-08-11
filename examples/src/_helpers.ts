@@ -2,7 +2,7 @@
  * Shared helpers for the @melandlabs/opencontext examples.
  *
  * Two layers use these:
- *   - `demo/*.ts`  — runnable documentation. Each file actually calls a
+ *   - `*.ts`  — runnable documentation. Each file actually calls a
  *     package's public API and asserts on the real return value.
  *   - `smoke/*.ts` — export-shape verification. Each file confirms a
  *     package resolves and exposes the symbols consumers import.

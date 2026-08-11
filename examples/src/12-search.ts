@@ -14,7 +14,7 @@
  */
 
 import { needsRealTimeInfo, search } from "@melandlabs/search";
-import { info, makeCheckWithSkip, runSection } from "../_helpers.ts";
+import { info, makeCheckWithSkip, runSection } from "./_helpers.ts";
 
 /** Queries whose answers change by the hour. */
 const TIME_SENSITIVE = [

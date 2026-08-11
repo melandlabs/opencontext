@@ -17,7 +17,7 @@
  */
 
 import { chunkText } from "@melandlabs/rag";
-import { info, makeCheck, runSection } from "../_helpers.ts";
+import { info, makeCheck, runSection } from "./_helpers.ts";
 
 const DOC = [
 	"Retrieval-augmented generation grounds a model's answer in your own documents.",

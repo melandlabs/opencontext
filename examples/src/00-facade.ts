@@ -14,7 +14,7 @@ import {
 	getModelPricing,
 	isUserType,
 } from "@melandlabs/opencontext";
-import { info, makeCheckWithSkip, runSection } from "../_helpers.ts";
+import { info, makeCheckWithSkip, runSection } from "./_helpers.ts";
 const ARTICLE = [
 	"OpenContext is a runtime substrate for context-aware agents.",
 	"It bundles retrieval, memory, scheduling, and integrations.",
@@ -46,7 +46,7 @@ export default async function demoFacade() {
 		//    collision — so through the facade this returns the embedding
 		//    price in USD per million tokens (a number), not the chat
 		//    pricing object. Import from @melandlabs/ai directly if you
-		//    want the chat pricing table (see demo/04-ai.ts).
+		//    want the chat pricing table (see 04-ai.ts).
 		const tokens = estimateTokens(ARTICLE);
 		const embeddingPrice = getModelPricing("text-embedding-3-small");
 		info("demo/facade", `estimateTokens = ${tokens} tokens for the article`);
