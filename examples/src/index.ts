@@ -36,6 +36,7 @@ import demoStorage from "./demo/10-storage.ts";
 import demoSecurity from "./demo/11-security.ts";
 import demoSearch from "./demo/12-search.ts";
 import demoIntegrationsCore from "./demo/13-integrations-core.ts";
+import demoLocalEmbedding from "./demo/14-local-embedding.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -52,6 +53,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: security", demoSecurity],
 	["demo: search", demoSearch],
 	["demo: integrations — core & utils", demoIntegrationsCore],
+	["demo: ai-rag — local Transformers embedding", demoLocalEmbedding],
 ];
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {

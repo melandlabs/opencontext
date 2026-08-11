@@ -62,6 +62,7 @@ is involved.
 | [`src/demo/11-security.ts`](./src/demo/11-security.ts)         | `@melandlabs/security` — `TokenEncryption` (Fernet) with a throwaway key, `validateUrlForSSRF` (rejects plain HTTP, loopback, RFC1918, cloud-metadata), `isTrustedStorageUrl` | —                                                                                                    |
 | [`src/demo/12-search.ts`](./src/demo/12-search.ts)             | `@melandlabs/search` — `needsRealTimeInfo` classifier on time-sensitive vs timeless queries, then live `search()`                                              | live `search()` skips without `BRAVE_SEARCH_API_KEY`                                                 |
 | [`src/demo/13-integrations-core.ts`](./src/demo/13-integrations-core.ts) | `@melandlabs/integrations` — `createMinimalContext({})` noop providers, partial overrides, `htmlToPlainText`, `buildSnippet`, `stripQuotedText`              | —                                                                                                    |
+| [`src/demo/14-local-embedding.ts`](./src/demo/14-local-embedding.ts) | `@melandlabs/ai-rag` — `LocalTransformersEmbeddingProvider` (ONNX, default `Xenova/all-MiniLM-L6-v2`, 384 dims), `getConfiguredEmbeddingProvider` factory routing via `EMBEDDING_PROVIDER=local`, `cosineSimilarity` sanity check | inference calls skip if neither the HF cache nor the network is available (first run downloads ~30 MB of ONNX weights)              |
 
 ## Representative snippets
 
