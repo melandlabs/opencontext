@@ -41,8 +41,17 @@
 		"whatwg-url": "^5.0.0",
 		"zod": "^4.3.6"
 	},
+	"peerDependencies": {
+		"@melandlabs/ai-rag": "workspace:*"
+	},
+	"peerDependenciesMeta": {
+		"@melandlabs/ai-rag": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
 		"@melandlabs/ai": "workspace:*",
+		"@melandlabs/ai-rag": "workspace:*",
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
 		"@melandlabs/loop": "workspace:*",

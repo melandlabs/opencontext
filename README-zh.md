@@ -105,32 +105,24 @@ pnpm -r build
 
 ```bash
 # `pnpm add -g @melandlabs/opencontext` 后,bin 已在 PATH 上:
-opencontext http --host 127.0.0.1 --port 7421
-# 或者,不全局安装,直接用 npx:
-npx -y @melandlabs/opencontext http --host 127.0.0.1 --port 7421
+opencontext http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec \
+  --host 127.0.0.1 --port 7421
+# 或者不全局安装,直接用 npx:
+npx -y @melandlabs/opencontext http \
+  --embedding-provider local --memory-backend sqlite-vec
 curl http://127.0.0.1:7421/health
 ```
 
 ### 4. 把 MCP server 接入 Claude Desktop / Cursor
 
-添加到你的 `claude_desktop_config.json`(或 Cursor → Settings → MCP):
-
-```json
-{
-	"mcpServers": {
-		"opencontext": {
-			"command": "npx",
-			"args": ["-y", "@melandlabs/opencontext", "mcp"],
-			"env": {
-				"DATABASE_URL": "postgres://user:pass@host:5432/opencontext"
-			}
-		}
-	}
-}
+```bash
+opencontext mcp \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
 ```
 
-编辑器中会立即可用四个工具:`memory.health`、`memory.searchUnified`、
-`memory.writeRawMessage`、`memory.getRawMessage`。
 
 ## 示例
 
@@ -165,7 +157,7 @@ pnpm test
 
 ### MCP server
 
-`@melandlabs/opencontext/mcp` 通过 stdio 暴露相同的操作 —— 可被 Claude Desktop、Cursor、Claude Code、Codex CLI 或任何具备 MCP 能力的 agent 运行时直接使用。CLI 入口点为 `opencontext`(默认子命令是 `mcp`),覆盖整个 OpenContext 能力,不只是 memory。HTTP daemon 用 `opencontext http`。
+`@melandlabs/opencontext/mcp` 通过 stdio 暴露相同的操作 —— 可被 Claude Desktop、Cursor、Claude Code、Codex CLI 或任何具备 MCP 能力的 agent 运行时直接使用。
 
 ### 跨源搜索
 

@@ -19,6 +19,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
+import type { RawMessage } from "@melandlabs/indexeddb/storage";
+import type { UnifiedSearchDeps } from "./config";
 import type { MemoryStoreConfig } from "./index";
 import { createUnifiedSearch } from "./search/unified-search";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
@@ -33,6 +35,44 @@ export interface StartMcpServerOptions extends MemoryStoreConfig {
 
 const DEFAULT_NAME = "@melandlabs/memory-store";
 const DEFAULT_VERSION = "0.1.0";
+
+type RawMessageStoreFn = (messages: RawMessage[]) => Promise<number[]>;
+type RawMessageGetFn = (messageId: string) => Promise<RawMessage | null | undefined>;
+
+interface RawMessageManagerLike {
+	upsertRawMessages?: (input: { userId: string; messages: RawMessage[] }) => Promise<unknown>;
+	storeMessages?: RawMessageStoreFn;
+	getMessageById?: RawMessageGetFn;
+}
+
+async function embedMissingMessages(messages: RawMessage[], deps: UnifiedSearchDeps): Promise<RawMessage[]> {
+	if (typeof deps.embedQuery !== "function") {
+		return messages;
+	}
+	const out: RawMessage[] = [];
+	for (const message of messages) {
+		if (Array.isArray(message.embedding) && message.embedding.length > 0) {
+			out.push(message);
+			continue;
+		}
+		if (typeof message.content !== "string" || message.content.length === 0) {
+			out.push(message);
+			continue;
+		}
+		const vector = await deps.embedQuery({
+			userId: message.userId,
+			query: message.content,
+		});
+		out.push({
+			...message,
+			embedding: vector,
+			embeddingModel: message.embeddingModel ?? "server",
+			embeddingDimensions: vector.length,
+			embeddingUpdatedAt: Date.now(),
+		});
+	}
+	return out;
+}
 
 export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
 	const server = new McpServer({
@@ -66,6 +106,14 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 
 	const writeSchema: ZodRawShape = {
 		userId: z.string(),
+		embedOnInsert: z
+			.boolean()
+			.optional()
+			.describe(
+				"When true AND the host wired `unified.embedQuery`, fill in any missing " +
+					"`embedding` server-side via that embedder. Required when the active " +
+					"memory backend is sqlite-vec and the caller doesn't pre-embed.",
+			),
 		message: z
 			.object({
 				id: z.string().optional(),
@@ -77,6 +125,9 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				channel: z.string().optional(),
 				person: z.string().optional(),
 				timestamp: z.number().optional(),
+				embedding: z.array(z.number()).optional(),
+				embeddingModel: z.string().optional(),
+				embeddingDimensions: z.number().optional(),
 				metadata: z.record(z.string(), z.unknown()).optional(),
 			})
 			.passthrough(),
@@ -128,26 +179,40 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			inputSchema: writeSchema as any,
 		},
 		async (args: unknown) => {
-			const a = args as { userId: string; message: unknown };
-			const manager = await rawStore.getManager();
-			const result = await (
-				manager as unknown as {
-					upsertRawMessages?: (input: {
-						userId: string;
-						messages: unknown[];
-					}) => Promise<unknown>;
-				}
-			).upsertRawMessages?.({
-				userId: a.userId,
-				messages: [a.message],
-			});
+			const a = args as {
+				userId: string;
+				embedOnInsert?: boolean;
+				message: unknown;
+			};
+			const manager = (await rawStore.getManager()) as RawMessageManagerLike;
+			const incoming = [a.message as RawMessage].map((m) => ({ ...m, userId: m.userId ?? a.userId }));
+			const messages =
+				a.embedOnInsert === true ? await embedMissingMessages(incoming, options.unified ?? {}) : incoming;
+
+			let result: unknown;
+			if (typeof manager.upsertRawMessages === "function") {
+				result = await manager.upsertRawMessages({
+					userId: a.userId,
+					messages,
+				});
+			} else if (typeof manager.storeMessages === "function") {
+				const ids = await manager.storeMessages(messages);
+				result = { inserted: ids.length, ids };
+			} else {
+				throw new Error("active raw-message manager exposes neither upsertRawMessages nor storeMessages");
+			}
 			try {
-				await upsertRawMessagesToChroma([a.message as never]);
+				await upsertRawMessagesToChroma(messages as never);
 			} catch (error) {
 				console.warn("[memory-store/mcp] chroma upsert failed:", error);
 			}
 			return {
-				content: [{ type: "text" as const, text: JSON.stringify({ ok: true, result }) }],
+				content: [
+					{
+						type: "text" as const,
+						text: JSON.stringify({ ok: true, count: messages.length, result }),
+					},
+				],
 			};
 		},
 	);
@@ -162,12 +227,8 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		},
 		async (args: unknown) => {
 			const a = args as { userId: string; messageId: string };
-			const manager = await rawStore.getManager();
-			const row = await (
-				manager as unknown as {
-					getMessageById?: (messageId: string) => Promise<unknown>;
-				}
-			).getMessageById?.(a.messageId);
+			const manager = (await rawStore.getManager()) as RawMessageManagerLike;
+			const row = await manager.getMessageById?.(a.messageId);
 			return {
 				content: [
 					{

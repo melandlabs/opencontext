@@ -63,6 +63,198 @@ is involved.
 | [`src/demo/12-search.ts`](./src/demo/12-search.ts)             | `@melandlabs/search` — `needsRealTimeInfo` classifier on time-sensitive vs timeless queries, then live `search()`                                              | live `search()` skips without `BRAVE_SEARCH_API_KEY`                                                 |
 | [`src/demo/13-integrations-core.ts`](./src/demo/13-integrations-core.ts) | `@melandlabs/integrations` — `createMinimalContext({})` noop providers, partial overrides, `htmlToPlainText`, `buildSnippet`, `stripQuotedText`              | —                                                                                                    |
 | [`src/demo/14-local-embedding.ts`](./src/demo/14-local-embedding.ts) | `@melandlabs/ai-rag` — `LocalTransformersEmbeddingProvider` (ONNX, default `Xenova/all-MiniLM-L6-v2`, 384 dims), `getConfiguredEmbeddingProvider` factory routing via `EMBEDDING_PROVIDER=local`, `cosineSimilarity` sanity check | inference calls skip if neither the HF cache nor the network is available (first run downloads ~30 MB of ONNX weights)              |
+| [`src/demo/15-http-server.ts`](./src/demo/15-http-server.ts) | `@melandlabs/memory-store/http` — `startHttpServer` booted on a random high port with **all three** `unified.*` deps supplied (`embedQuery` from the local ONNX provider, in-memory `searchKnowledge` / `searchInsights` cosine indices), then real `GET /health` / `POST /v1/raw-messages` / `POST /v1/search` round-trips that assert `warnings[]` is empty and hits come back | inference-dependent checks skip on the same condition as demo 14                                                                 |
+| [`src/demo/16-mcp-server.ts`](./src/demo/16-mcp-server.ts) | `@melandlabs/opencontext` — spawns `opencontext mcp` with `--embedding-provider local --memory-backend sqlite-vec --name --version`, then drives the daemon over stdio the way any MCP client would: full JSON-RPC handshake (`initialize` → `notifications/initialized` → `tools/list`), then `memory.writeRawMessage` (with `embedOnInsert: true`), `memory.searchUnified` (asserting ranked memory hits + no `embedQuery` warning), `memory.getRawMessage`, and `memory.health`. Mirrors the `claude_desktop_config.json` snippet in the README §4. | inference-dependent checks skip on the same condition as demo 14                                                                |
+
+### Daemon configuration
+
+Both `opencontext http` and `opencontext mcp` (plus their standalone
+bins `opencontext-memory-http` / `opencontext-memory-mcp`) take the
+same `--embedding-provider` / `--*-backend` flag surface. Every flag
+also accepts an env-var equivalent so the same options can be set in
+docker / systemd units.
+
+| Flag                              | Env var                  | Values                              | Wires                                                       |
+| --------------------------------- | ------------------------ | ----------------------------------- | ----------------------------------------------------------- |
+| `--port <n>`                      | `MEMORY_HTTP_PORT`       | int (default `7421`)                | HTTP listen port (`http` only)                              |
+| `--host <h>`                      | `MEMORY_HTTP_HOST`       | string (default `127.0.0.1`)        | HTTP bind host (`http` only)                                |
+| `--name <s>`                      | `MEMORY_MCP_NAME`        | string                              | MCP server name advertised to clients (`mcp` only)         |
+| `--version <s>`                   | `MEMORY_MCP_VERSION`     | string                              | MCP server version (`mcp` only)                             |
+| `--embedding-provider <name>`     | `EMBEDDING_PROVIDER`     | `local` \| `openrouter` \| `none`   | `unified.embedQuery` (default `none`)                       |
+| `--embedding-model <name>`        | `EMBEDDING_MODEL`        | string                              | provider-specific model id                                  |
+| `--memory-backend <name>`         | `MEMORY_BACKEND`         | `sqlite-vec` \| `chroma` \| `none`  | `unified.searchRawMessagesAnn` (default `none`)             |
+| `--insights-backend <name>`       | `INSIGHTS_BACKEND`       | `sqlite-vec` \| `chroma` \| `none`  | `unified.searchInsights` (default `none`)                   |
+| `--insights-collection <name>`    | `INSIGHTS_COLLECTION`    | string (default `opencontext_insights`) | Chroma collection name for `--insights-backend=chroma`  |
+| `--knowledge-backend <name>`      | `KNOWLEDGE_BACKEND`      | `chroma` \| `none`                  | `unified.searchKnowledge` (default `none`)                  |
+| `--knowledge-collection <name>`   | `KNOWLEDGE_COLLECTION`   | string (default `opencontext_knowledge`) | Chroma collection name for `--knowledge-backend=chroma` |
+| `--chroma-url <url>`              | `CHROMA_URL`             | http URL                            | required by any `--*-backend=chroma`                        |
+
+Three concrete recipes:
+
+```bash
+# 1. Local ONNX embedder + sqlite-vec ANN for the memory source. No API
+#    key, no extra services. Covers `opencontext http` AND `opencontext mcp`.
+opencontext http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+
+# 2. Wire everything via a running Chroma server (uses OpenRouter for
+#    embeddings). Requires `OPENROUTER_API_KEY` in the environment.
+OPENROUTER_API_KEY=sk-or-v1-... \
+opencontext http \
+  --embedding-provider openrouter \
+  --chroma-url http://127.0.0.1:8000 \
+  --memory-backend chroma \
+  --insights-backend chroma \
+  --knowledge-backend chroma
+
+# 3. Bare daemon (default) — only /health works and /v1/search returns
+#    three structured `*_not_configured` / `memory_search_failed`
+#    warnings. The bin emits no extra logs.
+opencontext http
+```
+
+`--embedding-provider local` and every `--*-backend=chroma` value
+require `@melandlabs/ai-rag` (a peer install — it pulls in
+`@huggingface/transformers`, `chromadb`, and ~30 MB of ONNX weights
+on first run). The bin fails with a clear remediation message if the
+package is missing.
+
+### `POST /v1/raw-messages` — `embedOnInsert`
+
+When the daemon is booted with `--embedding-provider local|openrouter`
+(or the host wires its own `unified.embedQuery`), the HTTP route
+auto-fills any missing `embedding` on incoming messages if the request
+body carries `"embedOnInsert": true`. Without that flag, the server
+stores the row verbatim — clients that pre-embed client-side keep
+their full pipeline.
+
+```bash
+curl -X POST http://127.0.0.1:7421/v1/raw-messages \
+  -H 'content-type: application/json' \
+  -d '{
+        "userId": "u-42",
+        "embedOnInsert": true,
+        "messages": [
+          { "role": "user", "messageId": "m-1",
+            "content": "User prefers dark mode",
+            "platform": "test", "botId": "b-1",
+            "timestamp": 1700000000000, "createdAt": 1700000000000 }
+        ]
+      }'
+# → { "ok": true, "count": 1, "result": { "inserted": 1, "ids": [1] } }
+```
+
+The MCP `writeRawMessage` tool takes the same flag as
+`arguments.embedOnInsert`; demo 16 exercises it end-to-end.
+
+### Wiring into Claude Desktop / Cursor
+
+The MCP demo (16) exercises the same flag surface the `opencontext mcp`
+CLI accepts. Drop this into `claude_desktop_config.json` (or Cursor →
+Settings → MCP) — no API key, no extra services:
+
+```json
+{
+	"mcpServers": {
+		"opencontext": {
+			"command": "npx",
+			"args": ["-y", "@melandlabs/opencontext", "mcp",
+			         "--embedding-provider", "local",
+			         "--memory-backend", "sqlite-vec"]
+		}
+	}
+}
+```
+
+Four tools are exposed: `memory.health`, `memory.searchUnified`,
+`memory.writeRawMessage`, `memory.getRawMessage`.
+
+### Daemon 配置(Daemon configuration 中文版)
+
+`opencontext http` 与 `opencontext mcp`(以及独立的 `opencontext-memory-http` / `opencontext-memory-mcp`)接受同一套 `--embedding-provider` / `--*-backend` flag。每个 flag 都有对应的环境变量,可以放进 docker / systemd unit 里。
+
+| Flag                              | 环境变量                | 取值                                  | 作用                                                         |
+| --------------------------------- | ----------------------- | ------------------------------------- | ------------------------------------------------------------ |
+| `--port <n>`                      | `MEMORY_HTTP_PORT`      | int(默认 `7421`)                      | HTTP 监听端口(仅 `http`)                                    |
+| `--host <h>`                      | `MEMORY_HTTP_HOST`      | string(默认 `127.0.0.1`)              | HTTP 绑定 host(仅 `http`)                                   |
+| `--name <s>`                      | `MEMORY_MCP_NAME`       | string                                | MCP server name(仅 `mcp`)                                   |
+| `--version <s>`                   | `MEMORY_MCP_VERSION`    | string                                | MCP server version(仅 `mcp`)                                |
+| `--embedding-provider <name>`     | `EMBEDDING_PROVIDER`    | `local` \| `openrouter` \| `none`     | `unified.embedQuery`(默认 `none`)                           |
+| `--embedding-model <name>`        | `EMBEDDING_MODEL`       | string                                | provider 特定的模型 id                                       |
+| `--memory-backend <name>`         | `MEMORY_BACKEND`        | `sqlite-vec` \| `chroma` \| `none`    | `unified.searchRawMessagesAnn`(默认 `none`)                  |
+| `--insights-backend <name>`       | `INSIGHTS_BACKEND`      | `sqlite-vec` \| `chroma` \| `none`    | `unified.searchInsights`(默认 `none`)                        |
+| `--insights-collection <name>`    | `INSIGHTS_COLLECTION`   | string(默认 `opencontext_insights`)   | `--insights-backend=chroma` 时使用的 Chroma collection        |
+| `--knowledge-backend <name>`      | `KNOWLEDGE_BACKEND`     | `chroma` \| `none`                    | `unified.searchKnowledge`(默认 `none`)                       |
+| `--knowledge-collection <name>`   | `KNOWLEDGE_COLLECTION`  | string(默认 `opencontext_knowledge`)  | `--knowledge-backend=chroma` 时使用的 Chroma collection       |
+| `--chroma-url <url>`              | `CHROMA_URL`            | http URL                              | 任何 `--*-backend=chroma` 都需要                              |
+
+三个常用 recipes:
+
+```bash
+# 1. 本地 ONNX embedder + sqlite-vec 内存后端。无需 API key,无需外部服务。
+#    同样适用于 `opencontext mcp`。
+opencontext http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+
+# 2. 接 Chroma 服务器 + OpenRouter embeddings(需要 `OPENROUTER_API_KEY`)。
+OPENROUTER_API_KEY=sk-or-v1-... \
+opencontext http \
+  --embedding-provider openrouter \
+  --chroma-url http://127.0.0.1:8000 \
+  --memory-backend chroma \
+  --insights-backend chroma \
+  --knowledge-backend chroma
+
+# 3. 裸 daemon(默认)—— 只有 /health 可用,/v1/search 返回三条结构化的
+#    `*_not_configured` / `memory_search_failed` warning。
+opencontext http
+```
+
+`--embedding-provider local` 以及任何 `--*-backend=chroma` 都需要
+`@melandlabs/ai-rag`(peer install,首次运行会拉 `@huggingface/transformers`、`chromadb` 和 ~30 MB 的 ONNX 权重)。bin 在缺失时会有明确的修复提示。
+
+### `POST /v1/raw-messages` — `embedOnInsert`(中文版)
+
+当 daemon 启动时带 `--embedding-provider local|openrouter`(或宿主自己接了 `unified.embedQuery`),HTTP 路由会在请求体里带 `"embedOnInsert": true` 时,自动为没有 `embedding` 的消息补上向量。客户端如果自行预嵌,不带这个 flag 也能工作,服务端会原样存储。
+
+```bash
+curl -X POST http://127.0.0.1:7421/v1/raw-messages \
+  -H 'content-type: application/json' \
+  -d '{
+        "userId": "u-42",
+        "embedOnInsert": true,
+        "messages": [
+          { "role": "user", "messageId": "m-1",
+            "content": "User prefers dark mode",
+            "platform": "test", "botId": "b-1",
+            "timestamp": 1700000000000, "createdAt": 1700000000000 }
+        ]
+      }'
+# → { "ok": true, "count": 1, "result": { "inserted": 1, "ids": [1] } }
+```
+
+MCP `writeRawMessage` 工具也接受 `arguments.embedOnInsert`,demo 16 已经端到端覆盖。
+
+### 接入 Claude Desktop / Cursor(Wiring 中文版)
+
+Demo 16 跑的就是 `opencontext mcp` CLI 接受的那套 flag。把下面这段放进 `claude_desktop_config.json`(或 Cursor → Settings → MCP)即可 —— 无 API key,无外部服务:
+
+```json
+{
+	"mcpServers": {
+		"opencontext": {
+			"command": "npx",
+			"args": ["-y", "@melandlabs/opencontext", "mcp",
+			         "--embedding-provider", "local",
+			         "--memory-backend", "sqlite-vec"]
+		}
+	}
+}
+```
+
+四个可用工具:`memory.health`、`memory.searchUnified`、`memory.writeRawMessage`、`memory.getRawMessage`。
 
 ## Representative snippets
 

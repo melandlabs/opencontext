@@ -16,6 +16,7 @@ export default defineConfig({
 		"policies/memory-graph-correction-policy": "src/policies/memory-graph-correction-policy.ts",
 		"server/cli-http": "src/server/cli-http.ts",
 		"server/cli-mcp": "src/server/cli-mcp.ts",
+		"server/cli-shared": "src/server/cli-shared.ts",
 	},
 	format: ["esm"],
 	dts: true,
@@ -32,5 +33,12 @@ export default defineConfig({
 		"better-sqlite3",
 		"sqlite-vec",
 		"server-only",
+		// Optional peer — pulled in only when the daemon is started with
+		// `--embedding-provider local` or `--*-backend=chroma`. Kept as a
+		// runtime import so the published `dependencies` stay minimal; if
+		// it's missing, the bin fails with a clear remediation hint.
+		"@melandlabs/ai-rag",
+		"@melandlabs/ai-rag/local-transformers-embedding-provider",
+		"@melandlabs/ai-rag/chroma-store",
 	],
 });

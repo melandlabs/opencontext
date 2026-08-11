@@ -14,6 +14,19 @@
  *   POST /v1/raw-messages   → upsert raw messages (returns count)
  *   GET  /v1/raw-messages/:id  → single raw message
  *
+ * `POST /v1/raw-messages` supports two body keys beyond `userId` /
+ * `messages[]`:
+ *
+ *   - `embedOnInsert: true` — when set AND `unified.embedQuery` is wired
+ *      (i.e. the host passed `--embedding-provider local|openrouter` or
+ *      supplied its own embedder), the server fills in any message
+ *      whose `embedding` field is missing by calling `embedQuery`
+ *      against `message.content` server-side. This is what makes the
+ *      daemon usable end-to-end with `--memory-backend=sqlite-vec` and
+ *      bare curl POSTs — without this flag, the bin logs the warning
+ *      and the messages persist without an embedding (so ANN search
+ *      won't return them).
+ *
  * The HTTP server speaks only to the raw-message + vector layers; it does
  * not expose RAG/insights cross-source search (callers wire those up
  * server-side or use the MCP server with a fully-wired store).
@@ -21,7 +34,9 @@
 
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
+import type { RawMessage } from "@melandlabs/indexeddb/storage";
 import type { MemoryStoreConfig } from "./index";
+import type { UnifiedSearchDeps } from "./config";
 import { createUnifiedSearch } from "./search/unified-search";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
 import { createRawMessageStore } from "./storage/raw-message-store";
@@ -37,6 +52,45 @@ export interface StartedHttpServer {
 	url: string;
 	port: number;
 	stop(): Promise<void>;
+}
+
+type RawMessageUpsertFn = (input: { userId: string; messages: RawMessage[] }) => Promise<unknown>;
+type RawMessageStoreFn = (messages: RawMessage[]) => Promise<number[]>;
+type RawMessageGetFn = (messageId: string) => Promise<RawMessage | null | undefined>;
+
+interface RawMessageManagerLike {
+	upsertRawMessages?: RawMessageUpsertFn;
+	storeMessages?: RawMessageStoreFn;
+	getMessageById?: RawMessageGetFn;
+}
+
+async function embedMissingMessages(messages: RawMessage[], deps: UnifiedSearchDeps): Promise<RawMessage[]> {
+	if (typeof deps.embedQuery !== "function") {
+		return messages;
+	}
+	const out: RawMessage[] = [];
+	for (const message of messages) {
+		if (Array.isArray(message.embedding) && message.embedding.length > 0) {
+			out.push(message);
+			continue;
+		}
+		if (typeof message.content !== "string" || message.content.length === 0) {
+			out.push(message);
+			continue;
+		}
+		const vector = await deps.embedQuery({
+			userId: message.userId,
+			query: message.content,
+		});
+		out.push({
+			...message,
+			embedding: vector,
+			embeddingModel: message.embeddingModel ?? "server",
+			embeddingDimensions: vector.length,
+			embeddingUpdatedAt: Date.now(),
+		});
+	}
+	return out;
 }
 
 export async function startHttpServer(options: StartHttpServerOptions = {}): Promise<StartedHttpServer> {
@@ -78,36 +132,63 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		if (!Array.isArray(body.messages) || !body.userId) {
 			return c.json({ error: "userId and messages[] required" }, 400);
 		}
-		const manager = await rawStore.getManager();
-		const result = await (
-			manager as unknown as {
-				upsertRawMessages?: (input: {
-					userId: string;
-					messages: unknown[];
-				}) => Promise<unknown>;
-			}
-		).upsertRawMessages?.({
-			userId: body.userId,
-			messages: body.messages,
-		});
+		const manager = (await rawStore.getManager()) as RawMessageManagerLike;
+		const incoming = body.messages as RawMessage[];
+
+		// ── 1. Auto-embed messages that lack an embedding — but only when
+		//      the client explicitly opted in via `embedOnInsert: true`
+		//      AND an embedder is wired into `unified.*`. We deliberately
+		//      don't auto-embed without the opt-in: hosts that send
+		//      pre-embedded rows from a sidecar shouldn't pay the cost of
+		//      a server-side inference call per message.
+		const messages =
+			body.embedOnInsert === true
+				? await embedMissingMessages(
+						incoming.map((m) => ({ ...m, userId: m.userId ?? body.userId })),
+						options.unified ?? {},
+					)
+				: incoming.map((m) => ({ ...m, userId: m.userId ?? body.userId }));
+
+		// ── 2. Insert into the active backend. Host-supplied Postgres
+		//      factories take precedence (their `upsertRawMessages` is a
+		//      richer upsert); the default SQLite manager falls through
+		//      to `storeMessages`, which is an idempotent INSERT … ON
+		//      CONFLICT(message_id) DO UPDATE.
+		let result: unknown;
+		if (typeof manager.upsertRawMessages === "function") {
+			result = await manager.upsertRawMessages({
+				userId: body.userId,
+				messages,
+			});
+		} else if (typeof manager.storeMessages === "function") {
+			const ids = await manager.storeMessages(messages);
+			result = { inserted: ids.length, ids };
+		} else {
+			return c.json(
+				{
+					error: "active raw-message manager exposes neither upsertRawMessages nor storeMessages",
+				},
+				500,
+			);
+		}
+
+		// ── 3. Parallel chroma upsert, best-effort. The legacy
+		//      `isRawMessageChromaEnabled()` env path still applies.
 		try {
-			await upsertRawMessagesToChroma(body.messages as never);
+			await upsertRawMessagesToChroma(messages as never);
 		} catch (error) {
 			console.warn("[memory-store/http] chroma upsert failed:", error);
 		}
-		return c.json({ ok: true, result });
+
+		return c.json({ ok: true, count: messages.length, result });
 	});
 
 	app.get("/v1/raw-messages/:id", async (c) => {
 		const id = c.req.param("id");
 		const userId = c.req.query("userId");
 		if (!userId) return c.json({ error: "userId query param required" }, 400);
-		const manager = await rawStore.getManager();
-		const row = await (
-			manager as unknown as {
-				getMessageById?: (messageId: string) => Promise<unknown>;
-			}
-		).getMessageById?.(id);
+		const manager = (await rawStore.getManager()) as RawMessageManagerLike;
+		const row = await manager.getMessageById?.(id);
 		if (!row) return c.json({ error: "not found" }, 404);
 		return c.json({ message: row });
 	});

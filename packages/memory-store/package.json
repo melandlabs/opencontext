@@ -54,14 +54,19 @@
 		"zod": "^4.3.6"
 	},
 	"peerDependencies": {
+		"@melandlabs/ai-rag": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*"
 	},
 	"peerDependenciesMeta": {
+		"@melandlabs/ai-rag": {
+			"optional": true
+		},
 		"@melandlabs/indexeddb": {
 			"optional": true
 		}
 	},
 	"devDependencies": {
+		"@melandlabs/ai-rag": "workspace:*",
 		"@melandlabs/config": "workspace:*",
 		"@types/node": "^22.13.10",
 		"typescript": "^5.6.3"

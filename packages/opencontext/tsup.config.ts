@@ -34,7 +34,7 @@ export default defineConfig({
 	splitting: false,
 	treeshake: true,
 	target: "esnext",
-	noExternal: [/^@melandlabs\//],
+	noExternal: [/^@melandlabs\/(?!ai-rag(?:\/|$))/],
 	external: [
 		"pg",
 		"punycode",
@@ -50,5 +50,13 @@ export default defineConfig({
 		"abort-controller",
 		"agentkeepalive",
 		"encoding",
+		// ai-rag ships native deps (@huggingface/transformers ONNX runtime,
+		// chromadb). Keep it external in the facade bundle so the published
+		// artifact stays lean; `opencontext http` only needs it when the
+		// user opts into `--embedding-provider local` or `--*-backend=chroma`,
+		// in which case it's an optional peer dep they install themselves.
+		"@melandlabs/ai-rag",
+		"@melandlabs/ai-rag/local-transformers-embedding-provider",
+		"@melandlabs/ai-rag/chroma-store",
 	],
 });

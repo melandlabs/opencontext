@@ -37,6 +37,8 @@ import demoSecurity from "./demo/11-security.ts";
 import demoSearch from "./demo/12-search.ts";
 import demoIntegrationsCore from "./demo/13-integrations-core.ts";
 import demoLocalEmbedding from "./demo/14-local-embedding.ts";
+import demoHttpServer from "./demo/15-http-server.ts";
+import demoMcpServer from "./demo/16-mcp-server.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -54,6 +56,8 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: search", demoSearch],
 	["demo: integrations — core & utils", demoIntegrationsCore],
 	["demo: ai-rag — local Transformers embedding", demoLocalEmbedding],
+	["demo: memory-store — fully-wired HTTP daemon (all 3 unified deps)", demoHttpServer],
+	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
 ];
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {

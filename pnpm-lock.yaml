@@ -935,6 +935,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@melandlabs/ai-rag':
+        specifier: workspace:*
+        version: link:../ai/rag
       '@melandlabs/config':
         specifier: workspace:*
         version: link:../config
@@ -1011,6 +1014,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../ai
+      '@melandlabs/ai-rag':
+        specifier: workspace:*
+        version: link:../ai/rag
       '@melandlabs/config':
         specifier: workspace:*
         version: link:../config

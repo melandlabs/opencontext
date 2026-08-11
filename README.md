@@ -113,33 +113,24 @@ pnpm -r build
 
 ```bash
 # After `pnpm add -g @melandlabs/opencontext`, the bin is on PATH:
-opencontext http --host 127.0.0.1 --port 7421
+opencontext http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec \
+  --host 127.0.0.1 --port 7421
 # Or, without a global install, via npx:
-npx -y @melandlabs/opencontext http --host 127.0.0.1 --port 7421
+npx -y @melandlabs/opencontext http \
+  --embedding-provider local --memory-backend sqlite-vec
 curl http://127.0.0.1:7421/health
 ```
 
 ### 4. Wire the MCP server into Claude Desktop / Cursor
 
-Add to your `claude_desktop_config.json` (or Cursor → Settings → MCP):
-
-```json
-{
-	"mcpServers": {
-		"opencontext": {
-			"command": "npx",
-			"args": ["-y", "@melandlabs/opencontext", "mcp"],
-			"env": {
-				"DATABASE_URL": "postgres://user:pass@host:5432/opencontext"
-			}
-		}
-	}
-}
+```bash
+opencontext mcp \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
 ```
 
-Four tools become available inside the editor: `memory.health`,
-`memory.searchUnified`, `memory.writeRawMessage`,
-`memory.getRawMessage`.
 
 ## Examples
 
@@ -187,8 +178,7 @@ packages for as-of recall.
 
 `@melandlabs/opencontext` exposes the same operations over
 stdio — usable from Claude Desktop, Cursor, Claude Code, Codex CLI,
-or any MCP-capable agent runtime. The CLI entry point is
-`opencontext` (subcommand `mcp` is the default).
+or any MCP-capable agent runtime.
 
 ### Cross-source search
 

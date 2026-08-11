@@ -989,7 +989,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 
 		if (this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length)) {
 			const results = this.searchMessagesWithVectorTable(input);
-			console.log("[SQLite Raw Messages] Semantic search completed", {
+			console.error("[SQLite Raw Messages] Semantic search completed", {
 				backend: "sqlite-vec",
 				dimensions: input.queryEmbedding.length,
 				count: results.length,
