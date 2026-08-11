@@ -144,33 +144,6 @@ export const CLAUDE_CONFIG_SCHEMA = {
 };
 
 /**
- * JSON Schema for Codex agent configuration
- */
-export const CODEX_CONFIG_SCHEMA = {
-	type: "object",
-	properties: {
-		apiKey: {
-			type: "string",
-			description: "OpenAI API key",
-		},
-		codexPath: {
-			type: "string",
-			description: "Path to codex CLI executable",
-		},
-		model: {
-			type: "string",
-			default: "gpt-4",
-			description: "OpenAI model to use",
-		},
-		workDir: {
-			type: "string",
-			default: DEFAULT_WORK_DIR,
-			description: "Working directory for file operations",
-		},
-	},
-};
-
-/**
  * JSON Schema for DeepAgents configuration
  */
 export const DEEPAGENTS_CONFIG_SCHEMA = {
@@ -240,24 +213,6 @@ export const CLAUDE_METADATA: AgentProviderMetadata = {
 	],
 	defaultModel: "claude-sonnet-4-20250514",
 	tags: ["anthropic", "claude", "planning", "streaming"],
-};
-
-/**
- * Metadata for built-in Codex agent
- */
-export const CODEX_METADATA: AgentProviderMetadata = {
-	type: "codex",
-	name: "Codex CLI",
-	version: "1.0.0",
-	description: "OpenAI Codex CLI integration. Uses OpenAI models through the codex command-line tool.",
-	configSchema: CODEX_CONFIG_SCHEMA,
-	builtin: true,
-	supportsPlan: true,
-	supportsStreaming: true,
-	supportsSandbox: true,
-	supportedModels: ["gpt-5.4", "gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
-	defaultModel: "gpt-5.4",
-	tags: ["openai", "codex", "cli"],
 };
 
 /**

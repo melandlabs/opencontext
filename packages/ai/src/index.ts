@@ -2,69 +2,93 @@ export * from "./types";
 export * from "./memory/index";
 export * from "./audio";
 
-// Agent modules (selective exports to avoid duplicate type conflicts)
+// Agent barrel — re-exports the full `@melandlabs/ai/agent` surface (types,
+// base class, registry, runtime, defineAgentPlugin, StandaloneAgent, etc.).
+// Billing / compaction / context / model / routing / utils are intentionally
+// NOT re-exported from the agent barrel itself (see the comment in
+// `./agent/index.ts`) to avoid duplicate identifiers. Each of them is
+// re-imported below from its canonical submodule so existing consumers
+// keep their import paths from `@melandlabs/ai`.
+export * from "./agent/index";
+
+// Billing (tokens, pricing)
 export {
-	estimateTokens,
-	getInputCredits,
-	getOutputCredits,
-	getTotalCredits,
 	INPUT_TOKENS_PER_CREDIT,
 	OUTPUT_TOKENS_PER_CREDIT,
 	MODEL_PRICING,
-	getModelPricing,
-	getModelMultiplier,
 	CREDIT_VALUE_USD,
 	calculateImageCredits,
-	getImageModelPricing,
-	IMAGE_MODEL_PRICING,
-	getCanonicalImageModel,
 	calculateInputCredits,
 	calculateOutputCredits,
 	calculateTotalCredits,
-	AUDIO_MODEL_PRICING,
 	calculateTranscriptionCredits,
 	calculateTTSCredits,
+	estimateTokens,
 	getAudioModelPricing,
-	COMPACTION_SOFT_RATIO,
-	COMPACTION_HARD_RATIO,
+	getCanonicalImageModel,
+	getImageModelPricing,
+	getInputCredits,
+	getModelMultiplier,
+	getModelPricing,
+	getOutputCredits,
+	getTotalCredits,
+} from "./agent/billing";
+export type { ModelType } from "./agent/billing";
+
+// Compaction
+export {
 	COMPACTION_EMERGENCY_RATIO,
+	COMPACTION_HARD_RATIO,
 	COMPACTION_MODEL,
+	COMPACTION_SOFT_RATIO,
 	buildCompactionPrompt,
 	triggerCompaction,
 	triggerCompactionAsync,
-	prepareConversationWindows,
+} from "./agent/compaction";
+export type {
+	CompactionLevel,
+	CompactionOptions,
+	CompactionPlatform,
+	CompactionResponse,
+	CompactionResult,
+} from "./agent/compaction";
+
+// Context (conversation windows)
+export {
+	DEFAULT_CONVERSATION_WINDOW_CONFIG,
 	estimateConversationTokens,
 	getConversationBucket,
-	DEFAULT_CONVERSATION_WINDOW_CONFIG,
-	getModel,
-	getVLMModel,
-	createDynamicModel,
-	getModelProvider,
-	setAIUserContext,
+	prepareConversationWindows,
+} from "./agent/context";
+export type {
+	ConversationWindowBucket,
+	ConversationWindowBucketStats,
+	ConversationWindowConfig,
+	ConversationWindowMessage,
+	ConversationWindowResult,
+	ConversationWindowRole,
+	TokenizedConversationWindowMessage,
+} from "./agent/context";
+
+// Model providers
+export {
 	clearAIUserContext,
+	createDynamicModel,
 	getAIUserContext,
-	routeModelCall,
+	getModel,
+	getModelProvider,
+	getVLMModel,
+	setAIUserContext,
+} from "./agent/model";
+export type { AIUserContext, UserType } from "./agent/model";
+
+// Routing
+export {
 	checkCloudAIAvailability,
 	getRecommendedMode,
-	extractJsonFromMarkdown,
-} from "./agent";
+	routeModelCall,
+} from "./agent/routing";
+export type { ModelCallOptions, ModelCallResult } from "./agent/routing";
 
-export type {
-	ModelType,
-	CompactionLevel,
-	CompactionPlatform,
-	CompactionResult,
-	CompactionOptions,
-	CompactionResponse,
-	ConversationWindowMessage,
-	ConversationWindowConfig,
-	ConversationWindowBucket,
-	ConversationWindowResult,
-	TokenizedConversationWindowMessage,
-	ConversationWindowBucketStats,
-	ConversationWindowRole,
-	AIUserContext,
-	UserType,
-	ModelCallOptions,
-	ModelCallResult,
-} from "./agent";
+// Utils
+export { extractJsonFromMarkdown } from "./agent/utils";

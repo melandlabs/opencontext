@@ -64,10 +64,8 @@ export {
 export {
 	defineAgentPlugin,
 	CLAUDE_CONFIG_SCHEMA,
-	CODEX_CONFIG_SCHEMA,
 	DEEPAGENTS_CONFIG_SCHEMA,
 	CLAUDE_METADATA,
-	CODEX_METADATA,
 	DEEPAGENTS_METADATA,
 	STANDALONE_METADATA,
 	DEFAULT_AGENT_MODEL,
@@ -75,6 +73,29 @@ export {
 	type AgentPlugin,
 	type AgentProviderMetadata,
 } from "./plugin";
+
+// Per-provider metadata + JSON Schemas. The Codex/Hermes/OpenClaw/OpenCode
+// metadata constants live next to their concrete agent classes
+// (`./providers/<name>/metadata.ts`) so the schemas can describe the
+// provider-specific config knobs (e.g. codex sandbox modes, openclaw
+// gateway options). Claude/DeepAgents/Standalone remain on `./plugin`
+// above for historical reasons.
+export {
+	CODEX_CONFIG_SCHEMA,
+	CODEX_METADATA,
+} from "./providers/codex/metadata";
+export {
+	HERMES_CONFIG_SCHEMA,
+	HERMES_METADATA,
+} from "./providers/hermes/metadata";
+export {
+	OPENCLAW_CONFIG_SCHEMA,
+	OPENCLAW_METADATA,
+} from "./providers/openclaw/metadata";
+export {
+	OPENCODE_CONFIG_SCHEMA,
+	OPENCODE_METADATA,
+} from "./providers/opencode/metadata";
 
 // Base agent
 export {
@@ -152,6 +173,22 @@ export {
 	StandaloneAgent,
 	standaloneAgentPlugin,
 } from "./providers/standalone";
+export {
+	CodexAgent,
+	codexAgentPlugin,
+} from "./providers/codex";
+export {
+	HermesAgent,
+	hermesAgentPlugin,
+} from "./providers/hermes";
+export {
+	OpenClawAgent,
+	openclawAgentPlugin,
+} from "./providers/openclaw";
+export {
+	OpenCodeAgent,
+	opencodeAgentPlugin,
+} from "./providers/opencode";
 
 // Language directive (ports + default adapter)
 export type {

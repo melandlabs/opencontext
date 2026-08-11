@@ -354,7 +354,15 @@ export interface PlanStep {
 // Agent Configuration
 // ============================================================================
 
-export type BuiltinAgentProvider = "claude" | "codex" | "deepagents" | "standalone" | "custom";
+export type BuiltinAgentProvider =
+	| "claude"
+	| "codex"
+	| "deepagents"
+	| "hermes"
+	| "openclaw"
+	| "opencode"
+	| "standalone"
+	| "custom";
 export type AgentProvider = BuiltinAgentProvider | (string & {});
 
 export interface AgentConfig {
