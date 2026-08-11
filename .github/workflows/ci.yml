@@ -163,7 +163,11 @@ jobs:
 
       - name: Install published packages
         working-directory: examples
-        run: pnpm install --registry=https://registry.npmjs.org
+        # `--ignore-workspace` drops the surrounding pnpm-workspace.yaml
+        # context so pnpm actually pulls every @melandlabs/* from
+        # npmjs.org instead of symlinking to the monorepo's source
+        # trees (whose `dist/` doesn't exist on a fresh checkout).
+        run: pnpm install --ignore-workspace --registry=https://registry.npmjs.org
 
       - name: Run smoke tests
         working-directory: examples

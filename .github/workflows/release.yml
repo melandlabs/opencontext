@@ -92,5 +92,11 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
         run: |
-          pnpm install --registry=https://registry.npmjs.org
+          # `--ignore-workspace` drops the surrounding pnpm-workspace.yaml
+          # context so pnpm actually pulls every @melandlabs/* from
+          # npmjs.org. Without it, pnpm links to the monorepo's
+          # `packages/*` source trees (whose `dist/` was never built in
+          # this job) and every example fails with ERR_MODULE_NOT_FOUND
+          # against an empty dist.
+          pnpm install --ignore-workspace --registry=https://registry.npmjs.org
           pnpm test
