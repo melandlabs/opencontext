@@ -1,5 +1,37 @@
 # @melandlabs/rag
 
+## 0.1.5
+
+### Patch Changes
+
+- 0.1.5 — repair `SQLiteVecStore.addChunk` write path
+
+  Three latent bugs in `SQLiteVecStore` made every `addChunk` call throw:
+
+  1. **Lazy Drizzle init was never awaited.** The constructor scheduled
+     `initDrizzle(schemaModule)` as a floating Promise, then `addChunk`
+     used `this.drizzleDb` synchronously. The first `addChunk` call
+     crashed with `Cannot read properties of undefined (reading 'insert')`
+     and any later call raced against the still-pending import. The
+     constructor now stores the init Promise on `this.drizzleReady` and
+     every async write path `await`s `this.ensureDrizzle()` first.
+
+  2. **`addChunk` inserted into `{}`.** The Drizzle call was
+     `this.drizzleDb.insert({} as any)`, which passes an empty object
+     where Drizzle expects a column proxy and crashes on `.values(...)`.
+     It now resolves `this.schemaModule.ragChunks` — the host's actual
+     `rag_chunks` Drizzle table — which the constructor stashes on
+     `this.schemaModule`.
+
+  3. **`ON CONFLICT(chunk_id) DO UPDATE` on `vec0` is not supported.**
+     sqlite-vec's vec0 virtual tables don't ship an UPSERT, so the
+     previous `addChunk` would throw `SqliteError: UPSERT not implemented
+for virtual table "rag_chunks_vec"` on a chunk that was already
+     written. We now `DELETE WHERE chunk_id = ?` (no-op on first insert)
+     and then plain `INSERT`. The vector index is rebuilt from the
+     deleted row + new row, which is the supported way to re-write a
+     chunk_id in vec0.
+
 ## 0.1.4
 
 ### Patch Changes

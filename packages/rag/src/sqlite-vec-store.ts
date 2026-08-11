@@ -55,6 +55,13 @@ export class SQLiteVecStore {
 	private drizzleDb: any; // Drizzle instance
 	private vecTableName: string;
 	private initialized = false;
+	// Hold onto the host's schema module so async write paths can insert
+	// through real Drizzle tables instead of stubbing `{}`. Also keep the
+	// lazy-init Promise so callers can `await ensureDrizzle()` before they
+	// touch `this.drizzleDb`. Storing the Promise is what makes the
+	// constructor safe even though `initDrizzle` is itself `async`.
+	private schemaModule: SchemaModule;
+	private drizzleReady: Promise<void> | null = null;
 
 	constructor(dbPath: string, schemaModule: SchemaModule) {
 		// Open database connection
@@ -72,9 +79,15 @@ export class SQLiteVecStore {
 			throw error;
 		}
 
-		// Lazy-init Drizzle to avoid import cycle
-		// eslint-disable-next-line @typescript-eslint/no-floating-promises
-		this.initDrizzle(schemaModule);
+		// Stash the schema module for later methods (similaritySearch,
+		// deleteDocument, etc.) so we don't have to fish it out of `this`.
+		this.schemaModule = schemaModule;
+		(this as any)._schemaModule = schemaModule;
+
+		// Kick off the lazy Drizzle init; keep the Promise so write paths
+		// can `await` it. The constructor itself stays synchronous, which
+		// matches the public type signature `new SQLiteVecStore(...)`.
+		this.drizzleReady = this.initDrizzle(schemaModule);
 
 		// User-specific vector table name (using a common name)
 		this.vecTableName = "rag_chunks_vec";
@@ -86,6 +99,19 @@ export class SQLiteVecStore {
 	private async initDrizzle(schemaModule: SchemaModule): Promise<void> {
 		const { drizzle } = await import("drizzle-orm/better-sqlite3");
 		this.drizzleDb = drizzle(this.db, { schema: schemaModule as any });
+	}
+
+	/**
+	 * Wait for the lazily-initialised Drizzle handle to be ready. The
+	 * constructor schedules `initDrizzle` without awaiting it (to keep
+	 * the constructor synchronous); every public method that touches
+	 * `this.drizzleDb` must call this first.
+	 */
+	private async ensureDrizzle(): Promise<void> {
+		if (this.drizzleReady) {
+			await this.drizzleReady;
+			this.drizzleReady = null;
+		}
 	}
 
 	/**
@@ -128,7 +154,14 @@ export class SQLiteVecStore {
 	 */
 	async addChunk(chunk: DocumentChunk): Promise<void> {
 		try {
-			// 1. First insert into rag_chunks table
+			// Wait for the lazy Drizzle init kicked off by the constructor
+			// before we touch `this.drizzleDb`.
+			await this.ensureDrizzle();
+
+			// 1. First insert into rag_chunks table.
+			// Resolve the table from the host's schema module — using `{}`
+			// here crashes with `Cannot read properties of undefined
+			// (reading 'insert')` once Drizzle actually inspects the target.
 			const chunkData: Record<string, unknown> = {
 				id: chunk.id,
 				documentId: chunk.documentId,
@@ -140,16 +173,18 @@ export class SQLiteVecStore {
 			};
 
 			await this.drizzleDb
-				.insert({} as any) // schema resolved at runtime
+				.insert(this.schemaModule.ragChunks as any)
 				.values(chunkData)
 				.onConflictDoNothing();
 
-			// 2. Insert vector into vec0 table
-			const vecStmt = this.db.prepare(`
-        INSERT INTO ${this.vecTableName} (embedding, chunk_id)
-        VALUES (?, ?)
-        ON CONFLICT(chunk_id) DO UPDATE SET embedding = excluded.embedding
-      `);
+			// 2. Insert vector into vec0 table.
+			// vec0 virtual tables don't support `ON CONFLICT … DO UPDATE`
+			// (sqlite-vec only ships a subset of upsert), so for re-writes
+			// we delete any existing row for the same chunk_id first and
+			// then insert afresh. On first insert the DELETE matches zero
+			// rows, so this is a no-op write path.
+			this.db.prepare(`DELETE FROM ${this.vecTableName} WHERE chunk_id = ?`).run(chunk.id);
+			const vecStmt = this.db.prepare(`INSERT INTO ${this.vecTableName} (embedding, chunk_id) VALUES (?, ?)`);
 
 			// Convert embedding array to the format required by sqlite-vec
 			const embeddingBytes = this.floatArrayToBytes(chunk.embedding);
@@ -404,9 +439,10 @@ let vectorStoreInstance: SQLiteVecStore | null = null;
 
 export async function getSQLiteVecStore(dbPath: string, schemaModule: SchemaModule): Promise<SQLiteVecStore> {
 	if (!vectorStoreInstance) {
+		// The constructor stores `schemaModule` on `this.schemaModule`
+		// (and the legacy `_schemaModule` alias used by similaritySearch,
+		// deleteDocument, etc.), so no extra wiring is needed here.
 		vectorStoreInstance = new SQLiteVecStore(dbPath, schemaModule);
-		// Attach schema module for use in methods
-		(vectorStoreInstance as any)._schemaModule = schemaModule;
 	}
 	return vectorStoreInstance;
 }

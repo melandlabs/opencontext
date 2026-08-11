@@ -11,6 +11,7 @@
 	},
 	"dependencies": {
 		"@melandlabs/ai": "^0.2.0",
+		"drizzle-orm": "^0.44.7",
 		"@melandlabs/ai-rag": "^0.1.4",
 		"@melandlabs/api": "^0.1.4",
 		"@melandlabs/audit": "^0.1.4",

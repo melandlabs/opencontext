@@ -91,6 +91,18 @@ jobs:
         working-directory: examples
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          # Optional secrets — when set, the corresponding demos
+          # exercise live calls instead of skipping:
+          #   - demo/search    → BRAVE_SEARCH_API_KEY   (Brave web search)
+          #   - demo/ai-agent  → ANTHROPIC_API_KEY     (preferred),
+          #                      with fallbacks OPENAI_API_KEY /
+          #                      OPENROUTER_API_KEY.
+          # If a secret isn't configured on the repo, the matching
+          # demo still SKIPs cleanly (the demos short-circuit on
+          # `process.env.<KEY>`), so it's safe to add them later
+          # without touching this workflow again.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BRAVE_SEARCH_API_KEY: ${{ secrets.BRAVE_SEARCH_API_KEY }}
         run: |
           # `--ignore-workspace` drops the surrounding pnpm-workspace.yaml
           # context so pnpm actually pulls every @melandlabs/* from
