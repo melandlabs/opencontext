@@ -151,3 +151,7 @@ packages/integrations/*/dist/
 # themselves, but a crashed run can leave these behind
 examples/.tmp/
 examples/data/
+# examples/ is private; its lockfile is regenerated on every smoke-test
+# `pnpm install --ignore-workspace` run. Tracking it leads to stale
+# lockfiles that conflict with the just-bumped manifest specifiers.
+examples/pnpm-lock.yaml
