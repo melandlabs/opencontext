@@ -103,6 +103,21 @@ export default async function demoMcpServer() {
 
 			const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+			// Poll until the response for `id` lands instead of sleeping a fixed
+			// amount. The daemon's boot cost varies wildly across runners — a
+			// cold macOS CI box needs well over a second just to load the
+			// bundle, and the first `embedOnInsert` lazily pulls ~30 MB of ONNX
+			// weights. Fixed sleeps turned that variance into flaky failures.
+			const waitForId = async (id: number, timeoutMs: number) => {
+				const deadline = Date.now() + timeoutMs;
+				while (Date.now() < deadline) {
+					const found = findById(id);
+					if (found) return found;
+					await wait(50);
+				}
+				return undefined;
+			};
+
 			try {
 				// 1. initialize — handshake; expects our --name/--version back.
 				send({
@@ -115,7 +130,7 @@ export default async function demoMcpServer() {
 						clientInfo: { name: "demo", version: "0.0.1" },
 					},
 				});
-				await wait(800);
+				await waitForId(1, 30_000);
 
 				const init = findById(1) as
 					| { result: { serverInfo: { name: string; version: string }; protocolVersion: string } }
@@ -129,7 +144,7 @@ export default async function demoMcpServer() {
 				// 2. initialized notification + tools/list
 				send({ jsonrpc: "2.0", method: "notifications/initialized", params: {} });
 				send({ jsonrpc: "2.0", id: 2, method: "tools/list" });
-				await wait(400);
+				await waitForId(2, 30_000);
 
 				const tools = findById(2) as { result: { tools: Array<{ name: string }> } } | undefined;
 				const toolNames = new Set(tools?.result?.tools.map((t) => t.name) ?? []);
@@ -174,8 +189,8 @@ export default async function demoMcpServer() {
 				});
 				// First `embedQuery` inside the daemon process lazily loads
 				// ~30 MB of ONNX weights from disk (or downloads them on a
-				// cold cache). Give it plenty of time before the second write.
-				await wait(8000);
+				// cold cache), so give this write a long ceiling.
+				await waitForId(3, 90_000);
 				send({
 					jsonrpc: "2.0",
 					id: 4,
@@ -185,7 +200,7 @@ export default async function demoMcpServer() {
 						arguments: { userId: "u-mcp-1", embedOnInsert: true, message: msg2 },
 					},
 				});
-				await wait(2000);
+				await waitForId(4, 90_000);
 
 				const write1 = findById(3) as { result?: unknown; error?: unknown } | undefined;
 				const write1Text = (write1?.result as { content?: Array<{ text?: string }> } | undefined)
@@ -236,7 +251,7 @@ export default async function demoMcpServer() {
 						arguments: { userId: "u-mcp-1", query: "outdoor activities and nature", limit: 5, threshold: 0 },
 					},
 				});
-				await wait(1500);
+				await waitForId(5, 60_000);
 
 				const search = findById(5) as { result: { content: Array<{ text: string }> } } | undefined;
 				const searchText = search?.result?.content?.[0]?.text;
@@ -294,7 +309,7 @@ export default async function demoMcpServer() {
 					method: "tools/call",
 					params: { name: "memory.getRawMessage", arguments: { userId: "u-mcp-1", messageId: "msg-mcp-1" } },
 				});
-				await wait(500);
+				await waitForId(6, 30_000);
 
 				const got = findById(6) as { result: { content: Array<{ text: string }> } } | undefined;
 				const gotText = got?.result?.content?.[0]?.text;
@@ -319,7 +334,7 @@ export default async function demoMcpServer() {
 					method: "tools/call",
 					params: { name: "memory.health", arguments: {} },
 				});
-				await wait(300);
+				await waitForId(7, 30_000);
 				const health = findById(7) as { result: { content: Array<{ text: string }> } } | undefined;
 				const healthText = health?.result?.content?.[0]?.text;
 				let healthParsed: { ok?: boolean } | undefined;
