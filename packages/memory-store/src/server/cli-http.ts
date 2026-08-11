@@ -30,7 +30,7 @@
 
 import type { UnifiedSearchDeps } from "../config";
 import { startHttpServer } from "../http";
-import { parseUnifiedArgs, buildUnified, printUnifiedHelp, type UnifiedArgs } from "./cli-shared";
+import { type UnifiedArgs, buildUnified, parseUnifiedArgs, printUnifiedHelp } from "./cli-shared";
 
 interface HttpArgs extends UnifiedArgs {
 	port: number;

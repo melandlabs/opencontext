@@ -29,8 +29,8 @@
  * canonical copy of the runtime code.
  */
 
-import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
+import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { createRawMessageStore } from "@melandlabs/memory-store";
 import { startHttpServer, startMcpServer } from "../index.js";
 
@@ -185,6 +185,7 @@ function parseHttpArgs(argv: string[]): HttpArgs {
 			case "-h":
 				printHttpHelp();
 				process.exit(0);
+				break;
 			default:
 				applyUnifiedFlag(args, arg, takeValue, logPrefix);
 		}
@@ -223,6 +224,7 @@ function parseMcpArgs(argv: string[]): McpArgs {
 			case "-h":
 				printMcpHelp();
 				process.exit(0);
+				break;
 			default:
 				applyUnifiedFlag(args, arg, takeValue, logPrefix);
 		}

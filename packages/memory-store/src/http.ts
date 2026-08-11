@@ -33,10 +33,10 @@
  */
 
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
 import type { RawMessage } from "@melandlabs/indexeddb/storage";
-import type { MemoryStoreConfig } from "./index";
+import { Hono } from "hono";
 import type { UnifiedSearchDeps } from "./config";
+import type { MemoryStoreConfig } from "./index";
 import { createUnifiedSearch } from "./search/unified-search";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
 import { createRawMessageStore } from "./storage/raw-message-store";

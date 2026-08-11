@@ -15,11 +15,11 @@
  *   await startMcpServer({ db: { getDb } });
  */
 
+import type { RawMessage } from "@melandlabs/indexeddb/storage";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
-import type { RawMessage } from "@melandlabs/indexeddb/storage";
 import type { UnifiedSearchDeps } from "./config";
 import type { MemoryStoreConfig } from "./index";
 import { createUnifiedSearch } from "./search/unified-search";

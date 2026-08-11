@@ -17,7 +17,7 @@
 
 import type { UnifiedSearchDeps } from "../config";
 import { createRawMessageStore } from "../storage/raw-message-store";
-import { searchInsightsWithSQLiteVec, isInsightSQLiteVecEnabled } from "../storage/sqlite-vector-index";
+import { isInsightSQLiteVecEnabled, searchInsightsWithSQLiteVec } from "../storage/sqlite-vector-index";
 
 export interface UnifiedArgs {
 	embeddingProvider: "local" | "openrouter" | "none";
@@ -63,8 +63,7 @@ async function loadAiRag(): Promise<AiRagModules> {
 		};
 	} catch (error) {
 		throw new Error(
-			`--embedding-provider local / --*-backend=chroma require @melandlabs/ai-rag to be installed. ` +
-				`Run \`pnpm add @melandlabs/ai-rag\` and try again. (${(error as Error).message})`,
+			`--embedding-provider local / --*-backend=chroma require @melandlabs/ai-rag to be installed. Run \`pnpm add @melandlabs/ai-rag\` and try again. (${(error as Error).message})`,
 		);
 	}
 }
