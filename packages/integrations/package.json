@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/integrations",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -26,7 +30,13 @@
 	},
 	"license": "Apache-2.0",
 	"description": "Unified package for opencontext integration packages. Re-exports shared core interfaces, contacts utilities, and content utilities. Install each integration (e.g. @melandlabs/integrations-telegram) separately.",
-	"keywords": ["opencontext", "integrations", "core", "contacts", "utils"],
+	"keywords": [
+		"opencontext",
+		"integrations",
+		"core",
+		"contacts",
+		"utils"
+	],
 	"scripts": {
 		"build": "tsup",
 		"typecheck": "tsc --noEmit",
