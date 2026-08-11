@@ -72,7 +72,9 @@
 		"prepublishOnly": "pnpm build",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"exports": {
 		".": "./dist/index.js"

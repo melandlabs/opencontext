@@ -2,7 +2,11 @@
 	"name": "@melandlabs/security",
 	"version": "0.1.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -25,7 +29,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · security module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"fernet": "^0.4.0"
 	},
@@ -39,6 +45,8 @@
 		"prepublishOnly": "pnpm build",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	}
 }
