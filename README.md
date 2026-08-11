@@ -66,23 +66,38 @@ pnpm add @melandlabs/opencontext
 A 30-second example of the memory API:
 
 ```ts
-import { createMemoryStore } from "@melandlabs/opencontext";
+import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
 
-const store = await createMemoryStore({
-	db: { type: "sqlite-vec", path: "./memory.db" },
-	vector: { provider: "openai", model: "text-embedding-3-small" },
-});
+// The store defaults to SQLite at MEMORY_STORE_DB_PATH (./memory.db by
+// default). Each call returns an awaitable handle.
+const store = await createMemoryStore();
+const messages = await getRawMessageManager();
 
-await store.raw.remember({
-	content: "User prefers dark mode in all tools",
-	scope: "user:42",
-});
+// A message is one fact: a single piece of content attributed to a user.
+// `messageId` makes the call idempotent across re-ingest.
+const now = Date.now();
+await messages.storeMessages([
+	{
+		messageId: "msg-1",
+		userId: "u-42",
+		content: "User prefers dark mode in all tools",
+		platform: "test",
+		botId: "bot-1",
+		timestamp: now,
+		createdAt: now,
+	},
+]);
 
-const hits = await store.searchRawMemorySemantically({
-	query: "What does the user prefer?",
+// Unified search fans out to memory + insights + knowledge. Sources you
+// haven't wired up just emit a warning — fine for a single-backend deploy.
+const hits = await store.searchUnifiedMemory({
 	userId: "u-42",
+	query: "What does the user prefer?",
 	limit: 5,
 });
+// hits.count    — number of results
+// hits.sources  — which sub-indexes were actually consulted
+// hits.warnings — per-source degradation (e.g. missing embedder)
 ```
 
 ### 2. Build this monorepo from source
@@ -144,33 +159,29 @@ See [`examples/README.md`](./examples/README.md) for the full walkthrough.
 
 ### The memory API
 
-`@melandlabs/opencontext` exposes one factory and four verbs. The
-verbs are the minimum set that covers the full lifecycle of a fact —
-everything else is implementation. See
+`@melandlabs/opencontext` exposes two factory calls plus a small,
+flat search surface. Writes go through the raw-message manager and
+remain idempotent on `messageId`; reads fan out to memory + insights +
+knowledge and degrade gracefully when a source is unconfigured. See
 [`packages/memory-store/README.md`](./packages/memory-store/README.md)
 for the full configuration matrix and recipes.
 
-| Verb       | Use it for                                                                                                  |
-| ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `remember` | Ingest and re-ingest. Idempotent on `(scope, content-hash)`.                                                |
-| `recall`   | Unified search across semantic, lexical, graph, and recency sub-queries.                                    |
-| `improve`  | Append a supersession / contradiction / merge edge. The original node is never hard-deleted.                |
-| `forget`   | Soft-delete via `valid_until = now`. GDPR right-to-erasure is handled by an out-of-band compliance process. |
+| Symbol                            | Use it for                                                                              |
+| --------------------------------- | --------------------------------------------------------------------------------------- |
+| `createMemoryStore(config?)`      | Boot the store. Returns `{ raw, search, getRawMessageManager, searchUnifiedMemory, … }`. |
+| `getRawMessageManager()`          | Resolve the active raw-message manager (SQLite by default, Postgres when registered).   |
+| `manager.storeMessages(messages)` | Ingest facts. Idempotent on `messageId`. Each row carries the full `RawMessage` shape. |
+| `store.searchUnifiedMemory(opts)` | Unified search across memory + insights + knowledge; unconfigured sources emit warnings. |
 
 ### Temporal queries (time travel)
 
-Every node in the context graph has `valid_from` and `valid_until`
-fields. A recall can ask for facts as-of a particular timestamp by
-filtering `valid_from ≤ t < valid_until` — useful for "what did the
-user believe last Tuesday?" or "which preference is current?".
-
-```ts
-const asOf = await store.recall({
-	query: "user's preferred working hours",
-	scope: "user:42",
-	asOf: new Date("2026-08-01"),
-});
-```
+Every fact in the underlying context graph carries `valid_from` and
+`valid_until`, so an as-of query is "the facts whose validity
+interval covered `t`". The unified search API does not expose
+point-in-time filtering directly — temporal access lives one layer
+deeper, in `@melandlabs/ai/memory-consolidation` (`graph-aware-query`)
+and `@melandlabs/indexeddb/memory-graph-evolution`. See those
+packages for as-of recall.
 
 ### MCP server
 

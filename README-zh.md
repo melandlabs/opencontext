@@ -52,36 +52,44 @@
 ### 1. 把运行时嵌入到自己的应用
 
 ```bash
-pnpm add @melandlabs/opencontext @melandlabs/opencontext
+pnpm add @melandlabs/opencontext
 ```
 
-四动词 API 的 30 秒示例:
+记忆 API 的 30 秒示例:
 
 ```ts
-import { createMemoryStore } from "@melandlabs/opencontext";
+import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
 
-const store = createMemoryStore({
-	db: { type: "sqlite-vec", path: "./memory.db" },
-	vector: { provider: "openai", model: "text-embedding-3-small" },
-});
+// 存储默认走 SQLite，路径由 MEMORY_STORE_DB_PATH 决定（默认 ./memory.db）。
+// 每次调用都会返回 awaitable 句柄。
+const store = await createMemoryStore();
+const messages = await getRawMessageManager();
 
-await store.remember({
-	content: "User prefers dark mode in all tools",
-	scope: "user:42",
-});
+// 一条消息就是一条事实：归属于某个用户的单段内容。
+// `messageId` 让重复摄取天然幂等。
+const now = Date.now();
+await messages.storeMessages([
+	{
+		messageId: "msg-1",
+		userId: "u-42",
+		content: "User prefers dark mode in all tools",
+		platform: "test",
+		botId: "bot-1",
+		timestamp: now,
+		createdAt: now,
+	},
+]);
 
-const hits = await store.recall({
+// 统一搜索会向 memory + insights + knowledge 三个来源扇出。
+// 未配置的来源只会发一条 warning —— 单后端部署完全没问题。
+const hits = await store.searchUnifiedMemory({
+	userId: "u-42",
 	query: "What does the user prefer?",
-	topK: 5,
+	limit: 5,
 });
-
-await store.improve({
-	target: hits[0].id,
-	kind: "supersedes",
-	evidence: "User toggled to light mode in settings on 2026-08-10",
-});
-
-await store.forget({ id: hits[0].id, reason: "superseded" });
+// hits.count    — 结果条数
+// hits.sources  — 真正被查询过的子索引
+// hits.warnings — 各来源的降级信息（例如缺少 embedder）
 ```
 
 ### 2. 从源码构建本 monorepo
@@ -140,28 +148,20 @@ pnpm test
 
 ## 常用使用模式
 
-### 四动词 API
+### 记忆 API
 
-`@melandlabs/opencontext` 暴露一个工厂函数与四个动词。这些动词是覆盖事实完整生命周期所需的最小集合 —— 其他一切都是实现细节。完整的配置矩阵与示例见 [`packages/memory-store/README.md`](./packages/memory-store/README.md)。
+`@melandlabs/opencontext` 暴露两个工厂调用加上一个扁平、小巧的搜索面。写入走 raw message manager,并天然按 `messageId` 幂等；读取会向 memory + insights + knowledge 扇出,未配置的来源优雅降级。完整的配置矩阵与示例见 [`packages/memory-store/README.md`](./packages/memory-store/README.md)。
 
-| 动词       | 用途                                                                                          |
-| ---------- | --------------------------------------------------------------------------------------------- |
-| `remember` | 摄取与重新摄取。在 `(scope, content-hash)` 上幂等。                                           |
-| `recall`   | 在语义、词法、图结构与时间近因子查询之上的统一搜索。                                          |
-| `improve`  | 追加 supersession / contradiction / merge 边。原节点永远不会被硬删除。                        |
-| `forget`   | 通过 `valid_until = now` 进行软删除。GDPR 的被遗忘权由一个带外(out-of-band)合规流程负责处理。 |
+| 符号                              | 用途                                                                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `createMemoryStore(config?)`      | 引导存储。返回 `{ raw, search, getRawMessageManager, searchUnifiedMemory, … }`。                  |
+| `getRawMessageManager()`          | 拿到当前生效的 raw message manager（默认 SQLite，注册后端后切换 Postgres）。                       |
+| `manager.storeMessages(messages)` | 摄取事实。按 `messageId` 幂等。每行承载完整的 `RawMessage` 形态。                                |
+| `store.searchUnifiedMemory(opts)` | 在 memory + insights + knowledge 上的统一搜索,未配置的来源只发 warning。                          |
 
 ### 时序查询(时间旅行)
 
-上下文图中每个节点都有 `valid_from` 与 `valid_until` 字段。一次 recall 可以通过过滤 `valid_from ≤ t < valid_until` 来查询某个时间点的事实 —— 非常适合"用户上周二相信的是什么?"或"当前生效的偏好是哪条?"这类问题。
-
-```ts
-const asOf = await store.recall({
-	query: "user's preferred working hours",
-	scope: "user:42",
-	asOf: new Date("2026-08-01"),
-});
-```
+上下文图中每条事实都带 `valid_from` 与 `valid_until`,因此某个时间点的查询等价于"其有效区间覆盖了 `t` 的事实"。统一搜索 API 本身并未直接暴露时间点过滤 —— 时序访问住在更下一层,在 `@melandlabs/ai/memory-consolidation`(`graph-aware-query`)与 `@melandlabs/indexeddb/memory-graph-evolution` 里。as-of 查询请直接参考这两个包。
 
 ### MCP server
 
@@ -172,7 +172,7 @@ const asOf = await store.recall({
 `createUnifiedSearch(deps)` 允许你为每个来源独立接入搜索器。你省略的来源只会打印一条 warning —— 对只读部署或单后端栈来说完全没问题:
 
 ```ts
-import { createUnifiedSearch } from "@melandlabs/opencontext/unified-search";
+import { createUnifiedSearch } from "@melandlabs/opencontext";
 
 const search = createUnifiedSearch({
 	embedQuery: myEmbedder.embedQuery,
@@ -195,7 +195,7 @@ const { results, warnings } = await search.searchUnifiedMemory({
 
 | 关注点     | 后端                                                                                 |
 | ---------- | ------------------------------------------------------------------------------------ |
-| Raw 消息   | SQLite-vec(Tauri / 桌面)、Postgres(服务端 / daemon)、IndexedDB(浏览器)               |
+| Raw 消息   | SQLite-vec(默认,本地文件)、Postgres(服务端 / daemon,通过工厂注册)、IndexedDB(浏览器) |
 | 向量索引   | SQLite-vec(默认)、pgvector、Chroma、IndexedDB                                        |
 | Embeddings | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地 |
 
