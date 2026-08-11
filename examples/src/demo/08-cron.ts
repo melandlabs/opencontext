@@ -55,9 +55,15 @@ export default async function demoCron() {
 		const futureRun = computeNextRun(future, NOW);
 		const pastRun = computeNextRun(past, NOW);
 		info("demo/cron", `once@future → ${futureRun?.toISOString()}, once@past → ${pastRun}`);
-		check("a future one-shot returns its scheduled time", futureRun?.toISOString() === "2026-03-02T09:30:00.000Z");
+		check(
+			"a future one-shot returns its scheduled time",
+			futureRun?.toISOString() === "2026-03-02T09:30:00.000Z",
+		);
 		check("an elapsed one-shot returns null — it will not run again", pastRun === null);
-		check("an unparseable one-shot date returns null", computeNextRun({ type: "once", at: "nonsense" }, NOW) === null);
+		check(
+			"an unparseable one-shot date returns null",
+			computeNextRun({ type: "once", at: "nonsense" }, NOW) === null,
+		);
 
 		// 4. Determinism: same inputs, same output.
 		check(

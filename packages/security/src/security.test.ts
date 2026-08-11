@@ -19,11 +19,7 @@ import { randomBytes } from "node:crypto";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-	TokenEncryption,
-	isTrustedStorageUrl,
-	validateUrlForSSRF,
-} from "./index.ts";
+import { TokenEncryption, isTrustedStorageUrl, validateUrlForSSRF } from "./index";
 
 const ORIGINAL_KEY = process.env.ENCRYPTION_KEY;
 
@@ -33,6 +29,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	// biome-ignore lint/performance/noDelete: assigning undefined would set ENCRYPTION_KEY to the string "undefined".
 	if (ORIGINAL_KEY === undefined) delete process.env.ENCRYPTION_KEY;
 	else process.env.ENCRYPTION_KEY = ORIGINAL_KEY;
 });

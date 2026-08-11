@@ -60,6 +60,7 @@ export interface MemoryStoreDb {
  * parameters on the public surface still type-check, but new code
  * should not need to construct a value of this type.
  */
+// biome-ignore lint/suspicious/noEmptyInterface: intentionally empty — kept as a named type so existing `env?: MemoryStoreEnv` params still type-check.
 export interface MemoryStoreEnv {}
 
 export type VectorBackend = "sqlite-vec" | "chroma";

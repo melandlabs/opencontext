@@ -44,7 +44,9 @@ export default async function demoRagChunk() {
 		);
 		check(
 			"positions are contiguous: each chunk starts where the previous ended",
-			chunks.every((c, i) => (i === 0 ? c.startPosition === 0 : c.startPosition === chunks[i - 1].endPosition)),
+			chunks.every((c, i) =>
+				i === 0 ? c.startPosition === 0 : c.startPosition === chunks[i - 1].endPosition,
+			),
 		);
 		check(
 			"endPosition - startPosition equals the chunk length",
@@ -61,7 +63,9 @@ export default async function demoRagChunk() {
 
 		// Overlap: consecutive chunks share trailing/leading text so a
 		// sentence on a boundary is never lost.
-		const overlapping = chunks.filter((c, i) => i > 0 && chunks[i - 1].content.includes(c.content.split("\n\n")[0]));
+		const overlapping = chunks.filter(
+			(c, i) => i > 0 && chunks[i - 1].content.includes(c.content.split("\n\n")[0]),
+		);
 		info("demo/rag-chunk", `${overlapping.length} of ${chunks.length - 1} boundaries carry overlap text`);
 		check("at least one boundary carries overlap from the previous chunk", overlapping.length >= 1);
 

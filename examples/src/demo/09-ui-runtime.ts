@@ -27,14 +27,8 @@ export default async function demoUiRuntime() {
 		check("isTauri() is false under plain Node", tauri === false);
 		check("isBrowser() is false under plain Node — there is no window", browser === false);
 		check("isClient() is false under plain Node", client === false);
-		check(
-			"isBrowser() is defined as 'a client that isn't Tauri'",
-			browser === (client && !tauri),
-		);
-		check(
-			"Tauri implies client: a Tauri webview is never detected without a window",
-			!tauri || client,
-		);
+		check("isBrowser() is defined as 'a client that isn't Tauri'", browser === (client && !tauri));
+		check("Tauri implies client: a Tauri webview is never detected without a window", !tauri || client);
 
 		// getPlatformKind() only distinguishes tauri from browser — there is
 		// no "server" member — so on Node it falls through to "browser" even
@@ -42,10 +36,7 @@ export default async function demoUiRuntime() {
 		// to tell SSR apart from a real browser.
 		info("demo/ui-runtime", `getPlatformKind() = ${JSON.stringify(kind)} (note: no "server" kind exists)`);
 		check("getPlatformKind() names the host", kind === "tauri" || kind === "browser", String(kind));
-		check(
-			"getPlatformKind() agrees with isTauri()",
-			(kind === "tauri") === tauri,
-		);
+		check("getPlatformKind() agrees with isTauri()", (kind === "tauri") === tauri);
 		check("no predicate threw on a `window`-less host", true);
 	});
 }

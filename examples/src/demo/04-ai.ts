@@ -39,7 +39,10 @@ export default async function demoAi() {
 		// 2. Look up what a model costs.
 		const model = "openai/gpt-5.5";
 		const pricing = getModelPricing(model);
-		info("demo/ai", `${model}: $${pricing.inputPricePerMillion}/M in, $${pricing.outputPricePerMillion}/M out`);
+		info(
+			"demo/ai",
+			`${model}: $${pricing.inputPricePerMillion}/M in, $${pricing.outputPricePerMillion}/M out`,
+		);
 		check(
 			`getModelPricing('${model}') returns a priced entry`,
 			pricing.inputPricePerMillion > 0 && pricing.outputPricePerMillion > 0,

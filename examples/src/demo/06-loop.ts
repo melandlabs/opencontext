@@ -89,7 +89,10 @@ export default async function demoLoop() {
 
 			info("demo/loop", `child LOOP_HOME redirected to ${out.home}`);
 			info("demo/loop", `defaults: enabled=${out.defaultEnabled}, intervalSec=${out.defaultInterval}`);
-			info("demo/loop", `after writePreferences: intervalSec=${out.afterInterval}, narrative=${out.afterNarrative}`);
+			info(
+				"demo/loop",
+				`after writePreferences: intervalSec=${out.afterInterval}, narrative=${out.afterNarrative}`,
+			);
 
 			check("the child's LOOP_HOME really moved into the scratch dir", out.home.startsWith(dir), out.home);
 			check("ensureDirs() created LOOP_HOME", out.homeExists === true);

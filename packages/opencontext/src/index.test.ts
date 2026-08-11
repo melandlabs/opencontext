@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import * as facade from "./index.ts";
+import * as facade from "./index";
 
 describe("@melandlabs/opencontext facade", () => {
 	it("re-exports the contracts package boundary guards", () => {
@@ -94,6 +94,9 @@ describe("@melandlabs/opencontext facade", () => {
 		// The facade uses contracts' canonical UserType and renames ai's to
 		// AIUserType to avoid duplicate-type conflicts in compiled bundles.
 		// If that discipline regresses, this test catches it.
-		expect(typeof facade.AIUserType).toBe("undefined"); // runtime guard
+		// `AIUserType` is a type-only re-export, so it must have no runtime
+		// binding on the namespace object. Read through an index signature —
+		// the property intentionally doesn't exist on the typed surface.
+		expect((facade as Record<string, unknown>).AIUserType).toBeUndefined();
 	});
 });

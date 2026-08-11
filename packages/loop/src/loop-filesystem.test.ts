@@ -24,7 +24,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { LOOP_HOME, LOOP_PATHS } from "./paths.ts";
+import { LOOP_HOME, LOOP_PATHS } from "./paths";
 
 const ORIGINAL_HOME = process.env.HOME;
 
@@ -33,6 +33,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	// biome-ignore lint/performance/noDelete: assigning undefined would set HOME to the string "undefined".
 	if (ORIGINAL_HOME === undefined) delete process.env.HOME;
 	else process.env.HOME = ORIGINAL_HOME;
 });

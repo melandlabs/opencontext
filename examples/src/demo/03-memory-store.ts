@@ -55,7 +55,10 @@ export default async function demoMemoryStore() {
 				info("demo/memory", `  warning [${w.source}] ${w.code}: ${w.message}`);
 			}
 
-			check("the response echoes the query", res.query === "what did we decide about the retrieval pipeline?");
+			check(
+				"the response echoes the query",
+				res.query === "what did we decide about the retrieval pipeline?",
+			);
 			check(
 				"all three sources were consulted",
 				(["memory", "insights", "knowledge"] as const).every((s) => res.sources.includes(s)),

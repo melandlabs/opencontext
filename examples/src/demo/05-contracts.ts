@@ -10,7 +10,13 @@
  * is how you narrow an untrusted `string` to a `UserType` safely.
  */
 
-import { INTEGRATION_IDS, USER_TYPES, type UserType, isIntegrationId, isUserType } from "@melandlabs/contracts";
+import {
+	INTEGRATION_IDS,
+	USER_TYPES,
+	type UserType,
+	isIntegrationId,
+	isUserType,
+} from "@melandlabs/contracts";
 import { info, makeCheck, runSection } from "../_helpers.ts";
 
 export default async function demoContracts() {
@@ -18,7 +24,10 @@ export default async function demoContracts() {
 		const check = makeCheck("demo/contracts");
 
 		info("demo/contracts", `USER_TYPES = [${USER_TYPES.join(", ")}]`);
-		info("demo/contracts", `${INTEGRATION_IDS.length} integration ids, e.g. ${INTEGRATION_IDS.slice(0, 6).join(", ")}`);
+		info(
+			"demo/contracts",
+			`${INTEGRATION_IDS.length} integration ids, e.g. ${INTEGRATION_IDS.slice(0, 6).join(", ")}`,
+		);
 
 		check("USER_TYPES has 5 members", USER_TYPES.length === 5, USER_TYPES.join(", "));
 		check(
@@ -38,15 +47,16 @@ export default async function demoContracts() {
 		info("demo/contracts", `narrowed an untrusted string to UserType: ${narrowed}`);
 		check("isUserType narrows an untrusted string to UserType", narrowed === "regular");
 
-		check("INTEGRATION_IDS is a non-trivial list", INTEGRATION_IDS.length >= 5, `${INTEGRATION_IDS.length} ids`);
+		check(
+			"INTEGRATION_IDS is a non-trivial list",
+			INTEGRATION_IDS.length >= 5,
+			`${INTEGRATION_IDS.length} ids`,
+		);
 		check(
 			"every INTEGRATION_IDS member passes its own guard",
 			INTEGRATION_IDS.every((id) => isIntegrationId(id)),
 		);
-		check(
-			"isIntegrationId rejects a made-up id",
-			isIntegrationId("definitely-not-an-integration") === false,
-		);
+		check("isIntegrationId rejects a made-up id", isIntegrationId("definitely-not-an-integration") === false);
 		check(
 			"the two unions are disjoint: no user type is an integration id",
 			USER_TYPES.every((t) => !isIntegrationId(t)),

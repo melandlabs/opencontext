@@ -73,10 +73,7 @@ export default async function demoFacade() {
 			});
 			info("demo/facade", `searchUnifiedMemory fanned out to sources: ${res.sources.join(", ")}`);
 			info("demo/facade", `count=${res.count}, warnings=${res.warnings.length}`);
-			check(
-				"searchUnifiedMemory echoes the query back",
-				res.query === "what did we decide about retrieval?",
-			);
+			check("searchUnifiedMemory echoes the query back", res.query === "what did we decide about retrieval?");
 			check(
 				"searchUnifiedMemory returns a results array (empty on a fresh store)",
 				Array.isArray(res.results) && res.results.length === res.count,

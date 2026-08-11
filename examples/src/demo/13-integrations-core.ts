@@ -26,9 +26,14 @@ export default async function demoIntegrationsCore() {
 		info("demo/integrations", `context providers: ${Object.keys(ctx).join(", ")}`);
 		check(
 			"createMinimalContext supplies all six providers",
-			["credentialStore", "authProvider", "sessionStore", "fileIngester", "configProvider", "cloudSyncProvider"].every(
-				(k) => k in ctx,
-			),
+			[
+				"credentialStore",
+				"authProvider",
+				"sessionStore",
+				"fileIngester",
+				"configProvider",
+				"cloudSyncProvider",
+			].every((k) => k in ctx),
 			`${Object.keys(ctx).length} providers`,
 		);
 
@@ -37,7 +42,10 @@ export default async function demoIntegrationsCore() {
 		const accounts = await ctx.credentialStore.getAccountsByUserId("demo-user");
 		const userId = await ctx.authProvider.getUserId();
 		const enabled = await ctx.cloudSyncProvider.isEnabled();
-		info("demo/integrations", `noop reads: accounts=${JSON.stringify(accounts)}, userId=${userId}, cloudSync=${enabled}`);
+		info(
+			"demo/integrations",
+			`noop reads: accounts=${JSON.stringify(accounts)}, userId=${userId}, cloudSync=${enabled}`,
+		);
 		check("noop credentialStore returns no accounts", Array.isArray(accounts) && accounts.length === 0);
 		check("noop authProvider reports no signed-in user", userId === null);
 		check("noop cloudSyncProvider reports itself disabled", enabled === false);
@@ -45,11 +53,17 @@ export default async function demoIntegrationsCore() {
 		// Noop writes are discarded — set() then get() still yields null.
 		await ctx.sessionStore.set("demo-key", "demo-value");
 		const readBack = await ctx.sessionStore.get("demo-key");
-		info("demo/integrations", `noop sessionStore: set() then get() → ${JSON.stringify(readBack)} (writes are discarded)`);
+		info(
+			"demo/integrations",
+			`noop sessionStore: set() then get() → ${JSON.stringify(readBack)} (writes are discarded)`,
+		);
 		check("noop sessionStore discards writes instead of pretending to persist", readBack === null);
 
 		// Missing optional config is `undefined`; missing *required* config throws.
-		check("configProvider.get returns undefined for an unset key", (await ctx.configProvider.get("NOPE")) === undefined);
+		check(
+			"configProvider.get returns undefined for an unset key",
+			(await ctx.configProvider.get("NOPE")) === undefined,
+		);
 		let requiredThrew = false;
 		try {
 			await ctx.configProvider.getRequired("NOPE");
@@ -80,19 +94,24 @@ export default async function demoIntegrationsCore() {
 		// and trim quoted reply chains first.
 		const plain = htmlToPlainText("<p>Hello <b>world</b></p><p>Second paragraph</p>");
 		info("demo/integrations", `htmlToPlainText → ${JSON.stringify(plain)}`);
-		check("htmlToPlainText strips tags but keeps the text", plain.includes("Hello") && plain.includes("world"));
+		check(
+			"htmlToPlainText strips tags but keeps the text",
+			plain.includes("Hello") && plain.includes("world"),
+		);
 		check("htmlToPlainText leaves no angle brackets behind", !plain.includes("<"));
 
 		const snippet = buildSnippet("The quick brown fox jumps over the lazy dog repeatedly", 20);
 		info("demo/integrations", `buildSnippet(…, 20) → ${JSON.stringify(snippet)}`);
-		check("buildSnippet truncates to roughly the requested length", snippet.length <= 24, `${snippet.length} chars`);
-		check("buildSnippet marks the truncation with an ellipsis", snippet.endsWith("..."));
 		check(
-			"a string shorter than the limit is returned unchanged",
-			buildSnippet("short", 100) === "short",
+			"buildSnippet truncates to roughly the requested length",
+			snippet.length <= 24,
+			`${snippet.length} chars`,
 		);
+		check("buildSnippet marks the truncation with an ellipsis", snippet.endsWith("..."));
+		check("a string shorter than the limit is returned unchanged", buildSnippet("short", 100) === "short");
 
-		const withQuote = "My actual reply.\n\nOn Mon, someone wrote:\n> the original message\n> second quoted line";
+		const withQuote =
+			"My actual reply.\n\nOn Mon, someone wrote:\n> the original message\n> second quoted line";
 		const unquoted = stripQuotedText(withQuote);
 		info("demo/integrations", `stripQuotedText → ${JSON.stringify(unquoted)}`);
 		check("stripQuotedText keeps the new reply", unquoted.includes("My actual reply."));

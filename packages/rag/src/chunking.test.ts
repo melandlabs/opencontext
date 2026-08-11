@@ -12,12 +12,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import {
-	chunkText,
-	countTokens,
-	estimateChunkCount,
-	getOptimalChunkSize,
-} from "./chunking.ts";
+import { chunkText, countTokens, estimateChunkCount, getOptimalChunkSize } from "./chunking";
 
 describe("chunkText", () => {
 	it("returns a single chunk for input that fits inside maxChunkSize", () => {

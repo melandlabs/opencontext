@@ -31,7 +31,10 @@ export default async function demoSearch() {
 		const { check, skip } = makeCheckWithSkip("demo/search");
 
 		for (const q of [...TIME_SENSITIVE, ...TIMELESS]) {
-			info("demo/search", `needsRealTimeInfo = ${String(needsRealTimeInfo(q)).padEnd(5)} ${JSON.stringify(q)}`);
+			info(
+				"demo/search",
+				`needsRealTimeInfo = ${String(needsRealTimeInfo(q)).padEnd(5)} ${JSON.stringify(q)}`,
+			);
 		}
 
 		check(
@@ -44,7 +47,10 @@ export default async function demoSearch() {
 			TIMELESS.every((q) => needsRealTimeInfo(q) === false),
 			`${TIMELESS.length} queries`,
 		);
-		check("the classifier returns a boolean, never a promise", typeof needsRealTimeInfo("hello") === "boolean");
+		check(
+			"the classifier returns a boolean, never a promise",
+			typeof needsRealTimeInfo("hello") === "boolean",
+		);
 		check("an empty query does not need a lookup", needsRealTimeInfo("") === false);
 
 		// The live lookup, only when a key is configured.

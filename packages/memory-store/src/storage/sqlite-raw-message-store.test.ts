@@ -29,7 +29,7 @@ import {
 	getSQLiteRawMessageManager,
 	isSQLiteRawMessageStorageAvailable,
 	resolveSQLiteRawMessageDbPath,
-} from "./sqlite-raw-message-store.ts";
+} from "./sqlite-raw-message-store";
 
 /** A scratch dir for any sqlite files these tests create. */
 let scratchDir: string;
@@ -47,6 +47,7 @@ afterEach(async () => {
 	await closeSQLiteRawMessageManager().catch(() => {});
 	__resetSQLiteRawMessageManagerForTests();
 	rmSync(scratchDir, { recursive: true, force: true });
+	// biome-ignore lint/performance/noDelete: assigning undefined would set the var to the string "undefined".
 	if (ORIGINAL_MEMORY_STORE_DB_PATH === undefined) delete process.env.MEMORY_STORE_DB_PATH;
 	else process.env.MEMORY_STORE_DB_PATH = ORIGINAL_MEMORY_STORE_DB_PATH;
 });
@@ -57,6 +58,7 @@ describe("isSQLiteRawMessageStorageAvailable", () => {
 	});
 
 	it("returns true even with no env vars set", () => {
+		// biome-ignore lint/performance/noDelete: the var must be absent, not the string "undefined".
 		delete process.env.MEMORY_STORE_DB_PATH;
 		expect(isSQLiteRawMessageStorageAvailable()).toBe(true);
 	});
@@ -75,6 +77,7 @@ describe("resolveSQLiteRawMessageDbPath", () => {
 	});
 
 	it("falls back to the home-dir default when MEMORY_STORE_DB_PATH is unset", () => {
+		// biome-ignore lint/performance/noDelete: the var must be absent, not the string "undefined".
 		delete process.env.MEMORY_STORE_DB_PATH;
 		const resolved = resolveSQLiteRawMessageDbPath();
 		expect(resolved.endsWith("/.opencontext/memory/store.db")).toBe(true);

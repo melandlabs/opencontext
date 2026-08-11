@@ -102,10 +102,7 @@ export default async function demoStorage() {
 
 			// The security property, actually exercised.
 			check("a '../../' key cannot write outside the storage root", out.escapedOutside === false);
-			check(
-				"it is sanitised into a flat filename inside the root instead",
-				out.sanitisedInside === true,
-			);
+			check("it is sanitised into a flat filename inside the root instead", out.sanitisedInside === true);
 		});
 	});
 }

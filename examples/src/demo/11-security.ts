@@ -30,7 +30,9 @@ export default async function demoSecurity() {
 		process.env.ENCRYPTION_KEY = crypto.randomBytes(24).toString("base64"); // 32 chars
 
 		try {
-			const { TokenEncryption, isTrustedStorageUrl, validateUrlForSSRF } = await import("@melandlabs/security");
+			const { TokenEncryption, isTrustedStorageUrl, validateUrlForSSRF } = await import(
+				"@melandlabs/security"
+			);
 
 			// ── Token encryption ──────────────────────────────────────────
 			const enc = new TokenEncryption();
@@ -97,6 +99,7 @@ export default async function demoSecurity() {
 				isTrustedStorageUrl("https://evil.example.com/file.png") === false,
 			);
 		} finally {
+			// biome-ignore lint/performance/noDelete: assigning undefined would set ENCRYPTION_KEY to the string "undefined".
 			if (previousKey === undefined) delete process.env.ENCRYPTION_KEY;
 			else process.env.ENCRYPTION_KEY = previousKey;
 		}
