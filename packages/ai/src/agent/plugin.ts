@@ -275,3 +275,57 @@ export const DEEPAGENTS_METADATA: AgentProviderMetadata = {
 	supportsSandbox: false,
 	tags: ["langgraph", "deepagents", "multi-provider"],
 };
+
+/**
+ * JSON Schema for the built-in Standalone agent.
+ *
+ * The Standalone agent is a one-shot, single-LLM-call provider — it does
+ * not plan, does not use tools, and does not run inside a sandbox. Its
+ * whole job is to take one prompt, hit the configured model once, and
+ * yield the response back through the standard AgentMessage stream.
+ */
+export const STANDALONE_CONFIG_SCHEMA = {
+	type: "object",
+	properties: {
+		apiKey: {
+			type: "string",
+			description: "API key for the upstream LLM provider (falls back to env vars if omitted)",
+		},
+		baseUrl: {
+			type: "string",
+			description: "Custom API base URL (OpenAI-compatible or Anthropic-compatible)",
+		},
+		model: {
+			type: "string",
+			description: "Model id to call; provider-dependent (e.g. openai/gpt-4o, anthropic/claude-sonnet-4.6)",
+		},
+		workDir: {
+			type: "string",
+			default: DEFAULT_WORK_DIR,
+			description: "Working directory for any artifacts the agent writes (optional)",
+		},
+		isNativeMode: {
+			type: "boolean",
+			default: false,
+			description:
+				"Set true when running inside the Tauri/desktop shell so the model layer picks the right fetch/auth path",
+		},
+	},
+};
+
+/**
+ * Metadata for the built-in Standalone agent.
+ */
+export const STANDALONE_METADATA: AgentProviderMetadata = {
+	type: "standalone",
+	name: "Standalone Agent",
+	version: "1.0.0",
+	description:
+		"Built-in single-shot LLM provider. Takes one prompt, calls the configured model once, and streams the response back as standard AgentMessages. No tools, no planning phase, no sandbox — the smallest possible IAgent implementation, useful for tests, prompts, and lightweight demos.",
+	configSchema: STANDALONE_CONFIG_SCHEMA,
+	builtin: true,
+	supportsPlan: false,
+	supportsStreaming: false,
+	supportsSandbox: false,
+	tags: ["oneshot", "single-llm-call", "no-tools"],
+};

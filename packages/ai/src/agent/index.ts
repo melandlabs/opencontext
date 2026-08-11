@@ -5,6 +5,10 @@
  */
 
 // Types
+// ProviderCapabilities and ProviderMetadata intentionally omitted here —
+// the root package re-exports them from `./types` (the IProvider base types),
+// and TypeScript treats two structurally-identical interfaces declared in
+// different files as distinct identifiers.
 export type {
 	AgentConfig,
 	AgentMessage,
@@ -26,7 +30,6 @@ export type {
 	PDFAttachment,
 	PlanOptions,
 	PlanStep,
-	ProviderCapabilities,
 	Question,
 	QuestionOption,
 	SandboxConfig,
@@ -56,6 +59,8 @@ export {
 } from "./compaction-preprocess";
 
 // Plugin system
+// ProviderMetadata intentionally omitted — see the comment above the ./types
+// re-export; the canonical ProviderMetadata lives in the root `./types`.
 export {
 	defineAgentPlugin,
 	CLAUDE_CONFIG_SCHEMA,
@@ -64,11 +69,11 @@ export {
 	CLAUDE_METADATA,
 	CODEX_METADATA,
 	DEEPAGENTS_METADATA,
+	STANDALONE_METADATA,
 	DEFAULT_AGENT_MODEL,
 	DEFAULT_WORK_DIR,
 	type AgentPlugin,
 	type AgentProviderMetadata,
-	type ProviderMetadata,
 } from "./plugin";
 
 // Base agent
@@ -106,20 +111,20 @@ export {
 // Sandbox
 export * from "./sandbox";
 
-// Billing (tokens, pricing)
-export * from "./billing";
-
-// Compaction
-export * from "./compaction";
-
-// Context (conversation windows)
-export * from "./context";
-
-// Model providers
-export * from "./model";
-
-// Routing
-export * from "./routing";
+// NOTE: the following modules are intentionally NOT re-exported from this
+// barrel because their top-level names already live on the package root
+// (via the historical `export { ... } from "./agent"` block in
+// `packages/ai/src/index.ts`). Re-exporting them here would create
+// duplicate-identifier errors once the root barrel pulls in `./agent/index`.
+// Import them from `@melandlabs/ai/agent/<submodule>` (subpath exports) or
+// from the package root directly:
+//
+//   - ./billing         → MODEL_PRICING, getModelPricing, calculate*Credits, ...
+//   - ./compaction      → COMPACTION_*, triggerCompaction, buildCompactionPrompt, ...
+//   - ./context         → prepareConversationWindows, getConversationBucket, ...
+//   - ./model           → getModel, getVLMModel, createDynamicModel, getModelProvider, ...
+//   - ./routing         → routeModelCall, checkCloudAIAvailability, getRecommendedMode
+//   - ./utils           → extractJsonFromMarkdown (already on the root)
 
 // Runtime
 export * from "./runtime";
@@ -142,8 +147,11 @@ export * from "./video-gen";
 // Image Generation
 export * from "./image-gen";
 
-// Utils
-export { extractJsonFromMarkdown } from "./utils";
+// Built-in provider implementations
+export {
+	StandaloneAgent,
+	standaloneAgentPlugin,
+} from "./providers/standalone";
 
 // Language directive (ports + default adapter)
 export type {

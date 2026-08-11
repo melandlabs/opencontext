@@ -23,10 +23,12 @@ pnpm test
 one `[OK  ]` / `[SKIP]` / `[INFO]` line per check, and exits non-zero
 if anything regresses. Expected output on a clean checkout:
 
-- **~130 `[OK  ]`** — every demo ran against the real API and asserted
+- **~140 `[OK  ]`** — every demo ran against the real API and asserted
   on real return values
-- **2 `[SKIP]`** — `addChunk` (needs the host app's Drizzle schema) and
-  live `search()` (needs `BRAVE_SEARCH_API_KEY`)
+- **3 `[SKIP]`** — `addChunk` (needs the host app's Drizzle schema),
+  live `search()` (needs `BRAVE_SEARCH_API_KEY`), and the live
+  `agent.run(...)` call in demo 17 (needs `ANTHROPIC_API_KEY` /
+  `OPENAI_API_KEY` / `OPENROUTER_API_KEY`)
 - **0 `[FAIL]`**
 
 Demos that touch the filesystem sandbox themselves under
@@ -65,6 +67,7 @@ is involved.
 | [`src/demo/14-local-embedding.ts`](./src/demo/14-local-embedding.ts) | `@melandlabs/ai-rag` — `LocalTransformersEmbeddingProvider` (ONNX, default `Xenova/all-MiniLM-L6-v2`, 384 dims), `getConfiguredEmbeddingProvider` factory routing via `EMBEDDING_PROVIDER=local`, `cosineSimilarity` sanity check | inference calls skip if neither the HF cache nor the network is available (first run downloads ~30 MB of ONNX weights)              |
 | [`src/demo/15-http-server.ts`](./src/demo/15-http-server.ts) | `@melandlabs/memory-store/http` — `startHttpServer` booted on a random high port with **all three** `unified.*` deps supplied (`embedQuery` from the local ONNX provider, in-memory `searchKnowledge` / `searchInsights` cosine indices), then real `GET /health` / `POST /v1/raw-messages` / `POST /v1/search` round-trips that assert `warnings[]` is empty and hits come back | inference-dependent checks skip on the same condition as demo 14                                                                 |
 | [`src/demo/16-mcp-server.ts`](./src/demo/16-mcp-server.ts) | `@melandlabs/opencontext` — spawns `opencontext mcp` with `--embedding-provider local --memory-backend sqlite-vec --name --version`, then drives the daemon over stdio the way any MCP client would: full JSON-RPC handshake (`initialize` → `notifications/initialized` → `tools/list`), then `memory.writeRawMessage` (with `embedOnInsert: true`), `memory.searchUnified` (asserting ranked memory hits + no `embedQuery` warning), `memory.getRawMessage`, and `memory.health`. Mirrors the `claude_desktop_config.json` snippet in the README §4. | inference-dependent checks skip on the same condition as demo 14                                                                |
+| [`src/demo/17-ai-agent.ts`](./src/demo/17-ai-agent.ts)         | `@melandlabs/ai` — `IAgent` / `BaseAgent` / `defineAgentPlugin` / `AgentRegistry` / `runAgentRuntimeRequest` reachable from the root, plus the built-in `StandaloneAgent` (single LLM call) round-tripped through `getAgentInstance` | live `agent.run(...)` skips without `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY`     |
 
 ### Daemon configuration
 

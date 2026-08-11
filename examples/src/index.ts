@@ -27,6 +27,7 @@ import demoRagChunk from "./demo/01-rag-chunk.ts";
 import demoRagVectorStore from "./demo/02-rag-vector-store.ts";
 import demoMemoryStore from "./demo/03-memory-store.ts";
 import demoAi from "./demo/04-ai.ts";
+import demoAiAgent from "./demo/17-ai-agent.ts";
 import demoContracts from "./demo/05-contracts.ts";
 import demoLoop from "./demo/06-loop.ts";
 import demoEnvConfig from "./demo/07-env-config.ts";
@@ -46,6 +47,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: rag — SQLiteVecStore", demoRagVectorStore],
 	["demo: memory-store", demoMemoryStore],
 	["demo: ai — tokens & pricing", demoAi],
+	["demo: ai — IAgent + StandaloneAgent (built-in single-shot LLM provider)", demoAiAgent],
 	["demo: contracts", demoContracts],
 	["demo: loop — preferences", demoLoop],
 	["demo: env-config", demoEnvConfig],
