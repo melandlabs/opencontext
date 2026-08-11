@@ -29,7 +29,6 @@
 	},
 	"scripts": {
 		"build": "tsup",
-		"prepublishOnly": "pnpm build",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write ."
 	}
