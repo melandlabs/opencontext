@@ -11,7 +11,9 @@
 	},
 	"dependencies": {
 		"@melandlabs/ai": "^0.2.0",
+		"better-sqlite3": "^11.7.0",
 		"drizzle-orm": "^0.44.7",
+		"sqlite-vec": "^0.1.6-alpha.5",
 		"@melandlabs/ai-rag": "^0.1.4",
 		"@melandlabs/api": "^0.1.4",
 		"@melandlabs/audit": "^0.1.4",
