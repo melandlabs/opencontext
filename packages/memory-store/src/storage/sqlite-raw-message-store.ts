@@ -1,30 +1,47 @@
 /**
  * SQLite-backed raw message store.
  *
- * Singleton manager used in Tauri (local) mode. The Tauri env is
- * sourced from the injected `MemoryStoreConfig.env`.
+ * Singleton manager. Local SQLite is the default backend for the memory
+ * store — no host-mode check, no env-var opt-in. The DB path is resolved
+ * from (in order):
+ *   1. `MEMORY_STORE_DB_PATH`              — recommended knob
+ *   2. `~/.opencontext/memory/store.db`    — last-resort default
+ *
+ * The `env?` parameter on the exported functions is kept for back-compat
+ * with the historical `MemoryStoreEnv` interface but is no longer read.
  */
 
 import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite";
 import type { MemoryStoreEnv } from "../config";
 import { isRawMessageChromaEnabled } from "./chroma-memory-index";
 
 let manager: SQLiteRawMessageManager | null = null;
 
-export function isSQLiteRawMessageStorageAvailable(env?: MemoryStoreEnv): boolean {
-	return resolveEnv(env).isTauriMode();
+const DEFAULT_SQLITE_PATH = join(homedir(), ".opencontext", "memory", "store.db");
+
+/**
+ * Resolve the SQLite DB file path from env vars. Exposed so other storage
+ * layers (vector index) can stay in sync with the same default.
+ */
+export function resolveSQLiteRawMessageDbPath(): string {
+	const fromEnv = process.env.MEMORY_STORE_DB_PATH?.trim();
+	return fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_SQLITE_PATH;
 }
 
-export async function getSQLiteRawMessageManager(env?: MemoryStoreEnv): Promise<SQLiteRawMessageManager> {
-	const e = resolveEnv(env);
-	if (!e.isTauriMode()) {
-		throw new Error("SQLite raw message storage is only available in Tauri mode.");
-	}
+/**
+ * Local SQLite is the default. Every host (Tauri, server, CLI, tests) can
+ * open the manager; the only failure mode is filesystem write permission.
+ */
+export function isSQLiteRawMessageStorageAvailable(_env?: MemoryStoreEnv): boolean {
+	return true;
+}
 
+export async function getSQLiteRawMessageManager(_env?: MemoryStoreEnv): Promise<SQLiteRawMessageManager> {
 	if (!manager) {
-		const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
+		const dbPath = resolveSQLiteRawMessageDbPath();
 		mkdirSync(dirname(dbPath), { recursive: true });
 		manager = new SQLiteRawMessageManager({
 			dbPath,
@@ -51,11 +68,9 @@ export function __resetSQLiteRawMessageManagerForTests(): void {
 	manager = null;
 }
 
-function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
-	if (env) return env;
-	return {
-		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
-		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
-		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
-	};
+// Kept for back-compat with the historical `MemoryStoreEnv` interface.
+// The resolved env is no longer read by the SQLite layer, but the symbol
+// stays exported so external code that still calls `resolveEnv` compiles.
+function resolveEnv(_env?: MemoryStoreEnv): MemoryStoreEnv {
+	return {};
 }

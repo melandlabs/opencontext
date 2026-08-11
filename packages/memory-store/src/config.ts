@@ -2,12 +2,18 @@
  * Memory store configuration — injected by the host application.
  *
  * The memory-store package is intentionally decoupled from the
- * opencontext web app's database and env layers. Each consumer wires up
- * its own implementation of these contracts.
+ * opencontext web app's database layer. Each consumer wires up its own
+ * implementation of the `db` contract.
+ *
+ * Backend selection is env-var driven, not host-injected:
+ *   - Default: local SQLite at `~/.opencontext/memory/store.db`
+ *     (override with `MEMORY_STORE_DB_PATH`).
+ *   - Set `OPENCONTEXT_MEMORY_STORE_BACKEND=postgres` to opt into the
+ *     host's registered Postgres factory (call `registerPostgresFactory`
+ *     at startup). SQLite stays as the default in every other case.
  *
  * Required for raw-message persistence:
- *   - `db.getDb()` — returns a Drizzle DB handle
- *   - `env.isTauriMode()` — for sqlite vs postgres selection
+ *   - `db.getDb()` — returns a Drizzle DB handle (Postgres path only)
  *
  * Required for vector indexing:
  *   - one of `vector.sqlite-vec.dbPath` or `vector.chroma.url`
@@ -44,18 +50,17 @@ export interface MemoryStoreDb {
 	};
 }
 
-export interface MemoryStoreEnv {
-	/** True when running under Tauri (sqlite local). */
-	isTauriMode(): boolean;
-	/** Where to place the SQLite DB file (Tauri mode only). */
-	getTauriDbPath?(): string;
-	/**
-	 * Tauri data dir for mkdirSync. Defaults to dirname(getTauriDbPath()).
-	 * Provided so callers that use a custom layout don't need to expose
-	 * their internal helpers.
-	 */
-	getTauriDataDir?(): string;
-}
+/**
+ * Placeholder for the historical host-injected environment. The fields
+ * it used to expose (`isTauriMode`, `getTauriDbPath`, `getTauriDataDir`)
+ * were Tauri-specific and have been removed. Backend selection is now
+ * driven entirely by the `OPENCONTEXT_MEMORY_STORE_BACKEND` env var.
+ *
+ * The interface is kept (empty) so existing `env?: MemoryStoreEnv`
+ * parameters on the public surface still type-check, but new code
+ * should not need to construct a value of this type.
+ */
+export interface MemoryStoreEnv {}
 
 export type VectorBackend = "sqlite-vec" | "chroma";
 

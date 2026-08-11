@@ -2,11 +2,13 @@
  * SQLite-vec-backed raw-message + insight vector index.
  *
  * Mirrors the chroma-memory-index interface but uses the local
- * sqlite-vec store. The DB path is resolved via `MemoryStoreEnv`.
+ * sqlite-vec store. The DB path is resolved from the same env-var chain
+ * the raw-message SQLite layer uses.
  */
 
 import type { VectorSearchResult } from "@melandlabs/rag/vector-service";
 import type { MemoryStoreEnv } from "../config";
+import { resolveSQLiteRawMessageDbPath } from "./sqlite-raw-message-store";
 
 export interface SQLiteInsightVectorInput {
 	insightId: string;
@@ -47,22 +49,16 @@ function getMemoryVectorStoreBackend(): "chroma" | "sqlite-vec" {
 	return backend === "chroma" ? "chroma" : "sqlite-vec";
 }
 
-export function isInsightSQLiteVecEnabled(env?: MemoryStoreEnv): boolean {
-	return resolveEnv(env).isTauriMode() && getMemoryVectorStoreBackend() === "sqlite-vec";
+export function isInsightSQLiteVecEnabled(_env?: MemoryStoreEnv): boolean {
+	return getMemoryVectorStoreBackend() === "sqlite-vec";
 }
 
-function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
-	if (env) return env;
-	return {
-		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
-		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
-		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
-	};
+function resolveEnv(_env?: MemoryStoreEnv): MemoryStoreEnv {
+	return {};
 }
 
-async function getInsightSQLiteVecStore(env: MemoryStoreEnv) {
-	const e = resolveEnv(env);
-	const dbPath = e.getTauriDbPath?.() ?? process.env.TAURI_DB_PATH ?? "";
+async function getInsightSQLiteVecStore(_env: MemoryStoreEnv) {
+	const dbPath = resolveSQLiteRawMessageDbPath();
 	const { getSQLiteVecStore } = await import("@melandlabs/rag/sqlite-vec-store");
 	return await getSQLiteVecStore(dbPath, undefined, {
 		collectionName: process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "opencontext_insights",

@@ -1,20 +1,23 @@
 /**
  * Top-level raw-message store facade.
  *
- * Selects between sqlite (Tauri) and postgres (host-registered)
- * backends based on `MemoryStoreEnv.isTauriMode()`. The facade exposes
- * the common `RawMessageStorageManager` contract plus a typed
- * `searchMessagesSemantically` extension when present.
+ * Backend selection is env-var driven:
+ *
+ *   - `OPENCONTEXT_MEMORY_STORE_BACKEND=postgres` → use the host's
+ *     registered Postgres factory. A factory MUST be registered first
+ *     via `registerPostgresFactory()`; otherwise this throws a clear
+ *     error rather than silently falling back.
+ *   - Any other value (including unset) → local SQLite. The default
+ *     works in every host environment with no extra configuration.
+ *
+ * The facade exposes the common `RawMessageStorageManager` contract plus
+ * a typed `searchMessagesSemantically` extension when present.
  */
 
 import type { RawMessageStorageManager } from "@melandlabs/indexeddb/storage";
 import type { MemoryStoreConfig, MemoryStoreEnv } from "../config";
 import { hasPostgresFactory, resolvePostgresFactory } from "./postgres-raw-message-factory";
-import {
-	closeSQLiteRawMessageManager,
-	getSQLiteRawMessageManager,
-	isSQLiteRawMessageStorageAvailable,
-} from "./sqlite-raw-message-store";
+import { closeSQLiteRawMessageManager, getSQLiteRawMessageManager } from "./sqlite-raw-message-store";
 
 export type RawMessageStorageBackend = "sqlite" | "postgres";
 
@@ -47,13 +50,16 @@ export interface RawMessageStore {
 	close(): Promise<void>;
 }
 
-function resolveEnv(env?: MemoryStoreEnv): MemoryStoreEnv {
-	if (env) return env;
-	return {
-		isTauriMode: () => process.env.IS_TAURI === "true" || typeof process.env.TAURI_MODE === "string",
-		getTauriDbPath: () => process.env.TAURI_DB_PATH ?? "",
-		getTauriDataDir: () => process.env.TAURI_DATA_DIR ?? "",
-	};
+function resolveBackend(env: MemoryStoreEnv | undefined): RawMessageStorageBackend {
+	const explicit = process.env.OPENCONTEXT_MEMORY_STORE_BACKEND?.trim().toLowerCase();
+	if (explicit === "postgres") return "postgres";
+	// Any other value — including the default "sqlite", an unknown value,
+	// or the env var being unset — falls through to local SQLite.
+	return "sqlite";
+}
+
+function resolveEnv(_env?: MemoryStoreEnv): MemoryStoreEnv {
+	return {};
 }
 
 export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}): RawMessageStore {
@@ -61,27 +67,30 @@ export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}
 
 	return {
 		getBackend(): RawMessageStorageBackend {
-			return isSQLiteRawMessageStorageAvailable(env) ? "sqlite" : "postgres";
+			return resolveBackend(env);
 		},
 		isAvailable(): boolean {
-			return isSQLiteRawMessageStorageAvailable(env) || hasPostgresFactory();
+			// SQLite is always available; postgres is only available when the
+			// env var asks for it AND a factory has been registered.
+			return resolveBackend(env) === "sqlite" || hasPostgresFactory();
 		},
 		async getManager(): Promise<RawMessageStorageManagerWithSearch> {
-			if (isSQLiteRawMessageStorageAvailable(env)) {
-				return (await getSQLiteRawMessageManager(env)) as unknown as RawMessageStorageManagerWithSearch;
+			if (resolveBackend(env) === "postgres") {
+				const pg = await resolvePostgresFactory(env);
+				if (!pg) {
+					throw new Error(
+						"OPENCONTEXT_MEMORY_STORE_BACKEND=postgres but no Postgres factory is registered. " +
+							"Call registerPostgresFactory() at startup, or unset the env var to use the default SQLite backend.",
+					);
+				}
+				return pg as unknown as RawMessageStorageManagerWithSearch;
 			}
-			const pg = await resolvePostgresFactory(env);
-			if (!pg) {
-				throw new Error(
-					"No raw-message backend available. SQLite is disabled (not Tauri) and no Postgres factory is registered.",
-				);
-			}
-			return pg as unknown as RawMessageStorageManagerWithSearch;
+			return (await getSQLiteRawMessageManager(env)) as unknown as RawMessageStorageManagerWithSearch;
 		},
 		async close(): Promise<void> {
-			if (isSQLiteRawMessageStorageAvailable(env)) {
-				await closeSQLiteRawMessageManager();
-			}
+			// The sqlite singleton is process-wide, so close regardless of the
+			// env var's current value — the previous call may have used it.
+			await closeSQLiteRawMessageManager();
 		},
 	};
 }

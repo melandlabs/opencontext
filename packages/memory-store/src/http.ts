@@ -6,7 +6,6 @@
  *   const { url, stop } = await startHttpServer({
  *     port: 7421,
  *     db: { getDb: () => drizzleDb() },
- *     env: { isTauriMode: () => false },
  *   });
  *
  * Endpoints (all POST, JSON in/out):

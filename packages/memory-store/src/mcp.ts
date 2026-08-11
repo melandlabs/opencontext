@@ -12,7 +12,7 @@
  *
  * Usage:
  *   import { startMcpServer } from "@melandlabs/memory-store/mcp";
- *   await startMcpServer({ db: { getDb }, env: { isTauriMode } });
+ *   await startMcpServer({ db: { getDb } });
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
