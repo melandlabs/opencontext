@@ -1,5 +1,27 @@
 # @melandlabs/opencontext
 
+## 0.1.5
+
+### Patch Changes
+
+- 0.1.5 — externalize `cross-spawn` from the facade bundle
+
+  `@melandlabs/opencontext` re-exports `@melandlabs/ai`'s agent public API
+  through the root barrel, and the agent providers (codex, opencode,
+  openclaw, hermes, claude, …) all import `cross-spawn`. tsup was bundling
+  the entire `cross-spawn` source tree into the ESM-only facade dist,
+  which wraps every internal `require('child_process')` call inside tsup's
+  `__commonJS` shim. Loading the facade under Node 22 ESM (the examples
+  runner with `--experimental-strip-types`, `opencontext mcp` over stdio,
+  …) then threw:
+
+      Error: Dynamic require of "child_process" is not supported
+
+  Externalize `cross-spawn` in `packages/opencontext/tsup.config.ts` so
+  Node's resolver loads the real CJS package and `require` works normally,
+  and add `cross-spawn` to the facade's `dependencies` so consumers get
+  it at install time.
+
 ## 0.1.4
 
 ### Patch Changes

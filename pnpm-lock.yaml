@@ -977,6 +977,9 @@ importers:
       better-sqlite3:
         specifier: ^11.10.0
         version: 11.10.0
+      cross-spawn:
+        specifier: ^7.0.3
+        version: 7.0.6
       encoding:
         specifier: ^0.1.13
         version: 0.1.13

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.1.4",
+	"version": "0.1.5",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -37,6 +37,7 @@
 		"abort-controller": "^3.0.0",
 		"agentkeepalive": "^4.6.0",
 		"better-sqlite3": "^11.10.0",
+		"cross-spawn": "^7.0.3",
 		"encoding": "^0.1.13",
 		"form-data": "^4.0.6",
 		"form-data-encoder": "1.7.2",

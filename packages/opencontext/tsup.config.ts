@@ -50,6 +50,16 @@ export default defineConfig({
 		"abort-controller",
 		"agentkeepalive",
 		"encoding",
+		// `cross-spawn` is a transitive dep of the agent providers that
+		// `@melandlabs/ai` re-exports through `./agent/index`. It's a CJS
+		// package, so bundling it into this ESM-only facade wraps every
+		// internal `require('child_process')` call inside tsup's
+		// `__commonJS` shim — which then throws `Dynamic require of
+		// "child_process" is not supported` the moment anything (the
+		// examples runner, `opencontext mcp` over stdio, etc.) loads
+		// `@melandlabs/opencontext` under ESM. Keep it external so Node's
+		// resolver loads the real CJS package and `require` works normally.
+		"cross-spawn",
 		// ai-rag ships native deps (@huggingface/transformers ONNX runtime,
 		// chromadb). Keep it external in the facade bundle so the published
 		// artifact stays lean; `opencontext http` only needs it when the
