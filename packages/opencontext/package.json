@@ -8,12 +8,24 @@
 	"bin": {
 		"opencontext": "./dist/cli/opencontext.js"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"license": "Apache-2.0",
-	"keywords": ["opencontext", "melandlabs", "memory", "rag", "agent", "temporal-graph", "mcp", "llm"],
+	"keywords": [
+		"opencontext",
+		"melandlabs",
+		"memory",
+		"rag",
+		"agent",
+		"temporal-graph",
+		"mcp",
+		"llm"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/melandlabs/opencontext.git",
@@ -22,10 +34,23 @@
 	"dependencies": {
 		"@hono/node-server": "^1.13.7",
 		"@modelcontextprotocol/sdk": "^1.25.3",
+		"abort-controller": "^3.0.0",
+		"agentkeepalive": "^4.6.0",
 		"better-sqlite3": "^11.10.0",
+		"encoding": "^0.1.13",
+		"form-data": "^4.0.6",
+		"form-data-encoder": "1.7.2",
+		"formdata-node": "^4.4.1",
+		"formdata-polyfill": "^4.0.10",
 		"hono": "^4.6.14",
+		"node-domexception": "^1.0.0",
+		"node-fetch": "^2.7.0",
 		"pg": "^8.13.0",
+		"punycode": "^2.3.1",
 		"sqlite-vec": "^0.1.7",
+		"tr46": "^0.0.3",
+		"webidl-conversions": "^3.0.1",
+		"whatwg-url": "^5.0.0",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

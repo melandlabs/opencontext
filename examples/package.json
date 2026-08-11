@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
-	"description": "Smoke tests for every @melandlabs/* package published from the monorepo. Runs against the published npm artifacts to verify the bundle resolves and the public API surface loads. Run with `pnpm test`.",
+	"description": "Runnable demos for every @melandlabs/* package published from the monorepo that has a Node-callable headline API. Each file exercises the package's real public surface and asserts on the value returned. Run with `pnpm test`.",
 	"main": "./src/index.ts",
 	"scripts": {
 		"start": "node --experimental-strip-types src/index.ts",
@@ -62,6 +62,6 @@
 		"@melandlabs/voice-whisper": "^0.1.0"
 	},
 	"engines": {
-		"node": ">=20"
+		"node": ">=22"
 	}
 }

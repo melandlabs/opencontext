@@ -147,3 +147,7 @@ packages/*/dist/
 packages/*/.tsbuildinfo
 packages/ai/*/dist/
 packages/integrations/*/dist/
+# examples scratch dirs — demos that touch the filesystem clean up after
+# themselves, but a crashed run can leave these behind
+examples/.tmp/
+examples/data/

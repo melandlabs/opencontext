@@ -1,64 +1,84 @@
 /**
- * Main runner for the @melandlabs/opencontext example smoke tests.
+ * Main runner for the @melandlabs/opencontext examples.
  *
- * Each section (one file per major capability area) exports a default
- * async function. We invoke them in sequence; any failure sets a non-zero
- * exit code via `process.exitCode`. Run with:
+ * This workspace holds runnable documentation, one file per package
+ * published from the monorepo. Every demo calls a package's real public
+ * API and asserts on the value it actually returned: real SQLite files,
+ * real Fernet ciphertexts, real chunk boundaries, real preferences on
+ * disk, real SSRF rejections. If a demo's `[OK  ]` line printed, the
+ * code in that file is code you can copy.
+ *
+ * Browser-only packages (hooks, indexeddb, voice-kokoro), CJS-only
+ * integration leaves (weixin, whatsapp, …), and packages whose only API
+ * is a namespace of utilities (audit, config, db, insights, shared,
+ * i18n, api) are not exercised here — they have no Node-callable
+ * headline API to demonstrate. They're covered by the per-package
+ * vitest suites under packages/*\/src/\*.test.ts.
+ *
+ * Any failing check sets a non-zero exit code via `process.exitCode`.
+ * Run with:
  *
  *     pnpm install
  *     pnpm test
- *
- * Sections live in this directory and are imported by their `default`
- * export. Adding a new package means dropping a new section file and
- * wiring it here.
  */
 
-import testAi from "./ai.ts";
-import testContracts from "./contracts.ts";
-import testIntegrations from "./integrations.ts";
-import testMemory from "./memory.ts";
-import testOpencontext from "./opencontext.ts";
-import testRag from "./rag.ts";
-import testRuntime from "./runtime.ts";
-import testSearch from "./search.ts";
-import testSecurity from "./security.ts";
-import testStorage from "./storage.ts";
-import testUtilities from "./utilities.ts";
-import testVoice from "./voice.ts";
+import demoFacade from "./demo/00-facade.ts";
+import demoRagChunk from "./demo/01-rag-chunk.ts";
+import demoRagVectorStore from "./demo/02-rag-vector-store.ts";
+import demoMemoryStore from "./demo/03-memory-store.ts";
+import demoAi from "./demo/04-ai.ts";
+import demoContracts from "./demo/05-contracts.ts";
+import demoLoop from "./demo/06-loop.ts";
+import demoEnvConfig from "./demo/07-env-config.ts";
+import demoCron from "./demo/08-cron.ts";
+import demoUiRuntime from "./demo/09-ui-runtime.ts";
+import demoStorage from "./demo/10-storage.ts";
+import demoSecurity from "./demo/11-security.ts";
+import demoSearch from "./demo/12-search.ts";
+import demoIntegrationsCore from "./demo/13-integrations-core.ts";
 
-const sections: Array<[string, () => Promise<void>]> = [
-	["opencontext (facade)", testOpencontext],
-	["ai + ai-rag + mcp", testAi],
-	["memory-store + memory-consolidation", testMemory],
-	["rag", testRag],
-	["search", testSearch],
-	["contracts", testContracts],
-	["runtime (loop, hooks, ui-runtime, cron, env-config)", testRuntime],
-	["storage (storage, sqlite, indexeddb)", testStorage],
-	["security", testSecurity],
-	["utilities (audit, config, db, insights, shared, i18n, api)", testUtilities],
-	["integrations (umbrella + 21 leaves + rss + integrations-runtime)", testIntegrations],
-	["voice (kokoro, whisper)", testVoice],
+const demos: Array<[string, () => Promise<void>]> = [
+	["demo: opencontext (facade)", demoFacade],
+	["demo: rag — chunking", demoRagChunk],
+	["demo: rag — SQLiteVecStore", demoRagVectorStore],
+	["demo: memory-store", demoMemoryStore],
+	["demo: ai — tokens & pricing", demoAi],
+	["demo: contracts", demoContracts],
+	["demo: loop — preferences", demoLoop],
+	["demo: env-config", demoEnvConfig],
+	["demo: cron", demoCron],
+	["demo: ui-runtime", demoUiRuntime],
+	["demo: storage", demoStorage],
+	["demo: security", demoSecurity],
+	["demo: search", demoSearch],
+	["demo: integrations — core & utils", demoIntegrationsCore],
 ];
 
-async function main() {
-	console.log(`[smoke] running ${sections.length} section(s) against published @melandlabs/* packages`);
-	for (const [label, fn] of sections) {
+async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {
+	console.log(`\n${"═".repeat(64)}\n${label}\n${"═".repeat(64)}`);
+	for (const [name, fn] of sections) {
 		try {
 			await fn();
 		} catch (err) {
-			console.error(`\n[FAIL] section '${label}' threw:`, err);
+			console.error(`\n[FAIL] section '${name}' threw:`, err);
 			process.exitCode = 1;
 		}
 	}
+}
+
+async function main() {
+	console.log(`[examples] ${demos.length} demo section(s) against the @melandlabs/* packages`);
+
+	await runAll("DEMOS — runnable documentation (real API calls)", demos);
+
 	if (process.exitCode === 1) {
-		console.error("\n[FAIL] at least one capability check failed");
+		console.error("\n[FAIL] at least one check failed");
 	} else {
-		console.log("\n[OK] all @melandlabs/* packages verified end-to-end");
+		console.log("\n[OK] every demo ran against the real API");
 	}
 }
 
 main().catch((err) => {
-	console.error("[FAIL] uncaught error during smoke test:", err);
+	console.error("[FAIL] uncaught error while running examples:", err);
 	process.exit(1);
 });

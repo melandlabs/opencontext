@@ -13,6 +13,14 @@ import { defineConfig } from "tsup";
 // is not supported` when the bin scripts run under Node. Marking it
 // external preserves a real `import { x } from "pg"` so Node's resolver
 // handles it.
+//
+// The `openai@4` runtime shim drags in a chain of CJS-only packages
+// (node-fetch@2 → whatwg-url@5 → tr46 → punycode, plus the formdata /
+// abort-controller shims). They hit the exact same `__commonJS` problem as
+// `pg` — importing the bundle under Node 22 ESM threw
+// `Dynamic require of "punycode" is not supported`. Same pattern, same fix:
+// externalize them so Node's resolver loads the real CJS packages and
+// `require` works normally inside them.
 
 export default defineConfig({
 	entry: {
@@ -27,5 +35,20 @@ export default defineConfig({
 	treeshake: true,
 	target: "esnext",
 	noExternal: [/^@melandlabs\//],
-	external: ["pg"],
+	external: [
+		"pg",
+		"punycode",
+		"whatwg-url",
+		"tr46",
+		"webidl-conversions",
+		"node-fetch",
+		"form-data",
+		"form-data-encoder",
+		"formdata-node",
+		"formdata-polyfill",
+		"node-domexception",
+		"abort-controller",
+		"agentkeepalive",
+		"encoding",
+	],
 });
