@@ -174,6 +174,10 @@ export {
 	standaloneAgentPlugin,
 } from "./providers/standalone";
 export {
+	ClaudeAgent,
+	claudeAgentPlugin,
+} from "./providers/claude";
+export {
 	CodexAgent,
 	codexAgentPlugin,
 } from "./providers/codex";

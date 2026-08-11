@@ -52,6 +52,7 @@
 		"@agentclientprotocol/sdk": "^0.22.1",
 		"@ai-sdk/anthropic": "4.0.0-beta.67",
 		"@ai-sdk/openai-compatible": "^1.0.0",
+		"@anthropic-ai/claude-agent-sdk": "^0.3.227",
 		"@melandlabs/memory-consolidation": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"@vercel/sandbox": "^1.7.1",
