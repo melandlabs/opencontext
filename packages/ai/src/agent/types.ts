@@ -106,6 +106,15 @@ export interface AgentMessage {
 	plan?: TaskPlan;
 	/** Error fields */
 	message?: string;
+	/**
+	 * Provider-agnostic classification of the error. Present on
+	 * `{ type: "error" }` messages when the provider's adapter can recognise a
+	 * known upstream signal (auth failure, quota exhausted, missing
+	 * executable, abort). Callers should treat an absent `kind` as
+	 * `upstream_error` for backwards compatibility with providers that have
+	 * not been updated to emit the field.
+	 */
+	kind?: AgentErrorKind;
 	/** Question fields (for interactive skills) */
 	question?: AgentQuestion;
 	/**
@@ -333,6 +342,85 @@ export interface FileAttachment {
 }
 
 // ============================================================================
+// Agent Hooks (provider-agnostic surface)
+// ============================================================================
+
+/**
+ * Subset of SDK hook events ClaudeAgent currently wires; the union is open so
+ * future SDK events can be referenced without waiting for a code update.
+ */
+export type AgentHookEvent =
+	| "PreToolUse"
+	| "PostToolUse"
+	| "PostToolUseFailure"
+	| "UserPromptSubmit"
+	| "Stop"
+	| "SubagentStop"
+	| "PreCompact"
+	| "Notification"
+	| (string & {}); // forward-compat: SDK may add new events
+
+/**
+ * Provider-agnostic hook callback. ClaudeAgent passes the SDK's
+ * `(input, toolUseID, { signal })` triple; the last two are optional so
+ * providers that only carry the event payload still fit the surface. The
+ * guard inside `createRunDirToolGuard` only reads `input`, so a thin
+ * `(input) => ...` lambda works just as well.
+ *
+ * Note: the surface is single-arg-shaped, but TS's "fewer params assignable
+ * to more params" rule lets a single-arg function fill a 3-arg SDK slot at
+ * runtime without ceremony. Provider implementations should narrow `input`
+ * to their SDK's HookInput union before reading fields.
+ */
+export type AgentHookCallback = (
+	input: unknown,
+	toolUseID?: string,
+	options?: { signal: AbortSignal },
+) => Promise<unknown> | unknown;
+
+/** Match one or more callbacks to a given hook event. */
+export interface AgentHookMatcher {
+	/** Optional selector (tool name, regex on `tool_name`, etc.). */
+	matcher?: string;
+	hooks: ReadonlyArray<AgentHookCallback>;
+	/**
+	 * Per-matcher timeout forwarded to the underlying provider. Units match
+	 * the Claude SDK's `HookCallbackMatcher.timeout`, which is **seconds**
+	 * (e.g. `5` = 5s). ClaudeAgent does not convert - set the value the
+	 * SDK expects.
+	 */
+	timeout?: number;
+}
+
+/**
+ * Map of hook event → list of matchers. Empty partial maps disable all hooks;
+ * absent keys inherit provider defaults (ClaudeAgent's default hook chain).
+ */
+export type AgentHooks = Partial<Record<AgentHookEvent, AgentHookMatcher[]>>;
+
+// ============================================================================
+// Agent Run Errors (provider-agnostic classification)
+// ============================================================================
+
+/**
+ * Provider-agnostic classification of why an `IAgent.run()` failed. Surfaced
+ * via `AgentMessage.kind` on `{ type: "error" }` messages, so callers don't
+ * have to peek at provider-specific stream messages (e.g. ClaudeAgent's
+ * `__CLAUDE_CODE_NOT_FOUND__` sentinel or `401 Unauthorized` text).
+ *
+ * Open union: providers may add provider-specific kinds, and callers that
+ * don't recognise a kind should treat it as `upstream_error` rather than
+ * throw.
+ */
+export type AgentErrorKind =
+	| { kind: "executable_not_found"; message: string }
+	| { kind: "auth_failure"; status?: number; message: string }
+	| { kind: "quota_exhausted"; message: string }
+	| { kind: "aborted"; message?: string }
+	| { kind: "upstream_error"; message: string }
+	| { kind: "unknown"; message: string };
+
+// ============================================================================
 // Plan Types
 // ============================================================================
 
@@ -446,6 +534,14 @@ export interface AgentOptions {
 	taskId?: string;
 	/** Abort controller for cancellation */
 	abortController?: AbortController;
+	/**
+	 * Wall-clock budget in ms. ClaudeAgent creates an internal abort signal and
+	 * aborts the SDK query when the budget elapses, then yields a typed
+	 * `kind: "aborted"` error message before exiting. Callers that pass both
+	 * `timeoutMs` and an external `abortController` abort on whichever fires
+	 * first.
+	 */
+	timeoutMs?: number;
 	/** Permission mode */
 	permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan" | "dontAsk";
 	/** Sandbox configuration for isolated execution */
@@ -554,6 +650,71 @@ export interface AgentOptions {
 	language?: string | null;
 	/** User timezone for date/time operations */
 	timezone?: string | null;
+
+	// --------------------------------------------------------------------------
+	// Provider-override surface (added for non-chat callers like
+	// AgentContractReviewer). Each option here replaces the corresponding
+	// provider default wholesale — there is no merging with chat-path defaults.
+	// --------------------------------------------------------------------------
+
+	/** Maximum agent turns before run stops. ClaudeAgent default 1000. */
+	maxTurns?: number;
+	/**
+	 * Override the provider's default system prompt. The Claude provider
+	 * interprets a plain string; other providers may ignore it. Use for
+	 * hermetic one-shot tasks that need a bespoke instruction block without
+	 * inheriting chat-path defaults (e.g. contract review).
+	 */
+	systemPrompt?: string;
+	/**
+	 * Override the provider's preset tool list. Either an allowlist `string[]`
+	 * or the Claude SDK preset object `{ type: "preset", preset: "claude_code" }`.
+	 */
+	tools?: { type: "preset"; preset: "claude_code" } | string[];
+	/**
+	 * Replace the provider's default hook chain entirely (no merging with
+	 * provider defaults). Pass an empty partial map to disable all hooks.
+	 * Provider implementations narrow each callback to their SDK type internally.
+	 */
+	hooks?: AgentHooks;
+	/** Per-run model override; takes precedence over `AgentConfig.model`. */
+	model?: string;
+
+	// --------------------------------------------------------------------------
+	// Claude-only support bits — non-default paths chat never takes.
+	// --------------------------------------------------------------------------
+
+	/**
+	 * Controls `sessionCwd` resolution inside ClaudeAgent.
+	 * - `"session-wrapped"` (default): legacy behaviour, wraps `cwd` into
+	 *   `sessions/<id>` so concurrent chats cannot clobber each other.
+	 * - `"exact"`: use `cwd` verbatim after defensive expansion. Use when the
+	 *   caller has pre-resolved a hermetic per-run workspace (e.g. contract
+	 *   review's `mkdtemp`).
+	 */
+	cwdMode?: "exact" | "session-wrapped";
+	/**
+	 * Skip ClaudeAgent's `syncSkillsToClaude(sessionCwd)` global sync and copy
+	 * skills from this directory into `sessionCwd/.claude/skills/` instead. Use
+	 * for hermetic one-shot tasks that ship their own skill bundle.
+	 */
+	skillsSourceDir?: string;
+	/**
+	 * Controls the Claude SDK's session persistence (`query({ persistSession })`).
+	 * When `false`, the SDK does NOT write the run transcript (including all
+	 * Read tool output the agent sees) to `~/.claude/projects/<hash>/`. Set this
+	 * to `false` for hermetic one-shot tasks whose inputs are sensitive (e.g.
+	 * contract review, where the entire contract is read into context). When
+	 * `undefined`, ClaudeAgent does not override the SDK default (currently
+	 * `true`), preserving chat-path resume behaviour.
+	 */
+	persistSession?: boolean;
+	/**
+	 * @internal Claude-SDK child process env override. Other providers ignore.
+	 * Used to bypass ClaudeAgent.buildEnvConfigForSession's `applyEnvToProcess`
+	 * side effect for hermetic backend tasks (e.g. contract review).
+	 */
+	_envOverride?: Record<string, string>;
 }
 
 export interface PlanOptions extends AgentOptions {
@@ -576,6 +737,15 @@ export interface ExecuteOptions extends AgentOptions {
 // ============================================================================
 
 /**
+ * A one-shot agent run whose provider process has already been initialized.
+ * The final prompt and request-scoped callbacks are bound when consumed.
+ */
+export interface PreparedAgentRun {
+	consume(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage>;
+	close(reason?: string): Promise<void>;
+}
+
+/**
  * Base interface for all agent implementations.
  * Each provider (Claude, DeepAgents, etc.) must implement this interface.
  */
@@ -587,6 +757,12 @@ export interface IAgent {
 	 * Run the agent with a prompt (direct execution mode)
 	 */
 	run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage>;
+
+	/**
+	 * Pre-initialize a one-shot direct run when supported by the provider.
+	 * Callers must close unused handles.
+	 */
+	prepareRun?(options?: AgentOptions): Promise<PreparedAgentRun>;
 
 	/**
 	 * Run planning phase only (returns a plan for approval)
