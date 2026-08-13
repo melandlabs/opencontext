@@ -50,8 +50,6 @@ OpenContext fits teams who need to **engineer their context** — that is, teams
 - **Financial trading teams.** Every order, rebalance, and risk decision needs to be traceable and auditable. The temporal graph plus append-only corrections mean *"what was the strategy in April?"* is a queryable fact, not a buried guess — and the trail lines up with MiFID II / SEC retention rules.
 - **Legal, healthcare and other audited domains.** Law firms, hospitals, and similar teams where every judgement needs per-fact provenance, append-only corrections, and exportable compliance evidence.
 - **Multi-agent and autonomous-workflow authors.** Need scheduled, deterministic wake-up instead of an LLM loop all the way down. `packages/loop` ships exactly that separation.
-- **Agent / LLM platform teams.** Wiring memory, retrieval, and integrations behind one product runtime, not three separate stacks.
-- **Open-source AI builders.** Building their own agents **on top of OpenContext** — using it as the Apache-2.0, self-hostable substrate for memory, retrieval, integrations, and the loop engine, instead of stitching together vendor pieces.
 
 ## Features
 
