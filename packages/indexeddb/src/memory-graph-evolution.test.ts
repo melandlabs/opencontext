@@ -11,8 +11,8 @@ import type {
 	MemoryGraphSnapshot,
 	MemoryGraphSnapshotQuery,
 } from "../../ai/memory-consolidation/src/graph-contracts";
-import type { RawMessage } from "./storage";
 import { createRawMessageMemoryGraphStore, memoryGraphLedgerMessageId } from "./memory-graph-evolution";
+import type { RawMessage } from "./storage";
 
 const SCOPE: OwnerScope = { userId: "u1" };
 
@@ -89,7 +89,10 @@ function buildStorage(): {
 	queryMessages: (q: unknown) => Promise<RawMessage[]>;
 	storeMessage: (m: RawMessage) => Promise<number>;
 	storeMessages: (ms: RawMessage[]) => Promise<number[]>;
-	compareAndSwapGraphLedger?: (m: RawMessage, i: { expectedVersion: string; metadataKey: string }) => Promise<boolean>;
+	compareAndSwapGraphLedger?: (
+		m: RawMessage,
+		i: { expectedVersion: string; metadataKey: string },
+	) => Promise<boolean>;
 } {
 	const store = new Map<string, RawMessage>();
 	const ledgerId = memoryGraphLedgerMessageId(SCOPE);
