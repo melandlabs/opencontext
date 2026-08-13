@@ -37,6 +37,14 @@ export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
 		startTime?: number;
 		endTime?: number;
 	}) => Promise<unknown[]>;
+	lexicalSearchMessages?: (input: {
+		userId: string;
+		keywords: string[];
+		limit?: number;
+		includeArchived?: boolean;
+		platform?: string;
+		botId?: string;
+	}) => Promise<unknown[]>;
 };
 
 export interface CreateRawMessageStoreOptions {

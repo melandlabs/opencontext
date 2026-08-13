@@ -48,6 +48,11 @@ export interface RawMessage {
 	deprecatedAt?: number;
 	deprecationReason?: string;
 	supersededBySummaryId?: string;
+	/**
+	 * Optional back-pointer to the originating `Episode` envelope. Mirrors
+	 * `RawMessage.sourceEpisodeId` in `@melandlabs/memory-store/contracts`.
+	 */
+	sourceEpisodeId?: string;
 }
 
 export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
@@ -87,6 +92,7 @@ export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: Ra
 		deprecatedAt: existing.deprecatedAt ?? incoming.deprecatedAt,
 		deprecationReason: existing.deprecationReason ?? incoming.deprecationReason,
 		supersededBySummaryId: existing.supersededBySummaryId ?? incoming.supersededBySummaryId,
+		sourceEpisodeId: existing.sourceEpisodeId ?? incoming.sourceEpisodeId,
 	};
 }
 
