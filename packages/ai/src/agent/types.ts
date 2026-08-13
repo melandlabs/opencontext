@@ -298,6 +298,76 @@ export interface AgentSupplementalInputSource extends AsyncIterable<AgentSupplem
 }
 
 /**
+ * Trusted host-only state used to reconnect an unfinished runtime to the
+ * provider session that was persisted before process shutdown.
+ *
+ * This is deliberately carried outside public request payloads. Hosts may
+ * populate it only after authenticating the owner and loading the durable
+ * Runtime Session record.
+ */
+export interface AgentRuntimeRecovery {
+	/** Durable OpenContext Runtime Session identity. */
+	runtimeSessionId: string;
+	/** Exact provider session that must be resumed (never forked). */
+	providerSessionId: string;
+	/** Persisted provider working directory. */
+	workingDirectory: string;
+	/** Persisted runtime fencing epoch. */
+	runEpoch: number;
+	/** Opaque durable recovery claim issued by the trusted persistence layer. */
+	recoveryLeaseToken?: string;
+	/**
+	 * Durable delivery settlement used to rebuild process-local dispatcher
+	 * progress before the outbox is replayed. An explicit empty list means the
+	 * coordinator verified that every canonical instruction remains retryable.
+	 */
+	instructionSettlements: readonly AgentRuntimeInstructionSettlement[];
+	/**
+	 * Called only after Claude confirms that the expected provider session was
+	 * resumed and any settlement-aware outbox replay has finished. The host may
+	 * repair an interrupted evaluation and ask the attached GoalController for
+	 * one canonical continuation through `continueGoal`.
+	 */
+	onProviderSessionInitialized?: (context: {
+		runtimeSessionId: string;
+		providerSessionId: string;
+		runEpoch: number;
+		continueGoal: () => Promise<AgentRuntimeRecoveryContinuationResult>;
+		/**
+		 * Evaluates durable evidence after provider loss without producing another
+		 * instruction for the failed provider. Implementations either complete or
+		 * pause the Goal at this boundary.
+		 */
+		finalizeGoalWithoutContinuation?: () => Promise<AgentRuntimeRecoveryGoalFinalizationResult>;
+	}) => void | Promise<void>;
+}
+
+export interface AgentRuntimeInstructionSettlement {
+	instructionId: string;
+	disposition: "accepted" | "superseded";
+	recordedAt: string;
+	providerEventId?: string;
+	reason?: string;
+}
+
+export type AgentRuntimeRecoveryContinuationResult =
+	| {
+			decision: "allow";
+			outcome: "no_active_goal" | "stale" | "completed" | "paused" | "blocked" | "budget_limited" | "expired";
+	  }
+	| {
+			decision: "block";
+			outcome: "continue";
+	  };
+
+export type AgentRuntimeRecoveryGoalFinalizationResult = {
+	decision: "allow";
+	outcome: "no_active_goal" | "stale" | "completed" | "paused";
+	goalId?: string;
+	goalRevision?: number;
+};
+
+/**
  * Image attachment for vision capabilities.
  * Local uploads should prefer `data` (base64) so the payload stays
  * self-contained; `url` remains available for runtimes that can fetch a
@@ -509,6 +579,8 @@ export interface AgentOptions {
 	conversation?: ConversationMessage[];
 	/** Additional user inputs delivered to an already-active run. */
 	supplementalInput?: AgentSupplementalInputSource;
+	/** Trusted host-only restart recovery state; never accepted from HTTP. */
+	runtimeRecovery?: AgentRuntimeRecovery;
 	/** Working directory */
 	cwd?: string;
 	/** Use cwd exactly instead of wrapping it in an OpenContext session folder */
