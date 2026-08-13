@@ -31,23 +31,27 @@ host process.
 ## What is OpenContext?
 
 **OpenContext** is the context runtime layer that sits underneath an agentic
-application. It is not a UI, a chat surface, or a model provider —
+application — and the substrate you build your own agent on top of.
+It is not a UI, a chat surface, or a model provider —
 it is the glue between the things that make an agent useful: durable
 memory, retrieval, context correction, multi-platform connectivity,
-scheduled awareness, and the embedding-shaped persistence that holds
-all of it together.
+scheduled awareness, and a deterministic loop engine, all behind one dependency.
 
 → Read [`docs/architecture.md`](./docs/architecture.md) for the full
 data model, the lifecycle of a fact, and the transport surface map.
 
 ## Who is it for?
 
-- **Agent / LLM platform teams** wiring memory, retrieval, and integrations into a product behind one runtime
-- **Product engineers** adding an agentic surface (chat, search, automation) to an existing app without rebuilding storage and connectors
-- **Internal-tools teams** building RAG / agent features on top of Slack, Notion, Gmail, Linear, Jira, HubSpot, …
-- **Multi-agent and autonomous-workflow authors** who need scheduled, deterministic wake-up instead of an LLM loop all the way down
-- **Regulated, audited environments** — legal, finance, healthcare and similar teams who need to trace every decision back to its source and keep append-only correction records for compliance
-- **Open-source AI builders** who want a self-hosted, Apache-2.0 alternative to vendor memory and vector stacks
+OpenContext fits teams who need to **engineer their context** — that is, teams whose day-to-day work runs straight into the problems OpenContext was built to solve. Each bullet spells out the pain and how OpenContext addresses it:
+
+- **Software engineering teams.** Decisions scatter across GitHub PRs, Linear tickets, Slack threads, and Notion docs — across people, tools, and quarters. New hires ask *"why did we pick X?"* and no one can answer. OpenContext's temporal graph stores every fact with `valid_from / valid_until`, so *"what did we believe last quarter?"* is a real, citable query — not a guess.
+- **Efficiency / productivity engineering teams.** The people building internal automation for the rest of the company. They don't want another SaaS — they want a runtime they can drop into a CLI, an MCP server, or a daemon. OpenContext is library-first, and the deterministic Loop engine only invokes the LLM when there is real work, so it does not become a token-burning always-on loop.
+- **Office-assistant products.** Assistants that live inside Telegram, iMessage, WhatsApp, Lark/Feishu, and friends. Same agent code, same context across channels. `IntegrationRecord` hides credentials, rate-limits, and reconnect logic, while `platform + messageId` is the natural audit trail for personal and work data.
+- **Financial trading teams.** Every order, rebalance, and risk decision needs to be traceable and auditable. The temporal graph plus append-only corrections mean *"what was the strategy in April?"* is a queryable fact, not a buried guess — and the trail lines up with MiFID II / SEC retention rules.
+- **Legal, healthcare and other audited domains.** Law firms, hospitals, and similar teams where every judgement needs per-fact provenance, append-only corrections, and exportable compliance evidence.
+- **Multi-agent and autonomous-workflow authors.** Need scheduled, deterministic wake-up instead of an LLM loop all the way down. `packages/loop` ships exactly that separation.
+- **Agent / LLM platform teams.** Wiring memory, retrieval, and integrations behind one product runtime, not three separate stacks.
+- **Open-source AI builders.** Building their own agents **on top of OpenContext** — using it as the Apache-2.0, self-hostable substrate for memory, retrieval, integrations, and the loop engine, instead of stitching together vendor pieces.
 
 ## Features
 
