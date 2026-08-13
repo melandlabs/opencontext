@@ -99,6 +99,12 @@ export interface NativeAgentRunnerContext {
 	applicabilityContexts?: MemoryApplicabilityContext[];
 	permissionHandler?: AgentRuntimePermissionHandler;
 	emitPermissionRequestEvents?: boolean;
+	/**
+	 * Trusted recovery state loaded by the host. This intentionally lives on
+	 * the runner context rather than NativeAgentRequest so HTTP JSON cannot
+	 * select an arbitrary provider session to resume.
+	 */
+	runtimeRecovery?: AgentOptions["runtimeRecovery"];
 }
 
 export type NativeAgentMemoryContextStatus = "applied" | "baseline" | "no-op" | "failed";
@@ -225,7 +231,12 @@ export async function runNativeAgentRequest(
 
 	const promptBuild = await buildNativeAgentPrompt(preparedBody, context, host);
 	const userSettings = await host.getUserInsightSettings?.(context.userId);
-	const config = await buildAgentConfig(preparedBody, context.userId, host);
+	const config = await buildAgentConfig(
+		preparedBody,
+		context.userId,
+		host,
+		context.runtimeRecovery !== undefined,
+	);
 	const agentOptions = buildAgentOptions(preparedBody, context, {
 		aiSoulPrompt: userSettings?.aiSoulPrompt ?? null,
 		language: userSettings?.language ?? null,
@@ -257,6 +268,7 @@ async function buildAgentConfig(
 	body: NativeAgentRequest,
 	userId: string,
 	host: NativeAgentHost,
+	recoveringRuntime: boolean,
 ): Promise<AgentConfig> {
 	const provider = body.provider || "claude";
 	const useAnthropicCompatibleConfig = provider === "claude";
@@ -268,13 +280,22 @@ async function buildAgentConfig(
 			})
 		: undefined;
 
-	const effectiveModelConfig = {
-		...body.modelConfig,
-		...userAnthropicConfig,
-	};
+	const effectiveModelConfig = recoveringRuntime
+		? {
+				// Reuse current trusted credentials, but preserve the model/runtime
+				// choices stored with the exact provider session being resumed.
+				...userAnthropicConfig,
+				model: body.modelConfig?.model ?? userAnthropicConfig?.model,
+				thinkingLevel: body.modelConfig?.thinkingLevel,
+			}
+		: {
+				// Normal requests prefer user-saved Anthropic settings over frontend
+				// defaults. Recovery reloads only trusted credentials while retaining the
+				// model and runtime choices persisted with the provider session.
+				...body.modelConfig,
+				...userAnthropicConfig,
+			};
 
-	// User-saved Anthropic settings win over request defaults such as the
-	// frontend's selectedModel fallback to claude-sonnet-4.6.
 	return {
 		provider,
 		apiKey: useAnthropicCompatibleConfig ? effectiveModelConfig.apiKey : undefined,
@@ -299,6 +320,7 @@ function buildAgentOptions(
 		session: context.session,
 		authToken: body.authToken,
 		conversation: body.conversation,
+		runtimeRecovery: context.runtimeRecovery,
 		cwd: body.workDir,
 		useProvidedWorkDir: body.useProvidedWorkDir,
 		taskId: body.taskId,
@@ -352,6 +374,23 @@ async function buildNativeAgentPrompt(
 	prompt: string;
 	memoryContext: NativeAgentMemoryContextDiagnostic;
 }> {
+	if (context.runtimeRecovery) {
+		// Claude restores its original transcript through the provider resume
+		// handle. Re-materializing memory, RAG, files, or permission prose here
+		// would create a second synthetic prompt before the durable Goal outbox is
+		// replayed. The non-empty bootstrap text only satisfies the shared runner
+		// contract; the Claude adapter replaces it with its live input stream.
+		return {
+			prompt: body.prompt,
+			memoryContext: {
+				status: "no-op",
+				reasonCodes: ["runtime_recovery_uses_provider_transcript"],
+				sourceCount: 0,
+				appliedMode: "baseline",
+			},
+		};
+	}
+
 	const contextParts: string[] = [];
 
 	const memoryContext = await resolveDefaultMemoryContext(body, context, host);
