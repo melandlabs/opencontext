@@ -5,7 +5,7 @@
 **The context runtime substrate that powers agentic applications.**
 
 A temporal context graph, a memory API, retrieval primitives,
-and a multiple-platform integration mesh — designed to be embedded into any
+and a multi-platform integration mesh — designed to be embedded into any
 host process.
 
 <p align="center">
@@ -40,17 +40,26 @@ all of it together.
 → Read [`docs/architecture.md`](./docs/architecture.md) for the full
 data model, the lifecycle of a fact, and the transport surface map.
 
+## Who is it for?
+
+- **Agent / LLM platform teams** wiring memory, retrieval, and integrations into a product behind one runtime
+- **Product engineers** adding an agentic surface (chat, search, automation) to an existing app without rebuilding storage and connectors
+- **Internal-tools teams** building RAG / agent features on top of Slack, Notion, Gmail, Linear, Jira, HubSpot, …
+- **Multi-agent and autonomous-workflow authors** who need scheduled, deterministic wake-up instead of an LLM loop all the way down
+- **Regulated, audited environments** — legal, finance, healthcare and similar teams who need to trace every decision back to its source and keep append-only correction records for compliance
+- **Open-source AI builders** who want a self-hosted, Apache-2.0 alternative to vendor memory and vector stacks
+
 ## Features
 
-|     | Capability                                                                      | What it does                                                                                                                                                                                            |
-| --- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🧠  | **[Temporal Context Graph](./docs/architecture.md#the-temporal-context-graph)** | A directed acyclic graph where every fact has `valid_from` / `valid_until`. Supersession, contradiction, and merge are first-class edges — corrections are append-only, not destructive.                |
-| 🔌  | **[Platform Integration Mesh](./packages/integrations)**                        | One uniform `IntegrationRecord` shape across Gmail, Slack, Telegram, Linear, Jira, iMessage, Feishu, Weixin, … — credential rotation, rate-limit handling, and reconnect logic live behind the adapter. |
-| ⏰  | **[Deterministic Loop Engine](./packages/loop)**                                | A scheduler that wakes up, decides whether there is real work, and only then calls into the agent runtime. LLM calls are not the foundation — they are the last step.                                   |
-| 🔍  | **[Retrieval Primitives](./packages/rag)**                                      | Chunking, embeddings, parsers (PDF/ZIP/text), sqlite-vec + pgvector + Chroma adapters. Mix backends without rewriting the recall pipeline.                                                              |
-| 🤖  | **[Agent Runtime](./packages/ai)**                                              | AI SDK wrappers, sandbox providers (native / Claude / Vercel), MCP server, memory-consolidation job, image + audio generation.                                                                          |
-| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                      |
-| 🛡️  | **[Audit + Encrypted Storage](./packages/audit)**                               | Structured audit logging to `~/.opencontext/logs/audit.jsonl`, Fernet symmetric encryption for secrets, URL allowlist/blocklist for outbound calls.                                                     |
+|     | Capability                                                                      | What it does                                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 🧠  | **[Temporal Context Graph](./docs/architecture.md#the-temporal-context-graph)** | A directed acyclic graph where every fact has `valid_from` / `valid_until`. Supersession, contradiction, and merge are first-class edges — corrections are append-only, not destructive.                                                                                                                                                                                                                |
+| 🔌  | **[Platform Integration Mesh](./packages/integrations)**                        | One uniform `IntegrationRecord` shape across Gmail, Slack, Telegram, Linear, Jira, iMessage, Feishu, Weixin, … — credential rotation, rate-limit handling, and reconnect logic live behind the adapter.                                                                                                                                                                                                  |
+| ⏰  | **[Deterministic Loop Engine](./packages/loop)**                                | A scheduler that wakes up, decides whether there is real work, and only then calls into the agent runtime. LLM calls are not the foundation — they are the last step.                                                                                                                                                                                                                                  |
+| 🔍  | **[Retrieval Primitives](./packages/rag)**                                      | Chunking, embeddings, parsers (PDF/ZIP/text), sqlite-vec + pgvector + Chroma adapters. Mix backends without rewriting the recall pipeline.                                                                                                                                                                                                                                                              |
+| 🤖  | **[Agent Runtime](./packages/ai)**                                              | AI SDK wrappers, sandbox providers (native / Claude / Vercel), MCP server, memory-consolidation job, image + audio generation.                                                                                                                                                                                                                                                                          |
+| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                                                                                                                                                                                                                    |
+| 🛡️  | **[Audit + Encrypted Storage](./packages/audit)**                               | Structured audit logging to `~/.opencontext/logs/audit.jsonl`, Fernet symmetric encryption for secrets, URL allowlist/blocklist for outbound calls.                                                                                                                                                                                                                                                       |
 
 ## Quick Start
 
@@ -130,7 +139,6 @@ opencontext mcp \
   --embedding-provider local \
   --memory-backend sqlite-vec
 ```
-
 
 ## Examples
 
