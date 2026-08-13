@@ -510,14 +510,7 @@ export async function searchRawMessagesSemanticallyForUser(
 	},
 ) {
 	if (shouldUseRawMessageApiStorage()) {
-		try {
-			return await sqliteSearchRawMessagesSemanticallyForUser(userId, options);
-		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to search semantically, falling back to IndexedDB:",
-				error,
-			);
-		}
+		return await sqliteSearchRawMessagesSemanticallyForUser(userId, options);
 	}
 
 	const manager = await getManager();
