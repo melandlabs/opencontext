@@ -50,6 +50,7 @@ interface RawMessageRow {
 	deprecated_at: number | null;
 	deprecation_reason: string | null;
 	superseded_by_summary_id: string | null;
+	source_episode_id: string | null;
 }
 
 interface MemorySummaryRow {
@@ -109,6 +110,41 @@ export interface SQLiteRawMessageSemanticSearchResult {
 		timestamp: number;
 		memoryStage?: string;
 		embeddingModel?: string;
+	};
+	message: RawMessage;
+}
+
+/**
+ * BM25 lexical search powered by the existing `raw_messages_fts` virtual table.
+ * The FTS5 `rank` column is exposed as `bm25Rank` so callers can fold it into
+ * the unified RRF merge. Mirrors `SQLiteRawMessageSemanticSearchResult`'s
+ * shape so the two sub-queries are interchangeable downstream.
+ */
+export interface SQLiteRawMessageLexicalSearchInput {
+	userId: string;
+	keywords: string[];
+	limit?: number;
+	includeArchived?: boolean;
+	includeDeprecated?: boolean;
+	platform?: string;
+	botId?: string;
+}
+
+export interface SQLiteRawMessageLexicalSearchResult {
+	type: "memory";
+	id: string;
+	content: string;
+	similarity: number;
+	bm25Rank: number;
+	metadata: {
+		userId: string;
+		platform: string;
+		botId: string;
+		channel?: string;
+		person?: string;
+		timestamp: number;
+		memoryStage?: string;
+		scoring: "bm25";
 	};
 	message: RawMessage;
 }
@@ -182,6 +218,7 @@ function toRawMessage(row: RawMessageRow): RawMessage {
 		deprecatedAt: row.deprecated_at ?? undefined,
 		deprecationReason: row.deprecation_reason ?? undefined,
 		supersededBySummaryId: row.superseded_by_summary_id ?? undefined,
+		sourceEpisodeId: row.source_episode_id ?? undefined,
 	};
 }
 
@@ -906,14 +943,16 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             content, attachments, embedding, embedding_model,
             embedding_content_hash, embedding_dimensions, embedding_updated_at,
             metadata, created_at, memory_stage, access_count, last_access_at,
-            importance_score, archived_at, is_pinned, summary_ref_id
+            importance_score, archived_at, is_pinned, summary_ref_id,
+            source_episode_id
           )
           VALUES (
             @messageId, @platform, @botId, @userId, @channel, @person,
             @timestamp, @content, @attachments, @embedding, @embeddingModel,
             @embeddingContentHash, @embeddingDimensions, @embeddingUpdatedAt,
             @metadata, @createdAt, @memoryStage, @accessCount, @lastAccessAt,
-            @importanceScore, @archivedAt, @isPinned, @summaryRefId
+            @importanceScore, @archivedAt, @isPinned, @summaryRefId,
+            @sourceEpisodeId
           )
           ON CONFLICT(message_id) DO UPDATE SET
             platform = excluded.platform,
@@ -937,7 +976,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             importance_score = excluded.importance_score,
             archived_at = excluded.archived_at,
             is_pinned = excluded.is_pinned,
-            summary_ref_id = excluded.summary_ref_id
+            summary_ref_id = excluded.summary_ref_id,
+            source_episode_id = excluded.source_episode_id
           WHERE raw_messages.user_id = excluded.user_id
         `,
 			)
@@ -965,6 +1005,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				archivedAt: normalized.archivedAt ?? null,
 				isPinned: normalized.isPinned ? 1 : 0,
 				summaryRefId: normalized.summaryRefId ?? null,
+				sourceEpisodeId: normalized.sourceEpisodeId ?? null,
 			});
 
 		if (result.changes === 0) {
@@ -1006,6 +1047,92 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			vectorTableExists: this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length),
 		});
 		return results;
+	}
+
+	/**
+	 * Lexical (BM25) sub-query powered by `raw_messages_fts`. Lower scores are
+	 * better in FTS5; we negate `rank` into `similarity` so downstream merging
+	 * can treat this list identically to the semantic list.
+	 *
+	 * Backward-compatible: empty `keywords` short-circuits to `[]`. The
+	 * underlying FTS5 query is shared with `queryMessages` via
+	 * `buildFtsQuery`, so the two paths agree on tokenisation rules.
+	 */
+	async lexicalSearchMessages(
+		input: SQLiteRawMessageLexicalSearchInput,
+	): Promise<SQLiteRawMessageLexicalSearchResult[]> {
+		await this.init();
+
+		const keywords = input.keywords?.map((keyword) => keyword.trim()).filter(Boolean) ?? [];
+		if (keywords.length === 0) {
+			return [];
+		}
+
+		const ftsQuery = buildFtsQuery(keywords);
+		if (!ftsQuery) {
+			return [];
+		}
+
+		const where: string[] = [
+			"raw_messages_fts MATCH @ftsQuery",
+			"raw_messages.id = raw_messages_fts.rowid",
+			"raw_messages.user_id = @userId",
+		];
+		const params: Record<string, unknown> = {
+			ftsQuery,
+			userId: input.userId,
+		};
+
+		if (!input.includeArchived) {
+			where.push("raw_messages.archived_at IS NULL");
+		}
+		if (!input.includeDeprecated) {
+			where.push("raw_messages.deprecated_at IS NULL");
+		}
+		if (input.platform) {
+			where.push("raw_messages.platform = @platform");
+			params.platform = input.platform;
+		}
+		if (input.botId) {
+			where.push("raw_messages.bot_id = @botId");
+			params.botId = input.botId;
+		}
+
+		const limit = input.limit ?? 10;
+		params.limit = limit;
+
+		const sql = `
+			SELECT raw_messages.*, raw_messages_fts.rank AS bm25_rank
+			FROM raw_messages_fts, raw_messages
+			WHERE ${where.join(" AND ")}
+			ORDER BY bm25_rank ASC
+			LIMIT @limit
+		`;
+
+		const rows = this.db.prepare(sql).all(params) as Array<RawMessageRow & { bm25_rank: number }>;
+		return rows.map((row) => {
+			const message = toRawMessage(row);
+			return {
+				type: "memory" as const,
+				id: message.messageId,
+				content: message.content,
+				// FTS5 rank is a negative BM25 score; lower (more negative) is
+				// better. Normalise to [0, 1] for downstream similarity scoring.
+				similarity: sqliteDistanceToScore(-row.bm25_rank),
+				bm25Rank: row.bm25_rank,
+				metadata: {
+					userId: message.userId,
+					platform: message.platform,
+					botId: message.botId,
+					channel: message.channel,
+					person: message.person,
+					timestamp: message.timestamp,
+					memoryStage: message.memoryStage,
+					scoring: "bm25" as const,
+				},
+				message,
+			};
+		});
 	}
 
 	private initializeVectorSearch(): void {

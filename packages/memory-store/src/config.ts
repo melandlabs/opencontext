@@ -143,6 +143,25 @@ export interface UnifiedSearchDeps {
 		includeArchived?: boolean;
 		authToken?: string;
 	}) => Promise<UnifiedSearchInsightsResult[]>;
+	/**
+	 * Optional BM25 (lexical) sub-query for the memory source. Mirrors the
+	 * `searchRawMessagesAnn` shape but operates on FTS5 keywords instead of
+	 * dense embeddings. When absent, the unified pipeline skips the lexical
+	 * path and emits a `memory_lexical_search_not_configured` warning.
+	 */
+	searchRawMessagesLexical?: (input: {
+		userId: string;
+		keywords: string[];
+		limit: number;
+		botId?: string;
+	}) => Promise<
+		Array<{
+			id: string;
+			content: string;
+			similarity: number;
+			metadata: Record<string, unknown>;
+		}>
+	>;
 }
 
 export interface MemoryStoreConfig {

@@ -16,7 +16,14 @@ export interface MemoryApplicabilityContext {
 
 export type MemoryGraphNodeType = "raw" | "summary" | "artifact";
 
-export type MemoryGraphRelationKind = "support" | "compete" | "related" | "supersede";
+export type MemoryGraphRelationKind =
+	| "support"
+	| "compete"
+	| "related"
+	| "supersede"
+	| "caused"
+	| "influenced"
+	| "precedent-for";
 
 export type MemoryClusterLifecycleStatus =
 	| "forming"
@@ -146,6 +153,13 @@ export interface MemoryGraphSnapshotQuery {
 	nodeIds?: string[];
 	clusterIds?: string[];
 	includeAuditOnly?: boolean;
+	/**
+	 * Optional ISO-8601 timestamp. When present, snapshot filtering drops nodes,
+	 * edges, and clusters whose `applicability.validFrom`/`validUntil` window is
+	 * closed at that instant. Backward-compatible: omitted `asOf` keeps the
+	 * current behaviour exactly.
+	 */
+	asOf?: string;
 }
 
 export interface MemoryGraphAuditQuery {

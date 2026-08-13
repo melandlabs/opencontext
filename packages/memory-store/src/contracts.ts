@@ -56,6 +56,13 @@ export interface RawMessage {
 	deprecatedAt?: number;
 	deprecationReason?: string;
 	supersededBySummaryId?: string;
+	/**
+	 * Optional back-pointer to the originating {@link Episode} envelope. When
+	 * ingest adapters group raw messages by transcript / meeting / voice memo
+	 * the episode id is recorded here so that downstream retrieval can lift
+	 * whole episodes atomically.
+	 */
+	sourceEpisodeId?: string;
 }
 
 function normalizeTimestampToMs(value: number | undefined): number {

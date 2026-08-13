@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-export const RAW_MESSAGES_SCHEMA_VERSION = 2;
+export const RAW_MESSAGES_SCHEMA_VERSION = 3;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -123,5 +123,16 @@ export function initializeRawMessageSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_raw_messages_active_user
       ON raw_messages(user_id, memory_stage, deprecated_at)
       WHERE deprecated_at IS NULL;
+  `);
+
+	// --- v3: episode join key ---
+	// `source_episode_id` is an optional back-pointer to the originating
+	// `Episode` envelope (`@melandlabs/contracts/episode`). Populated by
+	// ingest adapters that group raw messages by transcript / meeting.
+	addColumnIfMissing(db, "raw_messages", "source_episode_id", "TEXT");
+	db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_raw_messages_source_episode_id
+      ON raw_messages(source_episode_id)
+      WHERE source_episode_id IS NOT NULL;
   `);
 }

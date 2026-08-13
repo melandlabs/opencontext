@@ -10,6 +10,8 @@
  */
 import { z } from "zod";
 
+import type { EntityType } from "./entity-type.js";
+import { ENTITY_TYPES } from "./entity-type.js";
 import type { IntegrationId } from "./integration-id.js";
 import { INTEGRATION_IDS } from "./integration-id.js";
 import type { UserType } from "./user-type.js";
@@ -18,3 +20,5 @@ import { USER_TYPES } from "./user-type.js";
 export const UserTypeSchema = z.enum(USER_TYPES as unknown as [UserType, ...UserType[]]);
 
 export const IntegrationIdSchema = z.enum(INTEGRATION_IDS as unknown as [IntegrationId, ...IntegrationId[]]);
+
+export const EntityTypeSchema = z.enum(ENTITY_TYPES as unknown as [EntityType, ...EntityType[]]);

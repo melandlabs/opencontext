@@ -68,6 +68,26 @@ export function __resetSQLiteRawMessageManagerForTests(): void {
 	manager = null;
 }
 
+/**
+ * BM25 lexical proxy over the SQLite FTS5 index. Mirrors
+ * `SQLiteRawMessageManager.lexicalSearchMessages` so callers downstream of the
+ * raw-message facade can opt in to a second ranking signal.
+ */
+export async function lexicalSearchRawMessages(input: {
+	userId: string;
+	keywords: string[];
+	limit?: number;
+	includeArchived?: boolean;
+	platform?: string;
+	botId?: string;
+}): Promise<unknown[]> {
+	const mgr = await getSQLiteRawMessageManager();
+	if (typeof mgr.lexicalSearchMessages !== "function") {
+		return [];
+	}
+	return mgr.lexicalSearchMessages(input);
+}
+
 // Kept for back-compat with the historical `MemoryStoreEnv` interface.
 // The resolved env is no longer read by the SQLite layer, but the symbol
 // stays exported so external code that still calls `resolveEnv` compiles.

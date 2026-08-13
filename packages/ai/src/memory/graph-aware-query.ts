@@ -16,6 +16,12 @@ import type {
 
 export interface MemoryQueryGraphRetrievalQuery extends MemorySearchQuery {
 	minRawResultsWithoutFallback?: number;
+	/**
+	 * Optional ISO-8601 timestamp. Forwarded to `MemoryGraphSnapshotQuery.asOf`
+	 * by snapshot providers that opt in, so the snapshot is filtered to the
+	 * state visible at that instant. Backward-compatible.
+	 */
+	asOf?: string;
 }
 
 export interface MemoryQueryGraphRetrievalSnapshotInput {
@@ -23,6 +29,12 @@ export interface MemoryQueryGraphRetrievalSnapshotInput {
 	query: MemoryQueryGraphRetrievalQuery;
 	baselineHits: MemorySearchHit[];
 	baselineNodeIds: string[];
+	/**
+	 * Convenience accessor for `query.asOf`. Snapshot providers that read
+	 * via `MemoryGraphStore.readSnapshot` should forward this into
+	 * `MemoryGraphSnapshotQuery.asOf` so time-travel filters apply.
+	 */
+	asOf?: string;
 }
 
 export interface MemoryQueryGraphRetrievalOptions {
@@ -402,6 +414,7 @@ export async function applyGraphAwareRetrieval(input: {
 			query: input.query,
 			baselineHits: input.baselineHits,
 			baselineNodeIds: allBaselineNodeIds,
+			asOf: input.query.asOf,
 		});
 
 		if (!snapshot) {

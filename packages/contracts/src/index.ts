@@ -6,4 +6,7 @@
  */
 export * from "./user-type.js";
 export * from "./integration-id.js";
+export * from "./entity-type.js";
+export * from "./episode.js";
+export * from "./decision.js";
 export * from "./errors.js";

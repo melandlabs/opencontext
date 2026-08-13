@@ -244,25 +244,65 @@ function filterSnapshot(
 ): MemoryGraphSnapshot {
 	const nodeIds = query.nodeIds ? new Set(query.nodeIds) : undefined;
 	const clusterIds = query.clusterIds ? new Set(query.clusterIds) : undefined;
+	const asOfMs = parseAsOf(query.asOf);
 	return {
 		...cloneSnapshot(snapshot),
 		nodes: snapshot.nodes.filter(
 			(node) =>
 				sameOwnerScope(node.ownerScope, query.ownerScope) &&
 				(!nodeIds || nodeIds.has(node.id)) &&
-				(query.includeAuditOnly || node.visibility !== "audit-only"),
+				(query.includeAuditOnly || node.visibility !== "audit-only") &&
+				applicabilityContains(node.applicability, asOfMs),
 		),
 		edges: snapshot.edges.filter(
 			(edge) =>
 				sameOwnerScope(edge.ownerScope, query.ownerScope) &&
-				(!nodeIds || nodeIds.has(edge.fromNodeId) || nodeIds.has(edge.toNodeId)),
+				(!nodeIds || nodeIds.has(edge.fromNodeId) || nodeIds.has(edge.toNodeId)) &&
+				applicabilityContains(edge.applicability, asOfMs),
 		),
 		clusters: snapshot.clusters.filter(
 			(cluster) =>
 				sameOwnerScope(cluster.ownerScope, query.ownerScope) &&
-				(!clusterIds || clusterIds.has(cluster.clusterId)),
+				(!clusterIds || clusterIds.has(cluster.clusterId)) &&
+				applicabilityContains(cluster.applicability, asOfMs),
 		),
 	};
+}
+
+/**
+ * Resolve `query.asOf` to epoch milliseconds. `null` means "no filter
+ * requested" — callers should leave applicability windows untouched. Invalid
+ * strings also map to `null` so the legacy behaviour (ignore applicability)
+ * wins instead of throwing.
+ */
+function parseAsOf(asOf: string | undefined): number | null {
+	if (typeof asOf !== "string" || asOf.length === 0) {
+		return null;
+	}
+	const ms = Date.parse(asOf);
+	return Number.isFinite(ms) ? ms : null;
+}
+
+/**
+ * Returns true when the applicability window contains `asOfMs` (or when no
+ * filter was requested, i.e. `asOfMs === null`). Items without applicability
+ * metadata are always included regardless of `asOfMs` — applicability is
+ * opt-in.
+ */
+function applicabilityContains(
+	applicability: MemoryApplicabilityContext | undefined,
+	asOfMs: number | null,
+): boolean {
+	if (asOfMs === null || !applicability) {
+		return true;
+	}
+	if (typeof applicability.validFrom === "number" && asOfMs < applicability.validFrom) {
+		return false;
+	}
+	if (typeof applicability.validUntil === "number" && asOfMs > applicability.validUntil) {
+		return false;
+	}
+	return true;
 }
 
 const ownerGraphLocks = new Map<string, Promise<void>>();
