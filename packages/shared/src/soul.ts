@@ -1,7 +1,7 @@
 /**
  * OpenContext Soul preset configuration
  * 6 presets + custom (id: "custom"), used for card and sidebar display in personalization settings
- * Default presets support bilingual (EN/ZH), returning corresponding prompt based on current language
+ * Default presets support bilingual (EN/ZH), returning the corresponding prompt based on current language
  */
 
 export interface SoulPreset {

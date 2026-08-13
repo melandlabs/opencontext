@@ -124,7 +124,7 @@ function isSourceIntent(text: string, rule: PlatformRule) {
 			return false;
 		}
 		// Mentioning email/gmail without clear send or read intent → default to source
-		// ("分析邮件", "检查邮箱" etc. are already matched by rule.patterns)
+		// (e.g. "analyze email", "check inbox" are already matched by rule.patterns)
 		return true;
 	}
 

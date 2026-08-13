@@ -59,8 +59,8 @@ const zhHans = {
 		sources: "来源",
 		noSources: "暂无引用来源",
 		temporary: "临时",
-		// #357 — 文件卡片上表示"最新一次工具调用失败/超时"的徽标，用于在
-		// 对话产物列表中区分"未完成"与"最终交付物"。
+		// #357 — Badge on file cards indicating that "the most recent tool call failed / timed out",
+		// used to distinguish "incomplete" from "final deliverable" in the conversation artifact list.
 		incomplete: "未完成",
 		previewImage: "预览图片",
 		preview: "预览",
@@ -775,8 +775,8 @@ const zhHans = {
 	},
 	connectors: {
 		pageDescription: "关联您的平台或订阅您关心的内容 — opencontext 为您守望。",
-		// #361 — capability state labels. 与单纯的 "connected" 措辞分开，让
-		// 用户清楚"已授权"与"被 Loop 监听"是两件事。
+		// #361 — capability state labels. Kept distinct from the plain "connected" wording
+		// so users understand that "authorized" and "monitored by Loop" are two different things.
 		capabilityConnected: "已连接",
 		capabilityLoopMonitored: "Loop 监听中",
 		capabilityDecisionCapable: "可产出决策",
@@ -787,15 +787,16 @@ const zhHans = {
 		capabilitySummary: "{{connected}} 已连接 · {{monitored}} 被 Loop 监听 · {{decision}} 可产出决策",
 		unsupportedSignalsNote: "{{count}} 条信号被丢弃 —— 来源缺少 Loop 标准映射。",
 		needsSetupAction: "让智能体接入 Loop",
-		// #391 — `/connectors` 页面同步 Composio 后端账户。同步按钮触发
-		// Loop 后台重新探测,展示给用户的账户可能落后于实际授权状态。
+		// #391 — The `/connectors` page syncs Composio backend accounts. The sync button
+		// triggers Loop's background re-probe, so the accounts shown to the user may lag
+		// behind the actual authorization state.
 		sync: "同步",
 		sourceComposio: "Composio",
 		sourceComposioHint: "通过 Composio（智能体管理）连接",
 		snapshotStale: "上次已知状态",
 		snapshotUnavailable: "Composio 状态不可用",
 		probeError: "最近同步失败",
-		// #412 — 每种探测失败类型对应的提示与一键修复。详见
+		// #412 — Hint and one-click fix per probe failure type. See
 		// `apps/web/components/loop/probe-error-callout.tsx`。
 		probeRetry: "重新探测",
 		probeRetrying: "重新探测中…",
@@ -2228,9 +2229,10 @@ const zhHans = {
 				title: "Agent 执行超时",
 				description: "任务执行时间过长导致超时。系统会自动重试。",
 				suggestions: ["系统将自动重试", "尝试简化任务或拆分成多个小任务", "检查网络连接"],
-				// 提供方超时中断卡片：当长任务在工具调用过程中被强制停止时
-				// 渲染这些文案。注意此处与上面的通用超时说明措辞不同 —— 本场景
-				// 没有自动重试，因此不能承诺会重试。
+				// Provider-timeout interruption card: rendered when a long task is forcibly
+				// stopped during a tool call. Note the wording differs from the generic
+				// timeout copy above — there is no automatic retry here, so we cannot
+				// promise a retry.
 				completedArtifacts: "上一轮已生成 {{count}} 个文件，保留在工作目录中可以继续复用。",
 				continueAction: "从断点继续",
 			},
@@ -2254,9 +2256,9 @@ const zhHans = {
 				description: "API 调用失败，请检查配置后重试。",
 				suggestions: ["检查 API 配置", "请重试", "如果问题持续存在，请联系支持"],
 			},
-			// 当内置 Claude runtime 没有鉴权（例如从未运行 `claude auth login`
-			// 或会话被清理）时展示。仿照 alloomi 的 `authentication_error`
-			// 策略条目，但显式列出两种修复路径。
+			// Shown when the built-in Claude runtime is not authenticated (e.g. `claude auth login`
+			// has never been run, or the session was cleared). Modelled after alloomi's
+			// `authentication_error` policy entry, but explicitly lists two remediation paths.
 			runtimeNotLoggedIn: {
 				title: "Claude runtime 未登录",
 				description:
