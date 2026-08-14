@@ -27,7 +27,7 @@ export function makeTsupConfig(opts) {
 		entry: opts.entries,
 		format: opts.cjs ? ["esm", "cjs"] : ["esm"],
 		dts: opts.dts ?? true,
-		sourcemap: opts.sourcemap ?? true,
+		sourcemap: opts.sourcemap ?? false,
 		clean: true,
 		splitting: false,
 		treeshake: true,
