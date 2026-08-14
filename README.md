@@ -2,7 +2,7 @@
 
 # OpenContext
 
-**The agentic context runtime substrate that powers agentic applications.**
+**The agentic context runtime, powering applications that act on your behalf.**
 
 A temporal context graph, a memory API, retrieval primitives,
 and a multi-platform integration mesh — designed to be embedded into any
@@ -235,7 +235,7 @@ vector index, for example.
 | ------------ | ----------------------------------------------------------------------------- |
 | Raw messages | SQLite-vec (Tauri / desktop), Postgres (server / daemon), IndexedDB (browser) |
 | Vector index | SQLite-vec (default), pgvector, Chroma, IndexedDB                             |
-| Embeddings   | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`                |
+| Embeddings   | Cloud (`text-embedding-3-small` via OpenRouter, configurable) + local (`Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`, opt-in `@melandlabs/ai-rag` peer dep) |
 
 ## Why It Is Different
 
@@ -256,7 +256,7 @@ the agent runtime behind one dependency.
 | Concern           | Providers                                                                                                                                                                                                                                            |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Vector index      | SQLite-vec (default), pgvector, Chroma, IndexedDB (browser)                                                                                                                                                                                          |
-| Embeddings        | OpenAI, Anthropic, Cohere, local via `@melandlabs/opencontext`                                                                                                                                                                                       |
+| Embeddings        | Cloud (`text-embedding-3-small` via OpenRouter, configurable) + local (`Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`, opt-in `@melandlabs/ai-rag` peer dep)                                                                                                                                            |
 | Raw message store | SQLite-vec, Postgres                                                                                                                                                                                                                                 |
 | Web search        | Brave Search                                                                                                                                                                                                                                         |
 | Sandboxes         | Native CLI, Claude, Vercel Sandbox                                                                                                                                                                                                                   |
