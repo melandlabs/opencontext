@@ -2,11 +2,11 @@
 
 # OpenContext
 
-**The context runtime substrate that powers agentic applications.**
+**The agentic context runtime substrate that powers agentic applications.**
 
 A temporal context graph, a memory API, retrieval primitives,
 and a multi-platform integration mesh — designed to be embedded into any
-host process.
+host process or agents.
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -30,7 +30,7 @@ host process.
 
 ## What is OpenContext?
 
-**OpenContext** is the context runtime layer that sits underneath an agentic
+**OpenContext** is the agentic context runtime that sits underneath an agentic
 application — and the substrate you build your own agent on top of.
 It is not a UI, a chat surface, or a model provider —
 it is the glue between the things that make an agent useful: durable

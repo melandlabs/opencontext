@@ -2,10 +2,10 @@
 
 # OpenContext
 
-**驱动 Agentic 应用的上下文运行时底座**
+**驱动 Agentic 应用的 Agentic 上下文运行时底座**
 
 一个时序上下文图谱、一套记忆 API、检索原语,
-和一个多平台集成网格，设计上可被嵌入到任何宿主进程。
+和一个多平台集成网格，设计上可被嵌入到任何宿主进程或 agent。
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
@@ -29,7 +29,7 @@
 
 ## OpenContext 是什么?
 
-**OpenContext** 是位于 Agentic 应用下方的上下文运行时层 —— 也是你拿来"构建自己的 agent"的运行时底座。它不是 UI、不是聊天界面、也不是模型提供商,而是把让 agent 真正有用的那些东西(持久化的记忆、检索、上下文修正、多平台连接、周期性的感知与 Loop 循环)合在同一个依赖里的胶水。
+**OpenContext** 是位于 Agentic 应用下方的 Agentic 上下文运行时 —— 也是你拿来"构建自己的 agent"的运行时底座。它不是 UI、不是聊天界面、也不是模型提供商,而是把让 agent 真正有用的那些东西(持久化的记忆、检索、上下文修正、多平台连接、周期性的感知与 Loop 循环)合在同一个依赖里的胶水。
 
 → 阅读 [`docs/architecture.md`](./docs/architecture.md) 了解完整的数据模型、事实的生命周期,以及传输面映射。
 
