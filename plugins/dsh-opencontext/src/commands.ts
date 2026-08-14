@@ -2,9 +2,9 @@
  * commands — register the `/oc` command (currently exposes `/oc doctor`).
  */
 
-import { classifyBackendError, constants } from "./errors";
-import type { OpenContextBackend } from "./backend";
-import type { ResolvedConfig } from "./config";
+import { classifyBackendError, constants } from "./errors.js";
+import type { OpenContextBackend } from "./backend.js";
+import type { ResolvedConfig } from "./config.js";
 
 interface CommandService {
 	register(definition: {

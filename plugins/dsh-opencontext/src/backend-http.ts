@@ -1,19 +1,20 @@
 /**
  * HttpBackend — `fetch()`-based implementation of OpenContextBackend.
  *
- * Activated when `OPENCONTEXT_DSH_HTTP_URL` is set. Targets the same
- * request shapes that the upstream `powercontext-dsh` plugin emits
- * against its context server, with paths prefixed `/v1/memory/*` and
- * `/v1/context/*`. This mode is forward-looking: the v0.1.x OpenContext
- * daemon does not yet expose these endpoints, so requests will fail
- * with structured `backend_unavailable` / `version_mismatch` errors
- * until a compatible server ships. Lib mode is the supported path on
- * day one.
+ * Activated when `OPENCONTEXT_DSH_HTTP_URL` is set. Paths are prefixed
+ * `/v1/memory/*` and `/v1/context/*`, aligned with the OpenContext
+ * HTTP daemon shape so future server releases can be wired in without
+ * breaking the tool surface. This mode is forward-looking: the v0.1.x
+ * OpenContext daemon does not yet expose these endpoints, so requests
+ * will fail with structured `backend_unavailable` / `version_mismatch`
+ * errors until a compatible server ships. Lib mode is the supported
+ * path on day one; HTTP mode is opt-in for users who can stand up a
+ * compatible server.
  */
 
-import { constants, classifyBackendError, type ErrorCode } from "./errors";
-import { redactSecrets } from "./secrets";
-import type { ResolvedConfig } from "./config";
+import { constants, classifyBackendError, type ErrorCode } from "./errors.js";
+import { redactSecrets } from "./secrets.js";
+import type { ResolvedConfig } from "./config.js";
 import type {
 	BackendCallOptions,
 	CaptureInput,
@@ -25,7 +26,7 @@ import type {
 	RevokeResult,
 	SearchHit,
 	SearchInput,
-} from "./backend";
+} from "./backend.js";
 
 export interface HttpBackend extends OpenContextBackend {
 	readonly mode: "http";

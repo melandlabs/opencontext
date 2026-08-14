@@ -1,4 +1,4 @@
-# opencontext-context
+# opencontext
 
 You have access to durable memory and retrieval-augmented context via the
 `dsh-opencontext` plugin. Use the `oc_*` tools to read and write long-term

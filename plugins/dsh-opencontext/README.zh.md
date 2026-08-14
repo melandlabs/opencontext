@@ -7,7 +7,7 @@
 - **协议**:Apache-2.0
 - **Node 版本**:`^22.19.0 || >=24.0.0`
 - **工具前缀**:`oc_*`
-- **技能**:`opencontext-context`
+- **技能**:`opencontext`
 - **命令**:`/oc doctor`
 
 ## 安装
@@ -64,7 +64,7 @@ dsh --profile web --dump-config
 默认采用 fire-and-forget 模式,不会阻塞轮次;如需严格顺序,
 可开启 `flushOnCapture: true`。
 
-### 技能:`opencontext-context`
+### 技能:`opencontext`
 
 在 `apply` 时注册。让模型在每次会话开始时即了解召回/捕获约定、
 信任模型与 8 个 `oc_*` 工具的语义。
@@ -95,8 +95,8 @@ dsh --profile web --dump-config
 
 ### `http`(可选)
 
-设置 `OPENCONTEXT_DSH_HTTP_URL` 时启用。请求路径对齐上游
-`powercontext-dsh` 插件使用的 `/v1/memory/*` 与 `/v1/context/*`。
+设置 `OPENCONTEXT_DSH_HTTP_URL` 时启用。请求路径对齐
+OpenContext HTTP daemon 将要暴露的 `/v1/memory/*` 与 `/v1/context/*`。
 当前 v0.1.x OpenContext daemon 尚未暴露这些端点,因此 HTTP 模式
 属于前瞻设计;day-one 推荐使用 `lib` 模式。
 

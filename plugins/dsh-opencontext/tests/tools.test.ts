@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerTools } from "../src/tools";
-import { makeConfig, makeFakeBackend, makeSearchHit, makeMemoryItem } from "./_helpers";
+import { registerTools } from "../src/tools.js";
+import { makeConfig, makeFakeBackend, makeSearchHit, makeMemoryItem } from "./_helpers.js";
 
 const registeredTools: Array<{
 	name: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerCommand } from "../src/commands";
-import { makeConfig, makeFakeBackend } from "./_helpers";
+import { registerCommand } from "../src/commands.js";
+import { makeConfig, makeFakeBackend } from "./_helpers.js";
 
 const registeredCommands: Array<{
 	name: string;

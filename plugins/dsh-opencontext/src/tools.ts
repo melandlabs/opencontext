@@ -6,12 +6,12 @@
  * the host can render forms and validate calls.
  */
 
-import { containsSecret } from "./secrets";
-import { constants } from "./errors";
-import { classifyBackendError, toolError, toolOk, type ToolResult } from "./errors";
-import { formatPreparedContext } from "./prepared-context";
-import type { OpenContextBackend } from "./backend";
-import type { ResolvedConfig } from "./config";
+import { containsSecret } from "./secrets.js";
+import { constants } from "./errors.js";
+import { classifyBackendError, toolError, toolOk, type ToolResult } from "./errors.js";
+import { formatPreparedContext } from "./prepared-context.js";
+import type { OpenContextBackend } from "./backend.js";
+import type { ResolvedConfig } from "./config.js";
 
 export type ToolContext = {
 	signal?: AbortSignal;
@@ -25,11 +25,40 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind: "search" | "read";
+	output?: { schema: unknown; render: (args: Record<string, unknown>, value: unknown) => unknown };
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
+// DSH's tool registry requires every tool to declare `output.schema` (the
+// shape of the success value the executor returns) and `output.render`
+// (turn the value into model-facing content blocks). Our tools return a
+// `{ ok, value | error }` envelope so the model can branch on structured
+// failures; we describe that envelope once and reuse it for every tool.
+const ENVELOPE_OUTPUT = {
+	schema: {
+		type: "object",
+		additionalProperties: false,
+		required: ["ok"],
+		properties: {
+			ok: { type: "boolean" },
+			value: {},
+			error: {
+				type: "object",
+				additionalProperties: false,
+				properties: {
+					code: { type: "string" },
+					message: { type: "string" },
+				},
+			},
+		},
+	},
+	render(_args: Record<string, unknown>, value: unknown): unknown {
+		return [{ type: "text", text: JSON.stringify(value, null, 2) }];
+	},
+};
+
 function defineTool(spec: ToolDefinition): ToolDefinition {
-	return spec;
+	return { ...spec, output: spec.output ?? ENVELOPE_OUTPUT };
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

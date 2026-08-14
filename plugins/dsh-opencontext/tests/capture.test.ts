@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerCapture } from "../src/capture";
-import { makeConfig, makeFakeBackend } from "./_helpers";
+import { registerCapture } from "../src/capture.js";
+import { makeConfig, makeFakeBackend } from "./_helpers.js";
 
 type Handler = (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 const listeners: Array<{ event: string; handler: Handler }> = [];

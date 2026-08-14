@@ -10,19 +10,19 @@
  *   3. Register the 8 `oc_*` tools.
  *   4. Register the `agent/pre-step` recall waterfall.
  *   5. Register the `agent/pre-step` capture listener (runs after recall).
- *   6. Register the `opencontext-context` skill (if the skill service is
+ *   6. Register the `opencontext` skill (if the skill service is
  *      injected by the host).
  *   7. Register the `/oc` command.
  *   8. Hook cleanup: `ctx.effect(() => () => backend.dispose?.())`.
  */
 
-import { ConfigSchema, resolveConfig, type ResolvedConfig } from "./config";
-import { createBackend, type OpenContextBackend } from "./backend";
-import { registerTools } from "./tools";
-import { registerRecall } from "./recall";
-import { registerCapture } from "./capture";
-import { registerSkill } from "./skill";
-import { registerCommand } from "./commands";
+import { ConfigSchema, resolveConfig, type ResolvedConfig } from "./config.js";
+import { createBackend, type OpenContextBackend } from "./backend.js";
+import { registerTools } from "./tools.js";
+import { registerRecall } from "./recall.js";
+import { registerCapture } from "./capture.js";
+import { registerSkill } from "./skill.js";
+import { registerCommand } from "./commands.js";
 
 export const name = "dsh-opencontext";
 
@@ -31,15 +31,14 @@ export const inject: string[] = [
 	"agents",
 	"agentDefaultModel",
 	"systemPrompt",
-	"skill",
 	"commands",
 	"llm",
 	"sessions",
 ];
 
 export { ConfigSchema };
-export type { ResolvedConfig } from "./config";
-export type { OpenContextBackend } from "./backend";
+export type { ResolvedConfig } from "./config.js";
+export type { OpenContextBackend } from "./backend.js";
 
 interface CordisContext {
 	tools: { register: (tool: unknown) => () => void };

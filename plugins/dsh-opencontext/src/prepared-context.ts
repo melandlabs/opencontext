@@ -2,13 +2,12 @@
  * prepared-context — formats search hits into a fenced, byte-budgeted
  * <opencontext_evidence> block that the system prompt can prepend.
  *
- * The "untrusted historical evidence" framing mirrors the convention
- * from the upstream powercontext-dsh plugin: anything in the block
- * is host-supplied context, not instructions, and the model must
- * treat it as evidence, not as commands.
+ * The "untrusted historical evidence" framing makes clear that
+ * anything in the block is host-supplied context, not instructions,
+ * and the model must treat it as evidence, not as commands.
  */
 
-import type { SearchHit } from "./backend";
+import type { SearchHit } from "./backend.js";
 
 export interface PreparedContext {
 	status: "ready" | "empty";

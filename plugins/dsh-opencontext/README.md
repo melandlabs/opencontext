@@ -8,7 +8,7 @@ retrieval-augmented context by plugging into
 - **License**: Apache-2.0
 - **Engine**: Node `^22.19.0 || >=24.0.0`
 - **Tool prefix**: `oc_*`
-- **Skill**: `opencontext-context`
+- **Skill**: `opencontext`
 - **Command**: `/oc doctor`
 
 ## Install
@@ -68,7 +68,7 @@ Gated by `config.capturePrompts` (default `true`; set
 default so the turn is not blocked; opt into `flushOnCapture: true` if
 you need strict ordering.
 
-### Skill: `opencontext-context`
+### Skill: `opencontext`
 
 Loaded at plugin-apply time. Primes the model on the recall / capture
 contract, the trust model, and the eight `oc_*` tools.
@@ -99,11 +99,11 @@ defaults to `~/.opencontext/memory/store.db`; override with the
 
 ### `http` (opt-in)
 
-Activated when `OPENCONTEXT_DSH_HTTP_URL` is set. Targets the same
-`/v1/memory/*` and `/v1/context/*` shapes the upstream
-`powercontext-dsh` plugin emits. The v0.1.x OpenContext daemon does not
-yet expose these endpoints, so HTTP mode is forward-looking. Lib mode
-is the supported path on day one.
+Activated when `OPENCONTEXT_DSH_HTTP_URL` is set. Targets the
+`/v1/memory/*` and `/v1/context/*` shapes that the OpenContext HTTP
+daemon will expose. The v0.1.x OpenContext daemon does not yet expose
+these endpoints, so HTTP mode is forward-looking. Lib mode is the
+supported path on day one.
 
 ## Configuration
 

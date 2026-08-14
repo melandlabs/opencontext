@@ -1,5 +1,5 @@
 /**
- * Secret-pattern redaction. Mirrors the spirit of the powercontext-dsh
+ * Secret-pattern redaction. The exact regex set is a curated subset
  * helper: a small set of regexes that flag obvious credential-shaped
  * strings in user-supplied content. The plugin never sends anything
  * matching these patterns to the backend.

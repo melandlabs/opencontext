@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { createHttpBackend } from "../src/backend-http";
-import { makeConfig } from "./_helpers";
+import { createHttpBackend } from "../src/backend-http.js";
+import { makeConfig } from "./_helpers.js";
 
 const fetchMock = vi.fn();
 
@@ -12,8 +12,8 @@ beforeEach(() => {
 
 afterEach(() => {
 	vi.unstubAllGlobals();
-	delete process.env.OPENCONTEXT_DSH_HTTP_URL;
-	delete process.env.OPENCONTEXT_DSH_AUTHORIZATION;
+	process.env.OPENCONTEXT_DSH_HTTP_URL = undefined;
+	process.env.OPENCONTEXT_DSH_AUTHORIZATION = undefined;
 });
 
 function jsonResponse(status: number, body: unknown): Response {

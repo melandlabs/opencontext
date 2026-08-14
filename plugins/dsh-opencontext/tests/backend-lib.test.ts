@@ -26,8 +26,8 @@ vi.mock("@melandlabs/opencontext", () => ({
 	closeRawMessageStore: mocks.closeRawMessageStore,
 }));
 
-import { createLibBackend } from "../src/backend-lib";
-import { makeConfig, makeSearchHit } from "./_helpers";
+import { createLibBackend } from "../src/backend-lib.js";
+import { makeConfig, makeSearchHit } from "./_helpers.js";
 
 const {
 	storeMessages,

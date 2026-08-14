@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { formatPreparedContext, deriveQuery } from "../src/prepared-context";
-import { makeSearchHit } from "./_helpers";
+import { formatPreparedContext, deriveQuery } from "../src/prepared-context.js";
+import { makeSearchHit } from "./_helpers.js";
 
 describe("formatPreparedContext", () => {
 	it("returns empty when there are no hits", () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { autoScopeId, resolveScopeId } from "../src/scope";
+import { autoScopeId, resolveScopeId } from "../src/scope.js";
 
 describe("autoScopeId", () => {
 	it("hashes a cwd into local:<12hex>", () => {

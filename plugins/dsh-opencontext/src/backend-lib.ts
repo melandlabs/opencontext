@@ -29,8 +29,8 @@ import type {
 	ReviseInput,
 	SearchHit,
 	SearchInput,
-} from "./backend";
-import type { ResolvedConfig } from "./config";
+} from "./backend.js";
+import type { ResolvedConfig } from "./config.js";
 
 interface RawManager {
 	storeMessages(messages: unknown[]): Promise<number[]>;

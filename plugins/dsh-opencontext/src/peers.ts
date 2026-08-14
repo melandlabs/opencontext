@@ -10,7 +10,7 @@
 
 import type { Context } from "@deepseek-ai/cordis";
 import type { Schema } from "@deepseek-ai/schemastery";
-import type { ResolvedConfig } from "./config";
+import type { ResolvedConfig } from "./config.js";
 
 export type DshContext = Context;
 

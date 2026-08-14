@@ -8,10 +8,10 @@
  * never need to know which one is active.
  */
 
-import type { ResolvedConfig } from "./config";
-import { createLibBackend, type LibBackend } from "./backend-lib";
-import { createHttpBackend, type HttpBackend } from "./backend-http";
-import { isHttpMode } from "./config";
+import type { ResolvedConfig } from "./config.js";
+import { createLibBackend, type LibBackend } from "./backend-lib.js";
+import { createHttpBackend, type HttpBackend } from "./backend-http.js";
+import { isHttpMode } from "./config.js";
 
 export interface SearchInput {
 	query: string;

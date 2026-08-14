@@ -11,10 +11,10 @@
  *   5. If anything fails, log a warning and pass through `next()`.
  */
 
-import { classifyBackendError } from "./errors";
-import { formatPreparedContext, deriveQuery } from "./prepared-context";
-import type { OpenContextBackend } from "./backend";
-import type { ResolvedConfig } from "./config";
+import { classifyBackendError } from "./errors.js";
+import { formatPreparedContext, deriveQuery } from "./prepared-context.js";
+import type { OpenContextBackend } from "./backend.js";
+import type { ResolvedConfig } from "./config.js";
 
 interface DshPayload {
 	messages?: unknown[];

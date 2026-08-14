@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerRecall } from "../src/recall";
-import { makeConfig, makeFakeBackend, makeSearchHit } from "./_helpers";
+import { registerRecall } from "../src/recall.js";
+import { makeConfig, makeFakeBackend, makeSearchHit } from "./_helpers.js";
 
 type Handler = (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 

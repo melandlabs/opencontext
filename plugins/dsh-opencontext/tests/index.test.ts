@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the backends before importing the entry.
-vi.mock("../src/backend", async () => {
-	const actual = await vi.importActual<typeof import("../src/backend")>("../src/backend");
+vi.mock("../src/backend.js", async () => {
+	const actual = await vi.importActual<typeof import("../src/backend.js")>("../src/backend.js");
 	return {
 		...actual,
 		createBackend: vi.fn(),
 	};
 });
 
-import { apply, name, inject, ConfigSchema } from "../src/index";
-import { createBackend } from "../src/backend";
-import { makeConfig, makeFakeBackend } from "./_helpers";
+import { apply, name, inject, ConfigSchema } from "../src/index.js";
+import { createBackend } from "../src/backend.js";
+import { makeConfig, makeFakeBackend } from "./_helpers.js";
 
 const mockCreateBackend = vi.mocked(createBackend);
 
@@ -28,7 +28,6 @@ describe("plugin entry", () => {
 				"agents",
 				"agentDefaultModel",
 				"systemPrompt",
-				"skill",
 				"commands",
 				"llm",
 				"sessions",

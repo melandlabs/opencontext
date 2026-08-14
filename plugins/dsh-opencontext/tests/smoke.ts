@@ -146,7 +146,7 @@ try {
 	process.stdout.write(`✔ all 8 oc_* tools registered\n`);
 
 	// 4. Skill
-	if (registeredSkills[0]?.name !== "opencontext-context") {
+	if (registeredSkills[0]?.name !== "opencontext") {
 		throw new Error(`skill name: got ${registeredSkills[0]?.name}`);
 	}
 	if (

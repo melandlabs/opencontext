@@ -8,8 +8,8 @@
 
 import { vi } from "vitest";
 
-import type { OpenContextBackend, SearchHit, MemoryItem } from "../src/backend";
-import type { ResolvedConfig } from "../src/config";
+import type { OpenContextBackend, SearchHit, MemoryItem } from "../src/backend.js";
+import type { ResolvedConfig } from "../src/config.js";
 
 export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
 	return {
