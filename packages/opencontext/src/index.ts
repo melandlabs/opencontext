@@ -111,6 +111,37 @@ export type {
 	ChromaVectorStoreOptions,
 } from "@melandlabs/rag";
 
+// ─── 3b. Cloud / local embedding provider abstraction ─────────────────────
+// Re-exported from `@melandlabs/ai-rag`, an **optional** peer dep. The
+// factory `getConfiguredEmbeddingProvider()` honours the
+// `EMBEDDING_PROVIDER` env var (`cloud` default | `local`) and returns
+// a `LocalTransformersEmbeddingProvider` (ONNX via @huggingface/transformers,
+// default model `Xenova/all-MiniLM-L6-v2`, 384 dims) or a `CloudEmbeddingProvider`
+// (OpenRouter-compatible, default model `text-embedding-3-small`, 1536 dims).
+//
+// Host apps that need local embeddings must install `@melandlabs/ai-rag`
+// themselves; if they don't, these bindings resolve to undefined at
+// runtime and importing them will throw — same shape as the rest of the
+// facade's optional peer deps.
+export {
+	getConfiguredEmbeddingProvider,
+	getConfiguredEmbeddingModelName,
+	getEmbeddingProviderType,
+	CloudEmbeddingProvider,
+} from "@melandlabs/ai-rag/embedding-provider";
+export type {
+	CloudEmbeddingProviderOptions,
+	EmbeddingProvider,
+	EmbeddingProviderFactoryOptions,
+	EmbeddingProviderType,
+} from "@melandlabs/ai-rag/embedding-provider";
+// The local class is re-exported from its dedicated subpath (the
+// embedding-provider subpath intentionally does not re-export it).
+export {
+	LocalTransformersEmbeddingProvider,
+	type LocalTransformersEmbeddingProviderOptions,
+} from "@melandlabs/ai-rag/local-transformers-embedding-provider";
+
 // ─── 4. Loop engine: filesystem paths, CLI paths, preferences ────────────
 export * from "@melandlabs/loop";
 
