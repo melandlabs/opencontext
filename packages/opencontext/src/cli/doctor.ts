@@ -40,31 +40,27 @@
  * never load the ONNX runtime.
  */
 
-import { existsSync, statSync, accessSync, constants, readFileSync } from "node:fs";
+import { constants, accessSync, existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { AUDIT_LOG_PATH, readAuditLogs } from "@melandlabs/audit";
 import {
-	readPreferences,
-	resolveLoopCli,
-	listLoopCliCandidates,
-} from "@melandlabs/loop";
-import {
-	getRawMessageStorageBackend,
-	isRawMessageStorageAvailable,
-	hasPostgresFactory,
-	closeRawMessageStore,
-} from "@melandlabs/memory-store";
-import { resolveSQLiteRawMessageDbPath } from "@melandlabs/memory-store/sqlite-raw-message-store";
-import { resolveMemoryGraphWritePolicy } from "@melandlabs/memory-store/memory-graph-write-policy";
-import { resolveMemoryGraphCorrectionPolicy } from "@melandlabs/memory-store/memory-graph-correction-policy";
-import {
-	getEmbeddingProviderType,
 	getConfiguredEmbeddingModelName,
+	getEmbeddingProviderType,
 } from "@melandlabs/ai-rag/embedding-provider";
+import { AUDIT_LOG_PATH, readAuditLogs } from "@melandlabs/audit";
 import { INTEGRATION_IDS, isIntegrationId } from "@melandlabs/contracts";
+import { listLoopCliCandidates, readPreferences, resolveLoopCli } from "@melandlabs/loop";
+import {
+	closeRawMessageStore,
+	getRawMessageStorageBackend,
+	hasPostgresFactory,
+	isRawMessageStorageAvailable,
+} from "@melandlabs/memory-store";
+import { resolveMemoryGraphCorrectionPolicy } from "@melandlabs/memory-store/memory-graph-correction-policy";
+import { resolveMemoryGraphWritePolicy } from "@melandlabs/memory-store/memory-graph-write-policy";
+import { resolveSQLiteRawMessageDbPath } from "@melandlabs/memory-store/sqlite-raw-message-store";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -333,10 +329,7 @@ function errMessage(err: unknown): string {
 // ─── 1. runtime ────────────────────────────────────────────────────────────
 
 export function checkRuntime(_ctx: DoctorContext): Promise<CheckResult[]> {
-	return Promise.resolve([
-		checkNodeVersion(),
-		checkPackageVersion(),
-	]);
+	return Promise.resolve([checkNodeVersion(), checkPackageVersion()]);
 }
 
 function checkNodeVersion(): CheckResult {
@@ -465,10 +458,7 @@ function checkSubdir(homeDir: string, leaf: string): CheckResult {
 // ─── 3. loop ───────────────────────────────────────────────────────────────
 
 export function checkLoop(_ctx: DoctorContext): Promise<CheckResult[]> {
-	return Promise.resolve([
-		checkLoopPreferences(),
-		checkLoopCli(),
-	]);
+	return Promise.resolve([checkLoopPreferences(), checkLoopCli()]);
 }
 
 function checkLoopPreferences(): CheckResult {
@@ -504,8 +494,11 @@ function checkLoopCli(): CheckResult {
 		// Surface the candidates the resolver *did* consider so the user can
 		// set OPENCONTEXT_LOOP_CLI to one of them, mirroring PowerContext's
 		// `loop doctor` UX.
-		const candidates = listLoopCliCandidates().filter((c) => c.exists).slice(0, 3);
-		const extra = candidates.length > 0 ? ` (candidates tried: ${candidates.map((c) => c.path).join(", ")})` : "";
+		const candidates = listLoopCliCandidates()
+			.filter((c) => c.exists)
+			.slice(0, 3);
+		const extra =
+			candidates.length > 0 ? ` (candidates tried: ${candidates.map((c) => c.path).join(", ")})` : "";
 		return {
 			section: "loop",
 			name: "loop-cli",
@@ -655,11 +648,7 @@ async function probeMemoryStoreRead(ctx: DoctorContext): Promise<CheckResult> {
 // ─── 5. embedding ─────────────────────────────────────────────────────────
 
 export function checkEmbedding(): Promise<CheckResult[]> {
-	return Promise.resolve([
-		checkEmbeddingProviderType(),
-		checkEmbeddingModelName(),
-		checkOpenRouterApiKey(),
-	]);
+	return Promise.resolve([checkEmbeddingProviderType(), checkEmbeddingModelName(), checkOpenRouterApiKey()]);
 }
 
 function checkEmbeddingProviderType(): CheckResult {
@@ -731,21 +720,13 @@ function checkOpenRouterApiKey(): CheckResult {
 // ─── 6. policies ──────────────────────────────────────────────────────────
 
 export function checkPolicies(ctx: DoctorContext): Promise<CheckResult[]> {
-	return Promise.resolve([
-		probeMemoryGraphWritePolicy(ctx),
-		probeMemoryGraphCorrectionPolicy(ctx),
-	]);
+	return Promise.resolve([probeMemoryGraphWritePolicy(ctx), probeMemoryGraphCorrectionPolicy(ctx)]);
 }
 
 function probeMemoryGraphWritePolicy(ctx: DoctorContext): CheckResult {
 	try {
 		const decision = resolveMemoryGraphWritePolicy(ctx.userId, process.env);
-		return renderPolicyDecision(
-			"policies",
-			"write-policy",
-			decision.enabled,
-			decision.reasonCodes,
-		);
+		return renderPolicyDecision("policies", "write-policy", decision.enabled, decision.reasonCodes);
 	} catch (err) {
 		return {
 			section: "policies",
@@ -759,12 +740,7 @@ function probeMemoryGraphWritePolicy(ctx: DoctorContext): CheckResult {
 function probeMemoryGraphCorrectionPolicy(ctx: DoctorContext): CheckResult {
 	try {
 		const decision = resolveMemoryGraphCorrectionPolicy(ctx.userId, process.env);
-		return renderPolicyDecision(
-			"policies",
-			"correction-policy",
-			decision.enabled,
-			decision.reasonCodes,
-		);
+		return renderPolicyDecision("policies", "correction-policy", decision.enabled, decision.reasonCodes);
 	} catch (err) {
 		return {
 			section: "policies",
@@ -802,10 +778,7 @@ function renderPolicyDecision(
 // ─── 7. audit ──────────────────────────────────────────────────────────────
 
 export function checkAudit(ctx: DoctorContext): Promise<CheckResult[]> {
-	return Promise.resolve([
-		checkAuditParent(ctx.homeDir),
-		checkAuditSmoke(),
-	]);
+	return Promise.resolve([checkAuditParent(ctx.homeDir), checkAuditSmoke()]);
 }
 
 function checkAuditParent(homeDir: string): CheckResult {

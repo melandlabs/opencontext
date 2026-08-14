@@ -2,9 +2,12 @@
  * `opencontext doctor` — vitest cases.
  *
  * Mirrors the `embedding-provider-export.test.ts` env-mutation pattern:
- * every test that mutates `process.env` snapshots the prior value in
- * `previousX` and restores it in `afterEach`, so a failed assertion
- * never leaks env mutations into the next case.
+ * every test that mutates `process.env` snapshots the prior value once
+ * at module load and restores it in a single shared `afterEach`. The
+ * `clear()` helper uses `delete` to truly remove a key — biome's
+ * `noDelete` rule is disabled once because Node's `process.env.X =
+ * undefined` actually coerces to the string `"undefined"`, which
+ * differs in semantics (e.g. `key in process.env`) from a deleted key.
  *
  * No real filesystem side effects: the filesystem section is exercised
  * with an injected `homeDir` pointing at `/tmp/__doctor-test-home__`.
@@ -19,7 +22,6 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import {
 	type CheckResult,
-	type DoctorContext,
 	checkIntegrations,
 	checkPolicies,
 	checkRuntime,
@@ -29,6 +31,33 @@ import {
 	renderJson,
 	runDoctor,
 } from "./doctor";
+
+// biome-ignore lint/performance/noDelete: `process.env.X = undefined` coerces
+// to the string "undefined" — only `delete` truly removes the key, which
+// the env-restoration pattern needs.
+function clearEnvVar(key: string): void {
+	delete process.env[key];
+}
+
+// Snapshot every env var this test file touches. Restore in one
+// `afterEach` so biome's `noDuplicateTestHooks` rule stays happy.
+const ENV_SNAPSHOT = {
+	TG_APP_ID: process.env.TG_APP_ID,
+	TG_APP_HASH: process.env.TG_APP_HASH,
+	ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+	OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED: process.env.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED,
+	OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED: process.env.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED,
+} as const;
+
+afterEach(() => {
+	for (const [key, prev] of Object.entries(ENV_SNAPSHOT)) {
+		if (prev === undefined) {
+			clearEnvVar(key);
+		} else {
+			process.env[key] = prev;
+		}
+	}
+});
 
 describe("opencontext doctor", () => {
 	// ── 1. runDoctor + json envelope ────────────────────────────────────────
@@ -44,7 +73,12 @@ describe("opencontext doctor", () => {
 	it("renderJson produces the documented envelope shape", () => {
 		const results = [
 			{ section: "runtime", name: "node-version", status: "ok" as const, detail: "v22.13.10" },
-			{ section: "loop", name: "loop-cli", status: "warn" as const, detail: "not found; set OPENCONTEXT_LOOP_CLI" },
+			{
+				section: "loop",
+				name: "loop-cli",
+				status: "warn" as const,
+				detail: "not found; set OPENCONTEXT_LOOP_CLI",
+			},
 		];
 		const json = renderJson(results, 0);
 		const parsed = JSON.parse(json) as {
@@ -61,7 +95,12 @@ describe("opencontext doctor", () => {
 	it("renderHuman omits passing checks by default", () => {
 		const results = [
 			{ section: "runtime", name: "node-version", status: "ok" as const, detail: "v22.13.10" },
-			{ section: "security", name: "encryption-key", status: "warn" as const, detail: "ENCRYPTION_KEY not set" },
+			{
+				section: "security",
+				name: "encryption-key",
+				status: "warn" as const,
+				detail: "ENCRYPTION_KEY not set",
+			},
 		];
 		const human = renderHuman(results, false);
 		expect(human).not.toContain("node-version");
@@ -113,19 +152,9 @@ describe("opencontext doctor", () => {
 	});
 
 	// ── 6. checkIntegrations ──────────────────────────────────────────────
-	const previousTgId = process.env.TG_APP_ID;
-	const previousTgHash = process.env.TG_APP_HASH;
-
-	afterEach(() => {
-		if (previousTgId === undefined) delete process.env.TG_APP_ID;
-		else process.env.TG_APP_ID = previousTgId;
-		if (previousTgHash === undefined) delete process.env.TG_APP_HASH;
-		else process.env.TG_APP_HASH = previousTgHash;
-	});
-
 	it("checkIntegrations reports telegram creds as warn when TG_APP_ID unset", async () => {
-		delete process.env.TG_APP_ID;
-		delete process.env.TG_APP_HASH;
+		clearEnvVar("TG_APP_ID");
+		clearEnvVar("TG_APP_HASH");
 		const results = await checkIntegrations();
 		const telegram = results.find((r: CheckResult) => r.name === "telegram-creds");
 		expect(telegram).toBeDefined();
@@ -133,15 +162,8 @@ describe("opencontext doctor", () => {
 	});
 
 	// ── 7. checkSecurity ──────────────────────────────────────────────────
-	const previousEncKey = process.env.ENCRYPTION_KEY;
-
-	afterEach(() => {
-		if (previousEncKey === undefined) delete process.env.ENCRYPTION_KEY;
-		else process.env.ENCRYPTION_KEY = previousEncKey;
-	});
-
 	it("checkSecurity reports missing ENCRYPTION_KEY as warn (not fail)", async () => {
-		delete process.env.ENCRYPTION_KEY;
+		clearEnvVar("ENCRYPTION_KEY");
 		const results = await checkSecurity();
 		expect(results).toHaveLength(1);
 		expect(results[0]?.status).toBe("warn");
@@ -149,16 +171,6 @@ describe("opencontext doctor", () => {
 	});
 
 	// ── 8. checkPolicies ──────────────────────────────────────────────────
-	const previousWriteEnabled = process.env.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED;
-	const previousCorrectionEnabled = process.env.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED;
-
-	afterEach(() => {
-		if (previousWriteEnabled === undefined) delete process.env.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED;
-		else process.env.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED = previousWriteEnabled;
-		if (previousCorrectionEnabled === undefined) delete process.env.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED;
-		else process.env.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED = previousCorrectionEnabled;
-	});
-
 	it("checkPolicies returns memory_graph_write_cohort_miss reason code for default probe id", async () => {
 		// With the write flag enabled but no cohort allowlist, the policy
 		// short-circuits on the "missed cohort" branch — the
