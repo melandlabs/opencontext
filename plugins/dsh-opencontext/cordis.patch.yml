@@ -1,0 +1,17 @@
+# dsh-opencontext — defaults applied to a profile when this plugin is loaded.
+# Override any of these values in the profile's own config block, or via the
+# OPENCONTEXT_DSH_* environment variables (see README.md).
+
+- insert:
+    - id: dsh-opencontext
+      name: dsh-opencontext
+      config:
+        baseUrl: http://127.0.0.1:8000
+        authorization: ""
+        scopeId: ""
+        timeoutMs: 4000
+        requestTimeoutMs: 1000
+        maxBytes: 8000
+        capturePrompts: true
+        flushOnCapture: false
+        maxRecallItems: 8
