@@ -2,7 +2,7 @@
  * `opencontext doctor` — read-only health checks across the facade's
  * subsystems.
  *
- * Mirrors PowerContext's `powercontext doctor` pattern: a single command
+ * A single command
  * the user can run when something feels wrong ("why won't this start?",
  * "is my Postgres factory registered?", "where's my audit log?", …)
  * without having to read source code.
