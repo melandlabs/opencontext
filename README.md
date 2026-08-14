@@ -63,6 +63,16 @@ OpenContext fits teams who need to **engineer their context** — that is, teams
 | 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                                                                                                                                                                                                                    |
 | 🛡️  | **[Audit + Encrypted Storage](./packages/audit)**                               | Structured audit logging to `~/.opencontext/logs/audit.jsonl`, Fernet symmetric encryption for secrets, URL allowlist/blocklist for outbound calls.                                                                                                                                                                                                                                                       |
 
+## Benchmarks
+
+Third-party memory and long-context recall benchmarks (numbers current as of 2026-08):
+
+| Benchmark     | Score | What it measures                                                  |
+| ------------- | ----- | ----------------------------------------------------------------- |
+| LongMemEval-S | 97.6% | Long-term memory recall across long sessions                      |
+| LoCoMo-V2     | 97.4% | QA over long multimodal conversations                            |
+| BEAM @ 10M    | 67.0% | Factual recall at a 10M-token context window                      |
+
 ## Quick Start
 
 There are four ways to get opencontext into your project. Pick the one
