@@ -58,7 +58,10 @@ describe("registerRecall", () => {
 			search: vi.fn(async () => [makeSearchHit({ id: "h1", content: "alpha" })]),
 		});
 		registerRecall(ctx, backend, makeConfig());
-		const downstream = async () => ({ kind: "enter", messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] });
+		const downstream = async () => ({
+			kind: "enter",
+			messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
+		});
 		const out = (await runListener(
 			{
 				messages: [{ role: "user", content: [{ type: "text", text: "tell me about alpha" }] }],

@@ -17,10 +17,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Buffer } from "node:buffer";
 
-import {
-	getRawMessageManager,
-	isRawMessageStorageAvailable,
-} from "@melandlabs/opencontext";
+import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/opencontext";
 
 import type {
 	BackendCallOptions,
@@ -78,7 +75,8 @@ async function getUnifiedSearch(): Promise<UnifiedSearchLike | undefined> {
 		_createUnifiedSearchProbed = true;
 		try {
 			const mod = await import("@melandlabs/opencontext");
-			const factory = (mod as unknown as { createUnifiedSearch?: (deps?: unknown) => UnifiedSearchLike }).createUnifiedSearch;
+			const factory = (mod as unknown as { createUnifiedSearch?: (deps?: unknown) => UnifiedSearchLike })
+				.createUnifiedSearch;
 			if (typeof factory === "function") {
 				_createUnifiedSearch = factory as (deps?: unknown) => UnifiedSearchLike;
 			}
@@ -152,9 +150,15 @@ function asMemoryItem(raw: unknown): MemoryItem {
 }
 
 export function createLibBackend(config: ResolvedConfig): LibBackend {
-	let initPromise: Promise<{ manager: RawManager; search: UnifiedSearchLike | undefined; ready: boolean }> | undefined;
+	let initPromise:
+		| Promise<{ manager: RawManager; search: UnifiedSearchLike | undefined; ready: boolean }>
+		| undefined;
 
-	async function ensureInit(): Promise<{ manager: RawManager; search: UnifiedSearchLike | undefined; ready: boolean }> {
+	async function ensureInit(): Promise<{
+		manager: RawManager;
+		search: UnifiedSearchLike | undefined;
+		ready: boolean;
+	}> {
 		if (initPromise) return initPromise;
 		initPromise = (async () => {
 			const ready = isRawMessageStorageAvailable();
@@ -256,11 +260,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 			},
 			createdAt: ts,
 		};
-		await withTimeout(
-			manager.storeMessages([record]),
-			opts?.timeoutMs ?? config.timeoutMs,
-			opts?.signal,
-		);
+		await withTimeout(manager.storeMessages([record]), opts?.timeoutMs ?? config.timeoutMs, opts?.signal);
 		// `storeMessages` returns the autoincrement rowid; the public ID we
 		// expose to the rest of the plugin is the `message_id` we constructed
 		// (which is what `getMessageById` actually keys on).
@@ -307,7 +307,10 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		return results;
 	}
 
-	async function revise(input: ReviseInput, opts?: BackendCallOptions): Promise<{ deprecatedId: string; newId: string }> {
+	async function revise(
+		input: ReviseInput,
+		opts?: BackendCallOptions,
+	): Promise<{ deprecatedId: string; newId: string }> {
 		const { manager, ready } = await ensureInit();
 		if (!ready) throw new Error("raw message storage is not available in this environment");
 		const userId = resolveUser(input.userId);
@@ -391,8 +394,8 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 					undefined,
 				);
 			}
-			const dbPath = process.env.MEMORY_STORE_DB_PATH
-				?? join(homedir(), ".opencontext", "memory", "store.db");
+			const dbPath =
+				process.env.MEMORY_STORE_DB_PATH ?? join(homedir(), ".opencontext", "memory", "store.db");
 			return { ok: true, mode: "lib", details: `db=${dbPath}` };
 		} catch (error) {
 			return {

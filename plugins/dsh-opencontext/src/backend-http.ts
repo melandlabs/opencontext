@@ -105,7 +105,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 	): Promise<T> {
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
-			"Accept": "application/json",
+			Accept: "application/json",
 			"User-Agent": `${constants.PLUGIN_NAME}/0.1.0`,
 		};
 		if (auth) headers.Authorization = auth;
@@ -123,12 +123,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 			response = await withTimeout(fetchPromise, opts?.timeoutMs ?? config.timeoutMs, opts?.signal);
 		} catch (error) {
 			const cls = classifyBackendError(error);
-			throw new HttpClientError(
-				cls.statusCode ?? 0,
-				cls.code,
-				cls.message,
-				null,
-			);
+			throw new HttpClientError(cls.statusCode ?? 0, cls.code, cls.message, null);
 		}
 		const text = await response.text();
 		let json: unknown = null;
@@ -158,12 +153,15 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 			limit: Math.max(1, Math.min(50, input.limit ?? config.maxRecallItems)),
 			mode: "auto",
 		};
-		const res = await request<{ results?: Array<{ id: string; content: string; score: number; metadata?: Record<string, unknown>; timestamp?: number }> }>(
-			"POST",
-			"/v1/memory/search",
-			payload,
-			opts,
-		);
+		const res = await request<{
+			results?: Array<{
+				id: string;
+				content: string;
+				score: number;
+				metadata?: Record<string, unknown>;
+				timestamp?: number;
+			}>;
+		}>("POST", "/v1/memory/search", payload, opts);
 		return (res.results ?? []).map((hit) => ({
 			id: hit.id,
 			content: hit.content,

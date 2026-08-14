@@ -35,10 +35,7 @@ describe("registerCapture", () => {
 		const backend = makeFakeBackend({ captureSource: vi.fn() });
 		registerCapture(ctx, backend, makeConfig({ capturePrompts: false }));
 		const downstream = async () => ({ kind: "enter", messages: [] });
-		await runListener(
-			{ messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] },
-			downstream,
-		);
+		await runListener({ messages: [{ role: "user", content: [{ type: "text", text: "hi" }] }] }, downstream);
 		expect(backend.captureSource).not.toHaveBeenCalled();
 	});
 

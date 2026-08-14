@@ -31,7 +31,9 @@ function extractUserTexts(messages: DshPayload["messages"]): string[] {
 		}
 		if (!Array.isArray(blocks)) continue;
 		const text = blocks
-			.filter((block): block is { type: string; text?: string } => typeof block === "object" && block !== null)
+			.filter(
+				(block): block is { type: string; text?: string } => typeof block === "object" && block !== null,
+			)
 			.filter((block) => block.type === "text" && typeof block.text === "string")
 			.map((block) => block.text ?? "")
 			.join("")
@@ -42,7 +44,10 @@ function extractUserTexts(messages: DshPayload["messages"]): string[] {
 }
 
 export function registerCapture(
-	ctx: { on: (event: string, handler: (...args: never[]) => unknown) => () => void; logger: { warn: (msg: string) => void; debug?: (msg: string) => void } },
+	ctx: {
+		on: (event: string, handler: (...args: never[]) => unknown) => () => void;
+		logger: { warn: (msg: string) => void; debug?: (msg: string) => void };
+	},
 	backend: OpenContextBackend,
 	config: ResolvedConfig,
 ): () => void {

@@ -35,11 +35,7 @@ export function toolOk<T>(value: T): ToolOk<T> {
 	return { ok: true, value };
 }
 
-export function toolError(
-	code: ErrorCode,
-	message: string,
-	details?: unknown,
-): ToolError {
+export function toolError(code: ErrorCode, message: string, details?: unknown): ToolError {
 	return { ok: false, error: { code, message, details } };
 }
 

@@ -48,10 +48,7 @@ function formatHit(hit: SearchHit, index: number): string {
 	return [`[${index + 1}] id=${id} score=${score} ts=${ts}`, hit.content.trim()].join("\n");
 }
 
-export function formatPreparedContext(
-	hits: SearchHit[],
-	maxBytes: number,
-): PreparedContext {
+export function formatPreparedContext(hits: SearchHit[], maxBytes: number): PreparedContext {
 	if (!hits || hits.length === 0) {
 		return { status: "empty", content: null, contentBytes: 0 };
 	}

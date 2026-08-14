@@ -70,9 +70,7 @@ function envBool(name: string): boolean | undefined {
 	return undefined;
 }
 
-export function resolveConfig(
-	patchConfig: Partial<ResolvedConfig> | undefined,
-): ResolvedConfig {
+export function resolveConfig(patchConfig: Partial<ResolvedConfig> | undefined): ResolvedConfig {
 	const fromEnv: Partial<ResolvedConfig> = {};
 	const envBase = envString("OPENCONTEXT_DSH_BASE_URL");
 	if (envBase !== undefined) fromEnv.baseUrl = envBase;

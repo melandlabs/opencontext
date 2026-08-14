@@ -29,7 +29,17 @@ vi.mock("@melandlabs/opencontext", () => ({
 import { createLibBackend } from "../src/backend-lib";
 import { makeConfig, makeSearchHit } from "./_helpers";
 
-const { storeMessages, queryMessages, getMessageById, deprecateMessages, getStats, searchUnifiedMemory, isRawMessageStorageAvailable, getRawMessageManager, createUnifiedSearch } = mocks;
+const {
+	storeMessages,
+	queryMessages,
+	getMessageById,
+	deprecateMessages,
+	getStats,
+	searchUnifiedMemory,
+	isRawMessageStorageAvailable,
+	getRawMessageManager,
+	createUnifiedSearch,
+} = mocks;
 
 let dbDir = "";
 
@@ -93,7 +103,13 @@ describe("createLibBackend", () => {
 		const backend = createLibBackend(makeConfig({ scopeId: "user:2" }));
 		await backend.remember({ content: "hello", metadata: { kind: "agent-note" } });
 		expect(storeMessages).toHaveBeenCalledTimes(1);
-		const arg = storeMessages.mock.calls[0]?.[0] as Array<{ messageId: string; platform: string; botId: string; userId: string; content: string }>;
+		const arg = storeMessages.mock.calls[0]?.[0] as Array<{
+			messageId: string;
+			platform: string;
+			botId: string;
+			userId: string;
+			content: string;
+		}>;
 		expect(arg).toHaveLength(1);
 		expect(arg?.[0]?.platform).toBe("dsh");
 		expect(arg?.[0]?.botId).toBe("dsh");
@@ -125,10 +141,7 @@ describe("createLibBackend", () => {
 	it("revise deprecates the old id and stores the new content", async () => {
 		const backend = createLibBackend(makeConfig());
 		const result = await backend.revise({ id: "old", content: "new", reason: "fix" });
-		expect(deprecateMessages).toHaveBeenCalledWith(
-			["old"],
-			expect.objectContaining({ reason: "fix" }),
-		);
+		expect(deprecateMessages).toHaveBeenCalledWith(["old"], expect.objectContaining({ reason: "fix" }));
 		expect(storeMessages).toHaveBeenCalledTimes(1);
 		expect(result.deprecatedId).toBe("old");
 		expect(typeof result.newId).toBe("string");
@@ -137,10 +150,7 @@ describe("createLibBackend", () => {
 	it("retire soft-deprecates the id and returns ok", async () => {
 		const backend = createLibBackend(makeConfig());
 		const result = await backend.retire({ id: "x", reason: "stale" });
-		expect(deprecateMessages).toHaveBeenCalledWith(
-			["x"],
-			expect.objectContaining({ reason: "stale" }),
-		);
+		expect(deprecateMessages).toHaveBeenCalledWith(["x"], expect.objectContaining({ reason: "stale" }));
 		expect(result.ok).toBe(true);
 	});
 

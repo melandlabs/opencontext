@@ -84,7 +84,15 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			threshold: { type: "number", description: "Minimum similarity (0..1)." },
 		},
 		execute: async (args, ctx) =>
-			runTool<{ hits: Array<{ id: string; content: string; score: number; timestamp?: number; metadata: Record<string, unknown> }> }>(async () => {
+			runTool<{
+				hits: Array<{
+					id: string;
+					content: string;
+					score: number;
+					timestamp?: number;
+					metadata: Record<string, unknown>;
+				}>;
+			}>(async () => {
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -175,7 +183,10 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 				const ids: string[] = Array.isArray(raw)
 					? raw.map((v) => String(v))
 					: typeof raw === "string"
-						? raw.split(",").map((s) => s.trim()).filter(Boolean)
+						? raw
+								.split(",")
+								.map((s) => s.trim())
+								.filter(Boolean)
 						: [];
 				if (ids.length === 0) return toolError("invalid_arguments", "ids must be a non-empty array");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -259,7 +270,12 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
-				const maxBytes = coerceNumber(args.maxBytes, config.maxBytes, 256, constants.MAX_CONTEXT_BYTES_DEFAULT * 4);
+				const maxBytes = coerceNumber(
+					args.maxBytes,
+					config.maxBytes,
+					256,
+					constants.MAX_CONTEXT_BYTES_DEFAULT * 4,
+				);
 				const hits = await backend.search(
 					{
 						query,

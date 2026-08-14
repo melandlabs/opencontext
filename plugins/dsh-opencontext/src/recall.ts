@@ -30,7 +30,10 @@ interface PreStepDecision {
 type Next = () => Promise<PreStepDecision>;
 
 export function registerRecall(
-	ctx: { on: (event: string, handler: (...args: never[]) => unknown) => () => void; logger: { warn: (msg: string) => void; debug?: (msg: string) => void } },
+	ctx: {
+		on: (event: string, handler: (...args: never[]) => unknown) => () => void;
+		logger: { warn: (msg: string) => void; debug?: (msg: string) => void };
+	},
 	backend: OpenContextBackend,
 	config: ResolvedConfig,
 ): () => void {

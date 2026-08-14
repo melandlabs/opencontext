@@ -60,7 +60,10 @@ describe("registerTools", () => {
 		});
 		registerTools(toolsService, backend, makeConfig({ maxRecallItems: 4 }));
 		const t = getTool("oc_search");
-		const result = (await t.execute({ query: "alpha", limit: 3 }, {})) as { ok: boolean; value?: { hits: unknown[] } };
+		const result = (await t.execute({ query: "alpha", limit: 3 }, {})) as {
+			ok: boolean;
+			value?: { hits: unknown[] };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.hits).toHaveLength(1);
 		expect(backend.search).toHaveBeenCalledWith(
@@ -82,7 +85,10 @@ describe("registerTools", () => {
 		const backend = makeFakeBackend();
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_remember");
-		const result = (await t.execute({ content: "my sk-abcdefghijklmnopqrstuv is here" }, {})) as { ok: boolean; error?: { code: string } };
+		const result = (await t.execute({ content: "my sk-abcdefghijklmnopqrstuv is here" }, {})) as {
+			ok: boolean;
+			error?: { code: string };
+		};
 		expect(result.ok).toBe(false);
 		expect(result.error?.code).toBe("secret_rejected");
 	});
@@ -91,7 +97,10 @@ describe("registerTools", () => {
 		const backend = makeFakeBackend({ remember: vi.fn(async () => ({ ids: ["a", "b"] })) });
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_remember");
-		const result = (await t.execute({ content: "remember this" }, {})) as { ok: boolean; value?: { ids: string[] } };
+		const result = (await t.execute({ content: "remember this" }, {})) as {
+			ok: boolean;
+			value?: { ids: string[] };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.ids).toEqual(["a", "b"]);
 	});
@@ -103,10 +112,7 @@ describe("registerTools", () => {
 		const result = (await t.execute({}, {})) as { ok: boolean; value?: { items: unknown[] } };
 		expect(result.ok).toBe(true);
 		expect(result.value?.items).toHaveLength(1);
-		expect(backend.list).toHaveBeenCalledWith(
-			expect.objectContaining({ limit: 50 }),
-			expect.any(Object),
-		);
+		expect(backend.list).toHaveBeenCalledWith(expect.objectContaining({ limit: 50 }), expect.any(Object));
 	});
 
 	it("oc_memory_get requires ids", async () => {
@@ -124,7 +130,10 @@ describe("registerTools", () => {
 		});
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_memory_revise");
-		const result = (await t.execute({ id: "old", content: "new" }, {})) as { ok: boolean; value?: { deprecatedId: string; newId: string } };
+		const result = (await t.execute({ id: "old", content: "new" }, {})) as {
+			ok: boolean;
+			value?: { deprecatedId: string; newId: string };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.deprecatedId).toBe("old");
 		expect(result.value?.newId).toBe("new");
@@ -143,7 +152,10 @@ describe("registerTools", () => {
 		const backend = makeFakeBackend();
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_prepare_context");
-		const result = (await t.execute({ query: "anything" }, {})) as { ok: boolean; value?: { hits: number; contextBlock: string; truncated: boolean } };
+		const result = (await t.execute({ query: "anything" }, {})) as {
+			ok: boolean;
+			value?: { hits: number; contextBlock: string; truncated: boolean };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.hits).toBe(0);
 		expect(result.value?.contextBlock).toBe("");
@@ -158,17 +170,23 @@ describe("registerTools", () => {
 		});
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_prepare_context");
-		const result = (await t.execute({ query: "alpha" }, {})) as { ok: boolean; value?: { hits: number; contextBlock: string; truncated: boolean } };
+		const result = (await t.execute({ query: "alpha" }, {})) as {
+			ok: boolean;
+			value?: { hits: number; contextBlock: string; truncated: boolean };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.hits).toBe(2);
-		expect(result.value?.contextBlock).toContain("<opencontext_evidence hits=\"2\">");
+		expect(result.value?.contextBlock).toContain('<opencontext_evidence hits="2">');
 	});
 
 	it("oc_capture_source returns id and tags sourceType", async () => {
 		const backend = makeFakeBackend({ captureSource: vi.fn(async () => ({ id: "cap-1" })) });
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_capture_source");
-		const result = (await t.execute({ content: "snippet", sourceType: "url" }, {})) as { ok: boolean; value?: { id: string } };
+		const result = (await t.execute({ content: "snippet", sourceType: "url" }, {})) as {
+			ok: boolean;
+			value?: { id: string };
+		};
 		expect(result.ok).toBe(true);
 		expect(result.value?.id).toBe("cap-1");
 	});
@@ -181,7 +199,10 @@ describe("registerTools", () => {
 		});
 		registerTools(toolsService, backend, makeConfig());
 		const t = getTool("oc_search");
-		const result = (await t.execute({ query: "x" }, {})) as { ok: boolean; error?: { code: string; message: string } };
+		const result = (await t.execute({ query: "x" }, {})) as {
+			ok: boolean;
+			error?: { code: string; message: string };
+		};
 		expect(result.ok).toBe(false);
 		expect(result.error?.code).toBe("internal_error");
 	});

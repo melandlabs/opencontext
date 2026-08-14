@@ -57,7 +57,9 @@ export function apply(ctx: CordisContext, config: ResolvedConfig): void {
 	);
 
 	const disposers: Array<() => void> = [];
-	disposers.push(registerTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved));
+	disposers.push(
+		registerTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
+	);
 	disposers.push(registerRecall(ctx, backend, resolved));
 	disposers.push(registerCapture(ctx, backend, resolved));
 	disposers.push(registerSkill(ctx));

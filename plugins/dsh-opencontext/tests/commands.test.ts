@@ -5,7 +5,11 @@ import { makeConfig, makeFakeBackend } from "./_helpers";
 const registeredCommands: Array<{
 	name: string;
 	description: string;
-	handler: (inv: { rawInput: string; signal: AbortSignal; agent: { session: { header: { id: string; cwd: string } } } }) => Promise<{ kind: "success" | "error"; text: string }>;
+	handler: (inv: {
+		rawInput: string;
+		signal: AbortSignal;
+		agent: { session: { header: { id: string; cwd: string } } };
+	}) => Promise<{ kind: "success" | "error"; text: string }>;
 }> = [];
 
 const commandsService = {
