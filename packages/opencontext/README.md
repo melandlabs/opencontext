@@ -39,6 +39,23 @@ a single `import { … } from "@melandlabs/opencontext"` boundary.
 | Loop engine     | `readPreferences`, `writePreferences`, …      |
 | Agent runtime   | `getModelPricing`, `calculateTotalCredits`, … |
 
+## CLI
+
+The package ships a single `opencontext` bin with three subcommands:
+
+| Subcommand | Purpose                                                       |
+| ---------- | ------------------------------------------------------------- |
+| `mcp`      | Start the MCP server on stdio (default when no subcommand).   |
+| `http`     | Start the Hono HTTP server on `127.0.0.1:7421`.               |
+| `doctor`   | Read-only health checks across nine install-subsystem sections. |
+
+```bash
+opencontext                # default → MCP on stdio
+opencontext http --port 7421
+opencontext doctor           # human-readable; --json for CI, --deep for memory probe
+opencontext doctor --section memory-store
+```
+
 The internal workspace packages (`contracts`, `memory-store`, `rag`,
 `loop`, `ai`, …) are bundled into the published artifact at build
 time. The published manifest declares no internal-package runtime

@@ -152,6 +152,19 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
+### 5. Diagnose the install
+
+```bash
+opencontext doctor             # human-readable health checks
+opencontext doctor --json      # CI-friendly { ok, exit, results } envelope
+opencontext doctor --section memory-store
+```
+
+`doctor` is read-only and exits `0` on a healthy install. It scans nine
+sections (`runtime`, `filesystem`, `loop`, `memory-store`, `embedding`,
+`policies`, `audit`, `security`, `integrations`) and reports pass /
+warn / fail for each. No auto-fix in v1.
+
 ## Examples
 
 The [`examples/`](./examples/) workspace ships a runnable example per

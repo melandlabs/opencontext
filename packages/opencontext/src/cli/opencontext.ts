@@ -32,6 +32,7 @@
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { createRawMessageStore } from "@melandlabs/memory-store";
+import { parseDoctorArgs, printDoctorHelp, runDoctor } from "./doctor.js";
 import { startHttpServer, startMcpServer } from "../index.js";
 
 // Shape that satisfies the `unified` field of `MemoryStoreConfig` (which
@@ -366,8 +367,9 @@ Usage:
   opencontext [command] [options]
 
 Commands:
-  mcp    Start the MCP server on stdio (default)
-  http   Start the HTTP server
+  mcp     Start the MCP server on stdio (default)
+  http    Start the HTTP server
+  doctor  Run health checks against the local install
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -376,7 +378,10 @@ Examples:
   opencontext mcp
   opencontext mcp --embedding-provider local --memory-backend sqlite-vec
   opencontext http
-  opencontext http --port 8080`);
+  opencontext http --port 8080
+  opencontext doctor
+  opencontext doctor --json
+  opencontext doctor --section memory-store`);
 }
 
 function printHttpHelp(): void {
@@ -511,6 +516,11 @@ async function main(): Promise<void> {
 
 	if (head === "http" || head === "HTTP") {
 		await startHttp(argv.slice(1));
+		return;
+	}
+
+	if (head === "doctor" || head === "DOCTOR") {
+		await runDoctor(parseDoctorArgs(argv.slice(1)));
 		return;
 	}
 

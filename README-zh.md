@@ -144,6 +144,19 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
+### 5. 诊断安装环境
+
+```bash
+opencontext doctor             # 人类可读的健康检查
+opencontext doctor --json      # 适配 CI 的 { ok, exit, results } 输出
+opencontext doctor --section memory-store
+```
+
+`doctor` 是只读命令,健康时退出码为 `0`。它会扫描九个区块
+(`runtime`、`filesystem`、`loop`、`memory-store`、`embedding`、
+`policies`、`audit`、`security`、`integrations`) 并对每项报告
+pass / warn / fail。v1 不支持自动修复。
+
 
 ## 示例
 

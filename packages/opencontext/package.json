@@ -53,6 +53,7 @@
 	"devDependencies": {
 		"@melandlabs/ai": "workspace:*",
 		"@melandlabs/ai-rag": "workspace:*",
+		"@melandlabs/audit": "workspace:*",
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
 		"@melandlabs/loop": "workspace:*",

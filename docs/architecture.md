@@ -217,11 +217,32 @@ while using Chroma as the vector index, for example.
 | Programmatic | `@melandlabs/opencontext`                                                         | Direct import from a Node/Bun/Deno process.                                                                     |
 | HTTP daemon  | `@melandlabs/opencontext/http`                                                    | Hono server on `:7421` (`GET /health`, `POST /v1/search`, `POST /v1/raw-messages`, `GET /v1/raw-messages/:id`). |
 | MCP server   | `@melandlabs/opencontext/mcp`                                                     | Stdio MCP server exposing `memory_search`, `memory_recall`, `memory_forget` to MCP-capable agent runtimes.      |
-| CLI          | `opencontext` (shipped via `@melandlabs/opencontext`; subcommands: `mcp`, `http`) | Run the MCP (`mcp`, default) or HTTP (`http`) daemon from a terminal.                                           |
+| CLI          | `opencontext` (shipped via `@melandlabs/opencontext`; subcommands: `mcp`, `http`, `doctor`) | Run the MCP (`mcp`, default) or HTTP (`http`) daemon from a terminal, or run health checks (`doctor`) across the facade's subsystems.                                           |
 
 The HTTP and MCP surfaces are thin wrappers around the programmatic
 API. They share types via `@melandlabs/opencontext` and never reimplement
 business logic.
+
+### `opencontext doctor` — read-only health checks
+
+The `doctor` subcommand runs nine read-only check sections against the
+local install (`runtime`, `filesystem`, `loop`, `memory-store`,
+`embedding`, `policies`, `audit`, `security`, `integrations`) and
+reports `ok` / `warn` / `fail` for each. It is non-mutating by design
+(no `--fix`): the PowerContext pattern, and a safe one when an install
+is already broken.
+
+```bash
+opencontext doctor                          # human-readable; warns + fails only
+opencontext doctor --json                   # stable { ok, exit, results } envelope
+opencontext doctor --section memory-store   # filter to one section
+opencontext doctor --deep                   # opt-in real memory-store read probe
+opencontext doctor --user alice             # probe policies as a specific user
+```
+
+Exits `0` when no check fails, `1` otherwise — warnings do not affect
+the exit code, so the `--json` envelope plus `jq -e '.ok'` is a stable
+CI gate.
 
 ## Cross-process contracts
 

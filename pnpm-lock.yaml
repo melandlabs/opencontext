@@ -1041,6 +1041,9 @@ importers:
       '@melandlabs/ai-rag':
         specifier: workspace:*
         version: link:../ai/rag
+      '@melandlabs/audit':
+        specifier: workspace:*
+        version: link:../audit
       '@melandlabs/config':
         specifier: workspace:*
         version: link:../config
