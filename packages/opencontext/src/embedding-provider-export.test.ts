@@ -19,6 +19,7 @@ describe("@melandlabs/opencontext facade — embedding provider re-exports", () 
 
 	afterEach(() => {
 		if (previousProvider === undefined) {
+			// biome-ignore lint/performance/noDelete: env-restoration pattern
 			delete process.env.EMBEDDING_PROVIDER;
 		} else {
 			process.env.EMBEDDING_PROVIDER = previousProvider;
@@ -53,6 +54,7 @@ describe("@melandlabs/opencontext facade — embedding provider re-exports", () 
 	});
 
 	it("factory defaults to cloud when EMBEDDING_PROVIDER is unset", () => {
+		// biome-ignore lint/performance/noDelete: env-reset pattern
 		delete process.env.EMBEDDING_PROVIDER;
 		const provider = facade.getConfiguredEmbeddingProvider();
 		expect(provider.constructor.name).toBe("CloudEmbeddingProvider");
