@@ -24,7 +24,13 @@ dsh plugin --profile web add /path/to/dsh-opencontext
 # 3. Confirm it's mounted
 dsh --profile web --dump-config
 #   ... should contain `id: dsh-opencontext`
+
+# 4. Start DSH web and verify
+dsh --profile web web
+#   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
 ```
+
+![dsh-opencontext in DSH Web](screenshots/image.png)
 
 ## What you get
 
