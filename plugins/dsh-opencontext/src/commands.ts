@@ -26,23 +26,19 @@ interface CommandInvocation {
 
 async function handleDoctor(
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): Promise<{ kind: "success" | "error"; text: string }> {
 	const probe = await backend.health();
 	const scope = config.scopeId || "(auto)";
-	const url =
-		backend.mode === "http"
-			? process.env.OPENCONTEXT_DSH_HTTP_URL ?? config.baseUrl
-			: "(lib)";
+	const url = backend.mode === "http" ? (process.env.OPENCONTEXT_DSH_HTTP_URL ?? config.baseUrl) : "(lib)";
 	const libPath =
-		process.env.MEMORY_STORE_DB_PATH ??
-		`${process.env.HOME ?? "~"}/.opencontext/memory/store.db`;
+		process.env.MEMORY_STORE_DB_PATH ?? `${process.env.HOME ?? "~"}/.opencontext/memory/store.db`;
 
 	let recentCount: number | null = null;
 	try {
 		const items = await backend.list(
 			{ limit: 1, scopeId: scope, userId: scope },
-			{ timeoutMs: Math.min(config.timeoutMs, 2000) }
+			{ timeoutMs: Math.min(config.timeoutMs, 2000) },
 		);
 		recentCount = items.length;
 	} catch (error) {
@@ -60,7 +56,7 @@ async function handleDoctor(
 					listError: { code: cls.code, message: cls.message },
 				},
 				null,
-				2
+				2,
 			),
 		};
 	}
@@ -79,7 +75,7 @@ async function handleDoctor(
 				recentCount,
 			},
 			null,
-			2
+			2,
 		),
 	};
 }
@@ -87,7 +83,7 @@ async function handleDoctor(
 export function registerCommand(
 	ctx: { get: (name: string) => unknown },
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	const commands = ctx.get("commands") as CommandService | undefined;
 	if (!commands || typeof commands.register !== "function") {

@@ -64,11 +64,7 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			const disposer = registerToolResultListener(
-				ctx as any,
-				backend,
-				config as any
-			);
+			const disposer = registerToolResultListener(ctx as any, backend, config as any);
 
 			expect(typeof disposer).toBe("function");
 		});
@@ -85,17 +81,12 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const nextCalled = vi.fn();
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),
@@ -131,16 +122,11 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),
@@ -165,7 +151,7 @@ describe("events-tool-result", () => {
 					sourceType: "tool-interaction",
 					content: expect.stringContaining("Tool: test_tool"),
 				}),
-				expect.anything()
+				expect.anything(),
 			);
 		});
 
@@ -179,16 +165,11 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),
@@ -228,16 +209,11 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),
@@ -271,16 +247,11 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),
@@ -306,9 +277,7 @@ describe("events-tool-result", () => {
 		});
 
 		it("should handle capture errors gracefully", async () => {
-			const captureSource = vi
-				.fn()
-				.mockRejectedValue(new Error("Capture failed"));
+			const captureSource = vi.fn().mockRejectedValue(new Error("Capture failed"));
 			const backend = makeFakeBackend({ captureSource });
 			const config = {
 				scopeId: "test-scope",
@@ -317,16 +286,11 @@ describe("events-tool-result", () => {
 				captureToolResults: true,
 			};
 
-			let handler:
-				| ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)
-				| null = null;
+			let handler: ((payload: unknown, next: () => Promise<unknown>) => Promise<unknown>) | null = null;
 			const ctx = {
 				on: vi.fn((event: string, h: unknown) => {
 					if (event === "tool/result") {
-						handler = h as (
-							payload: unknown,
-							next: () => Promise<unknown>
-						) => Promise<unknown>;
+						handler = h as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>;
 					}
 					return vi.fn();
 				}),

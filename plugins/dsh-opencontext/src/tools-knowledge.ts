@@ -6,12 +6,7 @@
  */
 
 import { containsSecret } from "./secrets.js";
-import {
-	toolError,
-	toolOk,
-	type ToolResult,
-	classifyBackendError,
-} from "./errors.js";
+import { toolError, toolOk, type ToolResult, classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
 
@@ -27,10 +22,7 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
-	execute: (
-		args: Record<string, unknown>,
-		ctx: ToolContext
-	) => Promise<ToolResult<unknown>>;
+	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -45,9 +37,7 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(
-	fn: () => Promise<ToolResult<T> | T>
-): Promise<ToolResult<T>> {
+function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
 	return fn()
 		.then((value) => {
 			if (value && typeof value === "object" && "ok" in value) {
@@ -61,10 +51,7 @@ function runTool<T>(
 		});
 }
 
-function asScopeConfig(
-	ctx: ToolContext,
-	config: ResolvedConfig
-): { scopeId: string; userId: string } {
+function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
 	const scopeId = ctx.scopeId || config.scopeId || "local:default";
 	const userId = ctx.userId || scopeId;
 	return { scopeId, userId };
@@ -73,10 +60,7 @@ function asScopeConfig(
 /**
  * Create the knowledge search tool
  */
-function createKnowledgeSearchTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createKnowledgeSearchTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_knowledge_search",
 		kind: "search",
@@ -130,12 +114,11 @@ function createKnowledgeSearchTool(
 						query,
 						documentIds,
 						limit: coerceLimit(args.limit, 5, 20),
-						threshold:
-							typeof args.threshold === "number" ? args.threshold : 0.6,
+						threshold: typeof args.threshold === "number" ? args.threshold : 0.6,
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				if (!result) {
@@ -162,10 +145,7 @@ function createKnowledgeSearchTool(
 /**
  * Create the document upload tool
  */
-function createDocumentUploadTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_document_upload",
 		kind: "read",
@@ -189,22 +169,18 @@ function createDocumentUploadTool(
 			metadata: {
 				type: "object",
 				additionalProperties: true,
-				description:
-					"Optional metadata (e.g. { category: 'spec', version: '1.0' })",
+				description: "Optional metadata (e.g. { category: 'spec', version: '1.0' })",
 			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{ documentId: string; chunks: number }>(async () => {
 				const content = String(args.content ?? "");
-				if (!content)
-					return toolError("invalid_arguments", "content is required");
+				if (!content) return toolError("invalid_arguments", "content is required");
 
 				const filename = String(args.filename ?? "").trim();
-				if (!filename)
-					return toolError("invalid_arguments", "filename is required");
+				if (!filename) return toolError("invalid_arguments", "filename is required");
 
-				if (containsSecret(content))
-					return toolError("secret_rejected", "content looks like a secret");
+				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
@@ -212,20 +188,16 @@ function createDocumentUploadTool(
 					{
 						content,
 						filename,
-						mimeType:
-							typeof args.mimeType === "string" ? args.mimeType : "text/plain",
+						mimeType: typeof args.mimeType === "string" ? args.mimeType : "text/plain",
 						metadata: asRecord(args.metadata),
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				if (!result) {
-					return toolError(
-						"backend_unavailable",
-						"Document upload not yet available in this backend mode"
-					);
+					return toolError("backend_unavailable", "Document upload not yet available in this backend mode");
 				}
 
 				return toolOk({
@@ -239,15 +211,11 @@ function createDocumentUploadTool(
 /**
  * Create the document list tool
  */
-function createDocumentListTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createDocumentListTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_document_list",
 		kind: "read",
-		description:
-			"List all documents in the knowledge base for the current scope",
+		description: "List all documents in the knowledge base for the current scope",
 		parameters: {
 			limit: {
 				type: "number",
@@ -273,7 +241,7 @@ function createDocumentListTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				if (!result) {
@@ -297,10 +265,7 @@ function createDocumentListTool(
 	};
 }
 
-export function makeKnowledgeTools(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition[] {
+export function makeKnowledgeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
 	return [
 		createKnowledgeSearchTool(backend, config),
 		createDocumentUploadTool(backend, config),
@@ -311,7 +276,7 @@ export function makeKnowledgeTools(
 export function registerKnowledgeTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	const tools = makeKnowledgeTools(backend, config);
 	const disposers: Array<() => void> = [];

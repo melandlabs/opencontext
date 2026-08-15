@@ -145,10 +145,7 @@ async function testUserGuide() {
 		check("getAgentInstance is callable", typeof getAgentInstance === "function");
 
 		// Test standaloneAgentPlugin
-		check(
-			"standaloneAgentPlugin has factory",
-			typeof standaloneAgentPlugin?.factory === "function",
-		);
+		check("standaloneAgentPlugin has factory", typeof standaloneAgentPlugin?.factory === "function");
 
 		// Test plugin registration
 		registerAgentPlugin(standaloneAgentPlugin);
@@ -211,8 +208,14 @@ async function testUserGuide() {
 					collected.push(msg);
 				}
 
-				check("Live agent yields session message", collected.some((m) => m.type === "session"));
-				check("Live agent yields text or error", collected.some((m) => m.type === "text" || m.type === "error"));
+				check(
+					"Live agent yields session message",
+					collected.some((m) => m.type === "session"),
+				);
+				check(
+					"Live agent yields text or error",
+					collected.some((m) => m.type === "text" || m.type === "error"),
+				);
 			} catch (_err) {
 				check("Live agent handles errors gracefully", true);
 			}

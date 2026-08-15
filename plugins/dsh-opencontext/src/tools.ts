@@ -8,12 +8,7 @@
 
 import { containsSecret } from "./secrets.js";
 import { constants } from "./errors.js";
-import {
-	classifyBackendError,
-	toolError,
-	toolOk,
-	type ToolResult,
-} from "./errors.js";
+import { classifyBackendError, toolError, toolOk, type ToolResult } from "./errors.js";
 import { formatPreparedContext } from "./prepared-context.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
@@ -34,10 +29,7 @@ export type ToolDefinition = {
 		schema: unknown;
 		render: (args: Record<string, unknown>, value: unknown) => unknown;
 	};
-	execute: (
-		args: Record<string, unknown>,
-		ctx: ToolContext
-	) => Promise<ToolResult<unknown>>;
+	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
 // DSH's tool registry requires every tool to declare `output.schema` (the
@@ -84,12 +76,7 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function coerceNumber(
-	value: unknown,
-	fallback: number,
-	min: number,
-	max: number
-): number {
+function coerceNumber(value: unknown, fallback: number, min: number, max: number): number {
 	if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
 	return Math.max(min, Math.min(max, value));
 }
@@ -97,9 +84,7 @@ function coerceNumber(
 /** Run an async tool body. Any thrown error is converted into a
  *  structured ToolError. The function must return either a ToolResult
  *  (preferred) or a plain value that will be wrapped in `toolOk`. */
-function runTool<T>(
-	fn: () => Promise<ToolResult<T> | T>
-): Promise<ToolResult<T>> {
+function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
 	return fn()
 		.then((value) => {
 			if (value && typeof value === "object" && "ok" in value) {
@@ -113,19 +98,13 @@ function runTool<T>(
 		});
 }
 
-function asScopeConfig(
-	ctx: ToolContext,
-	config: ResolvedConfig
-): { scopeId: string; userId: string } {
+function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
 	const scopeId = ctx.scopeId || config.scopeId || "local:default";
 	const userId = ctx.userId || scopeId;
 	return { scopeId, userId };
 }
 
-function makeTools(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition[] {
+function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
 	const ocSearch = defineTool({
 		name: "oc_search",
 		description:
@@ -161,7 +140,7 @@ function makeTools(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({
 					hits: hits.map((hit) => ({
@@ -195,10 +174,8 @@ function makeTools(
 		execute: async (args, ctx) =>
 			runTool<{ ids: string[] }>(async () => {
 				const content = String(args.content ?? "").trim();
-				if (!content)
-					return toolError("invalid_arguments", "content is required");
-				if (containsSecret(content))
-					return toolError("secret_rejected", "content looks like a secret");
+				if (!content) return toolError("invalid_arguments", "content is required");
+				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 				const result = await backend.remember(
 					{
@@ -207,7 +184,7 @@ function makeTools(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({ ids: result.ids });
 			}),
@@ -237,7 +214,7 @@ function makeTools(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({ items });
 			}),
@@ -261,20 +238,16 @@ function makeTools(
 				const ids: string[] = Array.isArray(raw)
 					? raw.map((v) => String(v))
 					: typeof raw === "string"
-					? raw
-							.split(",")
-							.map((s) => s.trim())
-							.filter(Boolean)
-					: [];
-				if (ids.length === 0)
-					return toolError(
-						"invalid_arguments",
-						"ids must be a non-empty array"
-					);
+						? raw
+								.split(",")
+								.map((s) => s.trim())
+								.filter(Boolean)
+						: [];
+				if (ids.length === 0) return toolError("invalid_arguments", "ids must be a non-empty array");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 				const items = await backend.get(
 					{ ids, scopeId, userId },
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({ items });
 			}),
@@ -299,10 +272,8 @@ function makeTools(
 				const id = String(args.id ?? "").trim();
 				const content = String(args.content ?? "").trim();
 				if (!id) return toolError("invalid_arguments", "id is required");
-				if (!content)
-					return toolError("invalid_arguments", "content is required");
-				if (containsSecret(content))
-					return toolError("secret_rejected", "content looks like a secret");
+				if (!content) return toolError("invalid_arguments", "content is required");
+				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 				const result = await backend.revise(
 					{
@@ -312,7 +283,7 @@ function makeTools(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({
 					deprecatedId: result.deprecatedId,
@@ -323,8 +294,7 @@ function makeTools(
 
 	const ocMemoryRetire = defineTool({
 		name: "oc_memory_retire",
-		description:
-			"Retire a memory entry. Soft-deprecates it; data is not deleted.",
+		description: "Retire a memory entry. Soft-deprecates it; data is not deleted.",
 		kind: "read",
 		parameters: {
 			id: {
@@ -346,7 +316,7 @@ function makeTools(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({ ok: true as const });
 			}),
@@ -369,40 +339,36 @@ function makeTools(
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ contextBlock: string; hits: number; truncated: boolean }>(
-				async () => {
-					const query = String(args.query ?? "").trim();
-					if (!query)
-						return toolError("invalid_arguments", "query is required");
-					const { scopeId, userId } = asScopeConfig(ctx, config);
-					const maxBytes = coerceNumber(
-						args.maxBytes,
-						config.maxBytes,
-						256,
-						constants.MAX_CONTEXT_BYTES_DEFAULT * 4
-					);
-					const hits = await backend.search(
-						{
-							query,
-							limit: config.maxRecallItems,
-							scopeId,
-							userId,
-						},
-						{ signal: ctx.signal, timeoutMs: config.timeoutMs }
-					);
-					const prepared = formatPreparedContext(hits, maxBytes);
-					if (prepared.status === "empty") {
-						return toolOk({ contextBlock: "", hits: 0, truncated: false });
-					}
-					const truncated =
-						(prepared as { truncated?: boolean }).truncated ?? false;
-					return toolOk({
-						contextBlock: prepared.content ?? "",
-						hits: hits.length,
-						truncated,
-					});
+			runTool<{ contextBlock: string; hits: number; truncated: boolean }>(async () => {
+				const query = String(args.query ?? "").trim();
+				if (!query) return toolError("invalid_arguments", "query is required");
+				const { scopeId, userId } = asScopeConfig(ctx, config);
+				const maxBytes = coerceNumber(
+					args.maxBytes,
+					config.maxBytes,
+					256,
+					constants.MAX_CONTEXT_BYTES_DEFAULT * 4,
+				);
+				const hits = await backend.search(
+					{
+						query,
+						limit: config.maxRecallItems,
+						scopeId,
+						userId,
+					},
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
+				);
+				const prepared = formatPreparedContext(hits, maxBytes);
+				if (prepared.status === "empty") {
+					return toolOk({ contextBlock: "", hits: 0, truncated: false });
 				}
-			),
+				const truncated = (prepared as { truncated?: boolean }).truncated ?? false;
+				return toolOk({
+					contextBlock: prepared.content ?? "",
+					hits: hits.length,
+					truncated,
+				});
+			}),
 	});
 
 	const ocCaptureSource = defineTool({
@@ -429,23 +395,18 @@ function makeTools(
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const content = String(args.content ?? "").trim();
-				if (!content)
-					return toolError("invalid_arguments", "content is required");
-				if (containsSecret(content))
-					return toolError("secret_rejected", "content looks like a secret");
+				if (!content) return toolError("invalid_arguments", "content is required");
+				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 				const result = await backend.captureSource(
 					{
 						content,
-						sourceType:
-							typeof args.sourceType === "string"
-								? args.sourceType
-								: "user_input",
+						sourceType: typeof args.sourceType === "string" ? args.sourceType : "user_input",
 						metadata: asRecord(args.metadata),
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 				return toolOk({ id: result.id });
 			}),
@@ -466,7 +427,7 @@ function makeTools(
 export function registerTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	const tools = makeTools(backend, config);
 	const disposers: Array<() => void> = [];

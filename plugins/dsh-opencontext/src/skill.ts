@@ -22,8 +22,7 @@ export function registerSkill(ctx: {
 	}
 	return skill.register({
 		name: "opencontext",
-		description:
-			"How the dsh-opencontext plugin surfaces durable memory and untrusted recall to the model.",
+		description: "How the dsh-opencontext plugin surfaces durable memory and untrusted recall to the model.",
 		body: SKILL_BODY,
 	});
 }

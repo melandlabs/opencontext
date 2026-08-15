@@ -7,12 +7,7 @@
  */
 
 import { containsSecret } from "./secrets.js";
-import {
-	toolError,
-	toolOk,
-	type ToolResult,
-	classifyBackendError,
-} from "./errors.js";
+import { toolError, toolOk, type ToolResult, classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
 
@@ -28,10 +23,7 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
-	execute: (
-		args: Record<string, unknown>,
-		ctx: ToolContext
-	) => Promise<ToolResult<unknown>>;
+	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -46,9 +38,7 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(
-	fn: () => Promise<ToolResult<T> | T>
-): Promise<ToolResult<T>> {
+function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
 	return fn()
 		.then((value) => {
 			if (value && typeof value === "object" && "ok" in value) {
@@ -62,10 +52,7 @@ function runTool<T>(
 		});
 }
 
-function asScopeConfig(
-	ctx: ToolContext,
-	config: ResolvedConfig
-): { scopeId: string; userId: string } {
+function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
 	const scopeId = ctx.scopeId || config.scopeId || "local:default";
 	const userId = ctx.userId || scopeId;
 	return { scopeId, userId };
@@ -88,10 +75,7 @@ const INSIGHT_CATEGORIES = [
 /**
  * Create the insights search tool
  */
-function createInsightsSearchTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_insights_search",
 		kind: "search",
@@ -106,9 +90,7 @@ function createInsightsSearchTool(
 			categories: {
 				type: "array",
 				items: { type: "string" },
-				description: `Filter by insight categories. Valid: ${INSIGHT_CATEGORIES.join(
-					", "
-				)}`,
+				description: `Filter by insight categories. Valid: ${INSIGHT_CATEGORIES.join(", ")}`,
 			},
 			limit: {
 				type: "number",
@@ -153,7 +135,7 @@ function createInsightsSearchTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				if (!result) {
@@ -181,10 +163,7 @@ function createInsightsSearchTool(
 /**
  * Create the insight capture tool
  */
-function createInsightCaptureTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_insight_capture",
 		kind: "read",
@@ -198,9 +177,7 @@ function createInsightCaptureTool(
 			},
 			category: {
 				type: "string",
-				description: `Insight category. Valid: ${INSIGHT_CATEGORIES.join(
-					", "
-				)}`,
+				description: `Insight category. Valid: ${INSIGHT_CATEGORIES.join(", ")}`,
 			},
 			metadata: {
 				type: "object",
@@ -211,17 +188,12 @@ function createInsightCaptureTool(
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const content = String(args.content ?? "").trim();
-				if (!content)
-					return toolError("invalid_arguments", "content is required");
-				if (containsSecret(content))
-					return toolError("secret_rejected", "content looks like a secret");
+				if (!content) return toolError("invalid_arguments", "content is required");
+				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 
 				const category = String(args.category ?? "fact").toLowerCase();
 				if (!INSIGHT_CATEGORIES.includes(category as any)) {
-					return toolError(
-						"invalid_arguments",
-						`category must be one of: ${INSIGHT_CATEGORIES.join(", ")}`
-					);
+					return toolError("invalid_arguments", `category must be one of: ${INSIGHT_CATEGORIES.join(", ")}`);
 				}
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -234,14 +206,11 @@ function createInsightCaptureTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				if (!result) {
-					return toolError(
-						"backend_unavailable",
-						"Insight capture not yet available in this backend mode"
-					);
+					return toolError("backend_unavailable", "Insight capture not yet available in this backend mode");
 				}
 
 				return toolOk({ id: result.id });
@@ -249,20 +218,14 @@ function createInsightCaptureTool(
 	};
 }
 
-export function makeInsightsTools(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition[] {
-	return [
-		createInsightsSearchTool(backend, config),
-		createInsightCaptureTool(backend, config),
-	];
+export function makeInsightsTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
+	return [createInsightsSearchTool(backend, config), createInsightCaptureTool(backend, config)];
 }
 
 export function registerInsightsTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	const tools = makeInsightsTools(backend, config);
 	const disposers: Array<() => void> = [];

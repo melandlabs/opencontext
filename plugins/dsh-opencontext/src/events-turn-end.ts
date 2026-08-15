@@ -44,9 +44,7 @@ function extractLastUserMessage(messages: DshTurnPayload["messages"]): string {
 	return "";
 }
 
-function extractLastAssistantMessage(
-	messages: DshTurnPayload["messages"]
-): string {
+function extractLastAssistantMessage(messages: DshTurnPayload["messages"]): string {
 	if (!Array.isArray(messages)) return "";
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const m = messages[i];
@@ -76,9 +74,7 @@ function generateSimpleSummary(payload: DshTurnPayload): string {
 	const parts: string[] = [];
 
 	if (userMsg) {
-		parts.push(
-			`User: ${userMsg.slice(0, 200)}${userMsg.length > 200 ? "..." : ""}`
-		);
+		parts.push(`User: ${userMsg.slice(0, 200)}${userMsg.length > 200 ? "..." : ""}`);
 	}
 
 	if (tools.length > 0) {
@@ -105,15 +101,12 @@ export function registerTurnEndListener(
 		};
 	},
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	// Read config flags
-	const autoSummarize =
-		(config as ResolvedConfig & { autoSummarize?: boolean }).autoSummarize ??
-		false;
+	const autoSummarize = (config as ResolvedConfig & { autoSummarize?: boolean }).autoSummarize ?? false;
 	const captureToolOutcomes =
-		(config as ResolvedConfig & { captureToolOutcomes?: boolean })
-			.captureToolOutcomes ?? true;
+		(config as ResolvedConfig & { captureToolOutcomes?: boolean }).captureToolOutcomes ?? true;
 
 	const handler = async (payload: unknown): Promise<TurnEndResult> => {
 		const result: TurnEndResult = {
@@ -125,10 +118,7 @@ export function registerTurnEndListener(
 			const p = (payload ?? {}) as DshTurnPayload;
 			const cwd = p.session?.header?.cwd ?? p.cwd ?? process.cwd();
 			const sessionId = p.session?.header?.id ?? "session-unknown";
-			const scopeId =
-				config.scopeId && config.scopeId.length > 0
-					? config.scopeId
-					: `local:${cwd}`;
+			const scopeId = config.scopeId && config.scopeId.length > 0 ? config.scopeId : `local:${cwd}`;
 
 			// 1. Generate and store turn summary
 			if (autoSummarize) {
@@ -148,19 +138,15 @@ export function registerTurnEndListener(
 								scopeId,
 								userId: scopeId,
 							},
-							{ timeoutMs: config.requestTimeoutMs }
+							{ timeoutMs: config.requestTimeoutMs },
 						);
 						result.summary = summary;
-						ctx.logger.info?.(
-							`[dsh-opencontext] turn summary captured for session ${sessionId}`
-						);
+						ctx.logger.info?.(`[dsh-opencontext] turn summary captured for session ${sessionId}`);
 					}
 				} catch (error) {
 					const cls = classifyBackendError(error);
 					result.errors.push(`summary: ${cls.code}`);
-					ctx.logger.warn(
-						`[dsh-opencontext] turn summary failed: ${cls.code} ${cls.message}`
-					);
+					ctx.logger.warn(`[dsh-opencontext] turn summary failed: ${cls.code} ${cls.message}`);
 				}
 			}
 
@@ -181,24 +167,20 @@ export function registerTurnEndListener(
 								scopeId,
 								userId: scopeId,
 							},
-							{ timeoutMs: config.requestTimeoutMs }
+							{ timeoutMs: config.requestTimeoutMs },
 						);
 						result.outcomesCaptured = 1;
 					}
 				} catch (error) {
 					const cls = classifyBackendError(error);
 					result.errors.push(`outcome: ${cls.code}`);
-					ctx.logger.warn(
-						`[dsh-opencontext] tool outcome capture failed: ${cls.code} ${cls.message}`
-					);
+					ctx.logger.warn(`[dsh-opencontext] tool outcome capture failed: ${cls.code} ${cls.message}`);
 				}
 			}
 		} catch (error) {
 			const cls = classifyBackendError(error);
 			result.errors.push(`unexpected: ${cls.code}`);
-			ctx.logger.warn(
-				`[dsh-opencontext] turn/end handler error: ${cls.code} ${cls.message}`
-			);
+			ctx.logger.warn(`[dsh-opencontext] turn/end handler error: ${cls.code} ${cls.message}`);
 		}
 
 		return result;

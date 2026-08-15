@@ -29,19 +29,9 @@ interface ToolResultCapture {
 /**
  * Sanitize tool arguments for storage (remove secrets)
  */
-function sanitizeArguments(
-	args: Record<string, unknown>
-): Record<string, unknown> {
+function sanitizeArguments(args: Record<string, unknown>): Record<string, unknown> {
 	const sanitized: Record<string, unknown> = {};
-	const secretKeys = [
-		"password",
-		"token",
-		"secret",
-		"apiKey",
-		"api_key",
-		"auth",
-		"credential",
-	];
+	const secretKeys = ["password", "token", "secret", "apiKey", "api_key", "auth", "credential"];
 
 	for (const [key, value] of Object.entries(args)) {
 		const lowerKey = key.toLowerCase();
@@ -49,11 +39,7 @@ function sanitizeArguments(
 			sanitized[key] = "[REDACTED]";
 		} else if (typeof value === "string" && containsSecret(value)) {
 			sanitized[key] = "[REDACTED]";
-		} else if (
-			typeof value === "object" &&
-			value !== null &&
-			!Array.isArray(value)
-		) {
+		} else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
 			sanitized[key] = sanitizeArguments(value as Record<string, unknown>);
 		} else {
 			sanitized[key] = value;
@@ -108,22 +94,18 @@ export function registerToolResultListener(
 		logger: { warn: (msg: string) => void; debug?: (msg: string) => void };
 	},
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	// Read config flag
 	const captureToolResults =
-		(config as ResolvedConfig & { captureToolResults?: boolean })
-			.captureToolResults ?? false;
+		(config as ResolvedConfig & { captureToolResults?: boolean }).captureToolResults ?? false;
 
 	if (!captureToolResults) {
 		// Return a no-op disposer
 		return () => {};
 	}
 
-	const handler = async (
-		payload: unknown,
-		next: () => Promise<unknown>
-	): Promise<unknown> => {
+	const handler = async (payload: unknown, next: () => Promise<unknown>): Promise<unknown> => {
 		// Call next first to let the tool execute
 		const downstream = await next();
 
@@ -137,19 +119,14 @@ export function registerToolResultListener(
 			if (p.result !== undefined) {
 				const resultStr = JSON.stringify(p.result);
 				if (containsSecret(resultStr)) {
-					ctx.logger.debug?.(
-						`[dsh-opencontext] skipping tool result with potential secret in output`
-					);
+					ctx.logger.debug?.(`[dsh-opencontext] skipping tool result with potential secret in output`);
 					return downstream;
 				}
 			}
 
 			const cwd = p.session?.header?.cwd ?? p.cwd ?? process.cwd();
 			const sessionId = p.session?.header?.id ?? "session-unknown";
-			const scopeId =
-				config.scopeId && config.scopeId.length > 0
-					? config.scopeId
-					: `local:${cwd}`;
+			const scopeId = config.scopeId && config.scopeId.length > 0 ? config.scopeId : `local:${cwd}`;
 
 			// Build the memory content
 			const parts: string[] = [];
@@ -179,9 +156,7 @@ export function registerToolResultListener(
 
 			// Check for secrets in final content
 			if (containsSecret(content)) {
-				ctx.logger.debug?.(
-					`[dsh-opencontext] skipping tool result with potential secret`
-				);
+				ctx.logger.debug?.(`[dsh-opencontext] skipping tool result with potential secret`);
 				return downstream;
 			}
 
@@ -199,17 +174,13 @@ export function registerToolResultListener(
 					scopeId,
 					userId: scopeId,
 				},
-				{ timeoutMs: config.requestTimeoutMs }
+				{ timeoutMs: config.requestTimeoutMs },
 			);
 
-			ctx.logger.debug?.(
-				`[dsh-opencontext] captured tool result for ${toolName}`
-			);
+			ctx.logger.debug?.(`[dsh-opencontext] captured tool result for ${toolName}`);
 		} catch (error) {
 			const cls = classifyBackendError(error);
-			ctx.logger.warn(
-				`[dsh-opencontext] tool result capture failed: ${cls.code} ${cls.message}`
-			);
+			ctx.logger.warn(`[dsh-opencontext] tool result capture failed: ${cls.code} ${cls.message}`);
 		}
 
 		return downstream;

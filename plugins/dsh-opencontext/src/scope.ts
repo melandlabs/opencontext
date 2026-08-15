@@ -19,10 +19,7 @@ export function autoScopeId(cwd: string): string {
 	return `local:${hash}`;
 }
 
-export function resolveScopeId(
-	configScope: string | undefined,
-	cwd: string
-): string {
+export function resolveScopeId(configScope: string | undefined, cwd: string): string {
 	if (configScope && configScope.length > 0) return configScope;
 	return autoScopeId(cwd);
 }

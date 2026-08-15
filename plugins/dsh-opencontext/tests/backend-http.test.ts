@@ -32,7 +32,7 @@ describe("createHttpBackend", () => {
 		expect(h.ok).toBe(true);
 		expect(fetchMock).toHaveBeenCalledWith(
 			"http://127.0.0.1:9999/health/live",
-			expect.objectContaining({ method: "GET" })
+			expect.objectContaining({ method: "GET" }),
 		);
 	});
 
@@ -45,9 +45,7 @@ describe("createHttpBackend", () => {
 	});
 
 	it("search POSTs to /v1/memory/search with the scope_id and limit", async () => {
-		fetchMock.mockResolvedValueOnce(
-			jsonResponse(200, { results: [{ id: "h1", content: "x", score: 0.7 }] })
-		);
+		fetchMock.mockResolvedValueOnce(jsonResponse(200, { results: [{ id: "h1", content: "x", score: 0.7 }] }));
 		const backend = createHttpBackend(makeConfig({ scopeId: "s1" }));
 		const hits = await backend.search({ query: "hi", limit: 2 });
 		expect(hits).toHaveLength(1);

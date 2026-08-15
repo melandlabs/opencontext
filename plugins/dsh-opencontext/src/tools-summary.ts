@@ -6,12 +6,7 @@
  */
 
 import { containsSecret } from "./secrets.js";
-import {
-	toolError,
-	toolOk,
-	type ToolResult,
-	classifyBackendError,
-} from "./errors.js";
+import { toolError, toolOk, type ToolResult, classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
 
@@ -27,10 +22,7 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
-	execute: (
-		args: Record<string, unknown>,
-		ctx: ToolContext
-	) => Promise<ToolResult<unknown>>;
+	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -45,9 +37,7 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(
-	fn: () => Promise<ToolResult<T> | T>
-): Promise<ToolResult<T>> {
+function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
 	return fn()
 		.then((value) => {
 			if (value && typeof value === "object" && "ok" in value) {
@@ -61,10 +51,7 @@ function runTool<T>(
 		});
 }
 
-function asScopeConfig(
-	ctx: ToolContext,
-	config: ResolvedConfig
-): { scopeId: string; userId: string } {
+function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
 	const scopeId = ctx.scopeId || config.scopeId || "local:default";
 	const userId = ctx.userId || scopeId;
 	return { scopeId, userId };
@@ -73,10 +60,7 @@ function asScopeConfig(
 /**
  * Create the session summary tool
  */
-function createSessionSummaryTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_session_summary",
 		kind: "read",
@@ -91,29 +75,23 @@ function createSessionSummaryTool(
 			tags: {
 				type: "array",
 				items: { type: "string" },
-				description:
-					"Optional tags for categorization (e.g. ['task-complete', 'decision-made'])",
+				description: "Optional tags for categorization (e.g. ['task-complete', 'decision-made'])",
 			},
 			metadata: {
 				type: "object",
 				additionalProperties: true,
-				description:
-					"Optional metadata (e.g. { project: 'X', milestone: 'Y' })",
+				description: "Optional metadata (e.g. { project: 'X', milestone: 'Y' })",
 			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const summary = String(args.summary ?? "").trim();
-				if (!summary)
-					return toolError("invalid_arguments", "summary is required");
-				if (containsSecret(summary))
-					return toolError("secret_rejected", "summary looks like a secret");
+				if (!summary) return toolError("invalid_arguments", "summary is required");
+				if (containsSecret(summary)) return toolError("secret_rejected", "summary looks like a secret");
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
-				const tags = Array.isArray(args.tags)
-					? args.tags.map((t) => String(t))
-					: [];
+				const tags = Array.isArray(args.tags) ? args.tags.map((t) => String(t)) : [];
 
 				const result = await backend.remember(
 					{
@@ -127,7 +105,7 @@ function createSessionSummaryTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				const id = result.ids?.[0] ?? "";
@@ -139,10 +117,7 @@ function createSessionSummaryTool(
 /**
  * Create the task outcome tool
  */
-function createTaskOutcomeTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_task_outcome",
 		kind: "read",
@@ -157,8 +132,7 @@ function createTaskOutcomeTool(
 			taskName: { type: "string", description: "Optional task name" },
 			status: {
 				type: "string",
-				description:
-					"Status: completed, failed, blocked, or in-progress (default: completed)",
+				description: "Status: completed, failed, blocked, or in-progress (default: completed)",
 			},
 			metadata: {
 				type: "object",
@@ -169,15 +143,12 @@ function createTaskOutcomeTool(
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const outcome = String(args.outcome ?? "").trim();
-				if (!outcome)
-					return toolError("invalid_arguments", "outcome is required");
-				if (containsSecret(outcome))
-					return toolError("secret_rejected", "outcome looks like a secret");
+				if (!outcome) return toolError("invalid_arguments", "outcome is required");
+				if (containsSecret(outcome)) return toolError("secret_rejected", "outcome looks like a secret");
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
-				const taskName =
-					typeof args.taskName === "string" ? args.taskName.trim() : undefined;
+				const taskName = typeof args.taskName === "string" ? args.taskName.trim() : undefined;
 				const status = String(args.status ?? "completed").toLowerCase();
 
 				const result = await backend.remember(
@@ -193,7 +164,7 @@ function createTaskOutcomeTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				const id = result.ids?.[0] ?? "";
@@ -205,10 +176,7 @@ function createTaskOutcomeTool(
 /**
  * Create the recent summaries tool
  */
-function createRecentSummariesTool(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition {
+function createRecentSummariesTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
 	return {
 		name: "oc_recent_summaries",
 		kind: "read",
@@ -221,8 +189,7 @@ function createRecentSummariesTool(
 			sourceTypes: {
 				type: "array",
 				items: { type: "string" },
-				description:
-					"Filter by source type (e.g. ['session-summary', 'task-outcome'])",
+				description: "Filter by source type (e.g. ['session-summary', 'task-outcome'])",
 			},
 		},
 		execute: async (args, ctx) =>
@@ -244,27 +211,19 @@ function createRecentSummariesTool(
 						scopeId,
 						userId,
 					},
-					{ signal: ctx.signal, timeoutMs: config.timeoutMs }
+					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
 				// Filter by source types if provided
 				let filtered = items;
 				if (Array.isArray(args.sourceTypes) && args.sourceTypes.length > 0) {
 					const sourceTypes = new Set(args.sourceTypes.map((s) => String(s)));
-					filtered = items.filter((item) =>
-						sourceTypes.has(item.platform || "")
-					);
+					filtered = items.filter((item) => sourceTypes.has(item.platform || ""));
 				}
 
 				// Only return summaries and outcomes
-				const summaryTypes = new Set([
-					"session-summary",
-					"task-outcome",
-					"turn-summary",
-				]);
-				filtered = filtered.filter((item) =>
-					summaryTypes.has(item.platform || "")
-				);
+				const summaryTypes = new Set(["session-summary", "task-outcome", "turn-summary"]);
+				filtered = filtered.filter((item) => summaryTypes.has(item.platform || ""));
 
 				return toolOk({
 					items: filtered.map((item) => ({
@@ -279,10 +238,7 @@ function createRecentSummariesTool(
 	};
 }
 
-export function makeSummaryTools(
-	backend: OpenContextBackend,
-	config: ResolvedConfig
-): ToolDefinition[] {
+export function makeSummaryTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
 	return [
 		createSessionSummaryTool(backend, config),
 		createTaskOutcomeTool(backend, config),
@@ -293,7 +249,7 @@ export function makeSummaryTools(
 export function registerSummaryTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
 	backend: OpenContextBackend,
-	config: ResolvedConfig
+	config: ResolvedConfig,
 ): () => void {
 	const tools = makeSummaryTools(backend, config);
 	const disposers: Array<() => void> = [];

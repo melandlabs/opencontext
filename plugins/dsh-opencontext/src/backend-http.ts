@@ -42,10 +42,9 @@ interface FetchResponse {
 async function withTimeout<T>(
 	promise: Promise<T>,
 	timeoutMs: number | undefined,
-	signal: AbortSignal | undefined
+	signal: AbortSignal | undefined,
 ): Promise<T> {
-	const timeoutSignal =
-		!signal && timeoutMs ? AbortSignal.timeout(timeoutMs) : signal;
+	const timeoutSignal = !signal && timeoutMs ? AbortSignal.timeout(timeoutMs) : signal;
 	if (timeoutSignal && !signal) {
 		return await new Promise<T>((resolve, reject) => {
 			const timer = setTimeout(() => {
@@ -63,15 +62,13 @@ async function withTimeout<T>(
 				(err) => {
 					clearTimeout(timer);
 					reject(err);
-				}
+				},
 			);
 		});
 	}
 	if (signal) {
 		return await new Promise<T>((resolve, reject) => {
-			signal.addEventListener("abort", () =>
-				reject(new Error("request aborted"))
-			);
+			signal.addEventListener("abort", () => reject(new Error("request aborted")));
 			promise.then(resolve, reject);
 		});
 	}
@@ -88,12 +85,7 @@ class HttpClientError extends Error {
 	readonly statusCode: number;
 	readonly code: ErrorCode;
 	readonly payload: unknown;
-	constructor(
-		statusCode: number,
-		code: ErrorCode,
-		message: string,
-		payload: unknown
-	) {
+	constructor(statusCode: number, code: ErrorCode, message: string, payload: unknown) {
 		super(message);
 		this.name = "HttpClientError";
 		this.statusCode = statusCode;
@@ -103,19 +95,14 @@ class HttpClientError extends Error {
 }
 
 export function createHttpBackend(config: ResolvedConfig): HttpBackend {
-	const baseUrl =
-		process.env.OPENCONTEXT_DSH_HTTP_URL?.trim() || config.baseUrl;
-	const auth = (
-		process.env.OPENCONTEXT_DSH_AUTHORIZATION ??
-		config.authorization ??
-		""
-	).trim();
+	const baseUrl = process.env.OPENCONTEXT_DSH_HTTP_URL?.trim() || config.baseUrl;
+	const auth = (process.env.OPENCONTEXT_DSH_AUTHORIZATION ?? config.authorization ?? "").trim();
 
 	async function request<T = unknown>(
 		method: "GET" | "POST" | "DELETE",
 		path: string,
 		body: unknown,
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<T> {
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
@@ -134,19 +121,10 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 		});
 		let response: Response;
 		try {
-			response = await withTimeout(
-				fetchPromise,
-				opts?.timeoutMs ?? config.timeoutMs,
-				opts?.signal
-			);
+			response = await withTimeout(fetchPromise, opts?.timeoutMs ?? config.timeoutMs, opts?.signal);
 		} catch (error) {
 			const cls = classifyBackendError(error);
-			throw new HttpClientError(
-				cls.statusCode ?? 0,
-				cls.code,
-				cls.message,
-				null
-			);
+			throw new HttpClientError(cls.statusCode ?? 0, cls.code, cls.message, null);
 		}
 		const text = await response.text();
 		let json: unknown = null;
@@ -171,10 +149,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 		return input.scopeId || config.scopeId || "local:unknown";
 	}
 
-	async function search(
-		input: SearchInput,
-		opts?: BackendCallOptions
-	): Promise<SearchHit[]> {
+	async function search(input: SearchInput, opts?: BackendCallOptions): Promise<SearchHit[]> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
 			scope_id: scopeId,
@@ -200,10 +175,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 		}));
 	}
 
-	async function remember(
-		input: RememberInput,
-		opts?: BackendCallOptions
-	): Promise<{ ids: string[] }> {
+	async function remember(input: RememberInput, opts?: BackendCallOptions): Promise<{ ids: string[] }> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
 			scope_id: scopeId,
@@ -211,53 +183,32 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 			text: input.content,
 			reason: input.metadata?.reason as string | undefined,
 		};
-		const res = await request<{ ids?: string[] }>(
-			"POST",
-			"/v1/memory/remember",
-			payload,
-			opts
-		);
+		const res = await request<{ ids?: string[] }>("POST", "/v1/memory/remember", payload, opts);
 		return { ids: res.ids ?? [] };
 	}
 
-	async function list(
-		input: ListInput,
-		opts?: BackendCallOptions
-	): Promise<MemoryItem[]> {
+	async function list(input: ListInput, opts?: BackendCallOptions): Promise<MemoryItem[]> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
 			scope_id: scopeId,
 			limit: Math.max(1, Math.min(500, input.limit ?? 50)),
 			since: input.since,
 		};
-		const res = await request<{ items?: MemoryItem[] }>(
-			"POST",
-			"/v1/memory/list",
-			payload,
-			opts
-		);
+		const res = await request<{ items?: MemoryItem[] }>("POST", "/v1/memory/list", payload, opts);
 		return res.items ?? [];
 	}
 
 	async function get(
 		input: { ids: string[]; scopeId?: string },
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<MemoryItem[]> {
 		const scopeId = scopeIdOf(input);
 		const payload = { scope_id: scopeId, ids: input.ids };
-		const res = await request<{ items?: MemoryItem[] }>(
-			"POST",
-			"/v1/memory/get",
-			payload,
-			opts
-		);
+		const res = await request<{ items?: MemoryItem[] }>("POST", "/v1/memory/get", payload, opts);
 		return res.items ?? [];
 	}
 
-	async function revise(
-		input: ReviseInput,
-		opts?: BackendCallOptions
-	): Promise<RevokeResult> {
+	async function revise(input: ReviseInput, opts?: BackendCallOptions): Promise<RevokeResult> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
 			scope_id: scopeId,
@@ -270,7 +221,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 			"POST",
 			"/v1/memory/revise",
 			payload,
-			opts
+			opts,
 		);
 		return {
 			deprecatedId: res.deprecatedId ?? input.id,
@@ -280,7 +231,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 
 	async function retire(
 		input: { id: string; reason?: string; scopeId?: string },
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<{ ok: true }> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
@@ -292,10 +243,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 		return { ok: true };
 	}
 
-	async function captureSource(
-		input: CaptureInput,
-		opts?: BackendCallOptions
-	): Promise<{ id: string }> {
+	async function captureSource(input: CaptureInput, opts?: BackendCallOptions): Promise<{ id: string }> {
 		const scopeId = scopeIdOf(input);
 		const payload = {
 			scope_id: scopeId,
@@ -307,12 +255,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 				...(input.metadata ?? {}),
 			},
 		};
-		const res = await request<{ id: string }>(
-			"POST",
-			"/v1/memory/capture_source",
-			payload,
-			opts
-		);
+		const res = await request<{ id: string }>("POST", "/v1/memory/capture_source", payload, opts);
 		return { id: res.id };
 	}
 
@@ -328,11 +271,7 @@ export function createHttpBackend(config: ResolvedConfig): HttpBackend {
 				headers: auth ? { Authorization: auth } : {},
 				signal: controller.signal,
 			});
-			const response = await withTimeout(
-				fetchPromise,
-				Math.min(config.timeoutMs, 2000),
-				undefined
-			);
+			const response = await withTimeout(fetchPromise, Math.min(config.timeoutMs, 2000), undefined);
 			return {
 				ok: response.ok,
 				mode: "http",

@@ -62,9 +62,7 @@ interface CordisContext {
 }
 
 export function apply(ctx: CordisContext, config: ResolvedConfig): void {
-	const resolved: ResolvedConfig = resolveConfig(
-		config as Partial<ResolvedConfig>
-	);
+	const resolved: ResolvedConfig = resolveConfig(config as Partial<ResolvedConfig>);
 	const backend: OpenContextBackend = createBackend(resolved);
 
 	// Log enabled features
@@ -78,28 +76,20 @@ export function apply(ctx: CordisContext, config: ResolvedConfig): void {
 	ctx.logger.info?.(
 		`[dsh-opencontext] active backend=${backend.mode} scope=${
 			resolved.scopeId || "(auto)"
-		} maxBytes=${resolved.maxBytes} features=${features.join(",") || "core"}`
+		} maxBytes=${resolved.maxBytes} features=${features.join(",") || "core"}`,
 	);
 
 	const disposers: Array<() => void> = [];
 
 	// Core tools (always registered)
 	disposers.push(
-		registerTools(
-			ctx as { tools: { register: (tool: unknown) => () => void } },
-			backend,
-			resolved
-		)
+		registerTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
 	);
 
 	// Optional tools based on config
 	if (resolved.enableInsights) {
 		disposers.push(
-			registerInsightsTools(
-				ctx as { tools: { register: (tool: unknown) => () => void } },
-				backend,
-				resolved
-			)
+			registerInsightsTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
 		);
 	}
 	if (resolved.enableKnowledge) {
@@ -107,18 +97,14 @@ export function apply(ctx: CordisContext, config: ResolvedConfig): void {
 			registerKnowledgeTools(
 				ctx as { tools: { register: (tool: unknown) => () => void } },
 				backend,
-				resolved
-			)
+				resolved,
+			),
 		);
 	}
 
 	// Summary tools (always available)
 	disposers.push(
-		registerSummaryTools(
-			ctx as { tools: { register: (tool: unknown) => () => void } },
-			backend,
-			resolved
-		)
+		registerSummaryTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
 	);
 
 	// Event listeners

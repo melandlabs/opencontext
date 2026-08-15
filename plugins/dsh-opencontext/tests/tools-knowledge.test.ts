@@ -77,9 +77,11 @@ describe("knowledge tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			let callCount = 0;
 			const ctx = {
-				tools: { register: vi.fn(() => {
-					return disposers[callCount++];
-				}) },
+				tools: {
+					register: vi.fn(() => {
+						return disposers[callCount++];
+					}),
+				},
 			};
 
 			const disposer = registerKnowledgeTools(ctx as any, backend, config as any);

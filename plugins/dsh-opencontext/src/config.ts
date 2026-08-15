@@ -82,9 +82,7 @@ function envBool(name: string): boolean | undefined {
 	return undefined;
 }
 
-export function resolveConfig(
-	patchConfig: Partial<ResolvedConfig> | undefined
-): ResolvedConfig {
+export function resolveConfig(patchConfig: Partial<ResolvedConfig> | undefined): ResolvedConfig {
 	const fromEnv: Partial<ResolvedConfig> = {};
 	const envBase = envString("OPENCONTEXT_DSH_BASE_URL");
 	if (envBase !== undefined) fromEnv.baseUrl = envBase;
@@ -103,40 +101,30 @@ export function resolveConfig(
 	const envTimeout = envNumber("OPENCONTEXT_DSH_TIMEOUT_MS");
 	if (envTimeout !== undefined) fromEnv.timeoutMs = envTimeout;
 	const envRequestTimeout = envNumber("OPENCONTEXT_DSH_REQUEST_TIMEOUT");
-	if (envRequestTimeout !== undefined)
-		fromEnv.requestTimeoutMs = envRequestTimeout;
+	if (envRequestTimeout !== undefined) fromEnv.requestTimeoutMs = envRequestTimeout;
 	const envAutoSummarize = envBool("OPENCONTEXT_DSH_AUTO_SUMMARIZE");
 	if (envAutoSummarize !== undefined) fromEnv.autoSummarize = envAutoSummarize;
 	const envCaptureToolResults = envBool("OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS");
-	if (envCaptureToolResults !== undefined)
-		fromEnv.captureToolResults = envCaptureToolResults;
+	if (envCaptureToolResults !== undefined) fromEnv.captureToolResults = envCaptureToolResults;
 	const envEnableInsights = envBool("OPENCONTEXT_DSH_ENABLE_INSIGHTS");
-	if (envEnableInsights !== undefined)
-		fromEnv.enableInsights = envEnableInsights;
+	if (envEnableInsights !== undefined) fromEnv.enableInsights = envEnableInsights;
 	const envEnableKnowledge = envBool("OPENCONTEXT_DSH_ENABLE_KNOWLEDGE");
-	if (envEnableKnowledge !== undefined)
-		fromEnv.enableKnowledge = envEnableKnowledge;
+	if (envEnableKnowledge !== undefined) fromEnv.enableKnowledge = envEnableKnowledge;
 
 	const merged: ResolvedConfig = {
 		baseUrl: fromEnv.baseUrl ?? patchConfig?.baseUrl ?? "http://127.0.0.1:8000",
 		authorization: fromEnv.authorization ?? patchConfig?.authorization ?? "",
 		scopeId: fromEnv.scopeId ?? patchConfig?.scopeId ?? "",
 		timeoutMs: fromEnv.timeoutMs ?? patchConfig?.timeoutMs ?? 4000,
-		requestTimeoutMs:
-			fromEnv.requestTimeoutMs ?? patchConfig?.requestTimeoutMs ?? 1000,
+		requestTimeoutMs: fromEnv.requestTimeoutMs ?? patchConfig?.requestTimeoutMs ?? 1000,
 		maxBytes: fromEnv.maxBytes ?? patchConfig?.maxBytes ?? 8000,
-		capturePrompts:
-			fromEnv.capturePrompts ?? patchConfig?.capturePrompts ?? true,
-		flushOnCapture:
-			fromEnv.flushOnCapture ?? patchConfig?.flushOnCapture ?? false,
+		capturePrompts: fromEnv.capturePrompts ?? patchConfig?.capturePrompts ?? true,
+		flushOnCapture: fromEnv.flushOnCapture ?? patchConfig?.flushOnCapture ?? false,
 		maxRecallItems: fromEnv.maxRecallItems ?? patchConfig?.maxRecallItems ?? 8,
 		autoSummarize: fromEnv.autoSummarize ?? patchConfig?.autoSummarize ?? false,
-		captureToolResults:
-			fromEnv.captureToolResults ?? patchConfig?.captureToolResults ?? false,
-		enableInsights:
-			fromEnv.enableInsights ?? patchConfig?.enableInsights ?? true,
-		enableKnowledge:
-			fromEnv.enableKnowledge ?? patchConfig?.enableKnowledge ?? true,
+		captureToolResults: fromEnv.captureToolResults ?? patchConfig?.captureToolResults ?? false,
+		enableInsights: fromEnv.enableInsights ?? patchConfig?.enableInsights ?? true,
+		enableKnowledge: fromEnv.enableKnowledge ?? patchConfig?.enableKnowledge ?? true,
 	};
 	return merged;
 }

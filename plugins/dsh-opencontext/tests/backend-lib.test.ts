@@ -7,9 +7,7 @@ import { join } from "node:path";
 // mocks must be declared with `vi.hoisted` so they're available when
 // `vi.mock` is hoisted to the top of the file by vitest.
 const mocks = vi.hoisted(() => ({
-	storeMessages: vi.fn(async (msgs: unknown[]) =>
-		msgs.map(() => Math.random().toString(36).slice(2, 10))
-	),
+	storeMessages: vi.fn(async (msgs: unknown[]) => msgs.map(() => Math.random().toString(36).slice(2, 10))),
 	queryMessages: vi.fn(async () => []),
 	getMessageById: vi.fn(async (id: string) => ({
 		messageId: id,
@@ -104,7 +102,7 @@ describe("createLibBackend", () => {
 				limit: 3,
 				threshold: 0.4,
 				userId: "user:1",
-			})
+			}),
 		);
 	});
 
@@ -126,7 +124,7 @@ describe("createLibBackend", () => {
 				userId: "test:scope",
 				platform: "dsh",
 				keywords: ["alpha"],
-			})
+			}),
 		);
 	});
 
@@ -155,7 +153,7 @@ describe("createLibBackend", () => {
 		const backend = createLibBackend(makeConfig());
 		await backend.list({ limit: 5 });
 		expect(queryMessages).toHaveBeenCalledWith(
-			expect.objectContaining({ limit: 5, reverse: true, platform: "dsh" })
+			expect.objectContaining({ limit: 5, reverse: true, platform: "dsh" }),
 		);
 	});
 
@@ -179,10 +177,7 @@ describe("createLibBackend", () => {
 			content: "new",
 			reason: "fix",
 		});
-		expect(deprecateMessages).toHaveBeenCalledWith(
-			["old"],
-			expect.objectContaining({ reason: "fix" })
-		);
+		expect(deprecateMessages).toHaveBeenCalledWith(["old"], expect.objectContaining({ reason: "fix" }));
 		expect(storeMessages).toHaveBeenCalledTimes(1);
 		expect(result.deprecatedId).toBe("old");
 		expect(typeof result.newId).toBe("string");
@@ -191,10 +186,7 @@ describe("createLibBackend", () => {
 	it("retire soft-deprecates the id and returns ok", async () => {
 		const backend = createLibBackend(makeConfig());
 		const result = await backend.retire({ id: "x", reason: "stale" });
-		expect(deprecateMessages).toHaveBeenCalledWith(
-			["x"],
-			expect.objectContaining({ reason: "stale" })
-		);
+		expect(deprecateMessages).toHaveBeenCalledWith(["x"], expect.objectContaining({ reason: "stale" }));
 		expect(result.ok).toBe(true);
 	});
 

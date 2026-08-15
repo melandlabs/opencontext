@@ -4,10 +4,7 @@
  * zero runtime dependencies beyond `@melandlabs/opencontext`.
  */
 
-export function invariant(
-	condition: unknown,
-	message: string
-): asserts condition {
+export function invariant(condition: unknown, message: string): asserts condition {
 	if (!condition) {
 		throw new Error(`[dsh-opencontext] invariant: ${message}`);
 	}
@@ -19,9 +16,6 @@ export function invariantString(value: unknown, field: string): string {
 }
 
 export function invariantNumber(value: unknown, field: string): number {
-	invariant(
-		typeof value === "number" && Number.isFinite(value),
-		`${field} must be a finite number`
-	);
+	invariant(typeof value === "number" && Number.isFinite(value), `${field} must be a finite number`);
 	return value;
 }

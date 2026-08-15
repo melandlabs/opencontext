@@ -17,10 +17,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { Buffer } from "node:buffer";
 
-import {
-	getRawMessageManager,
-	isRawMessageStorageAvailable,
-} from "@melandlabs/opencontext";
+import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/opencontext";
 
 import type {
 	BackendCallOptions,
@@ -42,7 +39,7 @@ interface RawManager {
 	getStats?(): Promise<{ totalMessages: number }>;
 	deprecateMessages?(
 		messageIds: string[],
-		input: { reason?: string; deprecatedAt?: number; userId?: string }
+		input: { reason?: string; deprecatedAt?: number; userId?: string },
 	): Promise<number>;
 }
 
@@ -117,10 +114,9 @@ function nowMs(): number {
 async function withTimeout<T>(
 	promise: Promise<T>,
 	timeoutMs: number | undefined,
-	signal: AbortSignal | undefined
+	signal: AbortSignal | undefined,
 ): Promise<T> {
-	const effectiveSignal =
-		signal ?? (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined);
+	const effectiveSignal = signal ?? (timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined);
 	if (!effectiveSignal) return promise;
 	return await new Promise<T>((resolve, reject) => {
 		const timer = setTimeout(() => {
@@ -138,7 +134,7 @@ async function withTimeout<T>(
 			(error) => {
 				clearTimeout(timer);
 				reject(error);
-			}
+			},
 		);
 	});
 }
@@ -187,23 +183,15 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		return initPromise;
 	}
 
-	const resolveUser = (override?: string): string =>
-		override || config.scopeId || "dsh-default";
+	const resolveUser = (override?: string): string => override || config.scopeId || "dsh-default";
 	const resolveBot = (override?: string): string => override || DEFAULT_BOT_ID;
 
-	async function search(
-		input: SearchInput,
-		opts?: BackendCallOptions
-	): Promise<SearchHit[]> {
+	async function search(input: SearchInput, opts?: BackendCallOptions): Promise<SearchHit[]> {
 		const { manager, search, ready } = await ensureInit();
 		if (!ready) return [];
 		const userId = resolveUser(input.userId);
-		const limit = Math.max(
-			1,
-			Math.min(50, input.limit ?? config.maxRecallItems)
-		);
-		const threshold =
-			typeof input.threshold === "number" ? input.threshold : 0.5;
+		const limit = Math.max(1, Math.min(50, input.limit ?? config.maxRecallItems));
+		const threshold = typeof input.threshold === "number" ? input.threshold : 0.5;
 		const query = input.query.trim();
 		if (!query) return [];
 
@@ -212,14 +200,11 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				const result = await withTimeout(
 					search.searchUnifiedMemory({ userId, query, limit, threshold }),
 					opts?.timeoutMs ?? config.timeoutMs,
-					opts?.signal
+					opts?.signal,
 				);
 				const hits: SearchHit[] = [];
 				for (const r of result.results ?? []) {
-					const ts =
-						typeof r.metadata?.timestamp === "number"
-							? (r.metadata.timestamp as number)
-							: undefined;
+					const ts = typeof r.metadata?.timestamp === "number" ? (r.metadata.timestamp as number) : undefined;
 					hits.push({
 						id: r.id,
 						content: r.content,
@@ -267,21 +252,13 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		});
 	}
 
-	async function remember(
-		input: RememberInput,
-		opts?: BackendCallOptions
-	): Promise<{ ids: string[] }> {
+	async function remember(input: RememberInput, opts?: BackendCallOptions): Promise<{ ids: string[] }> {
 		const { manager, ready } = await ensureInit();
-		if (!ready)
-			throw new Error(
-				"raw message storage is not available in this environment"
-			);
+		if (!ready) throw new Error("raw message storage is not available in this environment");
 		const userId = resolveUser(input.userId);
 		const botId = resolveBot(input.botId);
 		const ts = nowMs();
-		const messageId = makeIdempotentId(
-			`${userId}|${botId}|${ts}|${input.content.slice(0, 256)}`
-		);
+		const messageId = makeIdempotentId(`${userId}|${botId}|${ts}|${input.content.slice(0, 256)}`);
 		const record = {
 			messageId,
 			platform: "dsh",
@@ -297,21 +274,14 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 			},
 			createdAt: ts,
 		};
-		await withTimeout(
-			manager.storeMessages([record]),
-			opts?.timeoutMs ?? config.timeoutMs,
-			opts?.signal
-		);
+		await withTimeout(manager.storeMessages([record]), opts?.timeoutMs ?? config.timeoutMs, opts?.signal);
 		// `storeMessages` returns the autoincrement rowid; the public ID we
 		// expose to the rest of the plugin is the `message_id` we constructed
 		// (which is what `getMessageById` actually keys on).
 		return { ids: [messageId] };
 	}
 
-	async function list(
-		input: ListInput,
-		opts?: BackendCallOptions
-	): Promise<MemoryItem[]> {
+	async function list(input: ListInput, opts?: BackendCallOptions): Promise<MemoryItem[]> {
 		const { manager, ready } = await ensureInit();
 		if (!ready) return [];
 		const userId = resolveUser(input.userId);
@@ -324,14 +294,14 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				reverse: true,
 			}),
 			opts?.timeoutMs ?? config.timeoutMs,
-			opts?.signal
+			opts?.signal,
 		);
 		return (records ?? []).map(asMemoryItem);
 	}
 
 	async function get(
 		input: { ids: string[]; scopeId?: string; userId?: string },
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<MemoryItem[]> {
 		const { manager, ready } = await ensureInit();
 		if (!ready) return [];
@@ -341,7 +311,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				const raw = await withTimeout(
 					manager.getMessageById(id),
 					opts?.timeoutMs ?? config.timeoutMs,
-					opts?.signal
+					opts?.signal,
 				);
 				if (raw) results.push(asMemoryItem(raw));
 			} catch {
@@ -353,13 +323,10 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 
 	async function revise(
 		input: ReviseInput,
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<{ deprecatedId: string; newId: string }> {
 		const { manager, ready } = await ensureInit();
-		if (!ready)
-			throw new Error(
-				"raw message storage is not available in this environment"
-			);
+		if (!ready) throw new Error("raw message storage is not available in this environment");
 		const userId = resolveUser(input.userId);
 		const botId = resolveBot(input.botId);
 		if (typeof manager.deprecateMessages === "function") {
@@ -370,7 +337,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 					userId,
 				}),
 				opts?.timeoutMs ?? config.timeoutMs,
-				opts?.signal
+				opts?.signal,
 			);
 		}
 		const stored = await remember(
@@ -383,17 +350,15 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				userId,
 				botId,
 			},
-			opts
+			opts,
 		);
-		const newId =
-			stored.ids[0] ??
-			makeIdempotentId(`${userId}|${botId}|${nowMs()}|${input.content}`);
+		const newId = stored.ids[0] ?? makeIdempotentId(`${userId}|${botId}|${nowMs()}|${input.content}`);
 		return { deprecatedId: input.id, newId };
 	}
 
 	async function retire(
 		input: { id: string; reason?: string; scopeId?: string; userId?: string },
-		opts?: BackendCallOptions
+		opts?: BackendCallOptions,
 	): Promise<{ ok: true }> {
 		const { manager, ready } = await ensureInit();
 		if (!ready) return { ok: true };
@@ -409,15 +374,12 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				userId,
 			}),
 			opts?.timeoutMs ?? config.timeoutMs,
-			opts?.signal
+			opts?.signal,
 		);
 		return { ok: true };
 	}
 
-	async function captureSource(
-		input: CaptureInput,
-		opts?: BackendCallOptions
-	): Promise<{ id: string }> {
+	async function captureSource(input: CaptureInput, opts?: BackendCallOptions): Promise<{ id: string }> {
 		const result = await remember(
 			{
 				content: input.content,
@@ -426,13 +388,9 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 				userId: input.userId,
 				botId: input.botId,
 			},
-			opts
+			opts,
 		);
-		const id =
-			result.ids[0] ??
-			makeIdempotentId(
-				`${input.userId ?? "dsh-default"}|capture|${randomUUID()}`
-			);
+		const id = result.ids[0] ?? makeIdempotentId(`${input.userId ?? "dsh-default"}|capture|${randomUUID()}`);
 		return { id };
 	}
 
@@ -460,12 +418,11 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 						threshold: -1,
 					}),
 					Math.min(config.timeoutMs, 2000),
-					undefined
+					undefined,
 				);
 			}
 			const dbPath =
-				process.env.MEMORY_STORE_DB_PATH ??
-				join(homedir(), ".opencontext", "memory", "store.db");
+				process.env.MEMORY_STORE_DB_PATH ?? join(homedir(), ".opencontext", "memory", "store.db");
 			return { ok: true, mode: "lib", details: `db=${dbPath}` };
 		} catch (error) {
 			return {
@@ -479,9 +436,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 	async function dispose(): Promise<void> {
 		try {
 			const mod = await import("@melandlabs/opencontext");
-			const close = (
-				mod as unknown as { closeRawMessageStore?: () => Promise<void> }
-			).closeRawMessageStore;
+			const close = (mod as unknown as { closeRawMessageStore?: () => Promise<void> }).closeRawMessageStore;
 			if (typeof close === "function") await close();
 		} catch {
 			// ignore

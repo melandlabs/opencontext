@@ -38,11 +38,7 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			const disposer = registerTurnEndListener(
-				ctx as any,
-				backend,
-				config as any
-			);
+			const disposer = registerTurnEndListener(ctx as any, backend, config as any);
 
 			expect(typeof disposer).toBe("function");
 		});
@@ -91,11 +87,9 @@ describe("events-turn-end", () => {
 					sourceType: "turn-summary",
 					content: expect.stringContaining("User:"),
 				}),
-				expect.anything()
+				expect.anything(),
 			);
-			expect(ctx.logger.info).toHaveBeenCalledWith(
-				expect.stringContaining("turn summary captured")
-			);
+			expect(ctx.logger.info).toHaveBeenCalledWith(expect.stringContaining("turn summary captured"));
 		});
 
 		it("should not generate summary when autoSummarize is false", async () => {
@@ -172,7 +166,7 @@ describe("events-turn-end", () => {
 					sourceType: "tool-outcome",
 					content: "Found X",
 				}),
-				expect.anything()
+				expect.anything(),
 			);
 		});
 
