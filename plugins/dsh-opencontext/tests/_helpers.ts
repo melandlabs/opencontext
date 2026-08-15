@@ -8,10 +8,16 @@
 
 import { vi } from "vitest";
 
-import type { OpenContextBackend, SearchHit, MemoryItem } from "../src/backend.js";
+import type {
+	OpenContextBackend,
+	SearchHit,
+	MemoryItem,
+} from "../src/backend.js";
 import type { ResolvedConfig } from "../src/config.js";
 
-export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
+export function makeConfig(
+	overrides: Partial<ResolvedConfig> = {}
+): ResolvedConfig {
 	return {
 		baseUrl: "http://127.0.0.1:8000",
 		authorization: "",
@@ -49,7 +55,9 @@ export function makeMemoryItem(over: Partial<MemoryItem> = {}): MemoryItem {
 	};
 }
 
-export function makeFakeBackend(over: Partial<OpenContextBackend> = {}): OpenContextBackend {
+export function makeFakeBackend(
+	over: Partial<OpenContextBackend> = {}
+): OpenContextBackend {
 	return {
 		mode: "lib",
 		search: vi.fn(async () => []),
@@ -59,7 +67,11 @@ export function makeFakeBackend(over: Partial<OpenContextBackend> = {}): OpenCon
 		revise: vi.fn(async () => ({ deprecatedId: "old", newId: "new" })),
 		retire: vi.fn(async () => ({ ok: true as const })),
 		captureSource: vi.fn(async () => ({ id: "msg-1" })),
-		health: vi.fn(async () => ({ ok: true, mode: "lib" as const, details: "ok" })),
+		health: vi.fn(async () => ({
+			ok: true,
+			mode: "lib" as const,
+			details: "ok",
+		})),
 		...over,
 	};
 }

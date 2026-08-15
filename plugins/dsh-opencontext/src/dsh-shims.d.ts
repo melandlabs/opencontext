@@ -7,7 +7,11 @@ declare module "@deepseek-ai/cordis" {
 		tools: { register(tool: unknown): () => void };
 		on(event: string, handler: (...args: never[]) => unknown): () => void;
 		get(name: string): unknown;
-		logger: { warn(message: string): void; debug?(message: string): void; info?(message: string): void };
+		logger: {
+			warn(message: string): void;
+			debug?(message: string): void;
+			info?(message: string): void;
+		};
 		effect(setup: () => () => void): () => void;
 	}
 }

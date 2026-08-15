@@ -59,10 +59,14 @@ describe("plugin entry", () => {
 			}),
 		};
 		apply(ctx as unknown as Parameters<typeof apply>[0], makeConfig());
-		// 8 tools registered
-		expect(ctx.tools.register).toHaveBeenCalledTimes(8);
+		// 16 tools registered: 8 core + 2 insights + 3 knowledge + 3 summary
+		expect(ctx.tools.register).toHaveBeenCalledTimes(16);
 		// Two agent/pre-step listeners (recall + capture)
 		expect(listeners.filter((l) => l.event === "agent/pre-step")).toHaveLength(2);
+		// turn/end listener (always registered)
+		expect(listeners.filter((l) => l.event === "turn/end")).toHaveLength(1);
+		// tool/result listener is NOT registered by default (captureToolResults=false)
+		expect(listeners.filter((l) => l.event === "tool/result")).toHaveLength(0);
 		// Skill + command each looked up
 		expect(ctx.get).toHaveBeenCalledWith("skill");
 		expect(ctx.get).toHaveBeenCalledWith("commands");

@@ -6,17 +6,24 @@
 import { SKILL_BODY } from "./skill-body.js";
 
 interface SkillService {
-	register(definition: { name: string; description: string; body: string }): () => void;
+	register(definition: {
+		name: string;
+		description: string;
+		body: string;
+	}): () => void;
 }
 
-export function registerSkill(ctx: { get: (name: string) => unknown }): () => void {
+export function registerSkill(ctx: {
+	get: (name: string) => unknown;
+}): () => void {
 	const skill = ctx.get("skill") as SkillService | undefined;
 	if (!skill || typeof skill.register !== "function") {
 		return () => undefined;
 	}
 	return skill.register({
 		name: "opencontext",
-		description: "How the dsh-opencontext plugin surfaces durable memory and untrusted recall to the model.",
+		description:
+			"How the dsh-opencontext plugin surfaces durable memory and untrusted recall to the model.",
 		body: SKILL_BODY,
 	});
 }

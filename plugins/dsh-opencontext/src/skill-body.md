@@ -4,7 +4,7 @@ You have access to durable memory and retrieval-augmented context via the
 `dsh-opencontext` plugin. Use the `oc_*` tools to read and write long-term
 memory; rely on automatic recall for grounded responses.
 
-## Tools
+## Core Memory Tools
 
 - `oc_search { query, limit?, threshold? }` — search long-term memory.
 - `oc_remember { content, metadata? }` — store one durable memory the user
@@ -19,6 +19,35 @@ memory; rely on automatic recall for grounded responses.
   context block (automatic recall already runs every step).
 - `oc_capture_source { content, sourceType?, metadata? }` — capture a
   content source for later retrieval.
+
+## Summary & Outcome Tools
+
+- `oc_session_summary { summary, tags?, metadata? }` — generate and store
+  a session summary at natural breakpoints (task completion, context switches).
+- `oc_task_outcome { outcome, taskName?, status?, metadata? }` — record a
+  task outcome or achievement when a task is completed, a decision is made,
+  or a deliverable is produced.
+- `oc_recent_summaries { limit?, sourceTypes? }` — list recent session
+  summaries and task outcomes.
+
+## Insights Tools (if enabled)
+
+- `oc_insights_search { query, categories?, limit?, since? }` — search
+  structured insights extracted from historical conversations (decisions,
+  preferences, outcomes). Categories include: decision, preference,
+  outcome, fact, opinion, plan, question, answer.
+- `oc_insight_capture { content, category?, metadata? }` — capture a
+  structured insight when the conversation reveals a high-level abstraction.
+
+## Knowledge/RAG Tools (if enabled)
+
+- `oc_knowledge_search { query, documentIds?, limit?, threshold? }` — search
+  uploaded documents and knowledge bases using RAG. Returns relevant document chunks.
+- `oc_document_upload { content, filename, mimeType?, metadata? }` — upload
+  a document to the knowledge base for later RAG search. The document will be
+  chunked and indexed.
+- `oc_document_list { limit? }` — list all documents in the knowledge base
+  for the current scope.
 
 ## Recall contract
 
@@ -45,6 +74,7 @@ User prompts are auto-captured (unless the host sets
 
 ## When to use which tool
 
+### Memory operations
 - The user says "remember that X" → `oc_remember`.
 - The user says "what did we decide about Y last time?" → the recall
   waterfall will already have surfaced it; you only need `oc_search` if
@@ -52,6 +82,23 @@ User prompts are auto-captured (unless the host sets
 - The user says "update memory Z" → `oc_memory_revise`.
 - The user says "forget X" → `oc_memory_retire`.
 - The user pastes a URL / transcript / source → `oc_capture_source`.
+
+### Summaries and outcomes
+- A task is completed → `oc_task_outcome`.
+- A natural breakpoint in conversation → `oc_session_summary`.
+- Review recent progress → `oc_recent_summaries`.
+
+### Insights (when enabled)
+- "What preferences has the user expressed?" → `oc_insights_search` with
+  `categories: ["preference"]`.
+- "What decisions have we made?" → `oc_insights_search` with
+  `categories: ["decision"]`.
+- Extract a new insight → `oc_insight_capture`.
+
+### Knowledge/RAG (when enabled)
+- "Search uploaded documents" → `oc_knowledge_search`.
+- "Save this document for later" → `oc_document_upload`.
+- "What documents do we have?" → `oc_document_list`.
 
 ## `/oc doctor`
 

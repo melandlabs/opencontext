@@ -86,18 +86,24 @@ export interface BackendCallOptions {
 export interface OpenContextBackend {
 	readonly mode: "lib" | "http";
 	search(input: SearchInput, opts?: BackendCallOptions): Promise<SearchHit[]>;
-	remember(input: RememberInput, opts?: BackendCallOptions): Promise<{ ids: string[] }>;
+	remember(
+		input: RememberInput,
+		opts?: BackendCallOptions
+	): Promise<{ ids: string[] }>;
 	list(input: ListInput, opts?: BackendCallOptions): Promise<MemoryItem[]>;
 	get(
 		input: { ids: string[]; scopeId?: string; userId?: string },
-		opts?: BackendCallOptions,
+		opts?: BackendCallOptions
 	): Promise<MemoryItem[]>;
 	revise(input: ReviseInput, opts?: BackendCallOptions): Promise<RevokeResult>;
 	retire(
 		input: { id: string; reason?: string; scopeId?: string; userId?: string },
-		opts?: BackendCallOptions,
+		opts?: BackendCallOptions
 	): Promise<{ ok: true }>;
-	captureSource(input: CaptureInput, opts?: BackendCallOptions): Promise<{ id: string }>;
+	captureSource(
+		input: CaptureInput,
+		opts?: BackendCallOptions
+	): Promise<{ id: string }>;
 	health(): Promise<{ ok: boolean; mode: "lib" | "http"; details?: string }>;
 	dispose?(): Promise<void>;
 }

@@ -54,7 +54,11 @@ describe("registerCommand", () => {
 
 	it("/oc doctor returns a JSON status payload", async () => {
 		const backend = makeFakeBackend({
-			health: vi.fn(async () => ({ ok: true, mode: "lib" as const, details: "db=/x" })),
+			health: vi.fn(async () => ({
+				ok: true,
+				mode: "lib" as const,
+				details: "db=/x",
+			})),
 		});
 		registerCommand(ctx, backend, makeConfig({ scopeId: "s1" }));
 		const cmd = registeredCommands[0];
@@ -74,7 +78,11 @@ describe("registerCommand", () => {
 
 	it("/oc doctor reports failure when health is down", async () => {
 		const backend = makeFakeBackend({
-			health: vi.fn(async () => ({ ok: false, mode: "lib" as const, details: "down" })),
+			health: vi.fn(async () => ({
+				ok: false,
+				mode: "lib" as const,
+				details: "down",
+			})),
 		});
 		registerCommand(ctx, backend, makeConfig());
 		const cmd = registeredCommands[0];

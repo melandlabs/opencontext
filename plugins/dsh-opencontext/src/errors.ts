@@ -35,7 +35,11 @@ export function toolOk<T>(value: T): ToolOk<T> {
 	return { ok: true, value };
 }
 
-export function toolError(code: ErrorCode, message: string, details?: unknown): ToolError {
+export function toolError(
+	code: ErrorCode,
+	message: string,
+	details?: unknown
+): ToolError {
 	return { ok: false, error: { code, message, details } };
 }
 
@@ -48,7 +52,12 @@ export function classifyBackendError(error: unknown): {
 	statusCode?: number;
 } {
 	if (!error) return { code: "internal_error", message: "unknown error" };
-	const err = error as { name?: string; message?: string; statusCode?: number; code?: string };
+	const err = error as {
+		name?: string;
+		message?: string;
+		statusCode?: number;
+		code?: string;
+	};
 
 	// AbortError from AbortSignal.timeout or fetch AbortController.
 	if (err.name === "AbortError" || err.name === "TimeoutError") {
@@ -56,7 +65,10 @@ export function classifyBackendError(error: unknown): {
 	}
 	// Node fetch maps ECONNREFUSED / ENOTFOUND onto TypeError with .cause.
 	if (err.name === "TypeError" || err instanceof TypeError) {
-		return { code: "backend_unavailable", message: err.message ?? "backend unavailable" };
+		return {
+			code: "backend_unavailable",
+			message: err.message ?? "backend unavailable",
+		};
 	}
 	if (typeof err.statusCode === "number") {
 		if (err.statusCode === 401 || err.statusCode === 403) {
@@ -74,7 +86,11 @@ export function classifyBackendError(error: unknown): {
 			};
 		}
 		if (err.statusCode === 408) {
-			return { code: "timeout", message: err.message ?? "request timed out", statusCode: err.statusCode };
+			return {
+				code: "timeout",
+				message: err.message ?? "request timed out",
+				statusCode: err.statusCode,
+			};
 		}
 		if (err.statusCode === 503) {
 			return {

@@ -7,9 +7,15 @@ import { join } from "node:path";
 // mocks must be declared with `vi.hoisted` so they're available when
 // `vi.mock` is hoisted to the top of the file by vitest.
 const mocks = vi.hoisted(() => ({
-	storeMessages: vi.fn(async (msgs: unknown[]) => msgs.map(() => Math.random().toString(36).slice(2, 10))),
+	storeMessages: vi.fn(async (msgs: unknown[]) =>
+		msgs.map(() => Math.random().toString(36).slice(2, 10))
+	),
 	queryMessages: vi.fn(async () => []),
-	getMessageById: vi.fn(async (id: string) => ({ messageId: id, content: "ok", timestamp: 1 })),
+	getMessageById: vi.fn(async (id: string) => ({
+		messageId: id,
+		content: "ok",
+		timestamp: 1,
+	})),
 	deprecateMessages: vi.fn(async () => 1),
 	getStats: vi.fn(async () => ({ totalMessages: 0 })),
 	searchUnifiedMemory: vi.fn(async () => ({ results: [], warnings: [] })),
@@ -72,36 +78,64 @@ afterEach(() => {
 describe("createLibBackend", () => {
 	it("search maps to searchUnifiedMemory with userId, limit, threshold", async () => {
 		searchUnifiedMemory.mockResolvedValueOnce({
-			results: [{ id: "h1", content: "x", similarity: 0.91, metadata: { timestamp: 42 } }],
+			results: [
+				{
+					id: "h1",
+					content: "x",
+					similarity: 0.91,
+					metadata: { timestamp: 42 },
+				},
+			],
 			warnings: [],
 		} as never);
 		const backend = createLibBackend(makeConfig({ scopeId: "user:1" }));
-		const hits = await backend.search({ query: "hello world", limit: 3, threshold: 0.4 });
+		const hits = await backend.search({
+			query: "hello world",
+			limit: 3,
+			threshold: 0.4,
+		});
 		expect(hits).toHaveLength(1);
 		expect(hits[0]?.id).toBe("h1");
 		expect(hits[0]?.score).toBeCloseTo(0.91);
 		expect(hits[0]?.timestamp).toBe(42);
 		expect(searchUnifiedMemory).toHaveBeenCalledWith(
-			expect.objectContaining({ query: "hello world", limit: 3, threshold: 0.4, userId: "user:1" }),
+			expect.objectContaining({
+				query: "hello world",
+				limit: 3,
+				threshold: 0.4,
+				userId: "user:1",
+			})
 		);
 	});
 
 	it("search falls back to lexical queryMessages when unified search throws", async () => {
 		searchUnifiedMemory.mockRejectedValueOnce(new Error("no embed provider"));
 		queryMessages.mockResolvedValueOnce([
-			{ messageId: "h1", content: "alpha", timestamp: 1, metadata: { origin: "dsh" } },
+			{
+				messageId: "h1",
+				content: "alpha",
+				timestamp: 1,
+				metadata: { origin: "dsh" },
+			},
 		] as never);
 		const backend = createLibBackend(makeConfig());
 		const hits = await backend.search({ query: "alpha" });
 		expect(hits).toHaveLength(1);
 		expect(queryMessages).toHaveBeenCalledWith(
-			expect.objectContaining({ userId: "test:scope", platform: "dsh", keywords: ["alpha"] }),
+			expect.objectContaining({
+				userId: "test:scope",
+				platform: "dsh",
+				keywords: ["alpha"],
+			})
 		);
 	});
 
 	it("remember calls storeMessages with a single RawMessage", async () => {
 		const backend = createLibBackend(makeConfig({ scopeId: "user:2" }));
-		await backend.remember({ content: "hello", metadata: { kind: "agent-note" } });
+		await backend.remember({
+			content: "hello",
+			metadata: { kind: "agent-note" },
+		});
 		expect(storeMessages).toHaveBeenCalledTimes(1);
 		const arg = storeMessages.mock.calls[0]?.[0] as Array<{
 			messageId: string;
@@ -121,7 +155,7 @@ describe("createLibBackend", () => {
 		const backend = createLibBackend(makeConfig());
 		await backend.list({ limit: 5 });
 		expect(queryMessages).toHaveBeenCalledWith(
-			expect.objectContaining({ limit: 5, reverse: true, platform: "dsh" }),
+			expect.objectContaining({ limit: 5, reverse: true, platform: "dsh" })
 		);
 	});
 
@@ -140,8 +174,15 @@ describe("createLibBackend", () => {
 
 	it("revise deprecates the old id and stores the new content", async () => {
 		const backend = createLibBackend(makeConfig());
-		const result = await backend.revise({ id: "old", content: "new", reason: "fix" });
-		expect(deprecateMessages).toHaveBeenCalledWith(["old"], expect.objectContaining({ reason: "fix" }));
+		const result = await backend.revise({
+			id: "old",
+			content: "new",
+			reason: "fix",
+		});
+		expect(deprecateMessages).toHaveBeenCalledWith(
+			["old"],
+			expect.objectContaining({ reason: "fix" })
+		);
 		expect(storeMessages).toHaveBeenCalledTimes(1);
 		expect(result.deprecatedId).toBe("old");
 		expect(typeof result.newId).toBe("string");
@@ -150,7 +191,10 @@ describe("createLibBackend", () => {
 	it("retire soft-deprecates the id and returns ok", async () => {
 		const backend = createLibBackend(makeConfig());
 		const result = await backend.retire({ id: "x", reason: "stale" });
-		expect(deprecateMessages).toHaveBeenCalledWith(["x"], expect.objectContaining({ reason: "stale" }));
+		expect(deprecateMessages).toHaveBeenCalledWith(
+			["x"],
+			expect.objectContaining({ reason: "stale" })
+		);
 		expect(result.ok).toBe(true);
 	});
 
@@ -180,8 +224,18 @@ describe("createLibBackend", () => {
 	it("seeded hits round-trip through formatPreparedContext", async () => {
 		searchUnifiedMemory.mockResolvedValueOnce({
 			results: [
-				{ id: "h1", content: "alpha", similarity: 0.9, metadata: { timestamp: 1 } },
-				{ id: "h2", content: "beta", similarity: 0.8, metadata: { timestamp: 2 } },
+				{
+					id: "h1",
+					content: "alpha",
+					similarity: 0.9,
+					metadata: { timestamp: 1 },
+				},
+				{
+					id: "h2",
+					content: "beta",
+					similarity: 0.8,
+					metadata: { timestamp: 2 },
+				},
 			],
 			warnings: [],
 		} as never);

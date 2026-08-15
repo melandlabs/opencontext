@@ -34,7 +34,7 @@ dsh --profile web web
 
 ## What you get
 
-### Tools (8)
+### Core Tools (8)
 
 | Tool | Purpose |
 |---|---|
@@ -46,6 +46,29 @@ dsh --profile web web
 | `oc_memory_retire` | Soft-deprecate an entry. |
 | `oc_prepare_context` | Manually build a bounded `<opencontext_evidence>` block. |
 | `oc_capture_source` | Capture an arbitrary content source for later retrieval. |
+
+### Summary & Outcome Tools (3)
+
+| Tool | Purpose |
+|---|---|
+| `oc_session_summary` | Generate and store a session summary at natural breakpoints. |
+| `oc_task_outcome` | Record task outcomes, decisions, and achievements. |
+| `oc_recent_summaries` | List recent session summaries and task outcomes. |
+
+### Insights Tools (2, opt-in)
+
+| Tool | Purpose |
+|---|---|
+| `oc_insights_search` | Search structured insights (decisions, preferences, outcomes). |
+| `oc_insight_capture` | Capture a structured insight from conversation. |
+
+### Knowledge/RAG Tools (3, opt-in)
+
+| Tool | Purpose |
+|---|---|
+| `oc_knowledge_search` | RAG search over uploaded documents. |
+| `oc_document_upload` | Upload documents to the knowledge base. |
+| `oc_document_list` | List all documents in the knowledge base. |
 
 All tools return `{ ok: true, value }` on success and
 `{ ok: false, error: { code, message } }` on failure — they never throw to
@@ -74,10 +97,23 @@ Gated by `config.capturePrompts` (default `true`; set
 default so the turn is not blocked; opt into `flushOnCapture: true` if
 you need strict ordering.
 
+### Turn-end summarization
+
+When `autoSummarize` is enabled, a `turn/end` listener:
+1. Generates a simple summary of the turn
+2. Stores it as a `turn-summary` memory
+3. Captures tool outcomes if `captureToolOutcomes` is enabled
+
+### Tool result capture
+
+When `captureToolResults` is enabled, a `tool/result` listener captures
+tool call results as `tool-interaction` memories, creating a searchable
+log of all tool interactions.
+
 ### Skill: `opencontext`
 
 Loaded at plugin-apply time. Primes the model on the recall / capture
-contract, the trust model, and the eight `oc_*` tools.
+contract, the trust model, and all available `oc_*` tools.
 
 ### Command: `/oc doctor`
 
@@ -91,7 +127,8 @@ Prints a JSON status payload:
   "scope": "local:9cd22c419df9",
   "db": "/Users/you/.opencontext/memory/store.db",
   "probe": { "ok": true, "mode": "lib", "details": "db=/Users/you/.opencontext/memory/store.db" },
-  "recentCount": 0
+  "recentCount": 0,
+  "features": ["insights", "knowledge", "prompt-capture"]
 }
 ```
 
@@ -130,6 +167,10 @@ Resolved in this order (highest first):
 | `capturePrompts` | bool | `true` | `OPENCONTEXT_DSH_CAPTURE_PROMPTS` (`1`/`0`) |
 | `flushOnCapture` | bool | `false` | `OPENCONTEXT_DSH_FLUSH_ON_CAPTURE` (`1`/`0`) |
 | `maxRecallItems` | number | `8` | `OPENCONTEXT_DSH_MAX_RECALL_ITEMS` |
+| `autoSummarize` | bool | `false` | `OPENCONTEXT_DSH_AUTO_SUMMARIZE` (`1`/`0`) |
+| `captureToolResults` | bool | `false` | `OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS` (`1`/`0`) |
+| `enableInsights` | bool | `true` | `OPENCONTEXT_DSH_ENABLE_INSIGHTS` (`1`/`0`) |
+| `enableKnowledge` | bool | `true` | `OPENCONTEXT_DSH_ENABLE_KNOWLEDGE` (`1`/`0`) |
 
 Presence-only switch:
 
@@ -151,6 +192,48 @@ pnpm install
 pnpm typecheck
 pnpm test          # 59 unit tests
 pnpm build         # tsc → lib/
+```
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    DSH Agent                                 │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  agent/pre-step 瀑布流                                  │  │
+│  │  ┌─────────────────┐    ┌─────────────────┐           │  │
+│  │  │   Recall        │ -> │   Capture       │           │  │
+│  │  │  (搜索历史)     │    │  (存储用户输入) │           │  │
+│  │  └─────────────────┘    └─────────────────┘           │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                           │                                   │
+│                           v                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │  turn/end & tool/result 事件监听器                      │  │
+│  │  ┌─────────────────┐    ┌─────────────────┐           │  │
+│  │  │  Session Summ.  │    │  Tool Capture   │           │  │
+│  │  │  (会话总结)      │    │  (工具输出捕获)  │           │  │
+│  │  └─────────────────┘    └─────────────────┘           │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                           │                                   │
+│                           v                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │         dsh-opencontext 插件 (16 tools)                 │  │
+│  │  ┌────────┐ ┌──────────┐ ┌─────────┐ ┌─────────┐       │  │
+│  │  │ Core   │ │Summary   │ │Insights │ │Knowledge│       │  │
+│  │  │ (8)    │ │ (3)      │ │ (2)     │ │ (3)     │       │  │
+│  │  └────────┘ └──────────┘ └─────────┘ └─────────┘       │  │
+│  └───────────────────────────────────────────────────────┘  │
+│                           │                                   │
+│                           v                                   │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │            OpenContext Backend                          │  │
+│  │  ┌─────────────────┐         ┌─────────────────┐      │  │
+│  │  │   Lib Mode      │         │   HTTP Mode     │      │  │
+│  │  │  (in-process)   │         │  (daemon)       │      │  │
+│  │  └─────────────────┘         └─────────────────┘      │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## License

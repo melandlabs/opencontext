@@ -32,9 +32,12 @@ function extractUserTexts(messages: DshPayload["messages"]): string[] {
 		if (!Array.isArray(blocks)) continue;
 		const text = blocks
 			.filter(
-				(block): block is { type: string; text?: string } => typeof block === "object" && block !== null,
+				(block): block is { type: string; text?: string } =>
+					typeof block === "object" && block !== null
 			)
-			.filter((block) => block.type === "text" && typeof block.text === "string")
+			.filter(
+				(block) => block.type === "text" && typeof block.text === "string"
+			)
 			.map((block) => block.text ?? "")
 			.join("")
 			.trim();
@@ -49,9 +52,12 @@ export function registerCapture(
 		logger: { warn: (msg: string) => void; debug?: (msg: string) => void };
 	},
 	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	config: ResolvedConfig
 ): () => void {
-	const handler = async (payload: unknown, next: () => Promise<unknown>): Promise<unknown> => {
+	const handler = async (
+		payload: unknown,
+		next: () => Promise<unknown>
+	): Promise<unknown> => {
 		const downstream = await next();
 		if (!config.capturePrompts) return downstream;
 		const p = (payload ?? {}) as DshPayload;
@@ -59,7 +65,10 @@ export function registerCapture(
 		if (messages.length === 0) return downstream;
 		const cwd = p.session?.header?.cwd ?? p.cwd ?? process.cwd();
 		const sessionId = p.session?.header?.id ?? "session-unknown";
-		const scopeId = config.scopeId && config.scopeId.length > 0 ? config.scopeId : `local:${cwd}`;
+		const scopeId =
+			config.scopeId && config.scopeId.length > 0
+				? config.scopeId
+				: `local:${cwd}`;
 		const texts = extractUserTexts(messages);
 		if (texts.length === 0) return downstream;
 
@@ -79,11 +88,13 @@ export function registerCapture(
 							scopeId,
 							userId: scopeId,
 						},
-						{ timeoutMs: config.requestTimeoutMs },
+						{ timeoutMs: config.requestTimeoutMs }
 					);
 				} catch (error) {
 					const cls = classifyBackendError(error);
-					ctx.logger.warn(`[dsh-opencontext] capture failed: ${cls.code} ${cls.message}`);
+					ctx.logger.warn(
+						`[dsh-opencontext] capture failed: ${cls.code} ${cls.message}`
+					);
 				}
 			}
 		};
@@ -94,7 +105,9 @@ export function registerCapture(
 			// Fire-and-forget. Swallow rejection so it never surfaces as an unhandledRejection.
 			runCaptures().catch((error: unknown) => {
 				const cls = classifyBackendError(error);
-				ctx.logger.warn(`[dsh-opencontext] capture background failed: ${cls.code} ${cls.message}`);
+				ctx.logger.warn(
+					`[dsh-opencontext] capture background failed: ${cls.code} ${cls.message}`
+				);
 			});
 		}
 		return downstream;

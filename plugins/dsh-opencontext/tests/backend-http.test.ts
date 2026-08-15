@@ -32,7 +32,7 @@ describe("createHttpBackend", () => {
 		expect(h.ok).toBe(true);
 		expect(fetchMock).toHaveBeenCalledWith(
 			"http://127.0.0.1:9999/health/live",
-			expect.objectContaining({ method: "GET" }),
+			expect.objectContaining({ method: "GET" })
 		);
 	});
 
@@ -45,7 +45,9 @@ describe("createHttpBackend", () => {
 	});
 
 	it("search POSTs to /v1/memory/search with the scope_id and limit", async () => {
-		fetchMock.mockResolvedValueOnce(jsonResponse(200, { results: [{ id: "h1", content: "x", score: 0.7 }] }));
+		fetchMock.mockResolvedValueOnce(
+			jsonResponse(200, { results: [{ id: "h1", content: "x", score: 0.7 }] })
+		);
 		const backend = createHttpBackend(makeConfig({ scopeId: "s1" }));
 		const hits = await backend.search({ query: "hi", limit: 2 });
 		expect(hits).toHaveLength(1);
@@ -53,7 +55,12 @@ describe("createHttpBackend", () => {
 		expect(call[0]).toBe("http://127.0.0.1:9999/v1/memory/search");
 		expect(call[1].method).toBe("POST");
 		const body = JSON.parse(call[1].body as string);
-		expect(body).toEqual({ scope_id: "s1", query: "hi", limit: 2, mode: "auto" });
+		expect(body).toEqual({
+			scope_id: "s1",
+			query: "hi",
+			limit: 2,
+			mode: "auto",
+		});
 	});
 
 	it("remember POSTs to /v1/memory/remember and returns ids", async () => {
@@ -89,6 +96,8 @@ describe("createHttpBackend", () => {
 	it("maps a 503 response to server_unavailable when search fails", async () => {
 		fetchMock.mockResolvedValueOnce(jsonResponse(503, { error: "down" }));
 		const backend = createHttpBackend(makeConfig());
-		await expect(backend.search({ query: "x" })).rejects.toMatchObject({ statusCode: 503 });
+		await expect(backend.search({ query: "x" })).rejects.toMatchObject({
+			statusCode: 503,
+		});
 	});
 });

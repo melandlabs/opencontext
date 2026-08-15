@@ -35,9 +35,12 @@ export function registerRecall(
 		logger: { warn: (msg: string) => void; debug?: (msg: string) => void };
 	},
 	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	config: ResolvedConfig
 ): () => void {
-	const handler = async (payload: unknown, next: Next): Promise<PreStepDecision> => {
+	const handler = async (
+		payload: unknown,
+		next: Next
+	): Promise<PreStepDecision> => {
 		try {
 			const p = (payload ?? {}) as DshPayload;
 			const messages = Array.isArray(p.messages) ? p.messages : [];
@@ -46,7 +49,10 @@ export function registerRecall(
 			if (!query) return await next();
 			const cwd = p.session?.header?.cwd ?? p.cwd ?? process.cwd();
 			const sessionId = p.session?.header?.id ?? "session-unknown";
-			const scopeId = config.scopeId && config.scopeId.length > 0 ? config.scopeId : `local:${cwd}`;
+			const scopeId =
+				config.scopeId && config.scopeId.length > 0
+					? config.scopeId
+					: `local:${cwd}`;
 
 			let hits;
 			try {
@@ -57,17 +63,23 @@ export function registerRecall(
 						scopeId,
 						userId: scopeId,
 					},
-					{ timeoutMs: config.requestTimeoutMs },
+					{ timeoutMs: config.requestTimeoutMs }
 				);
 			} catch (error) {
 				const cls = classifyBackendError(error);
-				ctx.logger.warn(`[dsh-opencontext] recall failed: ${cls.code} ${cls.message}`);
+				ctx.logger.warn(
+					`[dsh-opencontext] recall failed: ${cls.code} ${cls.message}`
+				);
 				return await next();
 			}
 
 			const prepared = formatPreparedContext(hits, config.maxBytes);
 			const decision = await next();
-			if (!prepared.content || prepared.status === "empty" || decision.kind !== "enter") {
+			if (
+				!prepared.content ||
+				prepared.status === "empty" ||
+				decision.kind !== "enter"
+			) {
 				return decision;
 			}
 			const wrappedMessage = {
@@ -87,7 +99,9 @@ export function registerRecall(
 			};
 		} catch (error) {
 			const cls = classifyBackendError(error);
-			ctx.logger.warn(`[dsh-opencontext] recall waterfall error: ${cls.code} ${cls.message}`);
+			ctx.logger.warn(
+				`[dsh-opencontext] recall waterfall error: ${cls.code} ${cls.message}`
+			);
 			return await next();
 		}
 	};
