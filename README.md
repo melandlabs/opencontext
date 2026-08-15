@@ -312,6 +312,17 @@ in [`docs/architecture.md`](./docs/architecture.md).
 
 ## Documentation
 
+### Tutorials (Start Here)
+
+- [`docs/tutorials/README.md`](./docs/tutorials/README.md) — **Tutorial index and learning path**
+- [`docs/tutorials/00-getting-started.md`](./docs/tutorials/00-getting-started.md) — Get up and running in 5 minutes
+- [`docs/tutorials/01-user-guide.md`](./docs/tutorials/01-user-guide.md) — Understand the four verbs and temporal memory
+- [`docs/tutorials/02-developer-guide.md`](./docs/tutorials/02-developer-guide.md) — Integrate OpenContext into your app
+- [`docs/tutorials/03-advanced-usage.md`](./docs/tutorials/03-advanced-usage.md) — Production patterns and advanced features
+- [`docs/tutorials/04-best-practices.md`](./docs/tutorials/04-best-practices.md) — Tips and common pitfalls
+
+### Architecture & Design
+
 - [`docs/architecture.md`](./docs/architecture.md) — data model, lifecycle, data plane and control plane
 - [`docs/philosophy.md`](./docs/philosophy.md) — why this shape
 - Each package's `README.md` — API surface, examples, migration notes

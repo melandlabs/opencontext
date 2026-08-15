@@ -285,6 +285,17 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 
 ## 文档
 
+### 教程（从这里开始）
+
+- [`docs/tutorials/README.md`](./docs/tutorials/README.md) — **教程目录和学习路径**
+- [`docs/tutorials/00-getting-started.md`](./docs/tutorials/00-getting-started.md) — 5 分钟快速上手
+- [`docs/tutorials/01-user-guide.md`](./docs/tutorials/01-user-guide.md) — 理解四个动词和时间记忆
+- [`docs/tutorials/02-developer-guide.md`](./docs/tutorials/02-developer-guide.md) — 将 OpenContext 集成到你的应用
+- [`docs/tutorials/03-advanced-usage.md`](./docs/tutorials/03-advanced-usage.md) — 生产模式与高级功能
+- [`docs/tutorials/04-best-practices.md`](./docs/tutorials/04-best-practices.md) — 最佳实践和常见陷阱
+
+### 架构与设计
+
 - [`docs/architecture.md`](./docs/architecture.md) — 数据模型、生命周期、数据面和控制面
 - [`docs/philosophy.md`](./docs/philosophy.md) — 为什么是这种形态
 - 每个包的 `README.md` — API 面、示例、迁移说明

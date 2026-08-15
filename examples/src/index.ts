@@ -22,6 +22,9 @@
  *     pnpm test
  */
 
+import testBuildingAgents from "../tutorial-tests/test-building-agents.ts";
+import testTutorials from "../tutorial-tests/test-tutorials.ts";
+import verifyTutorialUseCases from "../tutorial-tests/verify-tutorial-usecases.ts";
 import demoFacade from "./00-facade.ts";
 import demoRagChunk from "./01-rag-chunk.ts";
 import demoRagVectorStore from "./02-rag-vector-store.ts";
@@ -62,6 +65,12 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
 ];
 
+const tutorialTests: Array<[string, () => Promise<void>]> = [
+	["tutorial: docs/tutorials/*.md code examples", testTutorials],
+	["tutorial: docs/tutorials/* use cases verification", verifyTutorialUseCases],
+	["tutorial: docs/tutorials/05-building-agents.md examples", testBuildingAgents],
+];
+
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {
 	console.log(`\n${"═".repeat(64)}\n${label}\n${"═".repeat(64)}`);
 	for (const [name, fn] of sections) {
@@ -76,13 +85,16 @@ async function runAll(label: string, sections: Array<[string, () => Promise<void
 
 async function main() {
 	console.log(`[examples] ${demos.length} demo section(s) against the @melandlabs/* packages`);
+	console.log(`[tutorials] ${tutorialTests.length} tutorial test section(s)`);
 
 	await runAll("DEMOS — runnable documentation (real API calls)", demos);
+	await runAll("TUTORIALS — code examples from docs/tutorials/*.md", tutorialTests);
 
 	if (process.exitCode === 1) {
 		console.error("\n[FAIL] at least one check failed");
 	} else {
 		console.log("\n[OK] every demo ran against the real API");
+		console.log("[OK] every tutorial code example works");
 	}
 }
 
