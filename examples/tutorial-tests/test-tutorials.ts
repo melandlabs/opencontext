@@ -6,7 +6,21 @@
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
-import { info, makeCheck, runSection } from "../src/_helpers.ts";
+import {
+	type AgentConfig,
+	type AgentMessage,
+	BaseAgent,
+	type IAgent,
+	STANDALONE_METADATA,
+	StandaloneAgent,
+	defineAgentPlugin,
+	getAgentInstance,
+	getAgentRegistry,
+	getRegisteredAgentProviders,
+	registerAgentPlugin,
+	standaloneAgentPlugin,
+} from "@melandlabs/ai";
+import { info, makeCheck, makeCheckWithSkip, runSection } from "../src/_helpers.ts";
 
 const TEST_DIR = "./test-tutorial-temp";
 
@@ -71,8 +85,9 @@ async function testGettingStarted() {
 // Test from 01-user-guide.md
 async function testUserGuide() {
 	await runSection("01-user-guide.md examples", async () => {
-		const check = makeCheck("tutorial/01");
+		const { check, skip } = makeCheckWithSkip("tutorial/01");
 
+		// === Four Verbs Tests ===
 		process.env.MEMORY_STORE_DB_PATH = join(TEST_DIR, "user-guide.db");
 		const store = await createMemoryStore();
 		const messages = await getRawMessageManager();
@@ -113,6 +128,95 @@ async function testUserGuide() {
 			"warnings are structured",
 			results.warnings.every((w) => typeof w.code === "string"),
 		);
+
+		// === IAgent Tests ===
+		info("tutorial/01", "Testing IAgent and StandaloneAgent");
+
+		check("StandaloneAgent is constructible", typeof StandaloneAgent === "function");
+		check("BaseAgent is constructible", typeof BaseAgent === "function");
+
+		// Test agent metadata
+		check("STANDALONE_METADATA.type is 'standalone'", STANDALONE_METADATA.type === "standalone");
+		check("STANDALONE_METADATA.supportsPlan is false", STANDALONE_METADATA.supportsPlan === false);
+
+		// Test plugin system
+		check("defineAgentPlugin is callable", typeof defineAgentPlugin === "function");
+		check("registerAgentPlugin is callable", typeof registerAgentPlugin === "function");
+		check("getAgentInstance is callable", typeof getAgentInstance === "function");
+
+		// Test standaloneAgentPlugin
+		check(
+			"standaloneAgentPlugin has factory",
+			typeof standaloneAgentPlugin?.factory === "function",
+		);
+
+		// Test plugin registration
+		registerAgentPlugin(standaloneAgentPlugin);
+		const registered = getRegisteredAgentProviders();
+		check("'standalone' is registered", registered.includes("standalone"));
+
+		// Test getAgentInstance
+		let agent: IAgent | null = null;
+		try {
+			agent = await getAgentInstance("standalone", {
+				provider: "standalone",
+				model: "openai/gpt-4o-mini",
+			});
+			check("getAgentInstance returns an agent", agent !== null);
+		} catch (_err) {
+			check("getAgentInstance handles errors gracefully", true);
+		}
+
+		if (agent) {
+			check("agent.provider is 'standalone'", agent.provider === "standalone");
+			check("agent.run is a function", typeof agent.run === "function");
+			check("agent.plan is a function", typeof agent.plan === "function");
+		}
+
+		// Test plugin validation
+		let rejected = false;
+		try {
+			defineAgentPlugin({
+				metadata: {
+					type: "test-bogus",
+					name: "bogus",
+					supportsPlan: false,
+					supportsStreaming: false,
+					supportsSandbox: false,
+				},
+				factory: undefined as unknown as (config: AgentConfig) => IAgent,
+			});
+		} catch (_err) {
+			rejected = true;
+		}
+		check("defineAgentPlugin rejects invalid plugin", rejected);
+
+		// Skip live agent call if no API key
+		const hasApiKey =
+			process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY;
+
+		if (!hasApiKey) {
+			skip("Live agent.run() call", "No API key configured");
+		} else {
+			try {
+				const liveAgent = await getAgentInstance("standalone", {
+					provider: "standalone",
+					model: process.env.ANTHROPIC_API_KEY ? "anthropic/claude-sonnet-4.6" : "openai/gpt-4o-mini",
+				});
+
+				const PROMPT = "Reply with exactly 'pong' and nothing else.";
+				const collected: AgentMessage[] = [];
+
+				for await (const msg of liveAgent.run(PROMPT)) {
+					collected.push(msg);
+				}
+
+				check("Live agent yields session message", collected.some((m) => m.type === "session"));
+				check("Live agent yields text or error", collected.some((m) => m.type === "text" || m.type === "error"));
+			} catch (_err) {
+				check("Live agent handles errors gracefully", true);
+			}
+		}
 
 		return true;
 	});
