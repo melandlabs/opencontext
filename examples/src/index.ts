@@ -22,7 +22,6 @@
  *     pnpm test
  */
 
-import testBuildingAgents from "../tutorial-tests/test-building-agents.ts";
 import testTutorials from "../tutorial-tests/test-tutorials.ts";
 import verifyTutorialUseCases from "../tutorial-tests/verify-tutorial-usecases.ts";
 import demoFacade from "./00-facade.ts";
@@ -68,7 +67,6 @@ const demos: Array<[string, () => Promise<void>]> = [
 const tutorialTests: Array<[string, () => Promise<void>]> = [
 	["tutorial: docs/tutorials/*.md code examples", testTutorials],
 	["tutorial: docs/tutorials/* use cases verification", verifyTutorialUseCases],
-	["tutorial: docs/tutorials/05-building-agents.md examples", testBuildingAgents],
 ];
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {

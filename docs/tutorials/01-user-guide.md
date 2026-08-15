@@ -1,6 +1,6 @@
 # User Guide - Understanding OpenContext
 
-This guide explains the core concepts of OpenContext and how to use them effectively. By the end, you'll understand how to store, search, and manage temporal context.
+This guide explains the core concepts of OpenContext and how to use them effectively. By the end, you'll understand how to store, search, and manage temporal context, and how to build memory-aware AI agents.
 
 ## The Four Verbs of Memory
 
@@ -165,7 +165,177 @@ const factsAsOfApril = await store.searchUnifiedMemory({
 });
 ```
 
-## Configuration Matrix
+## Building AI Agents with Memory
+
+OpenContext's `IAgent` interface lets you create AI agents that can reason, plan, and remember context.
+
+### What is IAgent?
+
+`IAgent` is OpenContext's agent contract - a unified interface for running AI agents:
+
+- **Pluggable providers** - Swap between different LLM providers
+- **Standardized message stream** - Consistent output format across providers
+- **Memory-aware** - Agents can recall context before responding
+- **Extensible** - Build custom agents with tools and planning
+
+### Quick Start: StandaloneAgent
+
+The simplest way to use an agent is `StandaloneAgent` - a single LLM call:
+
+```typescript
+import { getAgentInstance } from "@melandlabs/ai";
+
+// Create an agent instance
+const agent = await getAgentInstance("standalone", {
+  provider: "standalone",
+  model: "openai/gpt-4o-mini",
+});
+
+// Run the agent
+for await (const message of agent.run("What is the capital of France?")) {
+  if (message.type === "text") {
+    console.log("Agent:", message.content);
+  }
+}
+```
+
+**Message types:**
+
+| Type | Description |
+|------|-------------|
+| `session` | Session started, includes `sessionId` |
+| `text` | Text content from the agent |
+| `result` | Final result with token usage |
+| `error` | Error occurred |
+
+### Supported Models
+
+| Provider | Environment Variable | Example Models |
+|----------|---------------------|----------------|
+| Anthropic | `ANTHROPIC_API_KEY` | `anthropic/claude-sonnet-4.6` |
+| OpenAI | `OPENAI_API_KEY` | `openai/gpt-4o-mini` |
+| OpenRouter | `OPENROUTER_API_KEY` | `openai/gpt-4o-mini` |
+
+### Memory-Aware Agent
+
+Combine `IAgent` with memory to create agents that remember context:
+
+```typescript
+import { getAgentInstance } from "@melandlabs/ai";
+import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+
+class MemoryAwareAgent {
+  constructor(userId: string) {
+    this.agent = null;
+    this.store = null;
+    this.userId = userId;
+  }
+
+  async initialize() {
+    this.agent = await getAgentInstance("standalone", {
+      provider: "standalone",
+      model: "openai/gpt-4o-mini",
+    });
+    this.store = await createMemoryStore();
+  }
+
+  async ask(query: string) {
+    // 1. Recall relevant context
+    const context = await this.store.searchUnifiedMemory({
+      userId: this.userId,
+      query,
+      limit: 5,
+    });
+
+    // 2. Build prompt with context
+    const contextStr = context.results
+      .map((r) => `- ${r.content}`)
+      .join("\n");
+
+    const prompt = `User asked: ${query}\n\nRelevant context:\n${contextStr}`;
+
+    // 3. Run the agent
+    const response = [];
+    for await (const message of this.agent.run(prompt)) {
+      if (message.type === "text") {
+        response.push(message.content ?? "");
+      }
+    }
+
+    // 4. Remember this interaction
+    const messages = await getRawMessageManager();
+    await messages.storeMessages([{
+      messageId: `msg-${Date.now()}`,
+      userId: this.userId,
+      content: `Q: ${query}\nA: ${response.join("")}`,
+      platform: "agent",
+      botId: "memory-aware",
+      timestamp: Date.now(),
+      createdAt: Date.now(),
+    }]);
+
+    return response.join("");
+  }
+}
+```
+
+### Agent Patterns
+
+#### Question-Answer Agent
+
+```typescript
+async function qaAgent(userId: string, question: string) {
+  const agent = await getAgentInstance("standalone", {
+    provider: "standalone",
+    model: "openai/gpt-4o-mini",
+  });
+
+  const store = await createMemoryStore();
+  const context = await store.searchUnifiedMemory({
+    userId,
+    query: question,
+    limit: 5,
+  });
+
+  const response = [];
+  for await (const msg of agent.run(
+    `Answer using context:\n${context.results.map(r => r.content).join("\n")}\n\nQuestion: ${question}`
+  )) {
+    if (msg.type === "text") response.push(msg.content);
+  }
+
+  return response.join("");
+}
+```
+
+#### Summarization Agent
+
+```typescript
+async function summarizeAgent(userId: string, timeframe: number) {
+  const agent = await getAgentInstance("standalone", {
+    provider: "standalone",
+    model: "anthropic/claude-sonnet-4.6",
+  });
+
+  const store = await createMemoryStore();
+  const recent = await store.searchUnifiedMemory({
+    userId,
+    query: "recent activity and decisions",
+    limit: 20,
+  });
+
+  const response = [];
+  for await (const msg of agent.run(
+    `Summarize these activities:\n${recent.results.map(r => r.content).join("\n")}`
+  )) {
+    if (msg.type === "text") response.push(msg.content);
+  }
+
+  return response.join("");
+}
+```
+
+## Configuration Options
 
 OpenContext can be configured for different use cases:
 
@@ -173,17 +343,7 @@ OpenContext can be configured for different use cases:
 
 ```typescript
 const store = await createMemoryStore({
-  // SQLite for storage (default)
   db: { type: "sqlite-vec", path: "./memory.db" },
-  // Local ONNX embeddings (opt-in, requires @melandlabs/ai-rag)
-  unified: {
-    embedQuery: async ({ query }) => {
-      // Use local embeddings (requires peer dep)
-      const { LocalTransformersEmbeddingProvider } = await import("@melandlabs/ai-rag");
-      const embedder = new LocalTransformersEmbeddingProvider();
-      return embedder.embed(query);
-    },
-  },
 });
 ```
 
@@ -194,7 +354,6 @@ const store = await createMemoryStore({
   db: { type: "sqlite-vec", path: "./memory.db" },
   unified: {
     embedQuery: async ({ query }) => {
-      // Use OpenRouter for embeddings
       const response = await fetch("https://openrouter.ai/api/v1/embeddings", {
         method: "POST",
         headers: {
@@ -223,14 +382,7 @@ const store = await createMemoryStore({
     chroma: {
       url: "http://127.0.0.1:8000",
       rawMessagesCollection: "my_raw_messages",
-      insightsCollection: "my_insights",
     },
-  },
-  unified: {
-    embedQuery: myEmbedder.embedQuery.bind(myEmbedder),
-    searchKnowledge: ragIndex.search.bind(ragIndex),
-    searchInsights: insightIndex.search.bind(insightIndex),
-    searchRawMessagesAnn: postgresManager.searchAnn.bind(postgresManager),
   },
 });
 ```
@@ -240,7 +392,6 @@ const store = await createMemoryStore({
 ### Pattern 1: Remember Everything
 
 ```typescript
-// In your message handler
 async function handleIncomingMessage(msg: any) {
   const messages = await getRawMessageManager();
 
@@ -259,7 +410,6 @@ async function handleIncomingMessage(msg: any) {
 ### Pattern 2: Recall Before Acting
 
 ```typescript
-// In your agent loop
 async function agentAction(userId: string, question: string) {
   const store = await createMemoryStore();
 
@@ -287,7 +437,6 @@ async function agentAction(userId: string, question: string) {
 ### Pattern 3: Continuous Improvement
 
 ```typescript
-// When user corrects the agent
 async function handleCorrection(userId: string, messageId: string, correction: string) {
   await improve({
     userId,
@@ -320,7 +469,6 @@ const results = await store.searchUnifiedMemory({ ... });
 for (const warning of results.warnings) {
   if (warning.code === "embed_query_not_configured") {
     console.warn("Search is limited - embeddings not available");
-    // Fall back to lexical search only
   }
 }
 ```
@@ -329,7 +477,7 @@ for (const warning of results.warnings) {
 
 - 📖 [Getting Started](./00-getting-started.md) - Installation and setup
 - 🔧 [Developer Guide](./02-developer-guide.md) - Integration patterns
-- 🚀 [Advanced Usage](./03-advanced-usage.md) - Production recipes
+- 🚀 [Advanced Usage](./03-advanced-usage.md) - Platform integrations
 - 📚 [Best Practices](./04-best-practices.md) - Tips from the team
 
 ---
