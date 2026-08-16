@@ -30,7 +30,9 @@ export interface MemoryStore {
 }
 
 export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise<MemoryStore> {
-	const raw = createRawMessageStore({ env: config.env });
+	const dbPath =
+		config.dbPath ?? (config.db && "path" in config.db ? (config.db as { path?: string }).path : undefined);
+	const raw = createRawMessageStore({ env: config.env, dbPath });
 	const search = createUnifiedSearch(config.unified);
 
 	// Make the legacy `getRawMessageManager()` module-level facade

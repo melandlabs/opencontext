@@ -26,7 +26,8 @@ const DEFAULT_SQLITE_PATH = join(homedir(), ".opencontext", "memory", "store.db"
  * Resolve the SQLite DB file path from env vars. Exposed so other storage
  * layers (vector index) can stay in sync with the same default.
  */
-export function resolveSQLiteRawMessageDbPath(): string {
+export function resolveSQLiteRawMessageDbPath(dbPath?: string): string {
+	if (dbPath && dbPath.length > 0) return dbPath;
 	const fromEnv = process.env.MEMORY_STORE_DB_PATH?.trim();
 	return fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_SQLITE_PATH;
 }
@@ -39,9 +40,11 @@ export function isSQLiteRawMessageStorageAvailable(_env?: MemoryStoreEnv): boole
 	return true;
 }
 
-export async function getSQLiteRawMessageManager(_env?: MemoryStoreEnv): Promise<SQLiteRawMessageManager> {
+export async function getSQLiteRawMessageManager(
+	options: { env?: MemoryStoreEnv; dbPath?: string } = {},
+): Promise<SQLiteRawMessageManager> {
 	if (!manager) {
-		const dbPath = resolveSQLiteRawMessageDbPath();
+		const dbPath = resolveSQLiteRawMessageDbPath(options.dbPath);
 		mkdirSync(dirname(dbPath), { recursive: true });
 		manager = new SQLiteRawMessageManager({
 			dbPath,

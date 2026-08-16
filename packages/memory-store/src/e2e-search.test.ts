@@ -18,11 +18,14 @@ import type { RawMessage } from "@melandlabs/indexeddb/storage";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 import { createMemoryStore } from "./index";
 import { createRawMessageStore } from "./storage/raw-message-store";
+import { __resetSQLiteRawMessageManagerForTests } from "./storage/sqlite-raw-message-store";
 
 let scratchDir: string;
 
 beforeEach(() => {
 	scratchDir = mkdtempSync(join(tmpdir(), "memory-e2e-test-"));
+	// Ensure each test gets its own SQLite singleton backed by a fresh temp DB.
+	__resetSQLiteRawMessageManagerForTests();
 });
 
 afterEach(() => {
@@ -50,9 +53,7 @@ describe("Memory Store End-to-End", () => {
 		const dbPath = join(scratchDir, "semantic-test.db");
 
 		const store = await createMemoryStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
+			dbPath,
 			unified: {
 				embedQuery: async ({ query }) => {
 					const result = await embeddingProvider.embedQuery(query);
@@ -61,11 +62,7 @@ describe("Memory Store End-to-End", () => {
 			},
 		});
 
-		const rawStore = createRawMessageStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
-		});
+		const rawStore = createRawMessageStore({ dbPath });
 		const messages = await rawStore.getManager();
 		const userId = "semantic-test-user";
 		const now = Math.floor(Date.now() / 1000);
@@ -95,6 +92,7 @@ describe("Memory Store End-to-End", () => {
 			userId,
 			query: "What theme does the user like?",
 			limit: 5,
+			threshold: 0.3,
 		});
 
 		// Should find at least one result about dark mode
@@ -110,18 +108,13 @@ describe("Memory Store End-to-End", () => {
 
 	it("falls back to keyword search when embeddings are not configured", async () => {
 		// Create store WITHOUT embedding provider
+		const dbPath = join(scratchDir, "keyword-test.db");
 		const store = await createMemoryStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
+			dbPath,
 			unified: {},
 		});
 
-		const rawStore = createRawMessageStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
-		});
+		const rawStore = createRawMessageStore({ dbPath });
 		const messages = await rawStore.getManager();
 		const userId = "keyword-test-user";
 		const now = Math.floor(Date.now() / 1000);
@@ -164,9 +157,7 @@ describe("Memory Store End-to-End", () => {
 
 	it("returns empty results for non-existent users without throwing", async () => {
 		const store = await createMemoryStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
+			dbPath: join(scratchDir, "empty-test.db"),
 		});
 
 		const results = await store.searchUnifiedMemory({
@@ -180,17 +171,12 @@ describe("Memory Store End-to-End", () => {
 	});
 
 	it("stores and retrieves messages without embeddings", async () => {
+		const dbPath = join(scratchDir, "retrieve-test.db");
 		const store = await createMemoryStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
+			dbPath,
 		});
 
-		const rawStore = createRawMessageStore({
-			env: {
-				MEMORY_BACKEND_PATH: scratchDir,
-			},
-		});
+		const rawStore = createRawMessageStore({ dbPath });
 		const messages = await rawStore.getManager();
 		const userId = "no-embedding-test-user";
 		const now = Math.floor(Date.now() / 1000);

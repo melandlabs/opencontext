@@ -165,8 +165,21 @@ export interface UnifiedSearchDeps {
 }
 
 export interface MemoryStoreConfig {
-	/** Database handle factory. Required for any persistence. */
+	/**
+	 * Database handle factory. Required for the Postgres backend
+	 * (`OPENCONTEXT_MEMORY_STORE_BACKEND=postgres`).
+	 */
 	db?: MemoryStoreDb;
+	/**
+	 * Custom SQLite database file path for the default SQLite backend.
+	 *
+	 * If provided, this takes precedence over the `MEMORY_STORE_DB_PATH`
+	 * environment variable and the default `~/.opencontext/memory/store.db`.
+	 *
+	 * For backward compatibility with early tutorials, `db.path` is also
+	 * honoured when `db` is supplied as `{ type, path }`.
+	 */
+	dbPath?: string;
 	/** Environment helpers. Defaults to a process.env-only stub if omitted. */
 	env?: MemoryStoreEnv;
 	/** Vector backend config. Defaults to env-based detection. */

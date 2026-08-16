@@ -49,6 +49,8 @@ export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
 
 export interface CreateRawMessageStoreOptions {
 	env?: MemoryStoreEnv;
+	/** Custom SQLite DB file path. Only used by the SQLite backend. */
+	dbPath?: string;
 }
 
 export interface RawMessageStore {
@@ -93,7 +95,10 @@ export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}
 				}
 				return pg as unknown as RawMessageStorageManagerWithSearch;
 			}
-			return (await getSQLiteRawMessageManager(env)) as unknown as RawMessageStorageManagerWithSearch;
+			return (await getSQLiteRawMessageManager({
+				env,
+				dbPath: options.dbPath,
+			})) as unknown as RawMessageStorageManagerWithSearch;
 		},
 		async close(): Promise<void> {
 			// The sqlite singleton is process-wide, so close regardless of the
@@ -108,29 +113,39 @@ export function createRawMessageStore(options: CreateRawMessageStoreOptions = {}
 let moduleStore: RawMessageStore | null = null;
 let moduleConfig: MemoryStoreConfig | null = null;
 
+function resolveDbPath(config: MemoryStoreConfig | undefined | null): string | undefined {
+	if (!config) return undefined;
+	if (config.dbPath) return config.dbPath;
+	// Honour the tutorial `db: { type, path }` shape as a dbPath fallback.
+	if (config.db && typeof config.db === "object" && "path" in config.db) {
+		return (config.db as { path?: string }).path;
+	}
+	return undefined;
+}
+
 export function configureRawMessageStore(config: MemoryStoreConfig): RawMessageStore {
 	moduleConfig = config;
-	moduleStore = createRawMessageStore({ env: config.env });
+	moduleStore = createRawMessageStore({ env: config.env, dbPath: resolveDbPath(config) });
 	return moduleStore;
 }
 
 export function getRawMessageStorageBackend(): RawMessageStorageBackend {
 	if (!moduleStore) {
-		moduleStore = createRawMessageStore({ env: moduleConfig?.env });
+		moduleStore = createRawMessageStore({ env: moduleConfig?.env, dbPath: resolveDbPath(moduleConfig) });
 	}
 	return moduleStore.getBackend();
 }
 
 export function isRawMessageStorageAvailable(): boolean {
 	if (!moduleStore) {
-		moduleStore = createRawMessageStore({ env: moduleConfig?.env });
+		moduleStore = createRawMessageStore({ env: moduleConfig?.env, dbPath: resolveDbPath(moduleConfig) });
 	}
 	return moduleStore.isAvailable();
 }
 
 export async function getRawMessageManager(): Promise<RawMessageStorageManagerWithSearch> {
 	if (!moduleStore) {
-		moduleStore = createRawMessageStore({ env: moduleConfig?.env });
+		moduleStore = createRawMessageStore({ env: moduleConfig?.env, dbPath: resolveDbPath(moduleConfig) });
 	}
 	return moduleStore.getManager();
 }
