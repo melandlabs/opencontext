@@ -60,3 +60,11 @@ Most files import from `@melandlabs/opencontext` only, so they work once the
 | `23-url-validation-example.ts` | `validateUrlForSSRF` and `isTrustedStorageUrl` | ✅ Works |
 | `24-web-search-example.ts` | `needsRealTimeInfo` and `search` | ✅ Works (skips search without `BRAVE_SEARCH_API_KEY`) |
 | `25-audit-logging-example.ts` | `logFileRead`, `logCommandExec`, `readAuditLogs` | ✅ Works |
+
+### Real-World Use Cases
+
+| File | What it shows | Status |
+|------|---------------|--------|
+| `use-cases/30-personal-memory-assistant.ts` | Personal assistant with preferences, notes, time-travel, metadata | ✅ Works |
+| `use-cases/31-customer-support-agent.ts` | Multi-user support agent with customer history, repeat detection, batch import | ✅ Works |
+| `use-cases/32-research-knowledge-tracker.ts` | Research tracker with findings, citations, evolution tracking, synthesis | ✅ Works |

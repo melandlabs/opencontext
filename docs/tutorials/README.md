@@ -29,6 +29,10 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 │     Production-ready patterns and common pitfalls                     │
 │     → 04-best-practices.md                                           │
 │                                                                       │
+│  6. 🏗️  Real-World Use Cases                                        │
+│     End-to-end scenarios: Personal assistant, Support agent, Research tracker       │
+│     → use-cases/                                                     │
+│                                                                       │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -94,6 +98,15 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 |----------------|------------|
 | Use with DeepSeek Harness | [Advanced Usage](./03-advanced-usage.md#deepseek-harness-plugin) |
 
+### Real-World Use Cases
+
+| You want to... | Read this |
+|----------------|------------|
+| Build a personal memory assistant | [Personal Memory Assistant](./use-cases/05-personal-memory-assistant.md) |
+| Build a customer support agent | [Customer Support Agent](./use-cases/06-customer-support-agent.md) |
+| Build a research knowledge tracker | [Research Knowledge Tracker](./use-cases/07-research-tracker.md) |
+| See all use cases | [Use Cases Index](./use-cases/) |
+
 ## Tutorial Contents
 
 | Tutorial | Focus | Key Topics |
@@ -103,6 +116,10 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 | [02-developer-guide.md](./02-developer-guide.md) | Integration | Embedding, HTTP server, MCP, backend selection |
 | [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, temporal queries, platforms, DeepSeek Harness plugin |
 | [04-best-practices.md](./04-best-practices.md) | Production | Idempotency, performance, security, deployment |
+| **Use Cases** | **Real-World Applications** | **End-to-end scenarios** |
+| [05-personal-memory-assistant.md](./use-cases/05-personal-memory-assistant.md) | Individual | Preferences, notes, time-travel, metadata |
+| [06-customer-support-agent.md](./use-cases/06-customer-support-agent.md) | Multi-user | Customer profiles, history tracking, repeat detection |
+| [07-research-tracker.md](./use-cases/07-research-tracker.md) | Knowledge Management | Findings, citations, evolution tracking, synthesis |
 
 ## Prerequisites
 
