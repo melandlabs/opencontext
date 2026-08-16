@@ -12,17 +12,41 @@
 
 ## 安装
 
+### 从 npm 安装（推荐）
+
 ```bash
-# 1. 构建插件(生成 lib/)
+# 直接从 npm 安装
+dsh plugin --profile web add dsh-opencontext
+
+# 确认已挂载
+dsh --profile web --dump-config
+#   ... 应包含 `id: dsh-opencontext`
+
+# 启动 DSH web 并验证
+dsh --profile web web
+#   访问 http://127.0.0.1:3080/plugins，确认 dsh-opencontext 显示 "Enabled"
+```
+
+### 从源码安装（开发用）
+
+```bash
+# 1. 进入插件目录
+cd /path/to/opencontext/plugins/dsh-opencontext
+
+# 2. 构建插件(生成 lib/)
 pnpm install
 pnpm build
 
-# 2. 注册到 DSH profile
-dsh plugin --profile web add /path/to/dsh-opencontext
+# 3. 注册到 DSH profile
+dsh plugin --profile web add /path/to/opencontext/plugins/dsh-opencontext
 
-# 3. 确认已挂载
+# 4. 确认已挂载
 dsh --profile web --dump-config
 #   ... 应包含 `id: dsh-opencontext`
+
+# 5. 启动 DSH web 并验证
+dsh --profile web web
+#   访问 http://127.0.0.1:3080/plugins，确认 dsh-opencontext 显示 "Enabled"
 ```
 
 ## 功能

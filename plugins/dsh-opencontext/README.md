@@ -13,19 +13,39 @@ retrieval-augmented context by plugging into
 
 ## Install
 
+### From npm (recommended)
+
 ```bash
-# 1. Build the plugin (emits lib/)
-pnpm install
-pnpm build
+# Install directly from npm
+dsh plugin --profile web add dsh-opencontext
 
-# 2. Register it with your DSH profile
-dsh plugin --profile web add /path/to/dsh-opencontext
-
-# 3. Confirm it's mounted
+# Confirm it's mounted
 dsh --profile web --dump-config
 #   ... should contain `id: dsh-opencontext`
 
-# 4. Start DSH web and verify
+# Start DSH web and verify
+dsh --profile web web
+#   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
+```
+
+### From source (for development)
+
+```bash
+# 1. Clone the repo and navigate to the plugin directory
+cd /path/to/opencontext/plugins/dsh-opencontext
+
+# 2. Build the plugin (emits lib/)
+pnpm install
+pnpm build
+
+# 3. Register it with your DSH profile
+dsh plugin --profile web add /path/to/opencontext/plugins/dsh-opencontext
+
+# 4. Confirm it's mounted
+dsh --profile web --dump-config
+#   ... should contain `id: dsh-opencontext`
+
+# 5. Start DSH web and verify
 dsh --profile web web
 #   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
 ```

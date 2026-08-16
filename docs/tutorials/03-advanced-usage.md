@@ -429,6 +429,128 @@ setInterval(() => {
 }, 60000);
 ```
 
+## DeepSeek Harness Plugin
+
+The `dsh-opencontext` plugin gives DeepSeek Harness (DSH) agents persistent memory and retrieval-augmented generation capabilities by integrating with OpenContext.
+
+### Prerequisites
+
+- [DeepSeek Harness](https://github.com/deepseek-ai/DeepSeek-Harness) installed
+- Node.js >= 22.19.0 or >= 24.0.0
+
+### Installation
+
+#### From npm (recommended)
+
+```bash
+# Install directly from npm
+dsh plugin --profile web add dsh-opencontext
+
+# Start DSH Web
+dsh --profile web web
+```
+
+#### From source (for development)
+
+```bash
+# Clone the repo and navigate to the plugin directory
+cd plugins/dsh-opencontext
+
+# Build the plugin
+pnpm install
+pnpm build
+
+# Register with your DSH profile
+dsh plugin --profile web add /path/to/opencontext/plugins/dsh-opencontext
+
+# Start DSH Web
+dsh --profile web web
+# Visit http://127.0.0.1:3080/plugins to confirm the plugin is enabled
+```
+
+### Available Tools (16)
+
+**Core Memory Tools (8)**
+
+| Tool | Purpose |
+|---|---|
+| `oc_search` | Search long-term memory (unified across memory, insights, knowledge) |
+| `oc_remember` | Persist one memory entry |
+| `oc_memory_list` | List recent memory entries in current scope |
+| `oc_memory_get` | Read one or more entries by ID |
+| `oc_memory_revise` | Soft-deprecate an entry and store a successor |
+| `oc_memory_retire` | Soft-deprecate an entry |
+| `oc_prepare_context` | Manually build a bounded context block |
+| `oc_capture_source` | Capture an arbitrary content source |
+
+**Summary & Outcome Tools (3)**
+
+| Tool | Purpose |
+|---|---|
+| `oc_session_summary` | Generate and store a session summary |
+| `oc_task_outcome` | Record task outcomes, decisions, achievements |
+| `oc_recent_summaries` | List recent session summaries and task outcomes |
+
+**Insights Tools (2)**
+
+| Tool | Purpose |
+|---|---|
+| `oc_insights_search` | Search structured insights (decisions, preferences, outcomes) |
+| `oc_insight_capture` | Capture a structured insight from conversation |
+
+**Knowledge/RAG Tools (3)**
+
+| Tool | Purpose |
+|---|---|
+| `oc_knowledge_search` | RAG search over uploaded documents |
+| `oc_document_upload` | Upload documents to knowledge base |
+| `oc_document_list` | List all documents in knowledge base |
+
+### Automatic Features
+
+**Recall Waterfall**: Before each turn, automatically searches relevant historical memories and injects them as context.
+
+**Auto-Capture**: Each user message is automatically written to the memory store.
+
+**Session Summarization**: Optional automatic summarization at turn boundaries.
+
+### Doctor Command
+
+```
+/oc doctor
+```
+
+Returns plugin status, database path, memory count, and enabled features.
+
+### Configuration Options
+
+| Field | Default | Environment Variable |
+|---|---|---|
+| `capturePrompts` | `true` | `OPENCONTEXT_DSH_CAPTURE_PROMPTS` |
+| `maxRecallItems` | `8` | `OPENCONTEXT_DSH_MAX_RECALL_ITEMS` |
+| `autoSummarize` | `false` | `OPENCONTEXT_DSH_AUTO_SUMMARIZE` |
+| `captureToolResults` | `false` | `OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS` |
+| `enableInsights` | `true` | `OPENCONTEXT_DSH_ENABLE_INSIGHTS` |
+| `enableKnowledge` | `true` | `OPENCONTEXT_DSH_ENABLE_KNOWLEDGE` |
+
+### Usage Examples
+
+> **User**: I prefer TypeScript, remember that
+> **Agent**: Got it, I'll remember that.
+>
+> *(Next conversation)*
+> **User**: Write me a function
+> **Agent**: I remember you prefer TypeScript. Here's a TS version...
+
+> **User**: Upload my API docs
+> **Agent**: *(uses oc_document_upload)* Done.
+> **User**: How do I call this API?
+> **Agent**: *(uses oc_knowledge_search)* According to your docs, the API is called like...
+
+### Trust Model
+
+Recalled memories are appended as **untrusted historical evidence**. If they contradict the user's current statement, the user always takes precedence.
+
 ## Next Steps
 
 - 📖 [Getting Started](./00-getting-started.md) - Quick start
