@@ -46,7 +46,7 @@ export default async function demoMcpServer() {
 		// packages/opencontext, so a fresh `pnpm build` here is picked
 		// up automatically.
 		const bin = fileURLToPath(
-			new URL("../node_modules/@melandlabs/opencontext/dist/cli/opencontext.js", import.meta.url),
+			new URL("../../node_modules/@melandlabs/opencontext/dist/cli/opencontext.js", import.meta.url),
 		);
 
 		await withTmp("mcp-server", async (dir) => {
