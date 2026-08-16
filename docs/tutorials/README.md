@@ -22,7 +22,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 │     → 02-developer-guide.md                                          │
 │                                                                       │
 │  4. 🚀 Advanced Usage                                               │
-│     Multi-source search, temporal queries, platforms, DSH plugin       │
+│     Multi-source search, temporal queries, platforms, DeepSeek Harness plugin       │
 │     → 03-advanced-usage.md                                           │
 │                                                                       │
 │  5. 📚 Best Practices                                                │
@@ -48,7 +48,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 |----------------|------------|
 | Build a memory-aware agent | [User Guide](./01-user-guide.md#building-ai-agents-with-memory) |
 | Build a Q&A agent with RAG | [User Guide](./01-user-guide.md#agent-patterns) |
-| Create custom agent provider | [User Guide](./01-user-guide.md#creating-a-custom-agent) |
+| Build custom agents with tools | [User Guide](./01-user-guide.md#what-is-iagent) |
 
 ### Search & Retrieval
 
@@ -72,7 +72,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 
 | You want to... | Read this |
 |----------------|------------|
-| Use with Claude Desktop | [Getting Started](./00-getting-started.md#using-with-claude-desktop-mcp) |
+| Use with Claude Desktop | [Getting Started](./00-getting-started.md#using-with-your-coding-agent-via-mcp) |
 | Run as HTTP service | [Developer Guide](./02-developer-guide.md#pattern-2-http-server-microservice) |
 | Deploy to production | [Best Practices](./04-best-practices.md) |
 | Run health checks | [Advanced Usage](./03-advanced-usage.md#health-checks) |
@@ -101,7 +101,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 | [00-getting-started.md](./00-getting-started.md) | Quick Start | Installation, first API call, HTTP server, MCP |
 | [01-user-guide.md](./01-user-guide.md) | Core Concepts | Four verbs, temporal graph, IAgent, memory-aware agents |
 | [02-developer-guide.md](./02-developer-guide.md) | Integration | Embedding, HTTP server, MCP, backend selection |
-| [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, temporal queries, platforms, DSH plugin |
+| [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, temporal queries, platforms, DeepSeek Harness plugin |
 | [04-best-practices.md](./04-best-practices.md) | Production | Idempotency, performance, security, deployment |
 
 ## Prerequisites
