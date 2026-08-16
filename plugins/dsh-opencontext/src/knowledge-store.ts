@@ -132,9 +132,13 @@ export class LibKnowledgeStore {
 		this.vecDimension = dim;
 		this.ensureVectorTable(dim);
 
+		// Remove any previous chunks/vectors for this deterministic document id
+		// so re-uploads update rather than fail on primary-key conflicts.
+		this.deleteDocumentVectors(documentId, dim);
+
 		const now = Date.now();
 		this.db!.prepare(
-			`INSERT OR REPLACE INTO documents
+			`INSERT INTO documents
 			 (id, scopeId, userId, filename, mimeType, uploadedAt, chunkCount, metadata)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		).run(
@@ -149,12 +153,12 @@ export class LibKnowledgeStore {
 		);
 
 		const insertChunk = this.db!.prepare(
-			`INSERT OR REPLACE INTO chunks
+			`INSERT INTO chunks
 			 (id, documentId, chunkIndex, content, metadata)
 			 VALUES (?, ?, ?, ?, ?)`,
 		);
 		const insertVec = this.db!.prepare(
-			`INSERT OR REPLACE INTO ${this.vecTableName(dim)} (embedding, chunk_id) VALUES (?, ?)`,
+			`INSERT INTO ${this.vecTableName(dim)} (embedding, chunk_id) VALUES (?, ?)`,
 		);
 
 		const insertAll = this.db!.transaction((items: Array<{ chunk: TextChunk; embedding: number[] }>) => {
@@ -168,6 +172,25 @@ export class LibKnowledgeStore {
 		insertAll(chunks.map((chunk, i) => ({ chunk, embedding: embeddings[i]! })));
 
 		return { documentId, chunks: chunks.length };
+	}
+
+	private deleteDocumentVectors(documentId: string, dim: number): void {
+		if (!this.db) return;
+		const vecTable = this.vecTableName(dim);
+
+		// Remove vectors by prefix so stale rows left by earlier crashes or
+		// partially-failed transactions are also cleaned up.
+		const deleteVec = this.db.prepare(`DELETE FROM ${vecTable} WHERE chunk_id LIKE ?`);
+		const deleteChunks = this.db.prepare("DELETE FROM chunks WHERE documentId = ?");
+		const deleteDoc = this.db.prepare("DELETE FROM documents WHERE id = ?");
+
+		const deleteAll = this.db.transaction(() => {
+			deleteVec.run(`${documentId}_chunk_%`);
+			deleteChunks.run(documentId);
+			deleteDoc.run(documentId);
+		});
+
+		deleteAll();
 	}
 
 	async searchKnowledge(input: SearchKnowledgeInput): Promise<{ chunks: KnowledgeChunk[] }> {
