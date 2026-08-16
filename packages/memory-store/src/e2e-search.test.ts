@@ -55,7 +55,7 @@ describe("Memory Store End-to-End", () => {
 			},
 			unified: {
 				embedQuery: async ({ query }) => {
-					const result = await embeddingProvider.embedQuery({ query });
+					const result = await embeddingProvider.embedQuery(query);
 					return result;
 				},
 			},
@@ -71,9 +71,7 @@ describe("Memory Store End-to-End", () => {
 		const now = Math.floor(Date.now() / 1000);
 
 		// Store with pre-computed embedding
-		const embedding = await embeddingProvider.embedQuery({
-			query: "User prefers dark mode in all applications",
-		});
+		const embedding = await embeddingProvider.embedQuery("User prefers dark mode in all applications");
 
 		await (messages as SQLiteRawMessageManager).storeMessages([
 			makeMessage({
@@ -87,9 +85,7 @@ describe("Memory Store End-to-End", () => {
 				messageId: `msg-${now + 1}`,
 				content: "Python is the user's favorite programming language",
 				userId,
-				embedding: await embeddingProvider.embedQuery({
-					query: "Python is the user's favorite programming language",
-				}),
+				embedding: await embeddingProvider.embedQuery("Python is the user's favorite programming language"),
 				embeddingModel: "Xenova/all-MiniLM-L6-v2",
 			}),
 		]);
@@ -286,9 +282,7 @@ describe("Vector Table Update", () => {
 		const now = Math.floor(Date.now() / 1000);
 
 		// Store message with embedding
-		const embedding = await embeddingProvider.embedQuery({
-			query: "Test message for vector table",
-		});
+		const embedding = await embeddingProvider.embedQuery("Test message for vector table");
 
 		await manager.storeMessages([
 			makeMessage({
