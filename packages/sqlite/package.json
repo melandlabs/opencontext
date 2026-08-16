@@ -33,12 +33,15 @@
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
 		"@types/better-sqlite3": "^7.6.13",
-		"typescript": "^5.6.3"
+		"typescript": "^5.6.3",
+		"vitest": "^4.1.10"
 	},
 	"scripts": {
 		"build": "tsup",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	}
 }

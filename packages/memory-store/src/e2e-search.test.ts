@@ -87,7 +87,9 @@ describe("Memory Store End-to-End", () => {
 				messageId: `msg-${now + 1}`,
 				content: "Python is the user's favorite programming language",
 				userId,
-				embedding: await embeddingProvider.embedQuery({ query: "Python is the user's favorite programming language" }),
+				embedding: await embeddingProvider.embedQuery({
+					query: "Python is the user's favorite programming language",
+				}),
 				embeddingModel: "Xenova/all-MiniLM-L6-v2",
 			}),
 		]);
@@ -104,9 +106,7 @@ describe("Memory Store End-to-End", () => {
 		expect(results.count).toBeGreaterThan(0);
 
 		// One of the results should be about dark mode (semantically similar to "theme")
-		const darkModeResult = results.results.find(
-			(r) => r.content.toLowerCase().includes("dark mode"),
-		);
+		const darkModeResult = results.results.find((r) => r.content.toLowerCase().includes("dark mode"));
 		expect(darkModeResult).toBeDefined();
 
 		await rawStore.close();
@@ -155,9 +155,7 @@ describe("Memory Store End-to-End", () => {
 		expect(results.results.length).toBeGreaterThan(0);
 
 		// Should find the pizza message
-		const pizzaResult = results.results.find(
-			(r) => r.content.toLowerCase().includes("pizza"),
-		);
+		const pizzaResult = results.results.find((r) => r.content.toLowerCase().includes("pizza"));
 		expect(pizzaResult).toBeDefined();
 
 		// Should have lexical search warning
