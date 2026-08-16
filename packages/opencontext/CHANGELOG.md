@@ -1,5 +1,13 @@
 # @melandlabs/opencontext
 
+## 0.2.3
+
+### Patch Changes
+
+- Fixed: HTTP server now updates sqlite-vec vector table when embedOnInsert is used
+- Fixed: HTTP server now supports lexical search as fallback for keyword queries
+- Semantic search in HTTP server now works with local embeddings
+
 ## 0.2.2
 
 ### Patch Changes
