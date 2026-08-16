@@ -131,11 +131,11 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 				);
 				return toolOk({
 					hits: hits.map((hit) => ({
-						id: hit.id,
-						content: hit.content,
+						id: String(hit.id),
+						content: String(hit.content),
 						score: Number.isFinite(hit.score) ? Number(hit.score.toFixed(3)) : 0,
-						timestamp: hit.timestamp,
-						metadata: hit.metadata ?? {},
+						timestamp: typeof hit.timestamp === "number" ? hit.timestamp : Date.now(),
+						metadata: hit.metadata && typeof hit.metadata === "object" ? hit.metadata : {},
 					})),
 				});
 			}),
