@@ -44,16 +44,7 @@ const ENVELOPE_OUTPUT = {
 		required: ["ok"],
 		properties: {
 			ok: { type: "boolean" },
-			value: {
-				oneOf: [
-					{ type: "object" },
-					{ type: "array" },
-					{ type: "string" },
-					{ type: "number" },
-					{ type: "boolean" },
-					{ type: "null" },
-				],
-			},
+			value: {},
 			error: {
 				type: "object",
 				additionalProperties: false,
@@ -64,8 +55,7 @@ const ENVELOPE_OUTPUT = {
 			},
 		},
 	},
-	render(_args: Record<string, unknown>, value: unknown): unknown {
-		// Return the value directly for JSON serialization
+	render(_args: Record<string, unknown>, value: unknown) {
 		return value;
 	},
 };
