@@ -182,6 +182,7 @@ opencontext doctor --section memory-store
 `policies`、`audit`、`security`、`integrations`) 并对每项报告
 pass / warn / fail。v1 不支持自动修复。
 
+**下一步：** [教程](./docs/tutorials/README.md) — 快速入门、用户指南、开发者指南、高级用法和最佳实践
 
 ## 示例
 
@@ -197,59 +198,6 @@ pnpm test
 
 完整说明见 [`examples/README.md`](./examples/README.md)。
 
-## 常用使用模式
-
-### 记忆 API
-
-`@melandlabs/opencontext` 暴露两个工厂调用加上一个扁平、小巧的搜索面。写入走 raw message manager,并天然按 `messageId` 幂等；读取会向 memory + insights + knowledge 扇出,未配置的来源优雅降级。完整的配置矩阵与示例见 [`packages/memory-store/README.md`](./packages/memory-store/README.md)。
-
-| 符号                              | 用途                                                                                              |
-| --------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `createMemoryStore(config?)`      | 引导存储。返回 `{ raw, search, getRawMessageManager, searchUnifiedMemory, … }`。                  |
-| `getRawMessageManager()`          | 拿到当前生效的 raw message manager（默认 SQLite，注册后端后切换 Postgres）。                       |
-| `manager.storeMessages(messages)` | 摄取事实。按 `messageId` 幂等。每行承载完整的 `RawMessage` 形态。                                |
-| `store.searchUnifiedMemory(opts)` | 在 memory + insights + knowledge 上的统一搜索,未配置的来源只发 warning。                          |
-
-### 时序查询(时间旅行)
-
-上下文图中每条事实都带 `valid_from` 与 `valid_until`,因此某个时间点的查询等价于"其有效区间覆盖了 `t` 的事实"。统一搜索 API 本身并未直接暴露时间点过滤 —— 时序访问住在更下一层,在 `@melandlabs/ai/memory-consolidation`(`graph-aware-query`)与 `@melandlabs/indexeddb/memory-graph-evolution` 里。as-of 查询请直接参考这两个包。
-
-### MCP server
-
-`@melandlabs/opencontext/mcp` 通过 stdio 暴露相同的操作 —— 可被 Claude Desktop、Cursor、Claude Code、Codex CLI 或任何具备 MCP 能力的 agent 运行时直接使用。
-
-### 跨源搜索
-
-`createUnifiedSearch(deps)` 允许你为每个来源独立接入搜索器。你省略的来源只会打印一条 warning —— 对只读部署或单后端栈来说完全没问题:
-
-```ts
-import { createUnifiedSearch } from "@melandlabs/opencontext";
-
-const search = createUnifiedSearch({
-	embedQuery: myEmbedder.embedQuery,
-	searchRawMessagesAnn: pgAnnSearch,
-	searchInsights: insightIndex.search,
-	searchKnowledge: ragIndex.search,
-});
-
-const { results, warnings } = await search.searchUnifiedMemory({
-	userId: "u-1",
-	query: "what changed since yesterday?",
-	sources: ["memory", "insights", "knowledge"],
-	limit: 10,
-});
-```
-
-### 后端选型
-
-每个后端在启动时通过 `MemoryStoreConfig` 选择 —— 没有抽象会隐藏每个后端能做到什么。支持混用后端:比如可以把 raw message 存放在 Postgres,同时把 Chroma 用作向量索引。
-
-| 关注点     | 后端                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------ |
-| Raw 消息   | SQLite-vec(默认,本地文件)、Postgres(服务端 / daemon,通过工厂注册)、IndexedDB(浏览器) |
-| 向量索引   | SQLite-vec(默认)、pgvector、Chroma、IndexedDB                                        |
-| Embeddings | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地 |
-
 ## 它有什么不同
 
 OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时底座 —— 每个包独立版本化、单一职责,并且在边界层只消费 `@melandlabs/opencontext`。
@@ -260,18 +208,6 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 | 一个上下文 / 记忆库                              | **运行时而非库** —— HTTP daemon、MCP server、CLI,以及集成网格与 Loop 引擎                        |
 | 自己接一套 agent 循环                            | **可分离的 Loop 引擎** —— 调度何时调用 `@melandlabs/opencontext`,而不是一路贯穿到底都是 LLM 循环 |
 | 为了使用集成而必须嵌入整个 opencontext           | **Library-First API 面** —— 每个包都可独立发布,使用任意一个都不要求 React / Next / Tauri         |
-
-## Provider 矩阵
-
-| 关注点       | 提供方                                                                                                                                                                                                                                               |
-| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 向量索引     | SQLite-vec(默认)、pgvector、Chroma、IndexedDB(浏览器)                                                                                                                                                                                                |
-| Embeddings   | OpenAI、Anthropic、Cohere,通过 `@melandlabs/opencontext/universal-embeddings` 走本地                                                                                                                                                                 |
-| Raw 消息存储 | SQLite-vec、Postgres                                                                                                                                                                                                                                 |
-| Web 搜索     | Brave Search                                                                                                                                                                                                                                         |
-| 沙箱         | Native CLI、Claude、Vercel Sandbox                                                                                                                                                                                                                   |
-| TTS / STT    | Kokoro(TTS)、Whisper(STT)                                                                                                                                                                                                                            |
-| 集成         | Gmail、Outlook、Google Calendar、Google Meet、Slack、Discord、Teams、Telegram、WhatsApp、LinkedIn、Instagram、X、Facebook Messenger、HubSpot、Notion、Asana、Jira、Linear、iMessage、Feishu、Dingtalk、QQbot、Weixin、RSS、Google Drive、Google Docs |
 
 ## 架构
 

@@ -190,6 +190,8 @@ sections (`runtime`, `filesystem`, `loop`, `memory-store`, `embedding`,
 `policies`, `audit`, `security`, `integrations`) and reports pass /
 warn / fail for each. No auto-fix in v1.
 
+**Next:** [Tutorials](./docs/tutorials/README.md) — get started, user guide, developer guide, advanced patterns, and best practices
+
 ## Examples
 
 The [`examples/`](./examples/) workspace ships a runnable example per
@@ -204,77 +206,6 @@ pnpm test
 
 See [`examples/README.md`](./examples/README.md) for the full walkthrough.
 
-## Common usage patterns
-
-### The memory API
-
-`@melandlabs/opencontext` exposes two factory calls plus a small,
-flat search surface. Writes go through the raw-message manager and
-remain idempotent on `messageId`; reads fan out to memory + insights +
-knowledge and degrade gracefully when a source is unconfigured. See
-[`packages/memory-store/README.md`](./packages/memory-store/README.md)
-for the full configuration matrix and recipes.
-
-| Symbol                            | Use it for                                                                              |
-| --------------------------------- | --------------------------------------------------------------------------------------- |
-| `createMemoryStore(config?)`      | Boot the store. Returns `{ raw, search, getRawMessageManager, searchUnifiedMemory, … }`. |
-| `getRawMessageManager()`          | Resolve the active raw-message manager (SQLite by default, Postgres when registered).   |
-| `manager.storeMessages(messages)` | Ingest facts. Idempotent on `messageId`. Each row carries the full `RawMessage` shape. |
-| `store.searchUnifiedMemory(opts)` | Unified search across memory + insights + knowledge; unconfigured sources emit warnings. |
-
-### Temporal queries (time travel)
-
-Every fact in the underlying context graph carries `valid_from` and
-`valid_until`, so an as-of query is "the facts whose validity
-interval covered `t`". The unified search API does not expose
-point-in-time filtering directly — temporal access lives one layer
-deeper, in `@melandlabs/ai/memory-consolidation` (`graph-aware-query`)
-and `@melandlabs/indexeddb/memory-graph-evolution`. See those
-packages for as-of recall.
-
-### MCP server
-
-`@melandlabs/opencontext` exposes the same operations over
-stdio — usable from Claude Desktop, Cursor, Claude Code, Codex CLI,
-or any MCP-capable agent runtime.
-
-### Cross-source search
-
-`createUnifiedSearch(deps)` lets you wire per-source searchers
-independently. Sources you omit just emit a warning — fine for a
-read-only deployment or a single-backend stack:
-
-```ts
-import { createUnifiedSearch } from "@melandlabs/opencontext";
-
-const search = createUnifiedSearch({
-	embedQuery: myEmbedder.embedQuery,
-	searchRawMessagesAnn: pgAnnSearch,
-	searchInsights: insightIndex.search,
-	searchKnowledge: ragIndex.search,
-});
-
-const { results, warnings } = await search.searchUnifiedMemory({
-	userId: "u-1",
-	query: "what changed since yesterday?",
-	sources: ["memory", "insights", "knowledge"],
-	limit: 10,
-});
-```
-
-### Backend selection
-
-Every backend is selected at boot via `MemoryStoreConfig` — no
-abstraction hides what each one can do. Mixing backends is supported:
-you can keep raw messages in Postgres while using Chroma as the
-vector index, for example.
-
-| Concern      | Backends                                                                      |
-| ------------ | ----------------------------------------------------------------------------- |
-| Raw messages | SQLite-vec (Tauri / desktop), Postgres (server / daemon), IndexedDB (browser) |
-| Vector index | SQLite-vec (default), pgvector, Chroma, IndexedDB                             |
-| Embeddings   | Cloud (`text-embedding-3-small` via OpenRouter, configurable) + local (`Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`, opt-in `@melandlabs/ai-rag` peer dep) |
-
 ## Why It Is Different
 
 OpenContext is not a memory library and not a vector DB. It is a
@@ -288,18 +219,6 @@ the agent runtime behind one dependency.
 | A context/memory library                           | A **runtime, not a library** — HTTP daemon, MCP server, CLI, plus the integrations mesh and the loop engine    |
 | Wiring your own agent loop                         | A **separable Loop engine** that schedules when to wake the agent, instead of an LLM loop all the way down     |
 | Embedding opencontext just to get its integrations | **Single-package install** — one `pnpm add` gets every capability, no React/Next/Tauri required to use         |
-
-## Provider matrix
-
-| Concern           | Providers                                                                                                                                                                                                                                            |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vector index      | SQLite-vec (default), pgvector, Chroma, IndexedDB (browser)                                                                                                                                                                                          |
-| Embeddings        | Cloud (`text-embedding-3-small` via OpenRouter, configurable) + local (`Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`, opt-in `@melandlabs/ai-rag` peer dep)                                                                                                                                            |
-| Raw message store | SQLite-vec, Postgres                                                                                                                                                                                                                                 |
-| Web search        | Brave Search                                                                                                                                                                                                                                         |
-| Sandboxes         | Native CLI, Claude, Vercel Sandbox                                                                                                                                                                                                                   |
-| TTS / STT         | Kokoro (TTS), Whisper (STT)                                                                                                                                                                                                                          |
-| Integrations      | Gmail, Outlook, Google Calendar, Google Meet, Slack, Discord, Teams, Telegram, WhatsApp, LinkedIn, Instagram, X, Facebook Messenger, HubSpot, Notion, Asana, Jira, Linear, iMessage, Feishu, Dingtalk, QQbot, Weixin, RSS, Google Drive, Google Docs |
 
 ## Architecture
 

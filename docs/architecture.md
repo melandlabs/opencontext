@@ -244,6 +244,16 @@ Exits `0` when no check fails, `1` otherwise — warnings do not affect
 the exit code, so the `--json` envelope plus `jq -e '.ok'` is a stable
 CI gate.
 
+## Providers
+
+| Concern       | Providers                                                                                                                                                                                                                                            |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Embeddings    | Cloud (`text-embedding-3-small` via OpenRouter, configurable) + local (`Xenova/all-MiniLM-L6-v2` via `@huggingface/transformers`, opt-in `@melandlabs/ai-rag` peer dep)                                                                          |
+| Web search    | Brave Search                                                                                                                                                                                                                                         |
+| Sandboxes     | Native CLI, Claude, Vercel Sandbox                                                                                                                                                                                                                   |
+| TTS / STT     | Kokoro (TTS), Whisper (STT)                                                                                                                                                                                                                          |
+| Integrations | Gmail, Outlook, Google Calendar, Google Meet, Slack, Discord, Teams, Telegram, WhatsApp, LinkedIn, Instagram, X, Facebook Messenger, HubSpot, Notion, Asana, Jira, Linear, iMessage, Feishu, Dingtalk, QQbot, Weixin, RSS, Google Drive, Google Docs |
+
 ## Cross-process contracts
 
 Two contracts are load-bearing across process boundaries:
