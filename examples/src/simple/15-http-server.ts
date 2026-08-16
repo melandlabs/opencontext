@@ -28,7 +28,7 @@ import { getConfiguredEmbeddingProvider } from "@melandlabs/ai-rag/embedding-pro
 import { cosineSimilarity } from "@melandlabs/ai-rag/embeddings";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { startHttpServer } from "@melandlabs/memory-store/http";
-import { info, makeCheckWithSkip, runSection, withTmp } from "./_helpers.ts";
+import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
 const MODEL = "Xenova/all-MiniLM-L6-v2";
 

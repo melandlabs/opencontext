@@ -18,7 +18,7 @@ import {
 	estimateTokens,
 	getModelPricing,
 } from "@melandlabs/ai";
-import { info, makeCheck, runSection } from "./_helpers.ts";
+import { info, makeCheck, runSection } from "../_helpers.ts";
 
 const PROMPT = "Summarise the retrieval pipeline decision we made last Tuesday, in three bullets.";
 

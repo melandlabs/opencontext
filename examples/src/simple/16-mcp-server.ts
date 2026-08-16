@@ -28,7 +28,7 @@
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { info, makeCheckWithSkip, runSection, withTmp } from "./_helpers.ts";
+import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
 interface McpResponse {
 	jsonrpc: "2.0";

@@ -18,7 +18,7 @@
  */
 
 import crypto from "node:crypto";
-import { info, makeCheck, runSection } from "./_helpers.ts";
+import { info, makeCheck, runSection } from "../_helpers.ts";
 
 export default async function demoSecurity() {
 	await runSection("demo: @melandlabs/security", async () => {

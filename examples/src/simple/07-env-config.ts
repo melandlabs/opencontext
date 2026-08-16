@@ -21,7 +21,7 @@ import {
 	isTauriMode,
 	isTestEnvironment,
 } from "@melandlabs/env-config";
-import { info, makeCheck, runSection } from "./_helpers.ts";
+import { info, makeCheck, runSection } from "../_helpers.ts";
 
 export default async function demoEnvConfig() {
 	await runSection("demo: @melandlabs/env-config", async () => {

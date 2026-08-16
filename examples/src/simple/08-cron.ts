@@ -14,7 +14,7 @@
  */
 
 import { type ScheduleConfig, computeNextRun, validateCronExpression } from "@melandlabs/cron";
-import { info, makeCheck, runSection } from "./_helpers.ts";
+import { info, makeCheck, runSection } from "../_helpers.ts";
 
 /** Fixed clock so every assertion below is deterministic. */
 const NOW = new Date("2026-03-02T08:00:00.000Z"); // a Monday

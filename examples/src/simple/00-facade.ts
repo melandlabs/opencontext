@@ -14,7 +14,7 @@ import {
 	getModelPricing,
 	isUserType,
 } from "@melandlabs/opencontext";
-import { info, makeCheckWithSkip, runSection } from "./_helpers.ts";
+import { info, makeCheckWithSkip, runSection } from "../_helpers.ts";
 const ARTICLE = [
 	"OpenContext is a runtime substrate for context-aware agents.",
 	"It bundles retrieval, memory, scheduling, and integrations.",

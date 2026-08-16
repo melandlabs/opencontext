@@ -36,7 +36,7 @@ import {
 	runAgentRuntimeRequest,
 	standaloneAgentPlugin,
 } from "@melandlabs/ai";
-import { info, makeCheckWithSkip, runSection } from "./_helpers.ts";
+import { info, makeCheckWithSkip, runSection } from "../_helpers.ts";
 
 const PROMPT = "Reply with the single word 'pong' and nothing else.";
 

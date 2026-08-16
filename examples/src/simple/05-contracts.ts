@@ -17,7 +17,7 @@ import {
 	isIntegrationId,
 	isUserType,
 } from "@melandlabs/contracts";
-import { info, makeCheck, runSection } from "./_helpers.ts";
+import { info, makeCheck, runSection } from "../_helpers.ts";
 
 export default async function demoContracts() {
 	await runSection("demo: @melandlabs/contracts", async () => {
