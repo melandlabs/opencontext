@@ -683,7 +683,7 @@ main().catch((error) => {
 
 ## DeepSeek Harness Plugin
 
-The `dsh-opencontext` plugin gives DeepSeek Harness (DSH) agents persistent memory and retrieval-augmented generation capabilities by integrating with OpenContext.
+The [`dsh-opencontext`](https://github.com/melandlabs/opencontext/tree/main/plugins/dsh-opencontext) plugin gives DeepSeek Harness (DSH) agents persistent memory and retrieval-augmented generation capabilities by integrating with OpenContext.
 
 ### Prerequisites
 
