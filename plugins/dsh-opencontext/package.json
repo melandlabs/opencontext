@@ -1,6 +1,6 @@
 {
 	"name": "dsh-opencontext",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"description": "DeepSeek Harness plugin that wires DSH agents to OpenContext for durable memory + retrieval-augmented context.",
 	"type": "module",
 	"main": "./lib/index.js",
@@ -13,7 +13,13 @@
 		"./cordis.patch.yml": "./cordis.patch.yml",
 		"./package.json": "./package.json"
 	},
-	"files": ["lib", "cordis.patch.yml", "README.md", "README.zh.md", "LICENSE"],
+	"files": [
+		"lib",
+		"cordis.patch.yml",
+		"README.md",
+		"README.zh.md",
+		"LICENSE"
+	],
 	"scripts": {
 		"build": "tsc -p tsconfig.build.json",
 		"typecheck": "tsc --noEmit",
@@ -75,5 +81,13 @@
 		"vitest": "2.1.8"
 	},
 	"license": "Apache-2.0",
-	"keywords": ["dsh", "deepseek-harness", "opencontext", "melandlabs", "memory", "rag", "agent"]
+	"keywords": [
+		"dsh",
+		"deepseek-harness",
+		"opencontext",
+		"melandlabs",
+		"memory",
+		"rag",
+		"agent"
+	]
 }
