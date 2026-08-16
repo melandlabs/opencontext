@@ -304,6 +304,37 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				.map(toMemoryResult);
 		}
 
+		// Fallback: try SQLite's searchMessagesSemantically for stored embeddings
+		if (semantic.length === 0) {
+			try {
+				const { getRawMessageManager } = await import("../storage/raw-message-store");
+				const manager = await getRawMessageManager();
+				if (typeof manager.searchMessagesSemantically === "function") {
+					const results = await manager.searchMessagesSemantically({
+						userId: input.userId,
+						queryEmbedding,
+						limit,
+					});
+					semantic = (
+						results as Array<{
+							id: string;
+							content: string;
+							similarity: number;
+							metadata?: Record<string, unknown>;
+						}>
+					).map((r) => ({
+						type: "memory" as const,
+						id: r.id,
+						content: r.content,
+						similarity: r.similarity,
+						metadata: r.metadata ?? {},
+					}));
+				}
+			} catch (error) {
+				logger.warn?.("[memory-store] SQLite semantic search failed:", error);
+			}
+		}
+
 		// Optional lexical (BM25) sub-query. Runs in parallel with the semantic
 		// sub-query when both are configured. Failures degrade gracefully to
 		// semantic-only results; missing config is not a failure unless the
