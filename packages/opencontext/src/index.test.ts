@@ -77,16 +77,16 @@ describe("@melandlabs/opencontext facade", () => {
 		expect(facade.estimateTokens("hi ".repeat(200))).toBeGreaterThan(facade.estimateTokens("hi"));
 	});
 
-	it("does NOT re-export security or integrations packages through the facade", () => {
-		// The facade is intentionally narrow. Host apps that need
-		// encryption / SSRF protection import @melandlabs/security
-		// directly; integrations text utilities come from
-		// @melandlabs/integrations. Pinning this prevents accidental
-		// bloat of the facade bundle.
-		expect((facade as Record<string, unknown>).TokenEncryption).toBeUndefined();
-		expect((facade as Record<string, unknown>).validateUrlForSSRF).toBeUndefined();
+	it("re-exports security and integrations/core packages through the facade", () => {
+		// The facade now exposes token encryption / SSRF protection and the
+		// minimal integration context factory so a host app can get started
+		// with only `@melandlabs/opencontext`. Other integrations utilities
+		// (e.g. text cleaners) are still not re-exported to keep the bundle
+		// focused.
+		expect(typeof (facade as Record<string, unknown>).TokenEncryption).toBe("function");
+		expect(typeof (facade as Record<string, unknown>).validateUrlForSSRF).toBe("function");
+		expect(typeof (facade as Record<string, unknown>).createMinimalContext).toBe("function");
 		expect((facade as Record<string, unknown>).htmlToPlainText).toBeUndefined();
-		expect((facade as Record<string, unknown>).createMinimalContext).toBeUndefined();
 	});
 
 	it("does not pollute the global namespace with conflicting UserType exports", () => {

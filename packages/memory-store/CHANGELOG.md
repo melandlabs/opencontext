@@ -1,5 +1,18 @@
 # @melandlabs/memory-store
 
+## 0.2.7
+
+### Patch Changes
+
+- Release @melandlabs/opencontext 0.2.6 and publish updated workspace dependencies.
+- Updated dependencies
+  - @melandlabs/ai@0.2.1
+  - @melandlabs/indexeddb@0.2.1
+  - @melandlabs/rag@0.2.1
+  - @melandlabs/shared@0.2.1
+  - @melandlabs/sqlite@0.2.1
+  - @melandlabs/ai-rag@0.2.3
+
 ## 0.2.6
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @melandlabs/sqlite
 
+## 0.2.1
+
+### Patch Changes
+
+- Release @melandlabs/opencontext 0.2.6 and publish updated workspace dependencies.
+- Updated dependencies
+  - @melandlabs/indexeddb@0.2.1
+
 ## 0.1.4
 
 ### Patch Changes

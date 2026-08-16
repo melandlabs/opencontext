@@ -1,5 +1,14 @@
 # @melandlabs/ai
 
+## 0.2.1
+
+### Patch Changes
+
+- Release @melandlabs/opencontext 0.2.6 and publish updated workspace dependencies.
+- Updated dependencies
+  - @melandlabs/shared@0.2.1
+  - @melandlabs/memory-consolidation@0.2.0
+
 ## 0.2.0
 
 ### Minor Changes

@@ -1,5 +1,14 @@
 # @melandlabs/integrations-imessage
 
+## 0.2.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@0.2.1
+  - @melandlabs/shared@0.2.1
+  - @melandlabs/integrations-channels@0.2.1
+
 ## 0.1.5
 
 ### Patch Changes

@@ -1,5 +1,12 @@
 # @melandlabs/opencontext
 
+## 0.2.6
+
+### Patch Changes
+
+- Release @melandlabs/opencontext 0.2.6 and publish updated workspace dependencies.
+  - @melandlabs/ai-rag@0.2.3
+
 ## 0.2.5
 
 ### Patch Changes

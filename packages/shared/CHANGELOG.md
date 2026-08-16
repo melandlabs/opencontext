@@ -1,5 +1,12 @@
 # @melandlabs/shared
 
+## 0.2.1
+
+### Patch Changes
+
+- Release @melandlabs/opencontext 0.2.6 and publish updated workspace dependencies.
+  - @melandlabs/ui-runtime@0.2.0
+
 ## 0.1.4
 
 ### Patch Changes

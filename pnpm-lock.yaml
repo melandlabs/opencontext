@@ -22,7 +22,7 @@ importers:
         version: 1.9.4
       '@changesets/cli':
         specifier: ^2.27.0
-        version: 2.31.1(@types/node@22.20.1)
+        version: 2.31.1(@types/node@26.2.0)
       '@types/fernet':
         specifier: ^0.4.3
         version: 0.4.3
@@ -49,30 +49,30 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.0
-        version: 2.1.9(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
 
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/ai
       '@melandlabs/ai-rag':
-        specifier: ^0.2.0
+        specifier: ^0.2.3
         version: link:../packages/ai/rag
       '@melandlabs/api':
         specifier: ^0.2.0
         version: link:../packages/api
       '@melandlabs/audit':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/audit
       '@melandlabs/config':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/config
       '@melandlabs/contracts':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/contracts
       '@melandlabs/cron':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/cron
       '@melandlabs/db':
         specifier: ^0.2.0
@@ -87,7 +87,7 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/i18n
       '@melandlabs/indexeddb':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/indexeddb
       '@melandlabs/insights':
         specifier: ^0.2.0
@@ -96,28 +96,28 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/integrations
       '@melandlabs/integrations-asana':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/asana
       '@melandlabs/integrations-calendar':
         specifier: ^0.2.0
         version: link:../packages/integrations/calendar
       '@melandlabs/integrations-channels':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/channels
       '@melandlabs/integrations-composio':
         specifier: ^0.2.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/facebook-messenger
       '@melandlabs/integrations-feishu':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
         specifier: ^0.2.0
@@ -126,40 +126,40 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/integrations/google-meet
       '@melandlabs/integrations-hubspot':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/instagram
       '@melandlabs/integrations-jira':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/jira
       '@melandlabs/integrations-linkedin':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/integrations/x
       '@melandlabs/loop':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/loop
       '@melandlabs/mcp':
         specifier: ^0.2.0
@@ -168,28 +168,28 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^0.2.0
+        specifier: ^0.2.7
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.2.0
+        specifier: ^0.2.6
         version: link:../packages/opencontext
       '@melandlabs/rag':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/rag
       '@melandlabs/rss':
         specifier: ^0.2.0
         version: link:../packages/integrations/rss
       '@melandlabs/search':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/search
       '@melandlabs/security':
         specifier: ^0.2.0
         version: link:../packages/security
       '@melandlabs/shared':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/shared
       '@melandlabs/sqlite':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/sqlite
       '@melandlabs/storage':
         specifier: ^0.2.0
@@ -198,10 +198,10 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/ui-runtime
       '@melandlabs/voice-kokoro':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/voice-kokoro
       '@melandlabs/voice-whisper':
-        specifier: ^0.2.0
+        specifier: ^0.2.1
         version: link:../packages/voice-whisper
       better-sqlite3:
         specifier: ^11.7.0
@@ -634,7 +634,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.6
-        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@22.20.1)(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/integrations/gmail:
     dependencies:
@@ -843,7 +843,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.0.6
-        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@22.20.1)(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/integrations/weixin:
     dependencies:
@@ -893,7 +893,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^2.1.8
-        version: 2.1.9(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
 
   packages/integrations/x:
     dependencies:
@@ -975,8 +975,14 @@ importers:
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.1)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.2
+        specifier: ^0.2.3
         version: link:../ai/rag
+      '@melandlabs/integrations':
+        specifier: ^0.2.0
+        version: link:../integrations
+      '@melandlabs/security':
+        specifier: ^0.2.0
+        version: link:../security
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -1221,7 +1227,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^4.1.10
-        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@22.20.1)(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.10(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
 
   packages/storage:
     dependencies:
@@ -3048,6 +3054,9 @@ packages:
 
   '@types/node@22.20.1':
     resolution: {integrity: sha512-EANqOCF9QFyra+4pfxUcX9STKJpCLjMbObVzljIJomAWSnuSIEAvyzEU53GaajbXJEgdh0iEcPL+DGvpUd4k1Q==}
+
+  '@types/node@26.2.0':
+    resolution: {integrity: sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg==}
 
   '@types/pg@8.21.0':
     resolution: {integrity: sha512-AYdtudzabjLZgVgRZmAnU8bAnVUXzuJX2IYHeSIiIHm68olD+LgQYCGWdtcNYnP0uq9c4S4NibVG3Ni7VbKW7Q==}
@@ -5855,6 +5864,9 @@ packages:
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
+  undici-types@8.3.0:
+    resolution: {integrity: sha512-j375ScV60dom+YkPFIfTLcOiPxkN/buHz5GobjLhixFuANaNs3C9l4GmrWqejgXWJ7BbJcFYpTEUkS1Ge8bpZQ==}
+
   undici@5.29.0:
     resolution: {integrity: sha512-raqeBD6NQK4SkWhQzeYKd1KmIG6dllBOTt55Rmkt4HtI9mwdWtJljnrXjAFUBLTSN67HWrOIZ3EPF4kjUw80Bg==}
     engines: {node: '>=14.0'}
@@ -6492,7 +6504,7 @@ snapshots:
     dependencies:
       '@changesets/types': 6.1.0
 
-  '@changesets/cli@2.31.1(@types/node@22.20.1)':
+  '@changesets/cli@2.31.1(@types/node@26.2.0)':
     dependencies:
       '@changesets/apply-release-plan': 7.1.1
       '@changesets/assemble-release-plan': 6.0.10
@@ -6508,7 +6520,7 @@ snapshots:
       '@changesets/should-skip-package': 0.1.2
       '@changesets/types': 6.1.0
       '@changesets/write': 0.4.0
-      '@inquirer/external-editor': 1.0.3(@types/node@22.20.1)
+      '@inquirer/external-editor': 1.0.3(@types/node@26.2.0)
       '@manypkg/get-packages': 1.1.3
       ansi-colors: 4.1.3
       enquirer: 2.4.1
@@ -6953,12 +6965,12 @@ snapshots:
   '@img/sharp-win32-x64@0.34.5':
     optional: true
 
-  '@inquirer/external-editor@1.0.3(@types/node@22.20.1)':
+  '@inquirer/external-editor@1.0.3(@types/node@26.2.0)':
     dependencies:
       chardet: 2.2.0
       iconv-lite: 0.7.3
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
 
   '@isaacs/fs-minipass@4.0.1':
     dependencies:
@@ -7537,6 +7549,11 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/node@26.2.0':
+    dependencies:
+      undici-types: 8.3.0
+    optional: true
+
   '@types/pg@8.21.0':
     dependencies:
       '@types/node': 22.20.1
@@ -7604,21 +7621,21 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 2.1.9
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
 
-  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))':
+  '@vitest/mocker@4.1.10(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 4.1.10
       estree-walker: 3.0.3
       magic-string: 0.30.21
     optionalDependencies:
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
 
   '@vitest/pretty-format@2.1.9':
     dependencies:
@@ -8953,7 +8970,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
+      retry-axios: 2.6.0(axios@1.18.0)
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -9869,7 +9886,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
+  retry-axios@2.6.0(axios@1.18.0):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 
@@ -10454,6 +10471,9 @@ snapshots:
 
   undici-types@6.21.0: {}
 
+  undici-types@8.3.0:
+    optional: true
+
   undici@5.29.0:
     dependencies:
       '@fastify/busboy': 2.1.1
@@ -10497,13 +10517,13 @@ snapshots:
 
   vary@1.1.2: {}
 
-  vite-node@2.1.9(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0):
+  vite-node@2.1.9(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       cac: 6.7.14
       debug: 4.4.3
       es-module-lexer: 1.7.0
       pathe: 1.1.2
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
     transitivePeerDependencies:
       - '@types/node'
       - jiti
@@ -10518,7 +10538,7 @@ snapshots:
       - tsx
       - yaml
 
-  vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0):
+  vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       esbuild: 0.25.12
       fdir: 6.5.0(picomatch@4.0.5)
@@ -10527,15 +10547,15 @@ snapshots:
       rollup: 4.62.4
       tinyglobby: 0.2.17
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
       fsevents: 2.3.3
       jiti: 2.7.0
       yaml: 2.9.0
 
-  vitest@2.1.9(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0):
+  vitest@2.1.9(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
@@ -10551,11 +10571,11 @@ snapshots:
       tinyexec: 0.3.2
       tinypool: 1.1.1
       tinyrainbow: 1.2.0
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
-      vite-node: 2.1.9(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
+      vite-node: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
     transitivePeerDependencies:
       - jiti
       - less
@@ -10570,10 +10590,10 @@ snapshots:
       - tsx
       - yaml
 
-  vitest@4.1.10(@opentelemetry/api@1.9.0)(@types/node@22.20.1)(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)):
+  vitest@4.1.10(@opentelemetry/api@1.9.0)(@types/node@26.2.0)(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
-      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0))
+      '@vitest/mocker': 4.1.10(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
       '@vitest/runner': 4.1.10
       '@vitest/snapshot': 4.1.10
@@ -10590,11 +10610,11 @@ snapshots:
       tinyexec: 1.3.0
       tinyglobby: 0.2.17
       tinyrainbow: 3.1.1
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(yaml@2.9.0)
+      vite: 6.4.3(@types/node@26.2.0)(jiti@2.7.0)(yaml@2.9.0)
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
-      '@types/node': 22.20.1
+      '@types/node': 26.2.0
     transitivePeerDependencies:
       - msw
 

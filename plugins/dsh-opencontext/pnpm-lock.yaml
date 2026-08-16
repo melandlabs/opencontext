@@ -33,8 +33,8 @@ importers:
         specifier: ^3.18.1
         version: 3.18.1
       '@melandlabs/opencontext':
-        specifier: ^0.2.5
-        version: 0.2.5(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)
+        specifier: ^0.2.6
+        version: 0.2.6(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)
     devDependencies:
       '@types/node':
         specifier: ^22.20.0
@@ -942,15 +942,15 @@ packages:
     peerDependencies:
       '@langchain/core': ^1.0.0
 
-  '@melandlabs/ai-rag@0.2.2':
-    resolution: {integrity: sha512-geR4rp9rDV8ngpP0P/WrW6MPGk8zlHq3RWxEQ4AuGtAIyuk1ZMRFk4v2RHVY00EPk1wFCDjNmH//QxEFT2XY9w==}
+  '@melandlabs/ai-rag@0.2.3':
+    resolution: {integrity: sha512-4RVVQd/4JecpuNszYpcJdRdCvIJC1VP1eWMKtNJtksL5IAWVuPpS/owSqDZvBc+FHGpOO2P/OFV9mMBhbxgh7A==}
 
-  '@melandlabs/opencontext@0.2.5':
-    resolution: {integrity: sha512-qI5e0/LC1L8jsW/eR5PDkMs9T8d1yPB63hR3r0j215bklX4M17sTLWD60qQElwmilWuAaMzAEGrWguUw3ltslA==}
+  '@melandlabs/opencontext@0.2.6':
+    resolution: {integrity: sha512-slmLI6dFntyrTO9XzcZfKxY9OuRZ9b1O9/Ae51ncHyCBDQNbjYhJt4io/a43mnmuUQ8Q7lplQJr5zbwtDqGEDQ==}
     hasBin: true
 
-  '@melandlabs/shared@0.2.0':
-    resolution: {integrity: sha512-xov0RRD77rf2ORR2JkQUcSSVVvp83Bt8dMU15Ii24LtvR9Z+il6nwi8gxU1VpspL49weL43RtlqY8IfhmigLUw==}
+  '@melandlabs/shared@0.2.1':
+    resolution: {integrity: sha512-4QIusUppSd4JBrtVQ3EsmEgJJj8ohLlppe+cnr5n9ETuxyw9fzR3yUIUibND7Xee06j5RzlGHdlU7XeF9JD6wA==}
     peerDependencies:
       react: '>=18.0.0'
 
@@ -1457,6 +1457,10 @@ packages:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
     engines: {node: '>= 8'}
 
+  crypto-js@3.1.8:
+    resolution: {integrity: sha512-4E+PJNbUbBrzQLB9Vw86eaF5xZ8MB6dw4aaZ67YhLNduTmqJ5AziuLrYikPWHJkC59DYZp+cyj+qg3vBE8OnOQ==}
+    deprecated: Active development of CryptoJS has been discontinued. This library is no longer maintained.
+
   date-fns@4.4.0:
     resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
 
@@ -1626,6 +1630,9 @@ packages:
 
   fast-uri@3.1.5:
     resolution: {integrity: sha512-gHwA1O9LDIcKunMKhObS/HimwtehO1nPUECKAu5TpKgaO19fcWEl4bliWe1jWxVFvIXztJjjQ4L8XQ1EU9f7Jw==}
+
+  fernet@0.4.0:
+    resolution: {integrity: sha512-FJgmKoMeG4eoM+bEbMyTzPx9US4W+sw4D0i6jSWSKHFYlFZv92UIWi6a/w6MEf2JNSO+Mth/T+u+d/ye1zwN9A==}
 
   fetch-blob@3.2.0:
     resolution: {integrity: sha512-7yAQpD2UMJzLi1Dqv7qFYnPbaPx7ZfFK6PiIxQ4PfkGPyNyl2Ugx+a/umUonmKqjhM4DnfbMvdX6otXq83soQQ==}
@@ -1806,8 +1813,8 @@ packages:
   isstream@0.1.2:
     resolution: {integrity: sha512-Yljz7ffyPbrLpLngrMtZ7NduUgVvi6wG9RJ9IUcyCd59YQ911PBJphODUcbOVbqYfxe1wuYf/LJ8PauMRwsM/g==}
 
-  jose@6.2.8:
-    resolution: {integrity: sha512-Bsdjwm3Qsd/P0jR+BHDe3LytDfY7WBq2HmCCLIwuVRHMuEC9ae7/R474GIUdF1NgCyZjzVo/A9DOiOBtXq8ZoQ==}
+  jose@6.2.9:
+    resolution: {integrity: sha512-XrchZOFZUl/T3vTwRe8XK+cJrGtMF4th1ARnDfwbBXFKThGhlsxEE4Zu03AD/bjJSt/9jT/mxrOCkJWOg77aPA==}
 
   js-tiktoken@1.0.21:
     resolution: {integrity: sha512-biOj/6M5qdgx5TKjDnFT1ymSpM5tbd3ylwDtrQvFQSu0Z7bBYko2dF+W/aUkXUPuk6IVpRxk/3Q2sHOzGlS36g==}
@@ -2513,6 +2520,9 @@ packages:
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
 
+  urlsafe-base64@1.0.0:
+    resolution: {integrity: sha512-RtuPeMy7c1UrHwproMZN9gN6kiZ0SvJwRaEzwZY0j9MypEkFqyBaKv176jvlPtg58Zh36bOkS0NFABXMHvvGCA==}
+
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
@@ -3134,14 +3144,14 @@ snapshots:
       '@langchain/core': 1.2.8(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(ws@8.21.3)
       js-tiktoken: 1.0.21
 
-  '@melandlabs/ai-rag@0.2.2(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.16)(encoding@0.1.13)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)':
+  '@melandlabs/ai-rag@0.2.3(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.16)(encoding@0.1.13)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)':
     dependencies:
       '@chroma-core/default-embed': 0.1.9
       '@huggingface/transformers': 3.8.1
       '@langchain/community': 1.1.29(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@huggingface/transformers@3.8.1)(@ibm-cloud/watsonx-ai@1.7.16)(@langchain/core@1.2.8(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))(better-sqlite3@11.10.0)(chromadb@3.5.0)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(pg@8.23.0)(playwright@1.62.1)(ws@8.21.3)
       '@langchain/core': 1.2.8(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(ws@8.21.3)
       '@langchain/textsplitters': 1.0.1(@langchain/core@1.2.8(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(ws@8.21.3))
-      '@melandlabs/shared': 0.2.0(react@19.2.8)
+      '@melandlabs/shared': 0.2.1(react@19.2.8)
       better-sqlite3: 11.10.0
       chromadb: 3.5.0
       jszip: 3.10.1
@@ -3281,16 +3291,17 @@ snapshots:
       - ws
       - youtubei.js
 
-  '@melandlabs/opencontext@0.2.5(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)':
+  '@melandlabs/opencontext@0.2.6(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@cfworker/json-schema@4.1.1)(@ibm-cloud/watsonx-ai@1.7.16)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)':
     dependencies:
       '@hono/node-server': 1.19.17(hono@4.13.2)
-      '@melandlabs/ai-rag': 0.2.2(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.16)(encoding@0.1.13)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)
+      '@melandlabs/ai-rag': 0.2.3(@browserbasehq/sdk@2.18.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(deepmerge@4.3.1)(dotenv@16.4.5)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3)(zod@4.4.3))(zod@4.4.3))(@ibm-cloud/watsonx-ai@1.7.16)(encoding@0.1.13)(ibm-cloud-sdk-core@5.6.0)(jsonwebtoken@9.0.3)(playwright@1.62.1)(react@19.2.8)(ws@8.21.3)
       '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
       abort-controller: 3.0.0
       agentkeepalive: 4.6.0
       better-sqlite3: 11.10.0
       cross-spawn: 7.0.6
       encoding: 0.1.13
+      fernet: 0.4.0
       form-data: 4.0.6
       form-data-encoder: 1.7.2
       formdata-node: 4.4.1
@@ -3436,7 +3447,7 @@ snapshots:
       - ws
       - youtubei.js
 
-  '@melandlabs/shared@0.2.0(react@19.2.8)':
+  '@melandlabs/shared@0.2.1(react@19.2.8)':
     dependencies:
       '@melandlabs/ui-runtime': 0.2.0
       clsx: 2.1.1
@@ -3464,7 +3475,7 @@ snapshots:
       express: 5.2.1
       express-rate-limit: 8.6.2(express@5.2.1)
       hono: 4.13.2
-      jose: 6.2.8
+      jose: 6.2.9
       json-schema-typed: 8.0.2
       pkce-challenge: 5.0.1
       raw-body: 3.0.2
@@ -3730,7 +3741,7 @@ snapshots:
 
   agent-base@6.0.2:
     dependencies:
-      debug: 4.4.3
+      debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
 
@@ -3890,6 +3901,8 @@ snapshots:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
+
+  crypto-js@3.1.8: {}
 
   date-fns@4.4.0: {}
 
@@ -4073,6 +4086,11 @@ snapshots:
 
   fast-uri@3.1.5: {}
 
+  fernet@0.4.0:
+    dependencies:
+      crypto-js: 3.1.8
+      urlsafe-base64: 1.0.0
+
   fetch-blob@3.2.0:
     dependencies:
       node-domexception: 1.0.0
@@ -4215,7 +4233,7 @@ snapshots:
   https-proxy-agent@5.0.1:
     dependencies:
       agent-base: 6.0.2
-      debug: 4.4.3
+      debug: 4.3.4
     transitivePeerDependencies:
       - supports-color
 
@@ -4274,7 +4292,7 @@ snapshots:
 
   isstream@0.1.2: {}
 
-  jose@6.2.8: {}
+  jose@6.2.9: {}
 
   js-tiktoken@1.0.21:
     dependencies:
@@ -5004,6 +5022,8 @@ snapshots:
     dependencies:
       querystringify: 2.2.0
       requires-port: 1.0.0
+
+  urlsafe-base64@1.0.0: {}
 
   util-deprecate@1.0.2: {}
 
