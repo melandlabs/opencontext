@@ -143,11 +143,27 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 	// ── 1. Wire the embedder (if any) — must happen before any backend
 	//      that consults it.
 	if (args.embeddingProvider === "local") {
-		const provider = new aiRag!.LocalTransformersEmbeddingProvider({ modelName: args.embeddingModel });
-		unified.embedQuery = async ({ query }) => provider.embedQuery(query);
-		log(
-			`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
-		);
+		try {
+			if (!aiRag) {
+				throw new Error("ai-rag modules not loaded");
+			}
+			const provider = new aiRag.LocalTransformersEmbeddingProvider({ modelName: args.embeddingModel });
+			unified.embedQuery = async ({ query }) => provider.embedQuery(query);
+			log(
+				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
+			);
+		} catch (error) {
+			log(
+				`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`,
+			);
+			log(
+				"Semantic search will be disabled. The server will continue with keyword-only search.",
+			);
+			log(
+				"To fix: Ensure the model is downloaded or check your network connection to huggingface.co",
+			);
+			// Don't set unified.embedQuery - the system will fall back to lexical search
+		}
 	} else if (args.embeddingProvider === "openrouter") {
 		const apiKey = process.env.OPENROUTER_API_KEY;
 		if (!apiKey) {
