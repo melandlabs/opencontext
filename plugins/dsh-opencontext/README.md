@@ -20,11 +20,11 @@ retrieval-augmented context by plugging into
 dsh plugin --profile web add dsh-opencontext
 
 # Confirm it's mounted
-dsh --profile web --dump-config
+dsh --profile web --dump-config | grep dsh-opencontext
 #   ... should contain `id: dsh-opencontext`
 
 # Start DSH web and verify
-dsh --profile web web
+dsh web
 #   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
 ```
 
@@ -38,15 +38,15 @@ cd /path/to/opencontext/plugins/dsh-opencontext
 pnpm install
 pnpm build
 
-# 3. Register it with your DSH profile
+# 3. Register it with your DSH
 dsh plugin --profile web add /path/to/opencontext/plugins/dsh-opencontext
 
 # 4. Confirm it's mounted
-dsh --profile web --dump-config
+dsh --profile web --dump-config | grep dsh-opencontext
 #   ... should contain `id: dsh-opencontext`
 
 # 5. Start DSH web and verify
-dsh --profile web web
+dsh web
 #   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
 ```
 

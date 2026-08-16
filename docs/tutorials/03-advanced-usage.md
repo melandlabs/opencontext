@@ -447,7 +447,7 @@ The `dsh-opencontext` plugin gives DeepSeek Harness (DSH) agents persistent memo
 dsh plugin --profile web add dsh-opencontext
 
 # Start DSH Web
-dsh --profile web web
+dsh web
 ```
 
 #### From source (for development)
@@ -464,7 +464,7 @@ pnpm build
 dsh plugin --profile web add /path/to/opencontext/plugins/dsh-opencontext
 
 # Start DSH Web
-dsh --profile web web
+dsh web
 # Visit http://127.0.0.1:3080/plugins to confirm the plugin is enabled
 ```
 

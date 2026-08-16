@@ -144,7 +144,31 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
-### 5. 诊断安装环境
+### 5. 在 DeepSeek Harness (DSH) 中使用
+
+OpenContext 可作为 DSH 插件使用，为任何 DSH agent 提供持久记忆和检索增强上下文：
+
+```bash
+# 从 npm 安装插件
+dsh plugin --profile web add dsh-opencontext
+
+# 确认已挂载
+dsh --profile web --dump-config | grep dsh-opencontext
+#   ... 应包含 `id: dsh-opencontext`
+
+# 启动 DSH web 并验证
+dsh web
+#   访问 http://127.0.0.1:3080/plugins，确认 dsh-opencontext 显示 "Enabled"
+```
+
+插件会暴露 16 个 `oc_*` 工具（如 `oc_search`、`oc_remember`、`oc_memory_list`），并自动：
+- 每轮对话运行 recall 瀑布流，注入相关历史上下文
+- 将用户消息捕获到持久记忆中
+- 在自然断点处进行会话总结（可选）
+
+配置选项和完整工具参考见 [`plugins/dsh-opencontext/README.md`](./plugins/dsh-opencontext/README.md)。
+
+### 6. 诊断安装环境
 
 ```bash
 opencontext doctor             # 人类可读的健康检查

@@ -152,7 +152,31 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
-### 5. Diagnose the install
+### 5. Use with DeepSeek Harness (DSH)
+
+OpenContext is available as a DSH plugin that gives any DSH agent durable memory and retrieval-augmented context:
+
+```bash
+# Install the plugin from npm
+dsh plugin --profile web add dsh-opencontext
+
+# Confirm it's mounted
+dsh --profile web --dump-config | grep dsh-opencontext
+#   ... should contain `id: dsh-opencontext`
+
+# Start DSH web and verify
+dsh web
+#   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
+```
+
+The plugin exposes 16 `oc_*` tools (e.g., `oc_search`, `oc_remember`, `oc_memory_list`) and automatically:
+- Runs a recall waterfall on each turn to inject relevant historical context
+- Captures user messages into durable memory
+- Summarizes sessions at natural breakpoints (opt-in)
+
+See [`plugins/dsh-opencontext/README.md`](./plugins/dsh-opencontext/README.md) for configuration options and the full tool reference.
+
+### 6. Diagnose the install
 
 ```bash
 opencontext doctor             # human-readable health checks
