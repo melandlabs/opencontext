@@ -290,11 +290,11 @@ const integrations = await getIntegrationManager();  // Real calls!
 
 ```bash
 # ✅ GOOD: Regular health checks
-opencontext doctor --json | jq '.ok'  # CI-friendly
+npx @melandlabs/opencontext doctor --json | jq '.ok'  # CI-friendly
 
 # Check specific subsystems
-opencontext doctor --section memory-store
-opencontext doctor --section integrations
+npx @melandlabs/opencontext doctor --section memory-store
+npx @melandlabs/opencontext doctor --section integrations
 ```
 
 ### 17. Log Important Events
@@ -363,7 +363,7 @@ OPENROUTER_API_KEY=sk-or-...
 ```yaml
 # .github/workflows/test.yml
 - name: Run OpenContext doctor
-  run: opencontext doctor --json | jq -e '.ok == true'
+  run: npx @melandlabs/opencontext doctor --json | jq -e '.ok == true'
 ```
 
 ### 21. Use Restart Policies

@@ -17,13 +17,13 @@ OpenContext is the **agentic context runtime** that powers applications that act
 Before you begin, ensure you have:
 
 - **Node.js** >= 22
-- **pnpm** >= 9.0.0 (recommended) or npm/yarn
+- **pnpm** >= 9 (recommended) or npm/yarn
 
 Verify your installation:
 
 ```bash
-node --version  # Should be >= 18.0.0
-pnpm --version  # Should be >= 9.0.0
+node --version  # Should be >= 22
+pnpm --version  # Should be >= 9
 ```
 
 ## Installation
@@ -41,6 +41,22 @@ pnpm init
 # Install OpenContext
 pnpm add @melandlabs/opencontext
 ```
+
+> **Note:** OpenContext includes `@melandlabs/ai-rag` as a dependency, which will be installed automatically. This package provides local embeddings support.
+
+> **Important: Native modules (better-sqlite3)**
+
+OpenContext uses `better-sqlite3`, a native module that requires compilation. With pnpm, you need to approve build scripts:
+
+```bash
+# After installation, approve build scripts for native modules
+pnpm approve-builds better-sqlite3
+
+# Then reinstall to trigger the build
+pnpm install
+```
+
+If you skip this step, you'll see "Could not locate the bindings file" error when running your code.
 
 ### Option 2: Build from source
 
@@ -66,11 +82,13 @@ async function main() {
   const messages = await getRawMessageManager();
 
   const now = Date.now();
+  // Use a unique message ID to avoid conflicts when running multiple times
+  const messageId = `msg-${now}`;
 
   // Store a fact about the user
   await messages.storeMessages([
     {
-      messageId: "msg-1",
+      messageId,
       userId: "user-42",
       content: "User prefers dark mode in all applications",
       platform: "tutorial",
@@ -107,18 +125,91 @@ npx tsx hello-memory.ts
 node --experimental-strip-types hello-memory.ts
 ```
 
+> **About the warnings:** You'll see a warning about `memory_lexical_search_fallback`. This is expected - by default, OpenContext uses keyword search (no API keys required).
+
+## SDK Mode: With Local Embeddings
+
+For semantic search in SDK mode, configure a local embedding provider:
+
+```typescript
+import { createMemoryStore, getRawMessageManager, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
+
+async function main() {
+  const embeddingProvider = new LocalTransformersEmbeddingProvider({
+    model: "Xenova/all-MiniLM-L6-v2",
+  });
+
+  const store = await createMemoryStore({
+    unified: {
+      embedQuery: async ({ query }) => {
+        const result = await embeddingProvider.embedQuery({ query });
+        return result;
+      },
+    },
+  });
+
+  const messages = await getRawMessageManager();
+  const now = Date.now();
+
+  // Store with pre-computed embedding
+  const embedding = await embeddingProvider.embedQuery({
+    query: "User prefers dark mode"
+  });
+
+  await messages.storeMessages([{
+    messageId: `msg-${now}`,
+    userId: "user-42",
+    content: "User prefers dark mode in all applications",
+    platform: "tutorial",
+    botId: "tutorial-bot",
+    timestamp: now,
+    createdAt: now,
+    embedding,
+    embeddingModel: "Xenova/all-MiniLM-L6-v2",
+  }]);
+
+  // Semantic search
+  const results = await store.searchUnifiedMemory({
+    userId: "user-42",
+    query: "What theme does the user like?",
+    limit: 5,
+  });
+
+  console.log("Found", results.count, "results");
+}
+
+main().catch(console.error);
+```
+
+> **Note:** SDK mode requires manual embedding handling. For automatic embeddings with better results, use the HTTP server below.
+
 ## Using the HTTP Server
 
-OpenContext can run as a standalone HTTP server:
+OpenContext can run as a standalone HTTP server with local embeddings:
 
 ```bash
-# Start the server with local embeddings and SQLite
-opencontext http \
+# Start the server with local embeddings (no API keys needed)
+npx @melandlabs/opencontext http \
   --embedding-provider local \
   --memory-backend sqlite-vec \
   --host 127.0.0.1 \
   --port 7421
 ```
+
+> **Tip:** For frequent use, install globally: `pnpm add -g @melandlabs/opencontext`, then use `opencontext http` directly.
+
+OpenContext can run as a standalone HTTP server:
+
+```bash
+# Start the server with local embeddings and SQLite
+npx @melandlabs/opencontext http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec \
+  --host 127.0.0.1 \
+  --port 7421
+```
+
+> **Tip:** For frequent use, install globally: `pnpm add -g @melandlabs/opencontext`, then use `opencontext http` directly.
 
 Test it:
 
@@ -212,16 +303,16 @@ OpenContext includes a `doctor` command for health checks:
 
 ```bash
 # Human-readable report
-opencontext doctor
+npx @melandlabs/opencontext doctor
 
 # JSON output for CI/CD
-opencontext doctor --json
+npx @melandlabs/opencontext doctor --json
 
 # Check a specific section
-opencontext doctor --section memory-store
+npx @melandlabs/opencontext doctor --section memory-store
 
 # Deep probe (includes real memory-store read)
-opencontext doctor --deep
+npx @melandlabs/opencontext doctor --deep
 ```
 
 The doctor checks nine sections:
@@ -254,9 +345,59 @@ Make sure you've installed the package:
 pnpm add @melandlabs/opencontext
 ```
 
-### "better-sqlite3 failed to build"
+### "Cannot find module '@melandlabs/ai-rag/...'"
 
-On some systems, the native `better-sqlite3` module may need build tools:
+This was fixed in v0.2.1. If you're using v0.2.0, either:
+
+1. Update to the latest version:
+```bash
+pnpm update @melandlabs/opencontext
+```
+
+2. Or manually install the missing dependency:
+```bash
+pnpm add @melandlabs/ai-rag
+```
+
+### "better-sqlite3 failed to build" or "Could not locate the bindings file"
+
+`better-sqlite3` is a native module that must be built for your system. With pnpm, build scripts are ignored by default for security.
+
+**Solution 1: Approve build scripts (recommended)**
+
+```bash
+# This will show an interactive prompt - press Space to select better-sqlite3, then Enter
+pnpm approve-builds
+
+# Reinstall to trigger the build
+pnpm install
+```
+
+**Solution 2: Use node_modules symlink bypass**
+
+```bash
+# Build directly in the package directory
+cd node_modules/.pnpm/better-sqlite3@*/node_modules/better-sqlite3
+npm run build
+cd ../../../../../..
+```
+
+**Solution 3: Configure pnpm to always trust this package**
+
+Add to your root `.npmrc` or `package.json`:
+
+```bash
+# .npmrc
+public-hoist-pattern[]=@melandlabs/opencontext
+public-hoist-pattern[]=better-sqlite3
+```
+
+Then run:
+```bash
+pnpm install
+```
+
+**If you don't have build tools installed**, you may need to install them first:
 
 **macOS:**
 ```bash
@@ -280,7 +421,7 @@ npm install --global windows-build-tools
 Use the `--embedding-provider` flag or set the `EMBEDDING_PROVIDER` environment variable:
 
 ```bash
-opencontext http --embedding-provider local
+npx @melandlabs/opencontext http --embedding-provider local
 ```
 
 ## Getting Help

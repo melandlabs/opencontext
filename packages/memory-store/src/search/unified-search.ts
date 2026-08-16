@@ -104,7 +104,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					warnings.push({
 						source: "memory",
 						code: "memory_search_failed",
-						message: (error as Error).message ?? "memory_search_failed",
+						message: `Memory search failed: ${(error as Error).message ?? "Unknown error"}. Using keyword search fallback.`,
 					});
 				}
 			} else {
@@ -146,11 +146,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				});
 			}
 		} else if (sources.includes("insights")) {
-			warnings.push({
-				source: "insights",
-				code: "insights_search_not_configured",
-				message: "Insights search is not configured for this host.",
-			});
+			// Insights is an optional feature - skip silently instead of warning
+			// Users need to set up insights extraction first
 		}
 
 		const knowledgeHits: UnifiedMemorySearchResult[] = [];
@@ -178,11 +175,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				});
 			}
 		} else if (sources.includes("knowledge")) {
-			warnings.push({
-				source: "knowledge",
-				code: "knowledge_search_not_configured",
-				message: "Knowledge search is not configured for this host.",
-			});
+			// Knowledge is an optional feature - skip silently instead of warning
+			// Users need to upload and index documents first
 		}
 
 		const merged = mergeAcrossSources({
@@ -208,8 +202,48 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		threshold: number,
 		warnings: UnifiedMemorySearchWarning[],
 	): Promise<MemorySubQueries> {
+		// When no embedding is configured, use default lexical search as fallback
 		if (typeof deps.embedQuery !== "function") {
-			throw new Error("embedQuery is not configured");
+			warnings.push({
+				source: "memory",
+				code: "memory_lexical_search_fallback",
+				message: "Semantic search not configured, using keyword search as fallback",
+			});
+
+			// Use lexical search from SQLite as default fallback
+			const { lexicalSearchRawMessages } = await import("../storage/sqlite-raw-message-store");
+			const keywords = deriveLexicalKeywords(input.query);
+
+			let lexical: UnifiedMemorySearchResult[] = [];
+			if (keywords.length > 0) {
+				try {
+					const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+					const results = await Promise.all(
+						filters.map((botId) =>
+							lexicalSearchRawMessages({
+								userId: input.userId,
+								keywords,
+								limit: Math.ceil(limit / filters.length),
+								botId,
+							}),
+						),
+					);
+					lexical = (
+						results.flat() as Array<{
+							id: string;
+							content: string;
+							similarity: number;
+							metadata: Record<string, unknown>;
+						}>
+					)
+						.filter(Boolean)
+						.map(toMemoryResult);
+				} catch (error) {
+					logger.warn?.("[memory-store] Default lexical search failed:", error);
+				}
+			}
+
+			return { semantic: [], lexical };
 		}
 
 		const queryEmbedding = await deps.embedQuery({

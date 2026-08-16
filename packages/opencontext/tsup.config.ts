@@ -61,12 +61,7 @@ export default defineConfig({
 		// resolver loads the real CJS package and `require` works normally.
 		"cross-spawn",
 		// ai-rag ships native deps (@huggingface/transformers ONNX runtime,
-		// chromadb). Keep it external in the facade bundle so the published
-		// artifact stays lean; `opencontext http` only needs it when the
-		// user opts into `--embedding-provider local` or `--*-backend=chroma`,
-		// in which case it's an optional peer dep they install themselves.
-		"@melandlabs/ai-rag",
-		"@melandlabs/ai-rag/local-transformers-embedding-provider",
-		"@melandlabs/ai-rag/chroma-store",
+		// chromadb). Now bundled as a regular dependency since the facade has
+		// static re-exports from it.
 	],
 });

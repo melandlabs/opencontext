@@ -1,5 +1,11 @@
 # @melandlabs/ai-rag
 
+## 0.2.1
+
+### Patch Changes
+
+- Version bump for coordinated release with @melandlabs/opencontext@0.2.1
+
 ## 0.1.4
 
 ### Patch Changes

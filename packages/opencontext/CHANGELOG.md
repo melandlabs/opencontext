@@ -1,5 +1,15 @@
 # @melandlabs/opencontext
 
+## 0.2.1
+
+### Patch Changes
+
+- Fixed: `@melandlabs/ai-rag` is now a regular dependency instead of an optional peer dependency
+
+  Previously, `@melandlabs/ai-rag` was marked as an optional peer dependency, but the code had static
+  re-exports from it, causing runtime errors when the package wasn't installed. Now it's a regular
+  dependency that gets installed automatically with `@melandlabs/opencontext`.
+
 ## 0.1.5
 
 ### Patch Changes

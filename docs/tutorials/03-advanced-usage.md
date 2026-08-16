@@ -392,15 +392,15 @@ const db = drizzle(client, { logger: true });
 
 ```bash
 # Check all subsystems
-opencontext doctor
+npx @melandlabs/opencontext doctor
 
 # Check specific subsystems
-opencontext doctor --section memory-store
-opencontext doctor --section embedding
-opencontext doctor --section integrations
+npx @melandlabs/opencontext doctor --section memory-store
+npx @melandlabs/opencontext doctor --section embedding
+npx @melandlabs/opencontext doctor --section integrations
 
 # JSON output for monitoring
-opencontext doctor --json | jq '.ok'
+npx @melandlabs/opencontext doctor --json | jq '.ok'
 ```
 
 ### Metrics

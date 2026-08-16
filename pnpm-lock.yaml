@@ -974,6 +974,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.1)
+      '@melandlabs/ai-rag':
+        specifier: ^0.2.1
+        version: link:../ai/rag
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -1038,9 +1041,6 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../ai
-      '@melandlabs/ai-rag':
-        specifier: workspace:*
-        version: link:../ai/rag
       '@melandlabs/audit':
         specifier: workspace:*
         version: link:../audit

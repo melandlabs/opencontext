@@ -80,7 +80,7 @@ Run OpenContext as a standalone HTTP service:
 
 ```bash
 # Start the server
-opencontext http \
+npx @melandlabs/opencontext http \
   --embedding-provider local \
   --memory-backend sqlite-vec \
   --host 0.0.0.0 \
