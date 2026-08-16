@@ -95,6 +95,7 @@ describe("Memory Store End-to-End", () => {
 			userId,
 			query: "What theme does the user like?",
 			limit: 5,
+			threshold: 0.3,
 		});
 
 		// Should find at least one result about dark mode
