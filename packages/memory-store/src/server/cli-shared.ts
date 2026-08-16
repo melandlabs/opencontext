@@ -153,15 +153,9 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
 			);
 		} catch (error) {
-			log(
-				`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`,
-			);
-			log(
-				"Semantic search will be disabled. The server will continue with keyword-only search.",
-			);
-			log(
-				"To fix: Ensure the model is downloaded or check your network connection to huggingface.co",
-			);
+			log(`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`);
+			log("Semantic search will be disabled. The server will continue with keyword-only search.");
+			log("To fix: Ensure the model is downloaded or check your network connection to huggingface.co");
 			// Don't set unified.embedQuery - the system will fall back to lexical search
 		}
 	} else if (args.embeddingProvider === "openrouter") {

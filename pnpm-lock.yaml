@@ -975,7 +975,7 @@ importers:
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.1)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: link:../ai/rag
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3

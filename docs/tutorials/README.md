@@ -72,7 +72,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 
 | You want to... | Read this |
 |----------------|------------|
-| Use with Claude Desktop | [Getting Started](./00-getting-started.md#using-with-your-coding-agent-via-mcp) |
+| Use with coding agent integration | [Getting Started](./00-getting-started.md#using-with-your-coding-agent-via-mcp) |
 | Run as HTTP service | [Developer Guide](./02-developer-guide.md#pattern-2-http-server-microservice) |
 | Deploy to production | [Best Practices](./04-best-practices.md) |
 | Run health checks | [Advanced Usage](./03-advanced-usage.md#health-checks) |

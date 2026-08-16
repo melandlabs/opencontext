@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeInsightsTools, registerInsightsTools } from "../src/tools-insights.js";
-import { makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
 describe("insights tools", () => {
 	describe("makeInsightsTools", () => {
@@ -13,15 +13,15 @@ describe("insights tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
 			expect(tools).toHaveLength(2);
-			expect(tools[0].name).toBe("oc_insights_search");
-			expect(tools[1].name).toBe("oc_insight_capture");
+			expect(tools[0]!.name).toBe("oc_insights_search");
+			expect(tools[1]!.name).toBe("oc_insight_capture");
 		});
 
 		it("oc_insights_search should have correct structure", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			expect(searchTool.name).toBe("oc_insights_search");
 			expect(searchTool.kind).toBe("search");
@@ -35,7 +35,7 @@ describe("insights tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const captureTool = tools[1];
+			const captureTool = tools[1]!;
 
 			expect(captureTool.name).toBe("oc_insight_capture");
 			expect(captureTool.kind).toBe("read");
@@ -85,23 +85,23 @@ describe("insights tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({}, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should return fallback when backend does not support insights", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({ query: "test" }, {});
 
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 			expect(result.value).toHaveProperty("insights");
 			expect((result.value as any).insights).toEqual([]);
 		});
@@ -112,25 +112,25 @@ describe("insights tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const captureTool = tools[1];
+			const captureTool = tools[1]!;
 
 			const result = await captureTool.execute({}, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should validate insight categories", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as any);
-			const captureTool = tools[1];
+			const captureTool = tools[1]!;
 
 			const result = await captureTool.execute({ content: "test", category: "invalid" }, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
-			expect(result.error?.message).toContain("category must be one of");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.error.message).toContain("category must be one of");
 		});
 	});
 });

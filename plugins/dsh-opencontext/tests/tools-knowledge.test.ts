@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeKnowledgeTools, registerKnowledgeTools } from "../src/tools-knowledge.js";
-import { makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
 describe("knowledge tools", () => {
 	describe("makeKnowledgeTools", () => {
@@ -13,16 +13,16 @@ describe("knowledge tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
 			expect(tools).toHaveLength(3);
-			expect(tools[0].name).toBe("oc_knowledge_search");
-			expect(tools[1].name).toBe("oc_document_upload");
-			expect(tools[2].name).toBe("oc_document_list");
+			expect(tools[0]!.name).toBe("oc_knowledge_search");
+			expect(tools[1]!.name).toBe("oc_document_upload");
+			expect(tools[2]!.name).toBe("oc_document_list");
 		});
 
 		it("oc_knowledge_search should have correct structure", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			expect(searchTool.name).toBe("oc_knowledge_search");
 			expect(searchTool.kind).toBe("search");
@@ -36,7 +36,7 @@ describe("knowledge tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const uploadTool = tools[1];
+			const uploadTool = tools[1]!;
 
 			expect(uploadTool.name).toBe("oc_document_upload");
 			expect(uploadTool.kind).toBe("read");
@@ -49,7 +49,7 @@ describe("knowledge tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const listTool = tools[2];
+			const listTool = tools[2]!;
 
 			expect(listTool.name).toBe("oc_document_list");
 			expect(listTool.kind).toBe("read");
@@ -98,23 +98,23 @@ describe("knowledge tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({}, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should return fallback when backend does not support knowledge", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const searchTool = tools[0];
+			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({ query: "test" }, {});
 
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 			expect(result.value).toHaveProperty("chunks");
 			expect((result.value as any).chunks).toEqual([]);
 		});
@@ -125,24 +125,24 @@ describe("knowledge tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const uploadTool = tools[1];
+			const uploadTool = tools[1]!;
 
 			const result = await uploadTool.execute({ filename: "test.txt" }, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should return error when filename is missing", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeKnowledgeTools(backend, config as any);
-			const uploadTool = tools[1];
+			const uploadTool = tools[1]!;
 
 			const result = await uploadTool.execute({ content: "test" }, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 	});
 });

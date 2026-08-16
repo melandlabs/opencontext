@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { makeSummaryTools, registerSummaryTools } from "../src/tools-summary.js";
-import { makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
 describe("summary tools", () => {
 	describe("makeSummaryTools", () => {
@@ -13,16 +13,16 @@ describe("summary tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
 			expect(tools).toHaveLength(3);
-			expect(tools[0].name).toBe("oc_session_summary");
-			expect(tools[1].name).toBe("oc_task_outcome");
-			expect(tools[2].name).toBe("oc_recent_summaries");
+			expect(tools[0]!.name).toBe("oc_session_summary");
+			expect(tools[1]!.name).toBe("oc_task_outcome");
+			expect(tools[2]!.name).toBe("oc_recent_summaries");
 		});
 
 		it("oc_session_summary should have correct structure", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const summaryTool = tools[0];
+			const summaryTool = tools[0]!;
 
 			expect(summaryTool.name).toBe("oc_session_summary");
 			expect(summaryTool.kind).toBe("read");
@@ -35,7 +35,7 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const outcomeTool = tools[1];
+			const outcomeTool = tools[1]!;
 
 			expect(outcomeTool.name).toBe("oc_task_outcome");
 			expect(outcomeTool.kind).toBe("read");
@@ -48,7 +48,7 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const listTool = tools[2];
+			const listTool = tools[2]!;
 
 			expect(listTool.name).toBe("oc_recent_summaries");
 			expect(listTool.kind).toBe("read");
@@ -98,12 +98,12 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const summaryTool = tools[0];
+			const summaryTool = tools[0]!;
 
 			const result = await summaryTool.execute({}, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should call backend.remember with correct params", async () => {
@@ -111,7 +111,7 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend({ remember });
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const summaryTool = tools[0];
+			const summaryTool = tools[0]!;
 
 			const result = await summaryTool.execute(
 				{ summary: "Test summary", tags: ["tag1"], metadata: { key: "value" } },
@@ -129,7 +129,7 @@ describe("summary tools", () => {
 				}),
 				expect.anything(),
 			);
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 		});
 	});
 
@@ -138,12 +138,12 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const outcomeTool = tools[1];
+			const outcomeTool = tools[1]!;
 
 			const result = await outcomeTool.execute({}, {});
 
-			expect(result.ok).toBe(false);
-			expect(result.error?.code).toBe("invalid_arguments");
+			assertToolError(result);
+			expect(result.error.code).toBe("invalid_arguments");
 		});
 
 		it("should call backend.remember with task-outcome sourceType", async () => {
@@ -151,7 +151,7 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend({ remember });
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const outcomeTool = tools[1];
+			const outcomeTool = tools[1]!;
 
 			const result = await outcomeTool.execute(
 				{ outcome: "Task completed", taskName: "My Task", status: "completed" },
@@ -169,7 +169,7 @@ describe("summary tools", () => {
 				}),
 				expect.anything(),
 			);
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 		});
 	});
 
@@ -183,11 +183,11 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend({ list });
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const listTool = tools[2];
+			const listTool = tools[2]!;
 
 			const result = await listTool.execute({ limit: 10 }, {});
 
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 			const items = (result.value as any).items;
 			expect(items).toHaveLength(2); // Only session-summary and task-outcome
 			expect(items[0].sourceType).toBe("session-summary");
@@ -202,11 +202,11 @@ describe("summary tools", () => {
 			const backend = makeFakeBackend({ list });
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as any);
-			const listTool = tools[2];
+			const listTool = tools[2]!;
 
 			const result = await listTool.execute({ sourceTypes: ["session-summary"] }, {});
 
-			expect(result.ok).toBe(true);
+			assertToolOk(result);
 			const items = (result.value as any).items;
 			expect(items).toHaveLength(1);
 			expect(items[0].sourceType).toBe("session-summary");

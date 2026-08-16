@@ -242,7 +242,9 @@ describe("events-turn-end", () => {
 
 			await handler!(payload);
 
-			const summaryArg = remember.mock.calls[0][0];
+			const call = remember.mock.calls[0];
+			expect(call).toBeDefined();
+			const summaryArg = call![0];
 			expect(summaryArg.content).toContain("User:");
 			expect(summaryArg.content).toContain("Tools used:");
 		});

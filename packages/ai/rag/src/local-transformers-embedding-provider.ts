@@ -1,6 +1,15 @@
+import * as os from "node:os";
+import * as path from "node:path";
+
 import type { EmbeddingProvider } from "./embedding-provider";
 
 const DEFAULT_LOCAL_EMBEDDING_MODEL = "Xenova/all-MiniLM-L6-v2";
+const DEFAULT_LOCAL_EMBEDDING_CACHE_DIR = path.join(
+	os.homedir(),
+	".cache",
+	"opencontext",
+	"local-embeddings",
+);
 const DEFAULT_LOCAL_EMBEDDING_BATCH_SIZE = 8;
 const DEFAULT_LOCAL_EMBEDDING_MAX_TOKENS = 512;
 const DEFAULT_LOCAL_EMBEDDING_POOLING = "mean";
@@ -44,7 +53,12 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 	constructor(options: LocalTransformersEmbeddingProviderOptions = {}) {
 		this.modelName = options.modelName || process.env.LOCAL_EMBEDDING_MODEL || DEFAULT_LOCAL_EMBEDDING_MODEL;
 		this.batchSize = options.batchSize ?? getLocalEmbeddingBatchSize();
-		this.cacheDir = options.cacheDir || process.env.LOCAL_EMBEDDING_CACHE_DIR || undefined;
+		// Use a stable, user-level cache directory by default so the model weights
+		// survive `npx` installs (which use a fresh, throw-away node_modules tree).
+		// Without this, Transformers.js falls back to `<transformers-pkg>/.cache`,
+		// which is empty for every new npx temp directory.
+		this.cacheDir =
+			options.cacheDir || process.env.LOCAL_EMBEDDING_CACHE_DIR || DEFAULT_LOCAL_EMBEDDING_CACHE_DIR;
 		this.remoteHost = options.remoteHost || process.env.LOCAL_EMBEDDING_REMOTE_HOST || undefined;
 		this.device = options.device || process.env.LOCAL_EMBEDDING_DEVICE || undefined;
 		this.dtype = options.dtype || process.env.LOCAL_EMBEDDING_DTYPE || undefined;
@@ -60,6 +74,10 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 
 	getDimensions(): number | undefined {
 		return this.dimensions;
+	}
+
+	getCacheDir(): string | undefined {
+		return this.cacheDir;
 	}
 
 	async embedDocuments(texts: string[]): Promise<number[][]> {

@@ -137,11 +137,11 @@ async function rememberFact(userId: string, content: string) {
 
 ### Pattern 3: MCP Server (for AI Agents)
 
-Integrate with Claude Desktop, Cursor, or any MCP-compatible agent:
+Integrate with coding agent integration:
 
-**Installation (Claude Desktop):**
+**Installation (coding agent integration):**
 
-Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%/Claude/claude_desktop_config.json` (Windows):
+Add the OpenContext MCP server to your coding agent's configuration:
 
 ```json
 {
@@ -173,7 +173,7 @@ Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) o
 
 ```typescript
 // Your agent can now call these tools via MCP
-// Claude Desktop will automatically expose them
+// Your coding agent will automatically expose them
 ```
 
 ## Backend Selection Guide

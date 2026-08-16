@@ -15,9 +15,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import type { RawMessage } from "@melandlabs/indexeddb/storage";
+import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 import { createMemoryStore } from "./index";
 import { createRawMessageStore } from "./storage/raw-message-store";
-import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 
 let scratchDir: string;
 

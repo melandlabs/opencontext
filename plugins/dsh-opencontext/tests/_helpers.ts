@@ -6,10 +6,11 @@
  * stub in each test by reassigning the relevant module exports.
  */
 
-import { vi } from "vitest";
+import { expect, vi } from "vitest";
 
 import type { OpenContextBackend, SearchHit, MemoryItem } from "../src/backend.js";
 import type { ResolvedConfig } from "../src/config.js";
+import type { ToolError, ToolOk, ToolResult } from "../src/errors.js";
 
 export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
 	return {
@@ -22,8 +23,20 @@ export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedCon
 		capturePrompts: true,
 		flushOnCapture: false,
 		maxRecallItems: 4,
+		autoSummarize: false,
+		captureToolResults: false,
+		enableInsights: true,
+		enableKnowledge: true,
 		...overrides,
 	};
+}
+
+export function assertToolError<T>(result: ToolResult<T>): asserts result is ToolError {
+	expect(result.ok).toBe(false);
+}
+
+export function assertToolOk<T>(result: ToolResult<T>): asserts result is ToolOk<T> {
+	expect(result.ok).toBe(true);
 }
 
 export function makeSearchHit(over: Partial<SearchHit> = {}): SearchHit {

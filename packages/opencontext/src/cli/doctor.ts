@@ -480,7 +480,12 @@ function checkLoopPreferences(): CheckResult {
 	}
 }
 
-function checkLoopCli(): CheckResult {
+/**
+ * Test seam: pass a custom `moduleUrl` to override the `import.meta.url`
+ * used for npm-bundle detection. The public `checkLoop()` path leaves it
+ * empty so real invocations use the actual module location.
+ */
+export function checkLoopCli(moduleUrl: string = import.meta.url): CheckResult {
 	try {
 		const cliPath = resolveLoopCli();
 		if (cliPath) {
@@ -491,6 +496,19 @@ function checkLoopCli(): CheckResult {
 				detail: cliPath,
 			};
 		}
+
+		// The shim is only shipped with the host app (Tauri / Next.js standalone /
+		// dev workspace). The published npm bundle does not include loop-cli.mjs,
+		// so npx users should not see a warning they cannot fix.
+		if (isPublishedNpmBundle(moduleUrl)) {
+			return {
+				section: "loop",
+				name: "loop-cli",
+				status: "ok",
+				detail: "not bundled in npm package — loop engine runs in host app",
+			};
+		}
+
 		// Surface the candidates the resolver *did* consider so the user can
 		// set OPENCONTEXT_LOOP_CLI to one of them, mirroring PowerContext's
 		// `loop doctor` UX.
@@ -512,6 +530,21 @@ function checkLoopCli(): CheckResult {
 			status: "warn",
 			detail: `resolveLoopCli threw: ${errMessage(err)}`,
 		};
+	}
+}
+
+/**
+ * Detect whether this doctor module is running from the published npm bundle.
+ * npm / pnpm / yarn all place the package under `node_modules/@melandlabs/opencontext`,
+ * whereas dev/workspace/host-app builds run from `packages/opencontext/...` or
+ * `.next/standalone/...`.
+ */
+function isPublishedNpmBundle(moduleUrl: string = import.meta.url): boolean {
+	try {
+		const here = fileURLToPath(moduleUrl);
+		return /node_modules[/\\]@melandlabs[/\\]opencontext(?:[/\\]|$)/.test(here);
+	} catch {
+		return false;
 	}
 }
 

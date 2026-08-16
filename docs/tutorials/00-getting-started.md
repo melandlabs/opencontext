@@ -235,24 +235,22 @@ curl -X POST http://127.0.0.1:7421/v1/search \
 
 OpenContext ships an MCP server that works with any MCP-compatible coding agent, including:
 
-- **Claude Desktop** - Anthropic's official Claude desktop app
 - **Cursor** - AI code editor
 - **Claude Code** - Anthropic's CLI coding agent
 - **Codex CLI** - Command-line agent runtime
-- And any other MCP-compatible agent
+- And any other MCP-compatible coding agent
 
 ### Setting up MCP
 
 1. Open your agent's MCP configuration:
-   - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%/Claude/claude_desktop_config.json` (Windows)
    - **Cursor**: Settings → MCP Servers
    - **Claude Code**: See its MCP configuration documentation
    - **Codex CLI**: See its MCP server documentation
-   - **Other agents**: Refer to their MCP documentation
+   - **Other coding agents**: Refer to their MCP documentation
 
 2. Add the OpenContext MCP server configuration:
 
-**For Claude Desktop / Claude Code:**
+**For coding agent integration:**
 ```json
 {
   "mcpServers": {

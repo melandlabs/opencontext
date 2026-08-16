@@ -4,10 +4,9 @@
  * Mirrors the `embedding-provider-export.test.ts` env-mutation pattern:
  * every test that mutates `process.env` snapshots the prior value once
  * at module load and restores it in a single shared `afterEach`. The
- * `clear()` helper uses `delete` to truly remove a key — biome's
- * `noDelete` rule is disabled once because Node's `process.env.X =
- * undefined` actually coerces to the string `"undefined"`, which
- * differs in semantics (e.g. `key in process.env`) from a deleted key.
+ * `clearEnvVar()` helper uses `delete` to truly remove a key because
+ * Node's `process.env.X = undefined` coerces to the string `"undefined"`,
+ * which differs in semantics (e.g. `key in process.env`) from a deleted key.
  *
  * No real filesystem side effects: the filesystem section is exercised
  * with an injected `homeDir` pointing at `/tmp/__doctor-test-home__`.
@@ -23,6 +22,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
 	type CheckResult,
 	checkIntegrations,
+	checkLoopCli,
 	checkPolicies,
 	checkRuntime,
 	checkSecurity,
@@ -32,10 +32,9 @@ import {
 	runDoctor,
 } from "./doctor";
 
-// biome-ignore lint/performance/noDelete: `process.env.X = undefined` coerces
-// to the string "undefined" — only `delete` truly removes the key, which
-// the env-restoration pattern needs.
 function clearEnvVar(key: string): void {
+	// `process.env.X = undefined` coerces to the string "undefined" — only
+	// `delete` truly removes the key, which the env-restoration pattern needs.
 	delete process.env[key];
 }
 
@@ -45,6 +44,7 @@ const ENV_SNAPSHOT = {
 	TG_APP_ID: process.env.TG_APP_ID,
 	TG_APP_HASH: process.env.TG_APP_HASH,
 	ENCRYPTION_KEY: process.env.ENCRYPTION_KEY,
+	OPENCONTEXT_LOOP_CLI: process.env.OPENCONTEXT_LOOP_CLI,
 	OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED: process.env.OPENCONTEXT_MEMORY_GRAPH_WRITE_ENABLED,
 	OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED: process.env.OPENCONTEXT_MEMORY_GRAPH_CORRECTION_ENABLED,
 } as const;
@@ -185,5 +185,43 @@ describe("opencontext doctor", () => {
 		const writePolicy = results.find((r: CheckResult) => r.name === "write-policy");
 		expect(writePolicy).toBeDefined();
 		expect(writePolicy?.detail).toContain("memory_graph_write_cohort_miss");
+	});
+
+	// ── 9. checkLoopCli ───────────────────────────────────────────────────
+	it("checkLoopCli warns when loop-cli.mjs is missing in workspace/host-app context", () => {
+		// Pin the env var to a non-existent path so a local loop-cli.mjs
+		// never masks the missing-shim behavior in this test.
+		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
+		const result = checkLoopCli();
+		expect(result.section).toBe("loop");
+		expect(result.name).toBe("loop-cli");
+		expect(result.status).toBe("warn");
+		expect(result.detail).toContain("not found");
+	});
+
+	it("checkLoopCli returns ok for published npm bundle even when shim is missing", () => {
+		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
+		const npmUrl =
+			"file:///Users/timi/.npm/_npx/abcd1234/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
+		const result = checkLoopCli(npmUrl);
+		expect(result.section).toBe("loop");
+		expect(result.name).toBe("loop-cli");
+		expect(result.status).toBe("ok");
+		expect(result.detail).toContain("not bundled");
+	});
+
+	it("checkLoopCli recognizes pnpm nested layout as published bundle", () => {
+		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
+		const pnpmUrl =
+			"file:///Users/timi/codes/some-project/node_modules/.pnpm/@melandlabs+opencontext@0.2.4/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
+		const result = checkLoopCli(pnpmUrl);
+		expect(result.status).toBe("ok");
+	});
+
+	it("checkLoopCli recognizes monorepo source as non-published context", () => {
+		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
+		const workspaceUrl = "file:///Users/timi/codes/opencontext/packages/opencontext/src/cli/doctor.ts";
+		const result = checkLoopCli(workspaceUrl);
+		expect(result.status).toBe("warn");
 	});
 });

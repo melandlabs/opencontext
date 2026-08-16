@@ -1,5 +1,12 @@
 # @melandlabs/memory-store
 
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai-rag@0.2.2
+
 ## 0.1.6
 
 ### Patch Changes

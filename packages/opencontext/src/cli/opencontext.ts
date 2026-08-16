@@ -80,6 +80,7 @@ interface UnifiedConfig {
 interface UnifiedArgs {
 	embeddingProvider: "local" | "openrouter" | "none";
 	embeddingModel?: string;
+	embeddingCacheDir?: string;
 	chromaUrl?: string;
 	memoryBackend: "sqlite-vec" | "chroma" | "none";
 	insightsBackend: "sqlite-vec" | "chroma" | "none";
@@ -104,6 +105,7 @@ function unifiedFromEnv(env: NodeJS.ProcessEnv): UnifiedArgs {
 	return {
 		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
 		embeddingModel: env.EMBEDDING_MODEL,
+		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
 		chromaUrl: env.CHROMA_URL,
 		memoryBackend: (env.MEMORY_BACKEND as UnifiedArgs["memoryBackend"] | undefined) ?? "none",
 		insightsBackend: (env.INSIGHTS_BACKEND as UnifiedArgs["insightsBackend"] | undefined) ?? "none",
@@ -120,6 +122,9 @@ function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => strin
 			break;
 		case "--embedding-model":
 			args.embeddingModel = takeValue();
+			break;
+		case "--embedding-cache-dir":
+			args.embeddingCacheDir = takeValue();
 			break;
 		case "--chroma-url":
 			args.chromaUrl = takeValue();
@@ -242,21 +247,18 @@ async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
 	//      that consults it.
 	if (args.embeddingProvider === "local") {
 		try {
-			const provider = new LocalTransformersEmbeddingProvider({ modelName: args.embeddingModel });
+			const provider = new LocalTransformersEmbeddingProvider({
+				modelName: args.embeddingModel,
+				cacheDir: args.embeddingCacheDir,
+			});
 			unified.embedQuery = async ({ query }) => provider.embedQuery(query);
 			log(
 				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
 			);
 		} catch (error) {
-			log(
-				`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`,
-			);
-			log(
-				"Semantic search will be disabled. The server will continue with keyword-only search.",
-			);
-			log(
-				"To fix: Ensure the model is downloaded or check your network connection to huggingface.co",
-			);
+			log(`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`);
+			log("Semantic search will be disabled. The server will continue with keyword-only search.");
+			log("To fix: Ensure the model is downloaded or check your network connection to huggingface.co");
 			// Don't set unified.embedQuery - the system will fall back to lexical search
 		}
 	} else if (args.embeddingProvider === "openrouter") {
@@ -299,6 +301,7 @@ async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
 			);
 		}
 		unified.searchRawMessagesAnn = async ({ userId, queryEmbedding, limit, threshold, botId }) => {
+			// biome-ignore lint/style/noNonNullAssertion: checked above that manager.searchMessagesSemantically is a function.
 			const rows = (await manager.searchMessagesSemantically!({
 				userId,
 				queryEmbedding,
@@ -413,6 +416,9 @@ Embedding (wires unified.embedQuery):
   --embedding-model <name>        Model name
                                   (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
                                   openrouter → text-embedding-3-small)
+  --embedding-cache-dir <path>    Directory for local ONNX model weights
+                                  (env: LOCAL_EMBEDDING_CACHE_DIR; default:
+                                  ~/.cache/opencontext/local-embeddings)
 
 Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
   --chroma-url <url>              Chroma server URL
@@ -458,6 +464,9 @@ Embedding (wires unified.embedQuery):
   --embedding-model <name>        Model name
                                   (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
                                   openrouter → text-embedding-3-small)
+  --embedding-cache-dir <path>    Directory for local ONNX model weights
+                                  (env: LOCAL_EMBEDDING_CACHE_DIR; default:
+                                  ~/.cache/opencontext/local-embeddings)
 
 Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
   --chroma-url <url>              Chroma server URL

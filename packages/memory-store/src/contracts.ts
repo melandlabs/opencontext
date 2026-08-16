@@ -21,7 +21,6 @@ export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
 /** A locally-defined re-export of the raw-message shape used by the SDK.
  * Kept as a structural type so consumers (SQLite, postgres factories)
  * can pass either the IndexedDB `RawMessage` or this shape. */
-// biome-ignore lint/suspicious/noExplicitAny: structural mirror of `@melandlabs/indexeddb/storage`'s `RawMessage`.
 export interface RawMessage {
 	id?: number;
 	messageId: string;

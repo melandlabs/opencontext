@@ -4,84 +4,102 @@ This guide covers advanced patterns for running OpenContext in production: multi
 
 ## Multi-Source Unified Search
 
-OpenContext can search across multiple data sources simultaneously:
+OpenContext can search across multiple data sources simultaneously. The default setup searches raw memory with a lexical fallback; to enable semantic search you wire an `embedQuery` function. You can also plug in optional `searchInsights` and `searchKnowledge` providers to search extracted facts and uploaded documents in the same call.
 
 ```typescript
-import { createMemoryStore } from "@melandlabs/opencontext";
+// multi-source-search-example.ts
+// Run with: npx tsx multi-source-search-example.ts
+// Note: semantic search needs @melandlabs/ai-rag installed.
+import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
 
-const store = await createMemoryStore({
-  db: { type: "sqlite-vec", path: "./memory.db" },
-  unified: {
-    // Required for semantic search
-    embedQuery: async ({ query }) => {
-      return await myEmbedder.embed(query);
+async function main() {
+  const embeddingProvider = new LocalTransformersEmbeddingProvider({
+    model: "Xenova/all-MiniLM-L6-v2",
+  });
+
+  const store = await createMemoryStore({
+    unified: {
+      embedQuery: async ({ query }) => {
+        return await embeddingProvider.embedQuery({ query });
+      },
+
+      // Optional: search extracted insights (provide your own index).
+      searchInsights: async ({ userId, query, limit, threshold }) => {
+        // Replace with your insights index, e.g. vector DB or graph search.
+        console.log("Searching insights for:", { userId, query, limit, threshold });
+        return [];
+      },
+
+      // Optional: search uploaded documents (provide your own RAG index).
+      searchKnowledge: async ({ userId, query, options }) => {
+        // Replace with your knowledge-base index.
+        console.log("Searching knowledge for:", { userId, query, options });
+        return [];
+      },
     },
+  });
 
-    // Optional: Search raw messages (what users said)
-    searchRawMessagesAnn: async ({ userId, queryEmbedding, limit, threshold }) => {
-      return await postgresManager.searchAnn({
-        userId,
-        embedding: queryEmbedding,
-        limit,
-        threshold: threshold ?? 0.7,
-      });
-    },
+  const results = await store.searchUnifiedMemory({
+    userId: "user-123",
+    query: "What did we decide about the architecture?",
+    sources: ["memory", "insights", "knowledge"],
+    limit: 10,
+    threshold: 0.7,
+    botIds: ["architect-bot"],  // Optional: filter by bot
+    documentIds: ["doc-456"],   // Optional: filter by document
+  });
 
-    // Optional: Search insights (extracted facts)
-    searchInsights: async ({ userId, query, limit, threshold }) => {
-      return await insightIndex.search({
-        userId,
-        query,
-        limit,
-        threshold: threshold ?? 0.7,
-      });
-    },
+  console.log(`Searched ${results.sources.length} source(s)`);
+  for (const warning of results.warnings) {
+    console.warn(`[${warning.source}] ${warning.code}: ${warning.message}`);
+  }
+  for (const hit of results.results) {
+    console.log(`[${hit.type}] ${hit.content} (${hit.similarity})`);
+  }
 
-    // Optional: Search knowledge base (uploaded docs)
-    searchKnowledge: async ({ userId, query, options }) => {
-      return await ragIndex.search({
-        userId,
-        query,
-        limit: options.limit,
-        threshold: options.threshold,
-      });
-    },
-  },
-});
-
-// Search across all configured sources
-const results = await store.searchUnifiedMemory({
-  userId: "user-123",
-  query: "What did we decide about the architecture?",
-  sources: ["memory", "insights", "knowledge"],
-  limit: 10,
-  threshold: 0.7,
-  botIds: ["architect-bot"],  // Optional: filter by bot
-  documentIds: ["doc-456"],   // Optional: filter by document
-});
-
-console.log(`Results from ${results.sources.length} sources`);
-for (const hit of results.results) {
-  console.log(`[${hit.source}] ${hit.content} (${hit.score})`);
+  await store.raw.close();
 }
+
+main().catch((error) => {
+  console.error("Multi-source search failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Temporal (Time-Travel) Queries
 
-Every fact has `valid_from` and `valid_until`, enabling queries as of a specific time:
+Every fact has `valid_from` and `valid_until`, enabling queries as of a specific time. Pass an ISO-8601 string to `asOf`:
 
 ```typescript
-// What did we believe about the project last month?
-const lastMonth = Date.now() - 30 * 24 * 60 * 60 * 1000;
+// temporal-query-example.ts
+// Run with: npx tsx temporal-query-example.ts
+import { createMemoryStore } from "@melandlabs/opencontext";
 
-const results = await store.searchUnifiedMemory({
-  userId: "user-123",
-  query: "project status and timeline",
-  asOf: lastMonth,  // Query as of this timestamp
-  limit: 10,
+async function main() {
+  const store = await createMemoryStore();
+
+  // What did we believe about the project last month?
+  const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const results = await store.searchUnifiedMemory({
+    userId: "user-123",
+    query: "project status and timeline",
+    asOf: lastMonth,  // Query as of this ISO-8601 timestamp
+    limit: 10,
+  });
+
+  console.log(`Found ${results.count} fact(s) that were true last month`);
+  for (const hit of results.results) {
+    console.log(`- ${hit.content}`);
+  }
+
+  await store.raw.close();
+}
+
+main().catch((error) => {
+  console.error("Temporal query failed:", error);
+  process.exit(1);
 });
-
-// The results only include facts that were true at that time
 ```
 
 **Use cases:**
@@ -91,92 +109,132 @@ const results = await store.searchUnifiedMemory({
 
 ## Working with the Temporal Graph
 
-For more advanced temporal queries, access the graph directly:
+For more advanced temporal queries, inspect the raw-message store directly. Every message records when it was created, archived, or deprecated, so you can reconstruct the history of a fact without a separate graph API:
 
 ```typescript
-import { getMemoryGraph } from "@melandlabs/opencontext";
+// temporal-graph-example.ts
+// Run with: npx tsx temporal-graph-example.ts
+import { getRawMessageManager } from "@melandlabs/opencontext";
 
-const graph = await getMemoryGraph();
+async function main() {
+  const manager = await getRawMessageManager();
 
-// Find facts that supersede other facts
-const superseded = await graph.findNodes({
-  edgeType: "supersedes",
-  userId: "user-123",
+  // Query active facts for a user.
+  const active = await manager.queryMessages({
+    userId: "user-123",
+    keywords: ["project status"],
+    includeArchived: false,
+  });
+
+  console.log(`Active facts: ${active.length}`);
+  for (const msg of active) {
+    console.log(`- ${msg.content}`);
+  }
+
+  // Query deprecated / corrected facts to see what changed over time.
+  const deprecated = await manager.queryMessages({
+    userId: "user-123",
+    includeArchived: true,
+  });
+
+  console.log("\nDeprecated or archived facts:");
+  for (const msg of deprecated) {
+    if (msg.deprecatedAt || msg.archivedAt) {
+      console.log(
+        `- ${msg.content}\n  deprecatedAt: ${msg.deprecatedAt ?? "n/a"}\n  archivedAt: ${msg.archivedAt ?? "n/a"}\n  reason: ${msg.deprecationReason ?? "n/a"}`,
+      );
+    }
+  }
+}
+
+main().catch((error) => {
+  console.error("Temporal graph query failed:", error);
+  process.exit(1);
 });
-
-// Find contradictions
-const contradictions = await graph.findNodes({
-  edgeType: "contradicts",
-  userId: "user-123",
-});
-
-// Get full history of a fact
-const history = await graph.getHistory("node-123");
-/*
-[
-  { nodeId: "node-123", validFrom: "2024-01-01", validUntil: "2024-02-01", content: "Version 1" },
-  { nodeId: "node-124", validFrom: "2024-02-01", validUntil: null, content: "Version 2", supersedes: "node-123" }
-]
-*/
 ```
 
 ## Platform Integrations
 
-OpenContext supports multiple platforms with a unified `IntegrationRecord` shape:
+OpenContext supports multiple platforms. Integration IDs are exported from the contracts package, and each platform has a dedicated adapter under `@melandlabs/integrations/*`.
 
 ### Available Platforms
 
 ```typescript
+// list-integrations-example.ts
+// Run with: npx tsx list-integrations-example.ts
 import { INTEGRATION_IDS } from "@melandlabs/opencontext";
 
-console.log(INTEGRATION_IDS);
-// gmail, outlook, slack, discord, teams, telegram, whatsapp,
-// linkedin, instagram, x, facebook_messenger, hubspot, notion,
-// asana, jira, linear, imessage, feishu, dingtalk, qqbot, weixin,
-// google_calendar, google_meet, google_drive, google_docs, rss
-```
-
-### Using an Integration
-
-```typescript
-import { getIntegrationManager } from "@melandlabs/opencontext";
-
-const integrations = await getIntegrationManager();
-
-// Check if an integration is connected
-const isConnected = await integrations.isConnected("gmail", "user-123");
-
-// Fetch messages from Gmail
-const messages = await integrations.fetchMessages({
-  platform: "gmail",
-  userId: "user-123",
-  limit: 50,
-  since: Date.now() - 7 * 24 * 60 * 60 * 1000,  // Last 7 days
-});
-
-// Each message is a normalized IntegrationRecord
-for (const msg of messages) {
-  await rememberFact("user-123", msg.content);
+console.log("Supported integrations:");
+for (const id of INTEGRATION_IDS) {
+  console.log(`- ${id}`);
 }
 ```
 
-### Sending Messages (Write)
+### Ingesting Platform Messages
+
+There is no single `IntegrationManager` facade. Each platform adapter (e.g. `@melandlabs/integrations/gmail`, `@melandlabs/integrations/slack`) returns messages in its own shape. A typical ingestion loop normalizes those messages into `RawMessage` records and stores them:
 
 ```typescript
-// Send a message through Slack
-await integrations.sendMessage({
-  platform: "slack",
-  userId: "user-123",
-  channel: "general",
-  content: "Here's your daily summary...",
+// ingest-messages-example.ts
+// Run with: npx tsx ingest-messages-example.ts
+import { getRawMessageManager } from "@melandlabs/opencontext";
+import type { RawMessage } from "@melandlabs/opencontext";
+
+interface PlatformMessage {
+  id: string;
+  userId: string;
+  content: string;
+  platform: string;
+  timestamp: number;
+}
+
+async function ingestMessages(messages: PlatformMessage[]) {
+  const manager = await getRawMessageManager();
+
+  const rawMessages: RawMessage[] = messages.map((msg) => ({
+    messageId: msg.id,
+    userId: msg.userId,
+    content: msg.content,
+    platform: msg.platform,
+    botId: "ingest-bot",
+    timestamp: msg.timestamp,
+    createdAt: Date.now(),
+  }));
+
+  const ids = await manager.storeMessages(rawMessages);
+  console.log(`Ingested ${ids.length} message(s)`);
+}
+
+async function main() {
+  // Replace this with a real adapter call, e.g. fetchGmailMessages(userId).
+  const exampleMessages: PlatformMessage[] = [
+    {
+      id: `msg-${Date.now()}`,
+      userId: "user-123",
+      content: "Meeting moved to 3pm",
+      platform: "gmail",
+      timestamp: Date.now(),
+    },
+  ];
+
+  await ingestMessages(exampleMessages);
+}
+
+main().catch((error) => {
+  console.error("Ingestion failed:", error);
+  process.exit(1);
 });
 ```
 
+See the individual `@melandlabs/integrations-*` packages for platform-specific authentication, fetching, and sending APIs.
+
 ## The Loop Engine
 
-The Loop engine is a deterministic scheduler that wakes your agent on a schedule:
+The Loop engine is a deterministic scheduler that wakes your agent on a schedule. It stores its config in `~/.opencontext/loop/config.json`.
 
 ```typescript
+// loop-engine-example.ts
+// Run with: npx tsx loop-engine-example.ts
 import {
   LOOP_PATHS,
   ensureDirs,
@@ -184,130 +242,224 @@ import {
   writePreferences,
 } from "@melandlabs/opencontext";
 
-// Ensure Loop directories exist
-ensureDirs();
+async function main() {
+  // Ensure Loop directories exist
+  ensureDirs();
 
-// Read current preferences (or get defaults)
-const prefs = readPreferences();
-console.log("Current interval:", prefs.intervalSec, "seconds");
+  // Read current preferences (or get defaults)
+  const prefs = readPreferences();
+  console.log("Current tick interval:", prefs.intervalSec, "seconds");
+  console.log("Loop enabled:", prefs.enabled);
 
-// Update preferences
-const updated = writePreferences({
-  intervalSec: 300,  // Run every 5 minutes
-  narrative: true,   // Enable narrative mode
-  enabled: true,    // Enable Loop
+  // Update preferences. Only the fields you pass are patched.
+  const updated = writePreferences({
+    enabled: true,
+    intervalSec: 300,          // Tick every 5 minutes
+    narrative: true,           // Generate narrative brief/wrap
+    briefTime: "09:00",        // Morning brief at 9 AM
+    wrapTime: "21:00",         // Evening wrap at 9 PM
+  });
+
+  console.log("Updated preferences:", updated);
+  console.log("Config file:", LOOP_PATHS.config);
+}
+
+main().catch((error) => {
+  console.error("Loop engine example failed:", error);
+  process.exit(1);
 });
-
-console.log("Updated preferences:", updated);
 ```
 
 ### Loop Configuration File
 
-Loop stores its config in `~/.opencontext/loop/config.json`:
+After running the example, `~/.opencontext/loop/config.json` looks similar to:
 
 ```json
 {
   "enabled": true,
   "intervalSec": 300,
-  "narrative": false,
-  "lastRun": 1704067200000,
-  "schedule": []
+  "narrative": true,
+  "briefTime": "09:00",
+  "wrapTime": "21:00",
+  "noReplySkip": true,
+  "promotionSkip": true
 }
 ```
 
 ### Scheduled Tasks
 
+Use the `@melandlabs/cron` package to validate cron expressions and compute the next run time:
+
 ```typescript
-import { validateCronExpression, computeNextRun } from "@melandlabs/opencontext";
+// scheduled-tasks-example.ts
+// Run with: npx tsx scheduled-tasks-example.ts
+import { computeNextRun, validateCronExpression } from "@melandlabs/cron";
 
-// Validate a cron expression
-const isValid = validateCronExpression("0 9 * * *");  // Daily at 9 AM
+async function main() {
+  // Validate a cron expression
+  const isValid = validateCronExpression("0 9 * * *");  // Daily at 9 AM
+  console.log("Cron valid:", isValid);
 
-// Compute next run time
-const nextRun = computeNextRun("0 9 * * *", Date.now());
-console.log("Next run:", new Date(nextRun).toISOString());
+  // Compute next run time. computeNextRun takes a ScheduleConfig object.
+  const nextRun = computeNextRun(
+    { type: "cron", expression: "0 9 * * *" },
+    new Date(),
+  );
+
+  if (nextRun) {
+    console.log("Next run:", nextRun.toISOString());
+  } else {
+    console.log("No next run scheduled");
+  }
+}
+
+main().catch((error) => {
+  console.error("Scheduled task example failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Encryption and Security
 
+These utilities live in `@melandlabs/security` (not re-exported from `@melandlabs/opencontext`).
+
 ### Encrypting Secrets
 
+`TokenEncryption` reads the key from the `ENCRYPTION_KEY` environment variable and expects a 32-byte value (or a password from which a 32-byte key is derived).
+
 ```typescript
-import { TokenEncryption } from "@melandlabs/opencontext";
+// token-encryption-example.ts
+// Run with: ENCRYPTION_KEY=your-32-byte-key-here!!!! npx tsx token-encryption-example.ts
+import { TokenEncryption } from "@melandlabs/security";
 
-// Create an encryptor with your key
-const key = process.env.ENCRYPTION_KEY || "your-32-byte-key-here!!!!";
-const encryptor = new TokenEncryption(key);
+async function main() {
+  const encryptor = new TokenEncryption();
 
-// Encrypt a token
-const encrypted = await encryptor.encrypt("sk-1234567890abcdef");
+  const original = "sk-1234567890abcdef";
 
-// Store it safely
-await database.save({ userId: "user-123", encryptedToken: encrypted });
+  // encryptToken / decryptToken are synchronous
+  const encrypted = encryptor.encryptToken(original);
+  console.log("Encrypted:", encrypted);
 
-// Decrypt it later
-const decrypted = await encryptor.decrypt(encrypted);
-console.log("Decrypted:", decrypted);
+  const decrypted = encryptor.decryptToken(encrypted);
+  console.log("Decrypted:", decrypted);
+}
+
+main().catch((error) => {
+  console.error("Token encryption failed:", error);
+  process.exit(1);
+});
 ```
 
 ### URL Validation (SSRF Protection)
 
 ```typescript
-import { validateUrlForSSRF, isTrustedStorageUrl } from "@melandlabs/opencontext";
+// url-validation-example.ts
+// Run with: npx tsx url-validation-example.ts
+import { isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/security";
 
-// Check if a URL is safe to call
-const safe = await validateUrlForSSRF("https://api.example.com/data");
-// Rejects: plain HTTP, loopback, private IPs, cloud metadata
+async function main() {
+  // validateUrlForSSRF rejects plain HTTP, loopback, private IPs, cloud metadata by default.
+  try {
+    const safe = await validateUrlForSSRF("https://api.example.com/data");
+    console.log("Safe URL:", safe.toString());
+  } catch (error) {
+    console.error("Unsafe URL:", error);
+  }
 
-// Check if a storage URL is trusted
-const trusted = isTrustedStorageUrl("https://s3.amazonaws.com/my-bucket/");
+  // Check if a storage URL is trusted
+  const trusted = isTrustedStorageUrl("https://s3.amazonaws.com/my-bucket/file.txt");
+  console.log("Trusted storage URL:", trusted);
+}
+
+main().catch((error) => {
+  console.error("URL validation failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Voice Capabilities
 
+Voice packages are not re-exported from `@melandlabs/opencontext`; install the specific package you need.
+
 ### Text-to-Speech (Kokoro)
 
+`KokoroPlugin` is browser-focused: it fetches audio from a Kokoro-compatible endpoint and plays it via `HTMLAudioElement`. It is not usable in Node.js/CLI scripts.
+
 ```typescript
-import { LocalKokoroTTS } from "@melandlabs/opencontext";
+// Browser-only example
+import { KokoroPlugin } from "@melandlabs/voice-kokoro";
 
-const tts = new LocalKokoroTTS();
+const tts = new KokoroPlugin({ enabled: true, voice: "af_bella" });
 
-const audioBuffer = await tts.synthesize("Hello, world!");
-// Returns a Buffer containing WAV audio
+// Speaks the text in the browser; returns a Promise that resolves when playback starts.
+await tts.speak("Hello, world!");
 ```
 
 ### Speech-to-Text (Whisper)
 
+`WhisperPlugin` transcribes audio using the OpenAI Whisper API (or a compatible endpoint).
+
 ```typescript
-import { LocalWhisperSTT } from "@melandlabs/opencontext";
+// whisper-example.ts
+// Run with: OPENAI_API_KEY=your-key npx tsx whisper-example.ts
+import { WhisperPlugin } from "@melandlabs/voice-whisper";
 
-const stt = new LocalWhisperSTT();
+async function main() {
+  const stt = new WhisperPlugin({
+    model: "whisper-1",
+    apiKey: process.env.OPENAI_API_KEY,
+  });
 
-const transcript = await stt.transcribe(audioBuffer);
-console.log("Transcript:", transcript);
+  // Load an audio file into a Blob. In the browser you can pass a File directly.
+  const audioBuffer = Buffer.from(/* WAV bytes */);
+  const audioBlob = new Blob([audioBuffer], { type: "audio/wav" });
+
+  const result = await stt.transcribe({
+    file: audioBlob,
+    filename: "voice-input.wav",
+  });
+
+  console.log("Transcript:", result.text);
+}
+
+main().catch((error) => {
+  console.error("Whisper transcription failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Web Search Integration
 
+Web search utilities live in `@melandlabs/search` (not re-exported from `@melandlabs/opencontext`).
+
 ```typescript
-import { needsRealTimeInfo, search } from "@melandlabs/opencontext";
+// web-search-example.ts
+// Run with: BRAVE_SEARCH_API_KEY=your-key npx tsx web-search-example.ts
+import { needsRealTimeInfo, search } from "@melandlabs/search";
 
-// Classify if a query needs real-time info
-const needsLive = needsRealTimeInfo("What's the weather today?");
-console.log("Needs live data:", needsLive);  // true
+async function main() {
+  // Classify if a query needs real-time info
+  const needsLive = needsRealTimeInfo("What's the weather today?");
+  console.log("Needs live data:", needsLive);  // true
 
-// Perform web search
-if (needsLive && process.env.BRAVE_SEARCH_API_KEY) {
-  const results = await search("OpenContext AI memory runtime", {
-    count: 5,
-    countryCode: "US",
-  });
+  // Perform web search (Brave Search API)
+  if (needsLive && process.env.BRAVE_SEARCH_API_KEY) {
+    const results = await search("OpenContext AI memory runtime", "web", 5);
 
-  for (const result of results.web.results) {
-    console.log(`- ${result.title}: ${result.url}`);
-    console.log(`  ${result.description}`);
+    for (const result of results) {
+      console.log(`- ${result.title}: ${result.url}`);
+      console.log(`  ${result.description}`);
+    }
+  } else {
+    console.log("Skipping live search: no BRAVE_SEARCH_API_KEY set");
   }
 }
+
+main().catch((error) => {
+  console.error("Web search failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Audit Logging
@@ -334,56 +486,111 @@ cat ~/.opencontext/logs/audit.jsonl | jq -r 'select(.event=="memory_write") | .u
 ### Batch Operations
 
 ```typescript
-// Batching is faster than individual calls
-const messages = await getRawMessageManager();
+// batch-store-example.ts
+// Run with: npx tsx batch-store-example.ts
+import { getRawMessageManager } from "@melandlabs/opencontext";
 
-// Batch store 1000 messages
-const batch = Array.from({ length: 1000 }, (_, i) => ({
-  messageId: `msg-${i}`,
-  userId: "user-123",
-  content: `Message ${i}`,
-  platform: "test",
-  botId: "test",
-  timestamp: Date.now(),
-  createdAt: Date.now(),
-}));
+async function main() {
+  const messages = await getRawMessageManager();
+  const now = Date.now();
 
-await messages.storeMessages(batch);
+  // Batch store is much faster than individual calls.
+  const batch = Array.from({ length: 1000 }, (_, i) => ({
+    messageId: `msg-${now}-${i}`,
+    userId: "user-123",
+    content: `Message ${i}`,
+    platform: "test",
+    botId: "test-bot",
+    timestamp: now,
+    createdAt: now,
+  }));
+
+  const start = Date.now();
+  const ids = await messages.storeMessages(batch);
+  console.log(`Stored ${ids.length} message(s) in ${Date.now() - start}ms`);
+}
+
+main().catch((error) => {
+  console.error("Batch store failed:", error);
+  process.exit(1);
+});
 ```
 
 ### Embedding Caching
 
-```typescript
-import { LRUCache } from "lru-cache";
+Avoid recomputing embeddings for repeated text by caching them. A `Map` works for short-lived processes; for production, swap in `lru-cache` or a shared cache store.
 
-const embeddingCache = new LRUCache<string, number[]>({
-  max: 1000,  // Cache 1000 embeddings
-});
+```typescript
+// embedding-cache-example.ts
+// Run with: npx tsx embedding-cache-example.ts
+import { LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
+
+const embeddingCache = new Map<string, number[]>();
 
 async function getCachedEmbedding(text: string) {
   const cached = embeddingCache.get(text);
   if (cached) return cached;
 
-  const embedding = await embedder.embed(text);
+  const provider = new LocalTransformersEmbeddingProvider({
+    model: "Xenova/all-MiniLM-L6-v2",
+  });
+  const embedding = await provider.embedQuery({ query: text });
   embeddingCache.set(text, embedding);
   return embedding;
 }
+
+async function main() {
+  const text = "User prefers dark mode";
+
+  const first = await getCachedEmbedding(text);
+  console.log("First embedding dimensions:", first.length);
+
+  const second = await getCachedEmbedding(text);
+  console.log("Cache hit, same embedding:", first === second);
+}
+
+main().catch((error) => {
+  console.error("Embedding cache example failed:", error);
+  process.exit(1);
+});
 ```
 
 ### Connection Pooling (Postgres)
 
+When using the Postgres backend for raw-message storage, configure a connection pool with `postgres` + `drizzle-orm`. These are not bundled with `@melandlabs/opencontext`, so install them separately.
+
 ```typescript
+// postgres-pool-example.ts
+// Run with: DATABASE_URL=postgres://... npx tsx postgres-pool-example.ts
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 
-// Connection pool for Postgres
-const client = postgres(process.env.DATABASE_URL!, {
-  max: 10,  // Max connections
-  idle_timeout: 20,
-  connect_timeout: 10,
-});
+async function main() {
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL is not set");
+  }
 
-const db = drizzle(client, { logger: true });
+  // Connection pool for Postgres
+  const client = postgres(databaseUrl, {
+    max: 10,            // Max connections
+    idle_timeout: 20,
+    connect_timeout: 10,
+  });
+
+  const db = drizzle(client, { logger: true });
+
+  // Example: run a lightweight query to verify connectivity.
+  const result = await db.execute("SELECT 1 as ok");
+  console.log("Connected:", result);
+
+  await client.end();
+}
+
+main().catch((error) => {
+  console.error("Postgres pool example failed:", error);
+  process.exit(1);
+});
 ```
 
 ## Monitoring
@@ -405,28 +612,55 @@ npx @melandlabs/opencontext doctor --json | jq '.ok'
 
 ### Metrics
 
+Track OpenContext usage in your own counters:
+
 ```typescript
-// Track your own metrics
+// metrics-example.ts
+// Run with: npx tsx metrics-example.ts
+import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+
 const metrics = {
   memoryWrites: 0,
   memoryRecalls: 0,
-  embeddings: 0,
 };
 
 async function trackedRemember(userId: string, content: string) {
+  const manager = await getRawMessageManager();
   metrics.memoryWrites++;
-  await rememberFact(userId, content);
+  await manager.storeMessages([{
+    messageId: `msg-${Date.now()}`,
+    userId,
+    content,
+    platform: "tracked",
+    botId: "metrics-bot",
+    timestamp: Date.now(),
+    createdAt: Date.now(),
+  }]);
 }
 
 async function trackedRecall(userId: string, query: string) {
+  const store = await createMemoryStore();
   metrics.memoryRecalls++;
-  return await recallFacts(userId, query);
+  const results = await store.searchUnifiedMemory({ userId, query, limit: 5 });
+  await store.raw.close();
+  return results;
 }
 
-// Log metrics periodically
-setInterval(() => {
+async function main() {
+  await trackedRemember("user-123", "User prefers TypeScript");
+  const results = await trackedRecall("user-123", "What does the user prefer?");
+
   console.log("Metrics:", metrics);
-}, 60000);
+  console.log(`Recalled ${results.count} result(s)`);
+
+  // In a long-running process you might log metrics periodically:
+  // setInterval(() => console.log("Metrics:", metrics), 60000);
+}
+
+main().catch((error) => {
+  console.error("Metrics example failed:", error);
+  process.exit(1);
+});
 ```
 
 ## DeepSeek Harness Plugin

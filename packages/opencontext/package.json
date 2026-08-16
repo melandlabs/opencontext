@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.2.4",
+	"version": "0.2.5",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -21,7 +21,7 @@
 	},
 	"dependencies": {
 		"@hono/node-server": "^1.13.7",
-		"@melandlabs/ai-rag": "^0.2.1",
+		"@melandlabs/ai-rag": "^0.2.2",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",
 		"agentkeepalive": "^4.6.0",

@@ -1,5 +1,13 @@
 # @melandlabs/opencontext
 
+## 0.2.5
+
+### Patch Changes
+
+- Persist local embedding cache to a stable user-level directory so model weights survive `npx` installs, expose `getCacheDir()` on `LocalTransformersEmbeddingProvider`, and add `--embedding-cache-dir` / `LOCAL_EMBEDDING_CACHE_DIR` support to the OpenContext CLI. Also suppress the `loop-cli` warning in `opencontext doctor` when running from the published npm bundle.
+- Updated dependencies
+  - @melandlabs/ai-rag@0.2.2
+
 ## 0.2.3
 
 ### Patch Changes

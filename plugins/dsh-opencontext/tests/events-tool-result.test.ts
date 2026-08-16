@@ -192,7 +192,9 @@ describe("events-tool-result", () => {
 
 			// Verify capture was called
 			expect(captureSource).toHaveBeenCalled();
-			const content = captureSource.mock.calls[0][0].content;
+			const call = captureSource.mock.calls[0];
+			expect(call).toBeDefined();
+			const content = call![0].content;
 			// The password key should be sanitized to [REDACTED]
 			expect(content).toContain("[REDACTED]");
 			// The secret value should not appear in the captured content
@@ -271,7 +273,9 @@ describe("events-tool-result", () => {
 
 			await handler!(payload, next);
 
-			const content = captureSource.mock.calls[0][0].content;
+			const call = captureSource.mock.calls[0];
+			expect(call).toBeDefined();
+			const content = call![0].content;
 			expect(content).toContain("Status: ERROR");
 			expect(content).toContain("Tool failed");
 		});
