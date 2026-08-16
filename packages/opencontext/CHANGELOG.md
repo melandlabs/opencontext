@@ -1,5 +1,12 @@
 # @melandlabs/opencontext
 
+## 0.2.2
+
+### Patch Changes
+
+- Fixed: Added SQLite semantic search fallback for messages with pre-computed embeddings
+- SDK mode semantic search now works with stored embeddings without requiring Chroma
+
 ## 0.2.1
 
 ### Patch Changes

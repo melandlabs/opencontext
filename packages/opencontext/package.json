@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
