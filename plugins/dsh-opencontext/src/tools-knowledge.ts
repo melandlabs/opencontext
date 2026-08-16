@@ -24,8 +24,8 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: string;
-		presentationMeta?: Record<string, unknown>;
+		render: (args: unknown, value: unknown) => unknown;
+		presentationMeta?: (args: unknown, value: unknown) => unknown;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
@@ -93,15 +93,21 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 		},
 		output: {
 			schema: {
-				chunks: {
-					type: "array",
-					items: {
-						id: { type: "string" },
-						content: { type: "string" },
-						documentId: { type: "string" },
-						documentName: { type: "string" },
-						score: { type: "number" },
-						metadata: { type: "object" },
+				type: "object",
+				properties: {
+					chunks: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								id: { type: "string" },
+								content: { type: "string" },
+								documentId: { type: "string" },
+								documentName: { type: "string" },
+								score: { type: "number" },
+								metadata: { type: "object" },
+							},
+						},
 					},
 				},
 			},
@@ -197,8 +203,11 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 		},
 		output: {
 			schema: {
-				documentId: { type: "string" },
-				chunks: { type: "number" },
+				type: "object",
+				properties: {
+					documentId: { type: "string" },
+					chunks: { type: "number" },
+				},
 			},
 			render(args: unknown, value: unknown) {
 				return value;
@@ -256,19 +265,27 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 		},
 		output: {
 			schema: {
-				documents: {
-					type: "array",
-					items: {
-						id: { type: "string" },
-						filename: { type: "string" },
-						mimeType: { type: "string" },
-						uploadedAt: { type: "number" },
-						chunks: { type: "number" },
-						metadata: { type: "object" },
+				type: "object",
+				properties: {
+					documents: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								id: { type: "string" },
+								filename: { type: "string" },
+								mimeType: { type: "string" },
+								uploadedAt: { type: "number" },
+								chunks: { type: "number" },
+								metadata: { type: "object" },
+							},
+						},
 					},
 				},
 			},
-			render: "text/json",
+			render(args: unknown, value: unknown) {
+				return value;
+			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{

@@ -25,8 +25,8 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: string;
-		presentationMeta?: Record<string, unknown>;
+		render: (args: unknown, value: unknown) => unknown;
+		presentationMeta?: (args: unknown, value: unknown) => unknown;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
@@ -108,15 +108,21 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 		},
 		output: {
 			schema: {
-				insights: {
-					type: "array",
-					items: {
-						id: { type: "string" },
-						content: { type: "string" },
-						category: { type: "string" },
-						score: { type: "number" },
-						timestamp: { type: "number" },
-						metadata: { type: "object" },
+				type: "object",
+				properties: {
+					insights: {
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								id: { type: "string" },
+								content: { type: "string" },
+								category: { type: "string" },
+								score: { type: "number" },
+								timestamp: { type: "number" },
+								metadata: { type: "object" },
+							},
+						},
 					},
 				},
 			},
@@ -210,7 +216,10 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 		},
 		output: {
 			schema: {
-				id: { type: "string" },
+				type: "object",
+				properties: {
+					id: { type: "string" },
+				},
 			},
 			render(args: unknown, value: unknown) {
 				return value;

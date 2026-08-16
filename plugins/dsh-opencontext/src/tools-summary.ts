@@ -24,8 +24,8 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: string;
-		presentationMeta?: Record<string, unknown>;
+		render: (args: unknown, value: unknown) => unknown;
+		presentationMeta?: (args: unknown, value: unknown) => unknown;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
@@ -90,9 +90,14 @@ function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedC
 		},
 		output: {
 			schema: {
-				id: { type: "string" },
+				type: "object",
+				properties: {
+					id: { type: "string" },
+				},
 			},
-			render: "text/json",
+			render(args: unknown, value: unknown) {
+				return value;
+			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
@@ -153,9 +158,14 @@ function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConf
 		},
 		output: {
 			schema: {
-				id: { type: "string" },
+				type: "object",
+				properties: {
+					id: { type: "string" },
+				},
 			},
-			render: "text/json",
+			render(args: unknown, value: unknown) {
+				return value;
+			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
@@ -211,18 +221,26 @@ function createRecentSummariesTool(backend: OpenContextBackend, config: Resolved
 		},
 		output: {
 			schema: {
-				items: {
-					type: "array",
+				type: "object",
+				properties: {
 					items: {
-						id: { type: "string" },
-						content: { type: "string" },
-						sourceType: { type: "string" },
-						timestamp: { type: "number" },
-						metadata: { type: "object" },
+						type: "array",
+						items: {
+							type: "object",
+							properties: {
+								id: { type: "string" },
+								content: { type: "string" },
+								sourceType: { type: "string" },
+								timestamp: { type: "number" },
+								metadata: { type: "object" },
+							},
+						},
 					},
 				},
 			},
-			render: "text/json",
+			render(args: unknown, value: unknown) {
+				return value;
+			},
 		},
 		execute: async (args, ctx) =>
 			runTool<{
