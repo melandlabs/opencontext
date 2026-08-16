@@ -149,7 +149,103 @@ export * from "@melandlabs/loop";
 // `UserType` from `@melandlabs/ai` is renamed to `AIUserType` here.
 export * from "./ai-reexport";
 
-// ─── 6. CLI entry points (used by the bundled bin scripts in dist/cli/) ──
+// ─── 6. Cron: scheduling primitives ────────────────────────────────────────
+export {
+	computeNextRun,
+	createJobExecutionStreamResponse,
+	formatDate,
+	isJobDue,
+	parseDate,
+	validateCronExpression,
+} from "@melandlabs/cron";
+export type {
+	CronJob,
+	ExecuteJobOptions,
+	JobAgentStreamEvent,
+	JobConfig,
+	JobExecutionContext,
+	JobExecutionResult,
+	JobTimezoneSource,
+	ScheduleConfig,
+	ScheduledJobLike,
+	SchedulerConfig,
+	SchedulerEvent,
+} from "@melandlabs/cron";
+
+// ─── 7. Security: token encryption + SSRF protection ───────────────────────
+export {
+	SSRFValidationError,
+	TokenEncryption,
+	decryptToken,
+	decryptTokenPair,
+	encryptToken,
+	encryptTokenPair,
+	fetchWithSSRFProtection,
+	isTrustedStorageUrl,
+	validateUrlForSSRF,
+} from "@melandlabs/security";
+export type { DerivedKey } from "@melandlabs/security";
+
+// ─── 8. Search: live web search + query classifier ────────────────────────
+export { needsRealTimeInfo, search } from "@melandlabs/search";
+// SearchResult collides with the identically-named type from @melandlabs/rag;
+// expose it under a web-search-specific name on the facade.
+export type { SearchResult as WebSearchResult, SearchType } from "@melandlabs/search";
+
+// ─── 9. Audit: structured operation logging ────────────────────────────────
+export {
+	AUDIT_LOG_PATH,
+	clearAuditLogs,
+	installAuditInterceptors,
+	logCommandExec,
+	logCredentialAccess,
+	logFileRead,
+	readAuditLogs,
+} from "@melandlabs/audit";
+export type { AuditEntry, CredentialAccessEntry } from "@melandlabs/audit";
+
+// ─── 10. Voice: browser-oriented TTS / STT plugins ─────────────────────────
+export { KokoroPlugin } from "@melandlabs/voice-kokoro";
+export { WhisperPlugin } from "@melandlabs/voice-whisper";
+export type {
+	WhisperPluginOptions,
+	WhisperTranscriptionInput,
+	WhisperTranscriptionResult,
+} from "@melandlabs/voice-whisper";
+
+// ─── 11. Integrations: platform context factory ────────────────────────────
+export { createMinimalContext } from "@melandlabs/integrations/core";
+export type {
+	AIHandler,
+	AIHandlerOptions,
+	AppConfigProvider,
+	AttachmentDownloadPayload,
+	AuthProvider,
+	BaileysAuthStateProvider,
+	Bot,
+	ClientRegistry,
+	CloudSyncProvider,
+	ConfigProvider,
+	CredentialStore,
+	FileIngester,
+	InboundMessageHandler,
+	IngestExternalOptions,
+	IngestResult,
+	IngestedAttachment,
+	IntegrationAccount,
+	IntegrationAccountWithBot,
+	IntegrationContext,
+	LocalUserType,
+	PlatformId,
+	SessionStore,
+} from "@melandlabs/integrations/core";
+
+// Tutorial-compatibility aliases for APIs that were renamed after the docs were written.
+export { KokoroPlugin as LocalKokoroTTS } from "@melandlabs/voice-kokoro";
+export { WhisperPlugin as LocalWhisperSTT } from "@melandlabs/voice-whisper";
+export { createMinimalContext as getIntegrationManager } from "@melandlabs/integrations/core";
+
+// ─── 12. CLI entry points (used by the bundled bin scripts in dist/cli/) ──
 // Re-export the server starters so the CLI bins can import them through
 // the facade's main bundle (one canonical copy of the code).
 export { startHttpServer } from "@melandlabs/memory-store/http";

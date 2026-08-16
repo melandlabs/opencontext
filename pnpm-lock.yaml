@@ -1050,9 +1050,15 @@ importers:
       '@melandlabs/contracts':
         specifier: workspace:*
         version: link:../contracts
+      '@melandlabs/cron':
+        specifier: workspace:*
+        version: link:../cron
       '@melandlabs/indexeddb':
         specifier: workspace:*
         version: link:../indexeddb
+      '@melandlabs/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       '@melandlabs/loop':
         specifier: workspace:*
         version: link:../loop
@@ -1062,12 +1068,24 @@ importers:
       '@melandlabs/rag':
         specifier: workspace:*
         version: link:../rag
+      '@melandlabs/search':
+        specifier: workspace:*
+        version: link:../search
+      '@melandlabs/security':
+        specifier: workspace:*
+        version: link:../security
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../shared
       '@melandlabs/sqlite':
         specifier: workspace:*
         version: link:../sqlite
+      '@melandlabs/voice-kokoro':
+        specifier: workspace:*
+        version: link:../voice-kokoro
+      '@melandlabs/voice-whisper':
+        specifier: workspace:*
+        version: link:../voice-whisper
       '@types/node':
         specifier: ^22.13.10
         version: 22.20.1
