@@ -22,6 +22,11 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
+	output?: {
+		schema: Record<string, unknown>;
+		render: string;
+		presentationMeta?: Record<string, unknown>;
+	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
@@ -84,6 +89,24 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 			threshold: {
 				type: "number",
 				description: "Minimum similarity threshold (0-1, default 0.6)",
+			},
+		},
+		output: {
+			schema: {
+				chunks: {
+					type: "array",
+					items: {
+						id: { type: "string" },
+						content: { type: "string" },
+						documentId: { type: "string" },
+						documentName: { type: "string" },
+						score: { type: "number" },
+						metadata: { type: "object" },
+					},
+				},
+			},
+			render(args: unknown, value: unknown) {
+				return value;
 			},
 		},
 		execute: async (args, ctx) =>
@@ -172,6 +195,15 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Optional metadata (e.g. { category: 'spec', version: '1.0' })",
 			},
 		},
+		output: {
+			schema: {
+				documentId: { type: "string" },
+				chunks: { type: "number" },
+			},
+			render(args: unknown, value: unknown) {
+				return value;
+			},
+		},
 		execute: async (args, ctx) =>
 			runTool<{ documentId: string; chunks: number }>(async () => {
 				const content = String(args.content ?? "");
@@ -221,6 +253,22 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 				type: "number",
 				description: "Maximum documents to return (default 50, max 200).",
 			},
+		},
+		output: {
+			schema: {
+				documents: {
+					type: "array",
+					items: {
+						id: { type: "string" },
+						filename: { type: "string" },
+						mimeType: { type: "string" },
+						uploadedAt: { type: "number" },
+						chunks: { type: "number" },
+						metadata: { type: "object" },
+					},
+				},
+			},
+			render: "text/json",
 		},
 		execute: async (args, ctx) =>
 			runTool<{

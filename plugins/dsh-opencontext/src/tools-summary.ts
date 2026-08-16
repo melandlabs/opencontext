@@ -22,6 +22,11 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
+	output?: {
+		schema: Record<string, unknown>;
+		render: string;
+		presentationMeta?: Record<string, unknown>;
+	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
@@ -83,6 +88,12 @@ function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Optional metadata (e.g. { project: 'X', milestone: 'Y' })",
 			},
 		},
+		output: {
+			schema: {
+				id: { type: "string" },
+			},
+			render: "text/json",
+		},
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const summary = String(args.summary ?? "").trim();
@@ -140,6 +151,12 @@ function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConf
 				description: "Optional metadata",
 			},
 		},
+		output: {
+			schema: {
+				id: { type: "string" },
+			},
+			render: "text/json",
+		},
 		execute: async (args, ctx) =>
 			runTool<{ id: string }>(async () => {
 				const outcome = String(args.outcome ?? "").trim();
@@ -191,6 +208,21 @@ function createRecentSummariesTool(backend: OpenContextBackend, config: Resolved
 				items: { type: "string" },
 				description: "Filter by source type (e.g. ['session-summary', 'task-outcome'])",
 			},
+		},
+		output: {
+			schema: {
+				items: {
+					type: "array",
+					items: {
+						id: { type: "string" },
+						content: { type: "string" },
+						sourceType: { type: "string" },
+						timestamp: { type: "number" },
+						metadata: { type: "object" },
+					},
+				},
+			},
+			render: "text/json",
 		},
 		execute: async (args, ctx) =>
 			runTool<{

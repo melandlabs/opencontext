@@ -23,6 +23,11 @@ export type ToolDefinition = {
 	description: string;
 	parameters: Record<string, unknown>;
 	kind?: "search" | "read";
+	output?: {
+		schema: Record<string, unknown>;
+		render: string;
+		presentationMeta?: Record<string, unknown>;
+	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
 
@@ -99,6 +104,24 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 			since: {
 				type: "number",
 				description: "Only return insights after this epoch ms timestamp.",
+			},
+		},
+		output: {
+			schema: {
+				insights: {
+					type: "array",
+					items: {
+						id: { type: "string" },
+						content: { type: "string" },
+						category: { type: "string" },
+						score: { type: "number" },
+						timestamp: { type: "number" },
+						metadata: { type: "object" },
+					},
+				},
+			},
+			render(args: unknown, value: unknown) {
+				return value;
 			},
 		},
 		execute: async (args, ctx) =>
@@ -183,6 +206,14 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 				type: "object",
 				additionalProperties: true,
 				description: "Optional metadata (e.g. { relatedTo: 'project-X' })",
+			},
+		},
+		output: {
+			schema: {
+				id: { type: "string" },
+			},
+			render(args: unknown, value: unknown) {
+				return value;
 			},
 		},
 		execute: async (args, ctx) =>
