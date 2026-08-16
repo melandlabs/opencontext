@@ -160,7 +160,7 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 					// Fallback if backend doesn't support insights yet
 					return toolOk({
 						insights: [],
-						note: "Insights search not yet available in this backend mode",
+						note: "Insights search is not available because the backend does not expose an insights store.",
 					});
 				}
 
@@ -228,7 +228,10 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 				);
 
 				if (!result) {
-					return toolError("backend_unavailable", "Insight capture not yet available in this backend mode");
+					return toolError(
+						"backend_unavailable",
+						"Insight capture is not available because the backend does not expose an insights store.",
+					);
 				}
 
 				return toolOk({ id: result.id });

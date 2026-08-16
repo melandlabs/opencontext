@@ -142,7 +142,7 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 				if (!result) {
 					return toolOk({
 						chunks: [],
-						note: "Knowledge search is not available in lib mode. To search uploaded documents, run OpenContext HTTP with --knowledge-backend=chroma and point OPENCONTEXT_DSH_HTTP_URL at it.",
+						note: "Knowledge search is not available because the backend does not expose a knowledge store.",
 					});
 				}
 
@@ -217,7 +217,7 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 				if (!result) {
 					return toolError(
 						"backend_unavailable",
-						"Document upload is not supported in lib mode. It requires HTTP mode with --knowledge-backend=chroma. Set OPENCONTEXT_DSH_HTTP_URL to a running OpenContext HTTP daemon that has a Chroma knowledge backend configured.",
+						"Document upload is not available because the backend does not expose a knowledge store.",
 					);
 				}
 
@@ -259,7 +259,7 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 				if (!result) {
 					return toolOk({
 						documents: [],
-						note: "Document listing is not available in lib mode. It requires HTTP mode with --knowledge-backend=chroma and OPENCONTEXT_DSH_HTTP_URL pointing to a compatible OpenContext daemon.",
+						note: "Document listing is not available because the backend does not expose a knowledge store.",
 					});
 				}
 

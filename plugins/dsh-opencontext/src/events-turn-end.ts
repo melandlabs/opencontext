@@ -104,9 +104,8 @@ export function registerTurnEndListener(
 	config: ResolvedConfig,
 ): () => void {
 	// Read config flags
-	const autoSummarize = (config as ResolvedConfig & { autoSummarize?: boolean }).autoSummarize ?? false;
-	const captureToolOutcomes =
-		(config as ResolvedConfig & { captureToolOutcomes?: boolean }).captureToolOutcomes ?? true;
+	const autoSummarize = config.autoSummarize ?? false;
+	const captureToolOutcomes = config.captureToolOutcomes ?? true;
 
 	const handler = async (payload: unknown): Promise<TurnEndResult> => {
 		const result: TurnEndResult = {

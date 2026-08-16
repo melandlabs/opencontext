@@ -83,6 +83,75 @@ export interface BackendCallOptions {
 	timeoutMs?: number;
 }
 
+export interface KnowledgeChunkResult {
+	id: string;
+	content: string;
+	documentId: string;
+	documentName: string;
+	score: number;
+	chunkIndex: number;
+	metadata?: Record<string, unknown>;
+}
+
+export interface KnowledgeDocumentResult {
+	id: string;
+	filename: string;
+	mimeType: string;
+	uploadedAt: number;
+	chunks: number;
+	metadata?: Record<string, unknown>;
+}
+
+export interface UploadDocumentInput {
+	content: string;
+	filename: string;
+	mimeType: string;
+	metadata?: Record<string, unknown>;
+	scopeId: string;
+	userId: string;
+}
+
+export interface SearchKnowledgeInput {
+	query: string;
+	documentIds?: string[];
+	limit: number;
+	threshold: number;
+	scopeId: string;
+	userId: string;
+}
+
+export interface ListDocumentsInput {
+	limit: number;
+	scopeId: string;
+	userId: string;
+}
+
+export interface InsightResult {
+	id: string;
+	content: string;
+	category: string;
+	score: number;
+	timestamp?: number;
+	metadata?: Record<string, unknown>;
+}
+
+export interface SearchInsightsInput {
+	query: string;
+	categories?: string[];
+	limit: number;
+	threshold: number;
+	scopeId: string;
+	userId: string;
+}
+
+export interface CaptureInsightInput {
+	content: string;
+	category: string;
+	metadata?: Record<string, unknown>;
+	scopeId: string;
+	userId: string;
+}
+
 export interface OpenContextBackend {
 	readonly mode: "lib" | "http";
 	search(input: SearchInput, opts?: BackendCallOptions): Promise<SearchHit[]>;
@@ -98,6 +167,23 @@ export interface OpenContextBackend {
 		opts?: BackendCallOptions,
 	): Promise<{ ok: true }>;
 	captureSource(input: CaptureInput, opts?: BackendCallOptions): Promise<{ id: string }>;
+	uploadDocument?(
+		input: UploadDocumentInput,
+		opts?: BackendCallOptions,
+	): Promise<{ documentId: string; chunks: number }>;
+	searchKnowledge?(
+		input: SearchKnowledgeInput,
+		opts?: BackendCallOptions,
+	): Promise<{ chunks: KnowledgeChunkResult[] }>;
+	listDocuments?(
+		input: ListDocumentsInput,
+		opts?: BackendCallOptions,
+	): Promise<{ documents: KnowledgeDocumentResult[] }>;
+	searchInsights?(
+		input: SearchInsightsInput,
+		opts?: BackendCallOptions,
+	): Promise<{ insights: InsightResult[] }>;
+	captureInsight?(input: CaptureInsightInput, opts?: BackendCallOptions): Promise<{ id: string }>;
 	health(): Promise<{ ok: boolean; mode: "lib" | "http"; details?: string }>;
 	dispose?(): Promise<void>;
 }

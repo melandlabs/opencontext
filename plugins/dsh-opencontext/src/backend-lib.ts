@@ -29,8 +29,14 @@ import type {
 	ReviseInput,
 	SearchHit,
 	SearchInput,
+	UploadDocumentInput,
+	SearchKnowledgeInput,
+	ListDocumentsInput,
+	SearchInsightsInput,
+	CaptureInsightInput,
 } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { LibKnowledgeStore, KnowledgeUnavailableError } from "./knowledge-store.js";
 
 interface RawManager {
 	storeMessages(messages: unknown[]): Promise<number[]>;
@@ -186,6 +192,14 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 	const resolveUser = (override?: string): string => override || config.scopeId || "dsh-default";
 	const resolveBot = (override?: string): string => override || DEFAULT_BOT_ID;
 
+	let knowledgeStore: LibKnowledgeStore | null = null;
+	function getKnowledgeStore(): LibKnowledgeStore {
+		if (!knowledgeStore) {
+			knowledgeStore = new LibKnowledgeStore({});
+		}
+		return knowledgeStore;
+	}
+
 	async function search(input: SearchInput, opts?: BackendCallOptions): Promise<SearchHit[]> {
 		const { manager, search, ready } = await ensureInit();
 		if (!ready) return [];
@@ -213,13 +227,10 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 						metadata: r.metadata,
 					});
 				}
-				// If the unified search surfaced no hits but warned that a source
-				// failed (most commonly: no embedQuery configured), fall through
-				// to the lexical raw-message search so the plugin still returns
+				// If the unified search surfaced no hits, fall through to the
+				// lexical raw-message search so the plugin still returns
 				// something useful out of the box.
-				if (hits.length === 0 && (result.warnings?.length ?? 0) > 0) {
-					// fall through
-				} else {
+				if (hits.length > 0) {
 					return hits;
 				}
 			} catch {
@@ -394,6 +405,132 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		return { id };
 	}
 
+	async function uploadDocument(
+		input: UploadDocumentInput,
+		opts?: BackendCallOptions,
+	): Promise<{ documentId: string; chunks: number }> {
+		const store = getKnowledgeStore();
+		return await withTimeout(
+			store.uploadDocument({
+				content: input.content,
+				filename: input.filename,
+				mimeType: input.mimeType,
+				metadata: input.metadata,
+				scopeId: input.scopeId || config.scopeId || "dsh-default",
+				userId: input.userId || config.scopeId || "dsh-default",
+			}),
+			opts?.timeoutMs ?? config.timeoutMs,
+			opts?.signal,
+		);
+	}
+
+	async function searchKnowledge(
+		input: SearchKnowledgeInput,
+		opts?: BackendCallOptions,
+	): Promise<{ chunks: import("./backend.js").KnowledgeChunkResult[] }> {
+		const store = getKnowledgeStore();
+		return await withTimeout(
+			store.searchKnowledge({
+				query: input.query,
+				documentIds: input.documentIds,
+				limit: input.limit,
+				threshold: input.threshold,
+				scopeId: input.scopeId || config.scopeId || "dsh-default",
+				userId: input.userId || config.scopeId || "dsh-default",
+			}),
+			opts?.timeoutMs ?? config.timeoutMs,
+			opts?.signal,
+		);
+	}
+
+	async function listDocuments(
+		input: ListDocumentsInput,
+		opts?: BackendCallOptions,
+	): Promise<{ documents: import("./backend.js").KnowledgeDocumentResult[] }> {
+		const store = getKnowledgeStore();
+		return await withTimeout(
+			store.listDocuments({
+				limit: input.limit,
+				scopeId: input.scopeId || config.scopeId || "dsh-default",
+				userId: input.userId || config.scopeId || "dsh-default",
+			}),
+			opts?.timeoutMs ?? config.timeoutMs,
+			opts?.signal,
+		);
+	}
+
+	async function searchInsights(
+		input: SearchInsightsInput,
+		opts?: BackendCallOptions,
+	): Promise<{ insights: import("./backend.js").InsightResult[] }> {
+		const userId = input.userId || config.scopeId || "dsh-default";
+		const scopeId = input.scopeId || config.scopeId || "dsh-default";
+
+		// Search returns a stripped metadata view, so first get candidate IDs
+		// by query, then fetch full records via get() to inspect sourceType/category.
+		const hits = await search(
+			{
+				query: input.query,
+				limit: input.limit * 3,
+				threshold: input.threshold,
+				scopeId,
+				userId,
+			},
+			opts,
+		);
+
+		if (hits.length === 0) {
+			return { insights: [] };
+		}
+
+		const fullItems = await get({ ids: hits.map((h) => h.id), scopeId, userId }, opts);
+		const itemById = new Map(fullItems.map((item) => [item.id, item]));
+
+		const insights: import("./backend.js").InsightResult[] = [];
+		for (const hit of hits) {
+			const item = itemById.get(hit.id);
+			if (!item) continue;
+			if (item.metadata?.sourceType !== "insight") continue;
+			if (
+				input.categories &&
+				input.categories.length > 0 &&
+				!input.categories.includes(String(item.metadata?.category))
+			) {
+				continue;
+			}
+			insights.push({
+				id: item.id,
+				content: item.content,
+				category: String(item.metadata?.category ?? "fact"),
+				score: hit.score,
+				timestamp: item.timestamp,
+				metadata: item.metadata,
+			});
+		}
+
+		return { insights: insights.slice(0, input.limit) };
+	}
+
+	async function captureInsight(
+		input: CaptureInsightInput,
+		opts?: BackendCallOptions,
+	): Promise<{ id: string }> {
+		const result = await remember(
+			{
+				content: input.content,
+				sourceType: "insight",
+				metadata: {
+					category: input.category,
+					...input.metadata,
+				},
+				scopeId: input.scopeId || config.scopeId || "dsh-default",
+				userId: input.userId || config.scopeId || "dsh-default",
+			},
+			opts,
+		);
+		return { id: result.ids[0] ?? "" };
+	}
+
 	async function health(): Promise<{
 		ok: boolean;
 		mode: "lib";
@@ -435,6 +572,11 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 
 	async function dispose(): Promise<void> {
 		try {
+			knowledgeStore?.close();
+		} catch {
+			// ignore
+		}
+		try {
 			const mod = await import("@melandlabs/opencontext");
 			const close = (mod as unknown as { closeRawMessageStore?: () => Promise<void> }).closeRawMessageStore;
 			if (typeof close === "function") await close();
@@ -452,6 +594,11 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		revise,
 		retire,
 		captureSource,
+		uploadDocument,
+		searchKnowledge,
+		listDocuments,
+		searchInsights,
+		captureInsight,
 		health,
 		dispose,
 	};

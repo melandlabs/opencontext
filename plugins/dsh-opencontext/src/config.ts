@@ -18,6 +18,7 @@
  *   OPENCONTEXT_DSH_REQUEST_TIMEOUT  → requestTimeoutMs
  *   OPENCONTEXT_DSH_AUTO_SUMMARIZE   → autoSummarize (`1` / `0`)
  *   OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS → captureToolResults (`1` / `0`)
+ *   OPENCONTEXT_DSH_CAPTURE_TOOL_OUTCOMES → captureToolOutcomes (`1` / `0`)
  *   OPENCONTEXT_DSH_ENABLE_INSIGHTS → enableInsights (`1` / `0`)
  *   OPENCONTEXT_DSH_ENABLE_KNOWLEDGE → enableKnowledge (`1` / `0`)
  *
@@ -41,6 +42,7 @@ export const ConfigSchema: Schema<ResolvedConfig> = z.object({
 	maxRecallItems: z.number().default(8),
 	autoSummarize: z.boolean().default(false),
 	captureToolResults: z.boolean().default(false),
+	captureToolOutcomes: z.boolean().default(true),
 	enableInsights: z.boolean().default(true),
 	enableKnowledge: z.boolean().default(true),
 }) as unknown as Schema<ResolvedConfig>;
@@ -57,6 +59,7 @@ export interface ResolvedConfig {
 	maxRecallItems: number;
 	autoSummarize: boolean;
 	captureToolResults: boolean;
+	captureToolOutcomes: boolean;
 	enableInsights: boolean;
 	enableKnowledge: boolean;
 }
@@ -106,6 +109,8 @@ export function resolveConfig(patchConfig: Partial<ResolvedConfig> | undefined):
 	if (envAutoSummarize !== undefined) fromEnv.autoSummarize = envAutoSummarize;
 	const envCaptureToolResults = envBool("OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS");
 	if (envCaptureToolResults !== undefined) fromEnv.captureToolResults = envCaptureToolResults;
+	const envCaptureToolOutcomes = envBool("OPENCONTEXT_DSH_CAPTURE_TOOL_OUTCOMES");
+	if (envCaptureToolOutcomes !== undefined) fromEnv.captureToolOutcomes = envCaptureToolOutcomes;
 	const envEnableInsights = envBool("OPENCONTEXT_DSH_ENABLE_INSIGHTS");
 	if (envEnableInsights !== undefined) fromEnv.enableInsights = envEnableInsights;
 	const envEnableKnowledge = envBool("OPENCONTEXT_DSH_ENABLE_KNOWLEDGE");
@@ -123,6 +128,7 @@ export function resolveConfig(patchConfig: Partial<ResolvedConfig> | undefined):
 		maxRecallItems: fromEnv.maxRecallItems ?? patchConfig?.maxRecallItems ?? 8,
 		autoSummarize: fromEnv.autoSummarize ?? patchConfig?.autoSummarize ?? false,
 		captureToolResults: fromEnv.captureToolResults ?? patchConfig?.captureToolResults ?? false,
+		captureToolOutcomes: fromEnv.captureToolOutcomes ?? patchConfig?.captureToolOutcomes ?? true,
 		enableInsights: fromEnv.enableInsights ?? patchConfig?.enableInsights ?? true,
 		enableKnowledge: fromEnv.enableKnowledge ?? patchConfig?.enableKnowledge ?? true,
 	};

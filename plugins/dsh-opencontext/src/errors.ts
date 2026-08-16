@@ -50,6 +50,13 @@ export function classifyBackendError(error: unknown): {
 		code?: string;
 	};
 
+	// Knowledge store is present but cannot run (e.g. missing local embedder).
+	if (err.name === "KnowledgeUnavailableError") {
+		return {
+			code: "backend_unavailable",
+			message: err.message ?? "knowledge backend is not available",
+		};
+	}
 	// AbortError from AbortSignal.timeout or fetch AbortController.
 	if (err.name === "AbortError" || err.name === "TimeoutError") {
 		return { code: "timeout", message: err.message ?? "request timed out" };

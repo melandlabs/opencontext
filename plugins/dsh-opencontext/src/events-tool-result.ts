@@ -97,8 +97,7 @@ export function registerToolResultListener(
 	config: ResolvedConfig,
 ): () => void {
 	// Read config flag
-	const captureToolResults =
-		(config as ResolvedConfig & { captureToolResults?: boolean }).captureToolResults ?? false;
+	const captureToolResults = config.captureToolResults ?? false;
 
 	if (!captureToolResults) {
 		// Return a no-op disposer
