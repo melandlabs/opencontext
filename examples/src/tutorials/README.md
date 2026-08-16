@@ -9,7 +9,7 @@ These are the runnable TypeScript cases extracted from the tutorial markdown fil
 From this repo's `examples` directory:
 
 ```bash
-cd /Users/timi/codes/opencontext/examples
+cd /path/to/opencontext/examples
 pnpm install
 node --experimental-strip-types src/tutorials/00-hello-memory.ts
 ```

@@ -160,21 +160,6 @@ Prints a JSON status payload:
 }
 ```
 
-## Two backend modes
-
-### `lib` (default)
-
-In-process. Calls `@melandlabs/opencontext` directly. The SQLite path
-defaults to `~/.opencontext/memory/store.db`; override with the
-`MEMORY_STORE_DB_PATH` env var (consumed by opencontext).
-
-### `http` (opt-in)
-
-Activated when `OPENCONTEXT_DSH_HTTP_URL` is set. Targets the
-`/v1/memory/*` and `/v1/context/*` shapes that the OpenContext HTTP
-daemon will expose. The v0.1.x OpenContext daemon does not yet expose
-these endpoints, so HTTP mode is forward-looking. Lib mode is the
-supported path on day one.
 
 ## Configuration
 

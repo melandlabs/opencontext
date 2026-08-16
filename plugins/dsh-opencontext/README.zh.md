@@ -53,7 +53,7 @@ dsh --profile web web
 
 ## 功能
 
-### 工具(8 个)
+### 核心工具(8 个)
 
 | 工具 | 用途 |
 |---|---|
@@ -65,6 +65,29 @@ dsh --profile web web
 | `oc_memory_retire` | 软废弃一条记忆。 |
 | `oc_prepare_context` | 手动构建一个字节受限的 `<opencontext_evidence>` 上下文块。 |
 | `oc_capture_source` | 捕获任意内容源以供后续检索。 |
+
+### 摘要与结果工具(3 个)
+
+| 工具 | 用途 |
+|---|---|
+| `oc_session_summary` | 在自然断点生成并存储会话摘要。 |
+| `oc_task_outcome` | 记录任务结果、决策与成就。 |
+| `oc_recent_summaries` | 列出近期会话摘要与任务结果。 |
+
+### Insights 工具(2 个,可选)
+
+| 工具 | 用途 |
+|---|---|
+| `oc_insights_search` | 检索结构化 insights(决策、偏好、结果)。 |
+| `oc_insight_capture` | 从对话中捕获结构化 insight。 |
+
+### Knowledge/RAG 工具(3 个,可选)
+
+| 工具 | 用途 |
+|---|---|
+| `oc_knowledge_search` | 对已上传文档进行 RAG 检索。 |
+| `oc_document_upload` | 上传文档到知识库。 |
+| `oc_document_list` | 列出知识库中的所有文档。 |
 
 所有工具成功时返回 `{ ok: true, value }`,失败时返回
 `{ ok: false, error: { code, message } }` —— 永远不向模型抛出异常。
@@ -90,10 +113,22 @@ dsh --profile web web
 默认采用 fire-and-forget 模式,不会阻塞轮次;如需严格顺序,
 可开启 `flushOnCapture: true`。
 
+### 轮次结束摘要
+
+开启 `autoSummarize` 后,`turn/end` 监听器会:
+1. 生成当前轮次的简要摘要
+2. 将其存储为 `turn-summary` 记忆
+3. 若启用 `captureToolOutcomes`,同时捕获工具结果
+
+### 工具结果捕获
+
+开启 `captureToolResults` 后,`tool/result` 监听器会将工具调用结果
+捕获为 `tool-interaction` 记忆,形成可检索的工具交互日志。
+
 ### 技能:`opencontext`
 
 在 `apply` 时注册。让模型在每次会话开始时即了解召回/捕获约定、
-信任模型与 8 个 `oc_*` 工具的语义。
+信任模型与全部 16 个 `oc_*` 工具的语义。
 
 ### 命令:`/oc doctor`
 
@@ -107,24 +142,11 @@ dsh --profile web web
   "scope": "local:9cd22c419df9",
   "db": "/Users/you/.opencontext/memory/store.db",
   "probe": { "ok": true, "mode": "lib", "details": "db=/Users/you/.opencontext/memory/store.db" },
-  "recentCount": 0
+  "recentCount": 0,
+  "features": ["insights", "knowledge", "prompt-capture"]
 }
 ```
 
-## 两种后端模式
-
-### `lib`(默认)
-
-进程内模式,直接调用 `@melandlabs/opencontext`。SQLite 文件路径默认
-为 `~/.opencontext/memory/store.db`,可通过 `MEMORY_STORE_DB_PATH` 环境
-变量覆盖(由 opencontext 读取)。
-
-### `http`(可选)
-
-设置 `OPENCONTEXT_DSH_HTTP_URL` 时启用。请求路径对齐
-OpenContext HTTP daemon 将要暴露的 `/v1/memory/*` 与 `/v1/context/*`。
-当前 v0.1.x OpenContext daemon 尚未暴露这些端点,因此 HTTP 模式
-属于前瞻设计;day-one 推荐使用 `lib` 模式。
 
 ## 配置
 
@@ -145,10 +167,15 @@ OpenContext HTTP daemon 将要暴露的 `/v1/memory/*` 与 `/v1/context/*`。
 | `capturePrompts` | bool | `true` | `OPENCONTEXT_DSH_CAPTURE_PROMPTS` (`1`/`0`) |
 | `flushOnCapture` | bool | `false` | `OPENCONTEXT_DSH_FLUSH_ON_CAPTURE` (`1`/`0`) |
 | `maxRecallItems` | number | `8` | `OPENCONTEXT_DSH_MAX_RECALL_ITEMS` |
+| `autoSummarize` | bool | `false` | `OPENCONTEXT_DSH_AUTO_SUMMARIZE` (`1`/`0`) |
+| `captureToolResults` | bool | `false` | `OPENCONTEXT_DSH_CAPTURE_TOOL_RESULTS` (`1`/`0`) |
+| `enableInsights` | bool | `true` | `OPENCONTEXT_DSH_ENABLE_INSIGHTS` (`1`/`0`) |
+| `enableKnowledge` | bool | `true` | `OPENCONTEXT_DSH_ENABLE_KNOWLEDGE` (`1`/`0`) |
 
 仅作为开关:
 
 - `OPENCONTEXT_DSH_HTTP_URL` — 切到 HTTP 模式(任何非空值)。
+  **KOL 制作期间不建议启用。**
 
 ## 信任模型
 
@@ -162,8 +189,50 @@ system-prompt 角色,而是作为插件来源的用户消息追加,模型可以�
 ```bash
 pnpm install
 pnpm typecheck
-pnpm test          # 59 个单元测试
+pnpm test          # 108 个单元测试
 pnpm build         # tsc → lib/
+```
+
+## 架构
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                                DSH Agent                                 │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  agent/pre-step pipeline                                           │  │
+│  │  ┌───────────────────────────┐    ┌───────────────────────────┐        │  │
+│  │  │  Recall                   │    │  Capture                  │        │  │
+│  │  │  (search history)         │    │  (store user input)       │        │  │
+│  │  └───────────────────────────┘    └───────────────────────────┘        │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               v                                    │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │  turn/end & tool/result listeners                                  │  │
+│  │  ┌───────────────────────────┐    ┌───────────────────────────┐        │  │
+│  │  │  Session Summ.            │    │  Tool Capture             │        │  │
+│  │  │  (session summary)        │    │  (tool output capture)    │        │  │
+│  │  └───────────────────────────┘    └───────────────────────────┘        │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               v                                    │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │                dsh-opencontext plugin (16 tools)                   │  │
+│  │  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐          │  │
+│  │  │ Core      │ │ Summary   │ │ Insights  │ │ Knowledge │          │  │
+│  │  │ (8)       │ │ (3)       │ │ (2)       │ │ (3)       │          │  │
+│  │  └───────────┘ └───────────┘ └───────────┘ └───────────┘          │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+│                               │                                    │
+│                               v                                    │
+│  ┌────────────────────────────────────────────────────────────────────┐  │
+│  │                         OpenContext Backend                        │  │
+│  │  ┌───────────────────────────┐    ┌───────────────────────────┐        │  │
+│  │  │  Lib Mode                 │    │  HTTP Mode                │        │  │
+│  │  │  (in-process)             │    │  (daemon)                 │        │  │
+│  │  └───────────────────────────┘    └───────────────────────────┘        │  │
+│  └────────────────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## 许可证

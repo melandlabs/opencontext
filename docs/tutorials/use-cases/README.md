@@ -57,7 +57,7 @@ Track academic findings, citations, and how understanding evolves as new researc
 Each use case includes a runnable TypeScript example. To run:
 
 ```bash
-cd /Users/timi/codes/opencontext/examples
+cd /path/to/opencontext/examples
 pnpm install
 node --experimental-strip-types src/tutorials/use-cases/XX-*.ts
 ```

@@ -77,6 +77,32 @@ function coerceNumber(value: unknown, fallback: number, min: number, max: number
 	return Math.max(min, Math.min(max, value));
 }
 
+/** Clean an object by removing undefined values recursively for lossless JSON */
+function cleanObject(obj: Record<string, unknown>): Record<string, unknown> {
+	const cleaned: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(obj)) {
+		if (value === undefined) {
+			continue; // Skip undefined values
+		}
+		if (value === null) {
+			cleaned[key] = null;
+		} else if (typeof value === "object" && !Array.isArray(value)) {
+			cleaned[key] = cleanObject(value as Record<string, unknown>);
+		} else if (Array.isArray(value)) {
+			cleaned[key] = value.map((item) =>
+				typeof item === "object" && item !== null && !Array.isArray(item)
+					? cleanObject(item as Record<string, unknown>)
+					: item === undefined
+						? null
+						: item,
+			);
+		} else {
+			cleaned[key] = value;
+		}
+	}
+	return cleaned;
+}
+
 /** Run an async tool body. Any thrown error is converted into a
  *  structured ToolError. The function must return either a ToolResult
  *  (preferred) or a plain value that will be wrapped in `toolOk`. */
@@ -135,7 +161,10 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 						content: String(hit.content),
 						score: Number.isFinite(hit.score) ? Number(hit.score.toFixed(3)) : 0,
 						timestamp: typeof hit.timestamp === "number" ? hit.timestamp : Date.now(),
-						metadata: hit.metadata && typeof hit.metadata === "object" ? hit.metadata : {},
+						metadata:
+							hit.metadata && typeof hit.metadata === "object"
+								? cleanObject(hit.metadata as Record<string, unknown>)
+								: {},
 					})),
 				});
 			}),

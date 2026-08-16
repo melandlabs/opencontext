@@ -202,7 +202,7 @@ describe("opencontext doctor", () => {
 	it("checkLoopCli returns ok for published npm bundle even when shim is missing", () => {
 		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
 		const npmUrl =
-			"file:///Users/timi/.npm/_npx/abcd1234/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
+			"file:///Users/developer/.npm/_npx/abcd1234/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
 		const result = checkLoopCli(npmUrl);
 		expect(result.section).toBe("loop");
 		expect(result.name).toBe("loop-cli");
@@ -213,14 +213,14 @@ describe("opencontext doctor", () => {
 	it("checkLoopCli recognizes pnpm nested layout as published bundle", () => {
 		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
 		const pnpmUrl =
-			"file:///Users/timi/codes/some-project/node_modules/.pnpm/@melandlabs+opencontext@0.2.4/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
+			"file:///Users/developer/codes/some-project/node_modules/.pnpm/@melandlabs+opencontext@0.2.4/node_modules/@melandlabs/opencontext/dist/cli/doctor.js";
 		const result = checkLoopCli(pnpmUrl);
 		expect(result.status).toBe("ok");
 	});
 
 	it("checkLoopCli recognizes monorepo source as non-published context", () => {
 		process.env.OPENCONTEXT_LOOP_CLI = "/tmp/__doctor-test-loop-cli__.mjs";
-		const workspaceUrl = "file:///Users/timi/codes/opencontext/packages/opencontext/src/cli/doctor.ts";
+		const workspaceUrl = "file:///Users/developer/codes/opencontext/packages/opencontext/src/cli/doctor.ts";
 		const result = checkLoopCli(workspaceUrl);
 		expect(result.status).toBe("warn");
 	});

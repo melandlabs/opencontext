@@ -298,7 +298,7 @@ The complete example is available at:
 Run it with:
 
 ```bash
-cd /Users/timi/codes/opencontext/examples
+cd /path/to/opencontext/examples
 pnpm install
 node --experimental-strip-types src/tutorials/use-cases/32-research-knowledge-tracker.ts
 ```
