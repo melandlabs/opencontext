@@ -34,18 +34,75 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 
 ## Quick Reference by Use Case
 
+### Core & Getting Started
+
 | You want to... | Read this |
 |----------------|------------|
 | Get started in 5 minutes | [Getting Started](./00-getting-started.md) |
 | Understand how memory works | [User Guide](./01-user-guide.md) |
+| Understand the temporal graph model | [User Guide](./01-user-guide.md#the-temporal-context-graph) |
+
+### Building Agents
+
+| You want to... | Read this |
+|----------------|------------|
 | Build a memory-aware agent | [User Guide](./01-user-guide.md#building-ai-agents-with-memory) |
-| Build a Q&A agent | [User Guide](./01-user-guide.md#agent-patterns) |
+| Build a Q&A agent with RAG | [User Guide](./01-user-guide.md#agent-patterns) |
+| Create custom agent provider | [User Guide](./01-user-guide.md#creating-a-custom-agent) |
+
+### Search & Retrieval
+
+| You want to... | Read this |
+|----------------|------------|
+| Search across memory + insights + knowledge | [Advanced Usage](./03-advanced-usage.md#multi-source-unified-search) |
+| Query as of a specific time (time-travel) | [Advanced Usage](./03-advanced-usage.md#temporal-time-travel-queries) |
+| Work with the temporal graph | [Advanced Usage](./03-advanced-usage.md#working-with-the-temporal-graph) |
+| Add web search to your agent | [Advanced Usage](./03-advanced-usage.md#web-search-integration) |
+
+### Integrations & Platforms
+
+| You want to... | Read this |
+|----------------|------------|
 | Add Gmail/Slack integrations | [Advanced Usage](./03-advanced-usage.md#platform-integrations) |
-| Deploy to production | [Best Practices](./04-best-practices.md) |
+| Send messages through platforms | [Advanced Usage](./03-advanced-usage.md#sending-messages-write) |
+| See all 27+ supported platforms | [Advanced Usage](./03-advanced-usage.md#available-platforms) |
+| Use with your coding agent via MCP | [Getting Started](./00-getting-started.md#using-with-your-coding-agent-via-mcp) |
+
+### Deployment & Operations
+
+| You want to... | Read this |
+|----------------|------------|
 | Use with Claude Desktop | [Getting Started](./00-getting-started.md#using-with-claude-desktop-mcp) |
 | Run as HTTP service | [Developer Guide](./02-developer-guide.md#pattern-2-http-server-microservice) |
-| Create custom agent provider | [User Guide](./01-user-guide.md#creating-a-custom-agent) |
+| Deploy to production | [Best Practices](./04-best-practices.md) |
+| Run health checks | [Advanced Usage](./03-advanced-usage.md#health-checks) |
+| Set up monitoring & metrics | [Advanced Usage](./03-advanced-usage.md#monitoring) |
+| Audit memory operations | [Advanced Usage](./03-advanced-usage.md#audit-logging) |
+
+### Advanced Features
+
+| You want to... | Read this |
+|----------------|------------|
+| Schedule recurring tasks with Loop | [Advanced Usage](./03-advanced-usage.md#the-loop-engine) |
+| Add voice capabilities (TTS/STT) | [Advanced Usage](./03-advanced-usage.md#voice-capabilities) |
+| Encrypt tokens and secrets | [Advanced Usage](./03-advanced-usage.md#encryption-and-security) |
+| Optimize performance | [Advanced Usage](./03-advanced-usage.md#performance-optimization) |
+
+### Framework Integrations
+
+| You want to... | Read this |
+|----------------|------------|
 | Use with DeepSeek Harness | [Advanced Usage](./03-advanced-usage.md#deepseek-harness-plugin) |
+
+### OpenLoomi Use Cases
+
+| You want to... | Reference |
+|----------------|------------|
+| Build a cross-platform desktop agent | [OpenLoomi GitHub](https://github.com/melandlabs/openloomi) |
+| Unify context across Gmail/Slack/Linear/Notion | [OpenLoomi README](https://github.com/melandlabs/openloomi#features) |
+| Create automated morning briefings | See Loop Engine section |
+| Send summaries via Telegram/WhatsApp/iMessage | [Platform Integrations](./03-advanced-usage.md#platform-integrations) |
+| Build local-first attention management | [OpenLoomi Architecture](https://github.com/melandlabs/openloomi) |
 
 ## Tutorial Contents
 
@@ -64,20 +121,7 @@ Before starting any tutorial:
 1. **Node.js** >= 18.0.0
 2. **pnpm** >= 9.0.0 (recommended) or npm/yarn
 
-Verify:
-
-```bash
-node --version  # Should be >= 18.0.0
-pnpm --version  # Should be >= 9.0.0
-```
-
-## Platform-Specific Prerequisites
-
-**Windows:** Install [Visual Studio Build Tools](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) with C++ components
-
-**macOS:** `xcode-select --install`
-
-**Linux:** `sudo apt-get install build-essential`
+See [Getting Started](./00-getting-started.md#prerequisites) for platform-specific prerequisites (Windows, macOS, Linux).
 
 ## Time Commitment
 
@@ -94,7 +138,7 @@ pnpm --version  # Should be >= 9.0.0
 
 If you get stuck:
 
-- 📖 Check the main [README](../README.md)
+- 📖 Check the main project [README](../../README.md)
 - 💬 Join our [Discord](https://discord.com/invite/xkJaJyWcsv)
 - 🐛 [Open an issue](https://github.com/melandlabs/opencontext/issues)
 - 𝕏 Follow [@AlloomiAI](https://x.com/AlloomiAI)

@@ -24,6 +24,7 @@
 
 import testTutorials from "../tutorial-tests/test-tutorials.ts";
 import verifyTutorialUseCases from "../tutorial-tests/verify-tutorial-usecases.ts";
+import testTutorialExtended from "../tutorial-tests/test-tutorial-extended.ts";
 import demoFacade from "./00-facade.ts";
 import demoRagChunk from "./01-rag-chunk.ts";
 import demoRagVectorStore from "./02-rag-vector-store.ts";
@@ -67,6 +68,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 const tutorialTests: Array<[string, () => Promise<void>]> = [
 	["tutorial: docs/tutorials/*.md code examples", testTutorials],
 	["tutorial: docs/tutorials/* use cases verification", verifyTutorialUseCases],
+	["tutorial: docs/tutorials/* extended coverage (forget, improve, temporal, etc.)", testTutorialExtended],
 ];
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {

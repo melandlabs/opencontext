@@ -103,7 +103,7 @@ Run it:
 # If using tsx or ts-node
 npx tsx hello-memory.ts
 
-# Or with Node.js 22+ (supports --experimental-strip-types)
+# Or with Node.js 22+ (supports --experimental-strip-types for running TypeScript directly)
 node --experimental-strip-types hello-memory.ts
 ```
 
@@ -153,16 +153,28 @@ curl -X POST http://127.0.0.1:7421/v1/search \
   }'
 ```
 
-## Using with Claude Desktop (MCP)
+## Using with Your Coding Agent via MCP
 
-OpenContext ships an MCP server for Claude Desktop and Cursor:
+OpenContext ships an MCP server that works with any MCP-compatible coding agent, including:
 
-1. Open your Claude Desktop config:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+- **Claude Desktop** - Anthropic's official Claude desktop app
+- **Cursor** - AI code editor
+- **Claude Code** - Anthropic's CLI coding agent
+- **Codex CLI** - Command-line agent runtime
+- And any other MCP-compatible agent
 
-2. Add the MCP server:
+### Setting up MCP
 
+1. Open your agent's MCP configuration:
+   - **Claude Desktop**: `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%/Claude/claude_desktop_config.json` (Windows)
+   - **Cursor**: Settings → MCP Servers
+   - **Claude Code**: See its MCP configuration documentation
+   - **Codex CLI**: See its MCP server documentation
+   - **Other agents**: Refer to their MCP documentation
+
+2. Add the OpenContext MCP server configuration:
+
+**For Claude Desktop / Claude Code:**
 ```json
 {
   "mcpServers": {
@@ -180,9 +192,15 @@ OpenContext ships an MCP server for Claude Desktop and Cursor:
 }
 ```
 
-3. Restart Claude Desktop
+**For Cursor:**
+Use the same configuration above via Settings → MCP Servers.
 
-You now have access to four tools inside Claude:
+**For Codex CLI:**
+See Codex's MCP server configuration documentation.
+
+3. Restart your agent application
+
+You now have access to four memory tools:
 - `memory.health` - Check if OpenContext is running
 - `memory.searchUnified` - Search memory with a query
 - `memory.writeRawMessage` - Store new messages
@@ -267,10 +285,21 @@ opencontext http --embedding-provider local
 
 ## Getting Help
 
-- 📖 [Documentation](../README.md)
+- 📖 [Documentation Index](../README.md)
 - 💬 [Discord](https://discord.com/invite/xkJaJyWcsv)
 - 🐛 [Issues](https://github.com/melandlabs/opencontext/issues)
 - 𝕏 [@AlloomiAI](https://x.com/AlloomiAI)
+
+## Glossary
+
+| Term | Description |
+|------|-------------|
+| `RawMessage` | The basic unit of data stored in OpenContext - a message with content, metadata, and timestamps |
+| `Temporal context graph` | A directed graph where each fact has `valid_from` and `valid_until` timestamps, enabling time-travel queries |
+| `Memory-aware agent` | An AI agent that can recall and use context from past interactions |
+| `Embedding` | A vector representation of text that enables semantic search |
+| `MCP` | Model Context Protocol - a standard for AI agents to access external tools and data |
+| `SSRF` | Server-Side Request Forgery - a security vulnerability that OpenContext protects against via URL validation |
 
 ---
 
