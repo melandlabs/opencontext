@@ -46,6 +46,8 @@ describe("insights tools", () => {
 	});
 
 	describe("registerInsightsTools", () => {
+		const defineTool = vi.fn((x: unknown) => x);
+
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
@@ -53,7 +55,7 @@ describe("insights tools", () => {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
 
-			const disposer = registerInsightsTools(ctx as any, backend, config as any);
+			const disposer = registerInsightsTools(ctx as any, { backend, config }, defineTool);
 
 			expect(ctx.tools.register).toHaveBeenCalledTimes(2);
 			expect(typeof disposer).toBe("function");
@@ -72,7 +74,7 @@ describe("insights tools", () => {
 				},
 			};
 
-			const disposer = registerInsightsTools(ctx as any, backend, config as any);
+			const disposer = registerInsightsTools(ctx as any, { backend, config }, defineTool);
 			disposer();
 
 			expect(disposers[0]).toHaveBeenCalled();
@@ -90,7 +92,7 @@ describe("insights tools", () => {
 			const result = await searchTool.execute({}, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should return fallback when backend does not support insights", async () => {
@@ -102,8 +104,8 @@ describe("insights tools", () => {
 			const result = await searchTool.execute({ query: "test" }, {});
 
 			assertToolOk(result);
-			expect(result.value).toHaveProperty("insights");
-			expect((result.value as any).insights).toEqual([]);
+			expect(result.data).toHaveProperty("insights");
+			expect((result.data as any).insights).toEqual([]);
 		});
 	});
 
@@ -117,7 +119,7 @@ describe("insights tools", () => {
 			const result = await captureTool.execute({}, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should validate insight categories", async () => {
@@ -129,8 +131,8 @@ describe("insights tools", () => {
 			const result = await captureTool.execute({ content: "test", category: "invalid" }, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
-			expect(result.error.message).toContain("category must be one of");
+			expect(result.code).toBe("invalid_arguments");
+			expect(result.message).toContain("category must be one of");
 		});
 	});
 });

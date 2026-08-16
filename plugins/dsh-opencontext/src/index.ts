@@ -7,19 +7,21 @@
  * Wiring (in order):
  *   1. Resolve config (already done by the loader; we re-merge for env safety).
  *   2. Pick a backend (lib or http) based on `OPENCONTEXT_DSH_HTTP_URL`.
- *   3. Register the core `oc_*` tools (8 tools).
- *   4. Register insights tools (2 tools, if enabled).
- *   5. Register knowledge/RAG tools (3 tools, if enabled).
- *   6. Register summary tools (3 tools).
- *   7. Register the `agent/pre-step` recall waterfall.
- *   8. Register the `agent/pre-step` capture listener (runs after recall).
- *   9. Register the `turn/end` listener (for session summarization).
- *   10. Register the `tool/result` listener (for tool output capture).
- *   11. Register the `opencontext` skill (if the skill service is injected).
- *   12. Register the `/oc` command.
- *   13. Hook cleanup: `ctx.effect(() => () => backend.dispose?.())`.
+ *   3. Load DSH tools peer dependency for proper tool registration.
+ *   4. Register the core `oc_*` tools (8 tools).
+ *   5. Register insights tools (2 tools, if enabled).
+ *   6. Register knowledge/RAG tools (3 tools, if enabled).
+ *   7. Register summary tools (3 tools).
+ *   8. Register the `agent/pre-step` recall waterfall.
+ *   9. Register the `agent/pre-step` capture listener (runs after recall).
+ *   10. Register the `turn/end` listener (for session summarization).
+ *   11. Register the `tool/result` listener (for tool output capture).
+ *   12. Register the `opencontext` skill (if the skill service is injected).
+ *   13. Register the `/oc` command.
+ *   14. Hook cleanup: `ctx.effect(() => () => backend.dispose?.())`.
  */
 
+import { loadPeer } from "./peers.js";
 import { ConfigSchema, resolveConfig, type ResolvedConfig } from "./config.js";
 import { createBackend, type OpenContextBackend } from "./backend.js";
 import { registerTools } from "./tools.js";
@@ -49,6 +51,13 @@ export { ConfigSchema };
 export type { ResolvedConfig } from "./config.js";
 export type { OpenContextBackend } from "./backend.js";
 
+type DefineTool = (definition: Record<string, unknown>) => unknown;
+
+interface PluginRuntime {
+	backend: OpenContextBackend;
+	config: ResolvedConfig;
+}
+
 interface CordisContext {
 	tools: { register: (tool: unknown) => () => void };
 	on: (event: string, handler: (...args: never[]) => unknown) => () => void;
@@ -61,7 +70,7 @@ interface CordisContext {
 	effect: (setup: () => () => void) => () => void;
 }
 
-export function apply(ctx: CordisContext, config: ResolvedConfig): void {
+export async function apply(ctx: CordisContext, config: ResolvedConfig): Promise<void> {
 	const resolved: ResolvedConfig = resolveConfig(config as Partial<ResolvedConfig>);
 	const backend: OpenContextBackend = createBackend(resolved);
 
@@ -81,31 +90,23 @@ export function apply(ctx: CordisContext, config: ResolvedConfig): void {
 
 	const disposers: Array<() => void> = [];
 
+	// Load DSH tools peer dependency for proper tool registration
+	const toolsMod = await loadPeer<{ defineTool: DefineTool }>("@deepseek-ai/dsh-tools");
+	const runtime: PluginRuntime = { backend, config: resolved };
+
 	// Core tools (always registered)
-	disposers.push(
-		registerTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
-	);
+	disposers.push(registerTools(ctx, runtime, toolsMod.defineTool));
 
 	// Optional tools based on config
 	if (resolved.enableInsights) {
-		disposers.push(
-			registerInsightsTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
-		);
+		disposers.push(registerInsightsTools(ctx, runtime, toolsMod.defineTool));
 	}
 	if (resolved.enableKnowledge) {
-		disposers.push(
-			registerKnowledgeTools(
-				ctx as { tools: { register: (tool: unknown) => () => void } },
-				backend,
-				resolved,
-			),
-		);
+		disposers.push(registerKnowledgeTools(ctx, runtime, toolsMod.defineTool));
 	}
 
 	// Summary tools (always available)
-	disposers.push(
-		registerSummaryTools(ctx as { tools: { register: (tool: unknown) => () => void } }, backend, resolved),
-	);
+	disposers.push(registerSummaryTools(ctx, runtime, toolsMod.defineTool));
 
 	// Event listeners
 	disposers.push(registerRecall(ctx, backend, resolved));

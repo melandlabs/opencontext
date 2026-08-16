@@ -24,11 +24,34 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: (args: unknown, value: unknown) => unknown;
-		presentationMeta?: (args: unknown, value: unknown) => unknown;
+		render: (args: Record<string, unknown>, value: ToolResult) => Array<{ type: string; text: string }>;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
+
+// Shared output definition for knowledge tools
+const KNOWLEDGE_OUTPUT = {
+	schema: {
+		type: "object",
+		additionalProperties: false,
+		properties: {
+			ok: { type: "boolean" },
+			code: { type: "string" },
+			message: { type: "string" },
+			data: {
+				type: "object",
+				additionalProperties: true,
+			},
+		},
+	},
+	render(_args: Record<string, unknown>, value: ToolResult) {
+		return [{ type: "text", text: JSON.stringify(value) }];
+	},
+};
+
+function defineTool(spec: ToolDefinition): ToolDefinition {
+	return { ...spec, output: spec.output ?? KNOWLEDGE_OUTPUT };
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
 	if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -42,18 +65,17 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
-	return fn()
-		.then((value) => {
-			if (value && typeof value === "object" && "ok" in value) {
-				return value as ToolResult<T>;
-			}
-			return toolOk(value as T);
-		})
-		.catch((error: unknown) => {
-			const cls = classifyBackendError(error);
-			return toolError(cls.code, cls.message);
-		});
+async function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
+	try {
+		const value = await fn();
+		if (value && typeof value === "object" && "ok" in value) {
+			return value as ToolResult<T>;
+		}
+		return toolOk(value as T);
+	} catch (error: unknown) {
+		const cls = classifyBackendError(error);
+		return toolError(cls.code, cls.message) as ToolResult<T>;
+	}
 }
 
 function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
@@ -66,7 +88,7 @@ function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: str
  * Create the knowledge search tool
  */
 function createKnowledgeSearchTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_knowledge_search",
 		kind: "search",
 		description:
@@ -91,41 +113,8 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 				description: "Minimum similarity threshold (0-1, default 0.6)",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					chunks: {
-						type: "array",
-						items: {
-							type: "object",
-							properties: {
-								id: { type: "string" },
-								content: { type: "string" },
-								documentId: { type: "string" },
-								documentName: { type: "string" },
-								score: { type: "number" },
-								metadata: { type: "object" },
-							},
-						},
-					},
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{
-				chunks: Array<{
-					id: string;
-					content: string;
-					documentId?: string;
-					documentName?: string;
-					score: number;
-					metadata: Record<string, unknown>;
-				}>;
-			}>(async () => {
+			runTool(async () => {
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 
@@ -168,14 +157,14 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 					})),
 				});
 			}),
-	};
+	});
 }
 
 /**
  * Create the document upload tool
  */
 function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_document_upload",
 		kind: "read",
 		description:
@@ -201,20 +190,8 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Optional metadata (e.g. { category: 'spec', version: '1.0' })",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					documentId: { type: "string" },
-					chunks: { type: "number" },
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{ documentId: string; chunks: number }>(async () => {
+			runTool(async () => {
 				const content = String(args.content ?? "");
 				if (!content) return toolError("invalid_arguments", "content is required");
 
@@ -246,14 +223,14 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 					chunks: result.chunks ?? 0,
 				});
 			}),
-	};
+	});
 }
 
 /**
  * Create the document list tool
  */
 function createDocumentListTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_document_list",
 		kind: "read",
 		description: "List all documents in the knowledge base for the current scope",
@@ -263,41 +240,8 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 				description: "Maximum documents to return (default 50, max 200).",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					documents: {
-						type: "array",
-						items: {
-							type: "object",
-							properties: {
-								id: { type: "string" },
-								filename: { type: "string" },
-								mimeType: { type: "string" },
-								uploadedAt: { type: "number" },
-								chunks: { type: "number" },
-								metadata: { type: "object" },
-							},
-						},
-					},
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{
-				documents: Array<{
-					id: string;
-					filename: string;
-					mimeType: string;
-					uploadedAt: number;
-					chunks: number;
-					metadata: Record<string, unknown>;
-				}>;
-			}>(async () => {
+			runTool(async () => {
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
 				const result = await (backend as any).listDocuments?.(
@@ -327,7 +271,7 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 					})),
 				});
 			}),
-	};
+	});
 }
 
 export function makeKnowledgeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
@@ -340,13 +284,13 @@ export function makeKnowledgeTools(backend: OpenContextBackend, config: Resolved
 
 export function registerKnowledgeTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
-	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	runtime: { backend: OpenContextBackend; config: ResolvedConfig },
+	defineTool: (definition: Record<string, unknown>) => unknown,
 ): () => void {
-	const tools = makeKnowledgeTools(backend, config);
+	const tools = makeKnowledgeTools(runtime.backend, runtime.config);
 	const disposers: Array<() => void> = [];
 	for (const tool of tools) {
-		disposers.push(ctx.tools.register(tool));
+		disposers.push(ctx.tools.register(defineTool(tool)));
 	}
 	return () => {
 		for (const dispose of disposers) {

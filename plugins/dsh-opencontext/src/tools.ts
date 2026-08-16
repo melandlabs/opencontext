@@ -1,7 +1,7 @@
 /**
  * tools — register the 8 `oc_*` tools that wrap the OpenContextBackend.
  *
- * Each tool is defined as `(args, ctx) => Promise<ToolResult<T>>` and
+ * Each tool is defined as `(args, ctx) => Promise<ToolResult>` and
  * never throws to the model. Schemas are described via schemastery so
  * the host can render forms and validate calls.
  */
@@ -26,42 +26,38 @@ export type ToolDefinition = {
 	parameters: Record<string, unknown>;
 	kind: "search" | "read";
 	output?: {
-		schema: unknown;
-		render: (args: Record<string, unknown>, value: unknown) => unknown;
+		schema: Record<string, unknown>;
+		render: (args: Record<string, unknown>, value: ToolResult) => Array<{ type: string; text: string }>;
 	};
-	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
+	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult>;
 };
 
 // DSH's tool registry requires every tool to declare `output.schema` (the
 // shape of the success value the executor returns) and `output.render`
 // (turn the value into model-facing content blocks). Our tools return a
-// `{ ok, value | error }` envelope so the model can branch on structured
-// failures; we describe that envelope once and reuse it for every tool.
-const ENVELOPE_OUTPUT = {
+// `{ ok, code?, message?, data? }` ToolResult so the model can branch on
+// structured failures; we describe that result once and reuse it for every tool.
+const TOOL_RESULT_OUTPUT = {
 	schema: {
 		type: "object",
 		additionalProperties: false,
-		required: ["ok"],
 		properties: {
 			ok: { type: "boolean" },
-			value: {},
-			error: {
+			code: { type: "string" },
+			message: { type: "string" },
+			data: {
 				type: "object",
-				additionalProperties: false,
-				properties: {
-					code: { type: "string" },
-					message: { type: "string" },
-				},
+				additionalProperties: true,
 			},
 		},
 	},
-	render(_args: Record<string, unknown>, value: unknown) {
-		return value;
+	render(_args: Record<string, unknown>, value: ToolResult) {
+		return [{ type: "text", text: JSON.stringify(value) }];
 	},
 };
 
 function defineTool(spec: ToolDefinition): ToolDefinition {
-	return { ...spec, output: spec.output ?? ENVELOPE_OUTPUT };
+	return { ...spec, output: spec.output ?? TOOL_RESULT_OUTPUT };
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -84,18 +80,17 @@ function coerceNumber(value: unknown, fallback: number, min: number, max: number
 /** Run an async tool body. Any thrown error is converted into a
  *  structured ToolError. The function must return either a ToolResult
  *  (preferred) or a plain value that will be wrapped in `toolOk`. */
-function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
-	return fn()
-		.then((value) => {
-			if (value && typeof value === "object" && "ok" in value) {
-				return value as ToolResult<T>;
-			}
-			return toolOk(value as T);
-		})
-		.catch((error: unknown) => {
-			const cls = classifyBackendError(error);
-			return toolError(cls.code, cls.message);
-		});
+async function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
+	try {
+		const value = await fn();
+		if (value && typeof value === "object" && "ok" in value) {
+			return value as ToolResult<T>;
+		}
+		return toolOk(value as T);
+	} catch (error: unknown) {
+		const cls = classifyBackendError(error);
+		return toolError(cls.code, cls.message) as ToolResult<T>;
+	}
 }
 
 function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
@@ -120,15 +115,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			threshold: { type: "number", description: "Minimum similarity (0..1)." },
 		},
 		execute: async (args, ctx) =>
-			runTool<{
-				hits: Array<{
-					id: string;
-					content: string;
-					score: number;
-					timestamp?: number;
-					metadata: Record<string, unknown>;
-				}>;
-			}>(async () => {
+			runTool(async () => {
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -172,7 +159,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ ids: string[] }>(async () => {
+			runTool(async () => {
 				const content = String(args.content ?? "").trim();
 				if (!content) return toolError("invalid_arguments", "content is required");
 				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
@@ -205,7 +192,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ items: unknown[] }>(async () => {
+			runTool(async () => {
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 				const items = await backend.list(
 					{
@@ -233,7 +220,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ items: unknown[] }>(async () => {
+			runTool(async () => {
 				const raw = args.ids;
 				const ids: string[] = Array.isArray(raw)
 					? raw.map((v) => String(v))
@@ -268,7 +255,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			reason: { type: "string", description: "Why this is being revised." },
 		},
 		execute: async (args, ctx) =>
-			runTool<{ deprecatedId: string; newId: string }>(async () => {
+			runTool(async () => {
 				const id = String(args.id ?? "").trim();
 				const content = String(args.content ?? "").trim();
 				if (!id) return toolError("invalid_arguments", "id is required");
@@ -305,7 +292,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			reason: { type: "string", description: "Why this is being retired." },
 		},
 		execute: async (args, ctx) =>
-			runTool<{ ok: true }>(async () => {
+			runTool(async () => {
 				const id = String(args.id ?? "").trim();
 				if (!id) return toolError("invalid_arguments", "id is required");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -339,7 +326,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ contextBlock: string; hits: number; truncated: boolean }>(async () => {
+			runTool(async () => {
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 				const { scopeId, userId } = asScopeConfig(ctx, config);
@@ -393,7 +380,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 			},
 		},
 		execute: async (args, ctx) =>
-			runTool<{ id: string }>(async () => {
+			runTool(async () => {
 				const content = String(args.content ?? "").trim();
 				if (!content) return toolError("invalid_arguments", "content is required");
 				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
@@ -424,15 +411,22 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 	];
 }
 
+interface PluginRuntime {
+	backend: OpenContextBackend;
+	config: ResolvedConfig;
+}
+
 export function registerTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
-	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	runtime: PluginRuntime,
+	defineTool: (definition: Record<string, unknown>) => unknown,
 ): () => void {
-	const tools = makeTools(backend, config);
+	const tools = makeTools(runtime.backend, runtime.config);
 	const disposers: Array<() => void> = [];
 	for (const tool of tools) {
-		disposers.push(ctx.tools.register(tool));
+		// Use DSH's defineTool to properly register with metadata
+		const registered = defineTool(tool);
+		disposers.push(ctx.tools.register(registered));
 	}
 	return () => {
 		for (const dispose of disposers) {

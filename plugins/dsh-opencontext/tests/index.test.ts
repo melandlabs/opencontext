@@ -36,7 +36,7 @@ describe("plugin entry", () => {
 		expect(ConfigSchema).toBeDefined();
 	});
 
-	it("apply() registers tools, listeners, skill, and command", () => {
+	it("apply() registers tools, listeners, skill, and command", async () => {
 		const backend = makeFakeBackend();
 		mockCreateBackend.mockReturnValue(backend);
 		const registered: string[] = [];
@@ -58,7 +58,7 @@ describe("plugin entry", () => {
 				return () => undefined;
 			}),
 		};
-		apply(ctx as unknown as Parameters<typeof apply>[0], makeConfig());
+		await apply(ctx as unknown as Parameters<typeof apply>[0], makeConfig());
 		// 16 tools registered: 8 core + 2 insights + 3 knowledge + 3 summary
 		expect(ctx.tools.register).toHaveBeenCalledTimes(16);
 		// Two agent/pre-step listeners (recall + capture)
@@ -76,20 +76,20 @@ describe("plugin entry", () => {
 		const dispose = vi.fn(async () => undefined);
 		const backend = makeFakeBackend({ dispose });
 		mockCreateBackend.mockReturnValue(backend);
-		const setupFns: Array<() => unknown> = [];
+		let cleanupFn: (() => unknown) | undefined;
 		const ctx = {
 			tools: { register: vi.fn(() => () => undefined) },
 			on: vi.fn(() => () => undefined),
 			get: vi.fn(() => undefined),
 			logger: { info: vi.fn(), warn: vi.fn(), debug: vi.fn() },
 			effect: vi.fn((setup: () => () => void) => {
-				setupFns.push(setup());
-				return () => undefined;
+				cleanupFn = setup();
+				return cleanupFn;
 			}),
 		};
-		apply(ctx as unknown as Parameters<typeof apply>[0], makeConfig());
-		for (const teardown of setupFns) {
-			await teardown();
+		await apply(ctx as unknown as Parameters<typeof apply>[0], makeConfig());
+		if (cleanupFn) {
+			await cleanupFn();
 		}
 		expect(dispose).toHaveBeenCalled();
 	});

@@ -24,6 +24,8 @@ describe("DSH tool output compatibility", () => {
 		}),
 	};
 
+	const defineTool = vi.fn((tool: unknown) => tool);
+
 	const ctx = {
 		get: vi.fn((name: string) => {
 			if (name === "tools") return toolsService;
@@ -38,12 +40,13 @@ describe("DSH tool output compatibility", () => {
 		registeredTools.length = 0;
 		toolsService.register.mockClear();
 		ctx.get.mockClear();
+		defineTool.mockClear();
 	});
 
 	describe("core tools", () => {
 		beforeEach(() => {
 			const backend = makeFakeBackend();
-			registerTools(ctx as never, backend, makeConfig());
+			registerTools(ctx as never, { backend, config: makeConfig() }, defineTool);
 		});
 
 		it("should register all core tools", () => {
@@ -98,22 +101,25 @@ describe("DSH tool output compatibility", () => {
 				// Check 'ok' is boolean
 				expect((schema.properties.ok as { type: string }).type).toBe("boolean");
 
-				// Check 'value' exists (can be empty schema {} for any type)
-				expect(schema.properties).toHaveProperty("value");
+				// Check 'data' exists (for success values)
+				expect(schema.properties).toHaveProperty("data");
 
-				// Check 'error' is an object
-				expect(schema.properties).toHaveProperty("error");
+				// Check 'code' exists (for error codes)
+				expect(schema.properties).toHaveProperty("code");
+
+				// Check 'message' exists (for error messages)
+				expect(schema.properties).toHaveProperty("message");
 			}
 		});
 
 		it("output.render must return JSON-serializable values", () => {
 			// Test with sample values that tools actually return
 			const testValues = [
-				{ ok: true, value: { ids: ["test-id"] } },
-				{ ok: true, value: { items: [] } },
-				{ ok: true, value: { hits: [{ id: "x", content: "y", score: 0.5 }] } },
-				{ ok: true, value: { ok: true } },
-				{ ok: false, error: { code: "timeout", message: "error" } },
+				{ ok: true, data: { ids: ["test-id"] } },
+				{ ok: true, data: { items: [] } },
+				{ ok: true, data: { hits: [{ id: "x", content: "y", score: 0.5 }] } },
+				{ ok: true, data: { ok: true } },
+				{ ok: false, code: "timeout", message: "error" },
 			];
 
 			for (const tool of registeredTools) {
@@ -137,7 +143,11 @@ describe("DSH tool output compatibility", () => {
 	describe("insights tools", () => {
 		beforeEach(() => {
 			const backend = makeFakeBackend();
-			registerInsightsTools(ctx as never, backend, makeConfig({ enableInsights: true }));
+			registerInsightsTools(
+				ctx as never,
+				{ backend, config: makeConfig({ enableInsights: true }) },
+				defineTool,
+			);
 		});
 
 		it("should register insights tools", () => {
@@ -158,7 +168,11 @@ describe("DSH tool output compatibility", () => {
 	describe("knowledge tools", () => {
 		beforeEach(() => {
 			const backend = makeFakeBackend();
-			registerKnowledgeTools(ctx as never, backend, makeConfig({ enableKnowledge: true }));
+			registerKnowledgeTools(
+				ctx as never,
+				{ backend, config: makeConfig({ enableKnowledge: true }) },
+				defineTool,
+			);
 		});
 
 		it("should register knowledge tools", () => {
@@ -179,7 +193,7 @@ describe("DSH tool output compatibility", () => {
 	describe("summary tools", () => {
 		beforeEach(() => {
 			const backend = makeFakeBackend();
-			registerSummaryTools(ctx as never, backend, makeConfig());
+			registerSummaryTools(ctx as never, { backend, config: makeConfig() }, defineTool);
 		});
 
 		it("should register summary tools", () => {
@@ -200,7 +214,7 @@ describe("DSH tool output compatibility", () => {
 
 describe("Tool output value serialization", () => {
 	it("serializes oc_remember output correctly", () => {
-		const output = { ok: true, value: { ids: ["test-id-123"] } };
+		const output = { ok: true, data: { ids: ["test-id-123"] } };
 		expect(() => JSON.stringify(output)).not.toThrow();
 
 		const serialized = JSON.stringify(output);
@@ -211,7 +225,7 @@ describe("Tool output value serialization", () => {
 	it("serializes oc_search output correctly", () => {
 		const output = {
 			ok: true,
-			value: {
+			data: {
 				hits: [{ id: "x", content: "test", score: 0.8, timestamp: 12345, metadata: {} }],
 			},
 		};
@@ -225,7 +239,7 @@ describe("Tool output value serialization", () => {
 	it("serializes oc_memory_list output correctly", () => {
 		const output = {
 			ok: true,
-			value: {
+			data: {
 				items: [{ id: "x", content: "test", timestamp: 12345, metadata: {} }],
 			},
 		};
@@ -235,7 +249,8 @@ describe("Tool output value serialization", () => {
 	it("serializes error output correctly", () => {
 		const output = {
 			ok: false,
-			error: { code: "timeout", message: "request timed out" },
+			code: "timeout",
+			message: "request timed out",
 		};
 		expect(() => JSON.stringify(output)).not.toThrow();
 

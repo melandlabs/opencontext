@@ -25,11 +25,34 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: (args: unknown, value: unknown) => unknown;
-		presentationMeta?: (args: unknown, value: unknown) => unknown;
+		render: (args: Record<string, unknown>, value: ToolResult) => Array<{ type: string; text: string }>;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
+
+// Shared output definition for insights tools
+const INSIGHTS_OUTPUT = {
+	schema: {
+		type: "object",
+		additionalProperties: false,
+		properties: {
+			ok: { type: "boolean" },
+			code: { type: "string" },
+			message: { type: "string" },
+			data: {
+				type: "object",
+				additionalProperties: true,
+			},
+		},
+	},
+	render(_args: Record<string, unknown>, value: ToolResult) {
+		return [{ type: "text", text: JSON.stringify(value) }];
+	},
+};
+
+function defineTool(spec: ToolDefinition): ToolDefinition {
+	return { ...spec, output: spec.output ?? INSIGHTS_OUTPUT };
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
 	if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -43,18 +66,17 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
-	return fn()
-		.then((value) => {
-			if (value && typeof value === "object" && "ok" in value) {
-				return value as ToolResult<T>;
-			}
-			return toolOk(value as T);
-		})
-		.catch((error: unknown) => {
-			const cls = classifyBackendError(error);
-			return toolError(cls.code, cls.message);
-		});
+async function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
+	try {
+		const value = await fn();
+		if (value && typeof value === "object" && "ok" in value) {
+			return value as ToolResult<T>;
+		}
+		return toolOk(value as T);
+	} catch (error: unknown) {
+		const cls = classifyBackendError(error);
+		return toolError(cls.code, cls.message) as ToolResult<T>;
+	}
 }
 
 function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
@@ -81,7 +103,7 @@ const INSIGHT_CATEGORIES = [
  * Create the insights search tool
  */
 function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_insights_search",
 		kind: "search",
 		description:
@@ -106,41 +128,8 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Only return insights after this epoch ms timestamp.",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					insights: {
-						type: "array",
-						items: {
-							type: "object",
-							properties: {
-								id: { type: "string" },
-								content: { type: "string" },
-								category: { type: "string" },
-								score: { type: "number" },
-								timestamp: { type: "number" },
-								metadata: { type: "object" },
-							},
-						},
-					},
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{
-				insights: Array<{
-					id: string;
-					content: string;
-					category: string;
-					score: number;
-					timestamp?: number;
-					metadata: Record<string, unknown>;
-				}>;
-			}>(async () => {
+			runTool(async () => {
 				const query = String(args.query ?? "").trim();
 				if (!query) return toolError("invalid_arguments", "query is required");
 
@@ -186,14 +175,14 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 					})),
 				});
 			}),
-	};
+	});
 }
 
 /**
  * Create the insight capture tool
  */
 function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_insight_capture",
 		kind: "read",
 		description:
@@ -214,19 +203,8 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Optional metadata (e.g. { relatedTo: 'project-X' })",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					id: { type: "string" },
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{ id: string }>(async () => {
+			runTool(async () => {
 				const content = String(args.content ?? "").trim();
 				if (!content) return toolError("invalid_arguments", "content is required");
 				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
@@ -255,7 +233,7 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 
 				return toolOk({ id: result.id });
 			}),
-	};
+	});
 }
 
 export function makeInsightsTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
@@ -264,13 +242,13 @@ export function makeInsightsTools(backend: OpenContextBackend, config: ResolvedC
 
 export function registerInsightsTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
-	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	runtime: { backend: OpenContextBackend; config: ResolvedConfig },
+	defineTool: (definition: Record<string, unknown>) => unknown,
 ): () => void {
-	const tools = makeInsightsTools(backend, config);
+	const tools = makeInsightsTools(runtime.backend, runtime.config);
 	const disposers: Array<() => void> = [];
 	for (const tool of tools) {
-		disposers.push(ctx.tools.register(tool));
+		disposers.push(ctx.tools.register(defineTool(tool)));
 	}
 	return () => {
 		for (const dispose of disposers) {

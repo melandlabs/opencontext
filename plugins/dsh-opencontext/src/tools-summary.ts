@@ -24,11 +24,34 @@ export type ToolDefinition = {
 	kind?: "search" | "read";
 	output?: {
 		schema: Record<string, unknown>;
-		render: (args: unknown, value: unknown) => unknown;
-		presentationMeta?: (args: unknown, value: unknown) => unknown;
+		render: (args: Record<string, unknown>, value: ToolResult) => Array<{ type: string; text: string }>;
 	};
 	execute: (args: Record<string, unknown>, ctx: ToolContext) => Promise<ToolResult<unknown>>;
 };
+
+// Shared output definition for summary tools
+const SUMMARY_OUTPUT = {
+	schema: {
+		type: "object",
+		additionalProperties: false,
+		properties: {
+			ok: { type: "boolean" },
+			code: { type: "string" },
+			message: { type: "string" },
+			data: {
+				type: "object",
+				additionalProperties: true,
+			},
+		},
+	},
+	render(_args: Record<string, unknown>, value: ToolResult) {
+		return [{ type: "text", text: JSON.stringify(value) }];
+	},
+};
+
+function defineTool(spec: ToolDefinition): ToolDefinition {
+	return { ...spec, output: spec.output ?? SUMMARY_OUTPUT };
+}
 
 function asRecord(value: unknown): Record<string, unknown> {
 	if (value && typeof value === "object" && !Array.isArray(value)) {
@@ -42,18 +65,17 @@ function coerceLimit(value: unknown, fallback: number, max: number): number {
 	return Math.max(1, Math.min(max, Math.floor(value)));
 }
 
-function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
-	return fn()
-		.then((value) => {
-			if (value && typeof value === "object" && "ok" in value) {
-				return value as ToolResult<T>;
-			}
-			return toolOk(value as T);
-		})
-		.catch((error: unknown) => {
-			const cls = classifyBackendError(error);
-			return toolError(cls.code, cls.message);
-		});
+async function runTool<T>(fn: () => Promise<ToolResult<T> | T>): Promise<ToolResult<T>> {
+	try {
+		const value = await fn();
+		if (value && typeof value === "object" && "ok" in value) {
+			return value as ToolResult<T>;
+		}
+		return toolOk(value as T);
+	} catch (error: unknown) {
+		const cls = classifyBackendError(error);
+		return toolError(cls.code, cls.message) as ToolResult<T>;
+	}
 }
 
 function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: string; userId: string } {
@@ -66,7 +88,7 @@ function asScopeConfig(ctx: ToolContext, config: ResolvedConfig): { scopeId: str
  * Create the session summary tool
  */
 function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_session_summary",
 		kind: "read",
 		description:
@@ -88,19 +110,8 @@ function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedC
 				description: "Optional metadata (e.g. { project: 'X', milestone: 'Y' })",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					id: { type: "string" },
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{ id: string }>(async () => {
+			runTool(async () => {
 				const summary = String(args.summary ?? "").trim();
 				if (!summary) return toolError("invalid_arguments", "summary is required");
 				if (containsSecret(summary)) return toolError("secret_rejected", "summary looks like a secret");
@@ -127,14 +138,14 @@ function createSessionSummaryTool(backend: OpenContextBackend, config: ResolvedC
 				const id = result.ids?.[0] ?? "";
 				return toolOk({ id });
 			}),
-	};
+	});
 }
 
 /**
  * Create the task outcome tool
  */
 function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_task_outcome",
 		kind: "read",
 		description:
@@ -156,19 +167,8 @@ function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConf
 				description: "Optional metadata",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					id: { type: "string" },
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{ id: string }>(async () => {
+			runTool(async () => {
 				const outcome = String(args.outcome ?? "").trim();
 				if (!outcome) return toolError("invalid_arguments", "outcome is required");
 				if (containsSecret(outcome)) return toolError("secret_rejected", "outcome looks like a secret");
@@ -197,14 +197,14 @@ function createTaskOutcomeTool(backend: OpenContextBackend, config: ResolvedConf
 				const id = result.ids?.[0] ?? "";
 				return toolOk({ id });
 			}),
-	};
+	});
 }
 
 /**
  * Create the recent summaries tool
  */
 function createRecentSummariesTool(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition {
-	return {
+	return defineTool({
 		name: "oc_recent_summaries",
 		kind: "read",
 		description: "List recent session summaries and task outcomes",
@@ -219,39 +219,8 @@ function createRecentSummariesTool(backend: OpenContextBackend, config: Resolved
 				description: "Filter by source type (e.g. ['session-summary', 'task-outcome'])",
 			},
 		},
-		output: {
-			schema: {
-				type: "object",
-				properties: {
-					items: {
-						type: "array",
-						items: {
-							type: "object",
-							properties: {
-								id: { type: "string" },
-								content: { type: "string" },
-								sourceType: { type: "string" },
-								timestamp: { type: "number" },
-								metadata: { type: "object" },
-							},
-						},
-					},
-				},
-			},
-			render(args: unknown, value: unknown) {
-				return value;
-			},
-		},
 		execute: async (args, ctx) =>
-			runTool<{
-				items: Array<{
-					id: string;
-					content: string;
-					sourceType: string;
-					timestamp: number;
-					metadata: Record<string, unknown>;
-				}>;
-			}>(async () => {
+			runTool(async () => {
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
 				// Use list with source type filter
@@ -285,7 +254,7 @@ function createRecentSummariesTool(backend: OpenContextBackend, config: Resolved
 					})),
 				});
 			}),
-	};
+	});
 }
 
 export function makeSummaryTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDefinition[] {
@@ -298,13 +267,13 @@ export function makeSummaryTools(backend: OpenContextBackend, config: ResolvedCo
 
 export function registerSummaryTools(
 	ctx: { tools: { register: (tool: unknown) => () => void } },
-	backend: OpenContextBackend,
-	config: ResolvedConfig,
+	runtime: { backend: OpenContextBackend; config: ResolvedConfig },
+	defineTool: (definition: Record<string, unknown>) => unknown,
 ): () => void {
-	const tools = makeSummaryTools(backend, config);
+	const tools = makeSummaryTools(runtime.backend, runtime.config);
 	const disposers: Array<() => void> = [];
 	for (const tool of tools) {
-		disposers.push(ctx.tools.register(tool));
+		disposers.push(ctx.tools.register(defineTool(tool)));
 	}
 	return () => {
 		for (const dispose of disposers) {

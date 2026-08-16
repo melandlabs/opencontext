@@ -58,6 +58,8 @@ describe("summary tools", () => {
 	});
 
 	describe("registerSummaryTools", () => {
+		const defineTool = vi.fn((x: unknown) => x);
+
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
@@ -65,7 +67,7 @@ describe("summary tools", () => {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
 
-			const disposer = registerSummaryTools(ctx as any, backend, config as any);
+			const disposer = registerSummaryTools(ctx as any, { backend, config }, defineTool);
 
 			expect(ctx.tools.register).toHaveBeenCalledTimes(3);
 			expect(typeof disposer).toBe("function");
@@ -84,7 +86,7 @@ describe("summary tools", () => {
 				},
 			};
 
-			const disposer = registerSummaryTools(ctx as any, backend, config as any);
+			const disposer = registerSummaryTools(ctx as any, { backend, config }, defineTool);
 			disposer();
 
 			expect(disposers[0]).toHaveBeenCalled();
@@ -103,7 +105,7 @@ describe("summary tools", () => {
 			const result = await summaryTool.execute({}, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should call backend.remember with correct params", async () => {
@@ -143,7 +145,7 @@ describe("summary tools", () => {
 			const result = await outcomeTool.execute({}, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should call backend.remember with task-outcome sourceType", async () => {
@@ -188,7 +190,7 @@ describe("summary tools", () => {
 			const result = await listTool.execute({ limit: 10 }, {});
 
 			assertToolOk(result);
-			const items = (result.value as any).items;
+			const items = (result.data as any).items;
 			expect(items).toHaveLength(2); // Only session-summary and task-outcome
 			expect(items[0].sourceType).toBe("session-summary");
 			expect(items[1].sourceType).toBe("task-outcome");
@@ -207,7 +209,7 @@ describe("summary tools", () => {
 			const result = await listTool.execute({ sourceTypes: ["session-summary"] }, {});
 
 			assertToolOk(result);
-			const items = (result.value as any).items;
+			const items = (result.data as any).items;
 			expect(items).toHaveLength(1);
 			expect(items[0].sourceType).toBe("session-summary");
 		});

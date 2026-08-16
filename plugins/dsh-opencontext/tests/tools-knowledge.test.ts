@@ -58,6 +58,8 @@ describe("knowledge tools", () => {
 	});
 
 	describe("registerKnowledgeTools", () => {
+		const defineTool = vi.fn((x: unknown) => x);
+
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
@@ -65,7 +67,7 @@ describe("knowledge tools", () => {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
 
-			const disposer = registerKnowledgeTools(ctx as any, backend, config as any);
+			const disposer = registerKnowledgeTools(ctx as any, { backend, config }, defineTool);
 
 			expect(ctx.tools.register).toHaveBeenCalledTimes(3);
 			expect(typeof disposer).toBe("function");
@@ -84,7 +86,7 @@ describe("knowledge tools", () => {
 				},
 			};
 
-			const disposer = registerKnowledgeTools(ctx as any, backend, config as any);
+			const disposer = registerKnowledgeTools(ctx as any, { backend, config }, defineTool);
 			disposer();
 
 			expect(disposers[0]).toHaveBeenCalled();
@@ -103,7 +105,7 @@ describe("knowledge tools", () => {
 			const result = await searchTool.execute({}, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should return fallback when backend does not support knowledge", async () => {
@@ -115,8 +117,8 @@ describe("knowledge tools", () => {
 			const result = await searchTool.execute({ query: "test" }, {});
 
 			assertToolOk(result);
-			expect(result.value).toHaveProperty("chunks");
-			expect((result.value as any).chunks).toEqual([]);
+			expect(result.data).toHaveProperty("chunks");
+			expect((result.data as any).chunks).toEqual([]);
 		});
 	});
 
@@ -130,7 +132,7 @@ describe("knowledge tools", () => {
 			const result = await uploadTool.execute({ filename: "test.txt" }, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 
 		it("should return error when filename is missing", async () => {
@@ -142,7 +144,7 @@ describe("knowledge tools", () => {
 			const result = await uploadTool.execute({ content: "test" }, {});
 
 			assertToolError(result);
-			expect(result.error.code).toBe("invalid_arguments");
+			expect(result.code).toBe("invalid_arguments");
 		});
 	});
 });

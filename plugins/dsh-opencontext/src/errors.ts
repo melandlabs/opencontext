@@ -2,7 +2,7 @@
  * Error taxonomy for dsh-opencontext.
  *
  * Every tool and the recall/capture waterfall report failures as
- * `{ ok: false, error: { code, message } }` — never throw to the model.
+ * `{ ok: false, code: ..., message: ... }` — never throw to the model.
  * These error codes are stable strings the host can switch on.
  */
 
@@ -19,24 +19,19 @@ export type ErrorCode =
 	| "secret_rejected"
 	| "internal_error";
 
-export interface ToolError {
-	ok: false;
-	error: { code: ErrorCode; message: string; details?: unknown };
+export interface ToolResult<T = unknown> {
+	ok: boolean;
+	code?: ErrorCode;
+	message?: string;
+	data?: T;
 }
 
-export interface ToolOk<T> {
-	ok: true;
-	value: T;
+export function toolOk<T>(data: T): ToolResult<T> {
+	return { ok: true, data };
 }
 
-export type ToolResult<T> = ToolOk<T> | ToolError;
-
-export function toolOk<T>(value: T): ToolOk<T> {
-	return { ok: true, value };
-}
-
-export function toolError(code: ErrorCode, message: string, details?: unknown): ToolError {
-	return { ok: false, error: { code, message, details } };
+export function toolError(code: ErrorCode, message: string): ToolResult {
+	return { ok: false, code, message };
 }
 
 const MAX_CONTEXT_BYTES_DEFAULT = 8_000;
