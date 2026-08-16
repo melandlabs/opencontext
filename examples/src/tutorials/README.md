@@ -40,9 +40,7 @@ node --experimental-strip-types docs-tutorials/09-http-client-example.ts
 |------|---------------|--------|
 | `00-hello-memory.ts` | Store a fact and recall it with `createMemoryStore` + `getRawMessageManager` | ✅ Works |
 | `07-local-embeddings-example.ts` | SDK mode with `LocalTransformersEmbeddingProvider` | ⚠️ Runs, but semantic search currently returns 0 results. The ONNX model loads and embeddings are produced, yet the stored vector is not retrieved by `searchUnifiedMemory`. |
-| `07d-local-embeddings-fixed.ts` | Corrected API for the above (`store.raw.getManager().storeMessages(...)`) | ⚠️ Runs without crashing, same 0-result caveat as `07`. |
-| `07i-semantic-search-wired.ts` | **Working** semantic search by wiring `unified.embedQuery`, `searchInsights`, and `searchKnowledge` with in-memory cosine indices | ✅ Returns real semantic hits. |
-| `08-local-embeddings-full-setup.ts` | Full local setup pattern from the developer guide | ⚠️ Runs, returns 0 results. |
+| `08-local-embeddings-full-setup.ts` | Full local setup pattern from the developer guide | ⚠️ Same as above — runs, returns 0 results. |
 | `09-http-client-example.ts` | HTTP client talking to `opencontext http` | ✅ Works when the server is running. |
 
 ### User guide (`01-user-guide.md`)
@@ -72,19 +70,3 @@ node --experimental-strip-types docs-tutorials/09-http-client-example.ts
 | `11-loop-example.ts` | `LOOP_PATHS`, `ensureDirs`, `readPreferences`, `writePreferences` | ✅ Works |
 | `12-integration-ids-example.ts` | `INTEGRATION_IDS` constant | ✅ Works |
 | `13-batch-example.ts` | Batch 100 writes in one `storeMessages` call | ✅ Works |
-
-## Not moved here
-
-The following tutorial cases could not be run as-is against `@melandlabs/opencontext@0.2.4`:
-
-- **AI agent examples** (`14-standalone-agent-example.ts`, `15-memory-aware-agent-example.ts`)
-  need `@melandlabs/ai`, which is not installed in the target project.
-- **`16-recall-before-acting-example.ts`** needs `ai` + `@ai-sdk/openai` and an
-  `OPENAI_API_KEY`.
-- Several snippets in `03-advanced-usage.md` and `04-best-practices.md` reference APIs that
-  are not exported from `@melandlabs/opencontext@0.2.4`, including:
-  `validateCronExpression`, `computeNextRun`, `TokenEncryption`, `validateUrlForSSRF`,
-  `isTrustedStorageUrl`, `getIntegrationManager`, `AuditLogger`, `LocalKokoroTTS`,
-  `LocalWhisperSTT`, `needsRealTimeInfo`, `search`, and `getMemoryGraph`. Those APIs exist
-  in the monorepo's individual packages (e.g. `@melandlabs/cron`, `@melandlabs/security`,
-  `@melandlabs/search`) but are not re-exported by the facade package at this version.

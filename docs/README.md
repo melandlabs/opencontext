@@ -16,7 +16,7 @@ These documents explain the design and technical architecture of OpenContext:
 For hands-on learning, see the [tutorials/](./tutorials/) directory:
 
 - **[Getting Started](./tutorials/00-getting-started.md)** - Installation and your first API call
-- **[User Guide](./tutorials/01-user-guide.md)** - Core concepts: four verbs, temporal graph, IAgent
+- **[User Guide](./tutorials/01-user-guide.md)** - Core concepts: four memory verbs, temporal graph, agent
 - **[Developer Guide](./tutorials/02-developer-guide.md)** - Integration patterns and deployment
 - **[Advanced Usage](./tutorials/03-advanced-usage.md)** - Multi-source search, temporal queries, platforms
 - **[Best Practices](./tutorials/04-best-practices.md)** - Production-ready patterns
