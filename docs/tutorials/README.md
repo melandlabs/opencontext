@@ -94,16 +94,6 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 |----------------|------------|
 | Use with DeepSeek Harness | [Advanced Usage](./03-advanced-usage.md#deepseek-harness-plugin) |
 
-### OpenLoomi Use Cases
-
-| You want to... | Reference |
-|----------------|------------|
-| Build a cross-platform desktop agent | [OpenLoomi GitHub](https://github.com/melandlabs/openloomi) |
-| Unify context across Gmail/Slack/Linear/Notion | [OpenLoomi README](https://github.com/melandlabs/openloomi#features) |
-| Create automated morning briefings | See Loop Engine section |
-| Send summaries via Telegram/WhatsApp/iMessage | [Platform Integrations](./03-advanced-usage.md#platform-integrations) |
-| Build local-first attention management | [OpenLoomi Architecture](https://github.com/melandlabs/openloomi) |
-
 ## Tutorial Contents
 
 | Tutorial | Focus | Key Topics |
@@ -118,7 +108,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 
 Before starting any tutorial:
 
-1. **Node.js** >= 18.0.0
+1. **Node.js** >= 22
 2. **pnpm** >= 9.0.0 (recommended) or npm/yarn
 
 See [Getting Started](./00-getting-started.md#prerequisites) for platform-specific prerequisites (Windows, macOS, Linux).

@@ -1,5 +1,64 @@
 # @melandlabs/opencontext-examples
 
+## 0.1.2
+
+### Patch Changes
+
+- Updated dependencies [c6a9248]
+- Updated dependencies [52ed6a9]
+- Updated dependencies [0e51467]
+- Updated dependencies
+  - @melandlabs/ai@0.3.0
+  - @melandlabs/contracts@0.2.0
+  - @melandlabs/memory-consolidation@0.2.0
+  - @melandlabs/sqlite@0.2.0
+  - @melandlabs/indexeddb@0.2.0
+  - @melandlabs/memory-store@1.0.0
+  - @melandlabs/opencontext@1.0.0
+  - @melandlabs/ai-rag@0.2.0
+  - @melandlabs/api@0.2.0
+  - @melandlabs/audit@0.2.0
+  - @melandlabs/config@0.2.0
+  - @melandlabs/cron@0.2.0
+  - @melandlabs/db@0.2.0
+  - @melandlabs/env-config@0.2.0
+  - @melandlabs/hooks@0.2.0
+  - @melandlabs/i18n@0.2.0
+  - @melandlabs/insights@0.2.0
+  - @melandlabs/integrations@0.2.0
+  - @melandlabs/integrations-asana@0.2.0
+  - @melandlabs/integrations-calendar@0.2.0
+  - @melandlabs/integrations-channels@0.2.0
+  - @melandlabs/integrations-composio@0.2.0
+  - @melandlabs/integrations-dingtalk@0.2.0
+  - @melandlabs/integrations-facebook-messenger@0.2.0
+  - @melandlabs/integrations-feishu@0.2.0
+  - @melandlabs/integrations-gmail@0.2.0
+  - @melandlabs/integrations-google-docs@0.2.0
+  - @melandlabs/integrations-google-meet@0.2.0
+  - @melandlabs/integrations-hubspot@0.2.0
+  - @melandlabs/integrations-imessage@0.2.0
+  - @melandlabs/integrations-instagram@0.2.0
+  - @melandlabs/integrations-jira@0.2.0
+  - @melandlabs/integrations-linkedin@0.2.0
+  - @melandlabs/integrations-qqbot@0.2.0
+  - @melandlabs/integrations-runtime@0.2.0
+  - @melandlabs/integrations-telegram@0.2.0
+  - @melandlabs/integrations-weixin@0.2.0
+  - @melandlabs/integrations-whatsapp@0.2.0
+  - @melandlabs/integrations-x@0.2.0
+  - @melandlabs/loop@0.2.0
+  - @melandlabs/mcp@0.2.0
+  - @melandlabs/rag@0.2.0
+  - @melandlabs/rss@0.2.0
+  - @melandlabs/search@0.2.0
+  - @melandlabs/security@0.2.0
+  - @melandlabs/shared@0.2.0
+  - @melandlabs/storage@0.2.0
+  - @melandlabs/ui-runtime@0.2.0
+  - @melandlabs/voice-kokoro@0.2.0
+  - @melandlabs/voice-whisper@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

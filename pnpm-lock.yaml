@@ -57,151 +57,151 @@ importers:
         specifier: ^0.2.0
         version: link:../packages/ai
       '@melandlabs/ai-rag':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/ai/rag
       '@melandlabs/api':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/api
       '@melandlabs/audit':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/audit
       '@melandlabs/config':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/config
       '@melandlabs/contracts':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/contracts
       '@melandlabs/cron':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/cron
       '@melandlabs/db':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/db
       '@melandlabs/env-config':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/env-config
       '@melandlabs/hooks':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/hooks
       '@melandlabs/i18n':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/i18n
       '@melandlabs/indexeddb':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/indexeddb
       '@melandlabs/insights':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/insights
       '@melandlabs/integrations':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations
       '@melandlabs/integrations-asana':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/asana
       '@melandlabs/integrations-calendar':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/calendar
       '@melandlabs/integrations-channels':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/channels
       '@melandlabs/integrations-composio':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/facebook-messenger
       '@melandlabs/integrations-feishu':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/google-docs
       '@melandlabs/integrations-google-meet':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/google-meet
       '@melandlabs/integrations-hubspot':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/instagram
       '@melandlabs/integrations-jira':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/jira
       '@melandlabs/integrations-linkedin':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/x
       '@melandlabs/loop':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/loop
       '@melandlabs/mcp':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/ai/mcp
       '@melandlabs/memory-consolidation':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.1.5
+        specifier: ^0.2.0
         version: link:../packages/opencontext
       '@melandlabs/rag':
-        specifier: ^0.1.5
+        specifier: ^0.2.0
         version: link:../packages/rag
       '@melandlabs/rss':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/integrations/rss
       '@melandlabs/search':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/search
       '@melandlabs/security':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/security
       '@melandlabs/shared':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/shared
       '@melandlabs/sqlite':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/sqlite
       '@melandlabs/storage':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/storage
       '@melandlabs/ui-runtime':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/ui-runtime
       '@melandlabs/voice-kokoro':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/voice-kokoro
       '@melandlabs/voice-whisper':
-        specifier: ^0.1.4
+        specifier: ^0.2.0
         version: link:../packages/voice-whisper
       better-sqlite3:
         specifier: ^11.7.0
