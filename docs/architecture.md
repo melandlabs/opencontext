@@ -251,7 +251,7 @@ Two contracts are load-bearing across process boundaries:
 - `RawMessage` — the wire format between a caller and the HTTP daemon.
   Defined in `@melandlabs/contracts`. Decoupled from
   browser globals so it can be imported in Node, Bun, and the browser alike.
-- `IntegrationId` — the 27-platform enum used everywhere an integration
+- `IntegrationId` — the multi-platform enum used everywhere an integration
   is referenced. Defined in `@melandlabs/contracts/integration-id`.
   UI-side code imports it to drive authorisation flows; runtime-side code
   imports it to load the correct adapter.

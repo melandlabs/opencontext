@@ -65,7 +65,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 |----------------|------------|
 | Add Gmail/Slack integrations | [Advanced Usage](./03-advanced-usage.md#platform-integrations) |
 | Send messages through platforms | [Advanced Usage](./03-advanced-usage.md#sending-messages-write) |
-| See all 27+ supported platforms | [Advanced Usage](./03-advanced-usage.md#available-platforms) |
+| See all supported platforms | [Advanced Usage](./03-advanced-usage.md#available-platforms) |
 | Use with your coding agent via MCP | [Getting Started](./00-getting-started.md#using-with-your-coding-agent-via-mcp) |
 
 ### Deployment & Operations

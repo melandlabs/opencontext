@@ -122,7 +122,7 @@ const history = await graph.getHistory("node-123");
 
 ## Platform Integrations
 
-OpenContext supports 27+ platforms with a unified `IntegrationRecord` shape:
+OpenContext supports multiple platforms with a unified `IntegrationRecord` shape:
 
 ### Available Platforms
 

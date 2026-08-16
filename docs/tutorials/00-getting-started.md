@@ -8,7 +8,7 @@ OpenContext is the **agentic context runtime** that powers applications that act
 
 - **Temporal memory** - facts are stored with `valid_from` / `valid_until` for time-travel queries
 - **Unified search** - search across memory, insights, and knowledge in one call
-- **27+ platform integrations** - Gmail, Slack, Telegram, Linear, Jira, and more
+- **Multi-platform integrations** - Gmail, Slack, Telegram, Linear, Jira, and more
 - **Deterministic loop engine** - schedule when your agent should wake up
 - **Library-first API** - one npm package, no framework required
 
@@ -16,7 +16,7 @@ OpenContext is the **agentic context runtime** that powers applications that act
 
 Before you begin, ensure you have:
 
-- **Node.js** >= 18.0.0
+- **Node.js** >= 22
 - **pnpm** >= 9.0.0 (recommended) or npm/yarn
 
 Verify your installation:

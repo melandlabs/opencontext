@@ -14,7 +14,7 @@ runtime logic. Canonical source of truth for boundary shapes.
 | -------------------------- | --------------------------------------------------------------------------------------------- |
 | `contracts` (root)         | Barrel — re-exports everything                                                                |
 | `contracts/user-type`      | `UserType = "guest" \| "regular" \| "basic" \| "pro" \| "team"` + `isUserType`, `USER_TYPES`  |
-| `contracts/integration-id` | `IntegrationId` (branded string union of 27 platforms) + `isIntegrationId`, `INTEGRATION_IDS` |
+| `contracts/integration-id` | `IntegrationId` (branded string union of multiple platforms) + `isIntegrationId`, `INTEGRATION_IDS` |
 | `contracts/errors`         | `AuthErrorCode` enum                                                                          |
 | `contracts/schemas`        | `UserTypeSchema`, `IntegrationIdSchema` (zod)                                                 |
 
