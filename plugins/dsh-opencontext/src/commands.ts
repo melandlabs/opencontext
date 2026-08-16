@@ -81,27 +81,37 @@ async function handleDoctor(
 }
 
 export function registerCommand(
-	ctx: { get: (name: string) => unknown },
+	ctx: { get: (name: string) => unknown; logger?: { warn?: (msg: string) => void } },
 	backend: OpenContextBackend,
 	config: ResolvedConfig,
 ): () => void {
 	const commands = ctx.get("commands") as CommandService | undefined;
 	if (!commands || typeof commands.register !== "function") {
+		ctx.logger?.warn?.("[dsh-opencontext] commands service not available");
 		return () => undefined;
 	}
+
 	return commands.register({
 		name: "oc",
 		description: "OpenContext status, search, remember, and diagnostics.",
 		handler: async (invocation: CommandInvocation) => {
-			const trimmed = (invocation.rawInput ?? "").trim();
-			const sub = trimmed.split(/\s+/).filter(Boolean)[0] ?? "";
-			if (sub === "doctor" || sub === "") {
-				return handleDoctor(backend, config);
+			try {
+				const trimmed = (invocation.rawInput ?? "").trim();
+				const sub = trimmed.split(/\s+/).filter(Boolean)[0] ?? "";
+				if (sub === "doctor" || sub === "") {
+					return await handleDoctor(backend, config);
+				}
+				return {
+					kind: "error",
+					text: `Unknown /oc subcommand: ${sub}. Try /oc doctor.`,
+				};
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				return {
+					kind: "error",
+					text: `Command failed: ${errorMessage}`,
+				};
 			}
-			return {
-				kind: "error",
-				text: `Unknown /oc subcommand: ${sub}. Try /oc doctor.`,
-			};
 		},
 	});
 }

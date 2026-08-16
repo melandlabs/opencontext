@@ -52,7 +52,13 @@ dsh web
 #   Visit http://127.0.0.1:3080/plugins and confirm dsh-opencontext shows "Enabled"
 ```
 
-![dsh-opencontext in DSH Web](screenshots/image.png)
+### Plugin view
+
+![dsh-opencontext plugin](screenshots/plugin.png)
+
+### Slash command
+
+![dsh-opencontext slash command](screenshots/slash.png)
 
 ## What you get
 
