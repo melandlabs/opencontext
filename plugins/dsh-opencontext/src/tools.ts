@@ -133,7 +133,7 @@ function makeTools(backend: OpenContextBackend, config: ResolvedConfig): ToolDef
 					hits: hits.map((hit) => ({
 						id: hit.id,
 						content: hit.content,
-						score: hit.score,
+						score: Number.isFinite(hit.score) ? Number(hit.score.toFixed(3)) : 0,
 						timestamp: hit.timestamp,
 						metadata: hit.metadata ?? {},
 					})),
