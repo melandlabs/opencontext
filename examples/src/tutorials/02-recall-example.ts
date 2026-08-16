@@ -21,7 +21,7 @@ async function main() {
 	}
 
 	for (const hit of results.results) {
-		console.log(`- ${hit.content} (score: ${hit.score})`);
+		console.log(`- ${hit.content} (similarity: ${hit.similarity})`);
 	}
 }
 

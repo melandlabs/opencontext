@@ -29,10 +29,7 @@ let store: Awaited<ReturnType<typeof createMemoryStore>>;
 
 export async function initMemory() {
   store = await createMemoryStore({
-    db: {
-      type: "sqlite-vec",
-      path: process.env.MEMORY_DB_PATH || "./memory.db",
-    },
+    dbPath: process.env.MEMORY_DB_PATH || "./memory.db",
   });
 }
 
@@ -225,7 +222,7 @@ const store = await createMemoryStore({
 
 ```typescript
 const store = await createMemoryStore({
-  db: { type: "sqlite-vec", path: "./raw.db" },
+  dbPath: "./raw.db",
   vector: {
     backend: "chroma",
     chroma: {
@@ -245,20 +242,17 @@ const store = await createMemoryStore({
 ### Full Local Setup (No API Keys)
 
 ```typescript
-import { createMemoryStore } from "@melandlabs/opencontext";
-import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag";
+import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
 
-const embedder = new LocalTransformersEmbeddingProvider();
+const embedder = new LocalTransformersEmbeddingProvider({
+  modelName: "Xenova/all-MiniLM-L6-v2",
+});
 
 const store = await createMemoryStore({
-  db: {
-    type: "sqlite-vec",
-    path: "./memory.db",
-  },
+  dbPath: "./memory.db",
   unified: {
     embedQuery: async ({ query }) => {
-      const result = await embedder.embed(query);
-      return result.embedding;
+      return await embedder.embedQuery(query);
     },
   },
 });

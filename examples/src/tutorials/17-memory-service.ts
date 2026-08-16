@@ -4,10 +4,7 @@ let store: Awaited<ReturnType<typeof createMemoryStore>>;
 
 export async function initMemory() {
 	store = await createMemoryStore({
-		db: {
-			type: "sqlite-vec",
-			path: process.env.MEMORY_DB_PATH || "./tutorials-memory-service.db",
-		},
+		dbPath: process.env.MEMORY_DB_PATH || "./tutorials-memory-service.db",
 	});
 }
 
@@ -36,7 +33,7 @@ async function main() {
 	await initMemory();
 	const userId = "user-memory-service";
 	await rememberFact(userId, "User prefers dark mode");
-	const results = await recallFacts(userId, "preferences");
+	const results = await recallFacts(userId, "dark mode");
 	console.log(`Found ${results.count} results`);
 	for (const hit of results.results) {
 		console.log(`- ${hit.content}`);

@@ -28,6 +28,7 @@
 		"better-sqlite3": "^11.10.0",
 		"cross-spawn": "^7.0.3",
 		"encoding": "^0.1.13",
+		"fernet": "^0.4.0",
 		"form-data": "^4.0.6",
 		"form-data-encoder": "1.7.2",
 		"formdata-node": "^4.4.1",

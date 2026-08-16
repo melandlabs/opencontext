@@ -203,7 +203,51 @@ export type {
 export { KokoroPlugin as LocalKokoroTTS } from "@melandlabs/voice-kokoro";
 export { WhisperPlugin as LocalWhisperSTT } from "@melandlabs/voice-whisper";
 
-// ─── 10. CLI entry points (used by the bundled bin scripts in dist/cli/) ──
+// ─── 10. Security: token encryption + SSRF protection ───────────────────────
+export {
+	SSRFValidationError,
+	TokenEncryption,
+	decryptToken,
+	decryptTokenPair,
+	encryptToken,
+	encryptTokenPair,
+	fetchWithSSRFProtection,
+	isTrustedStorageUrl,
+	validateUrlForSSRF,
+} from "@melandlabs/security";
+export type { DerivedKey } from "@melandlabs/security";
+
+// ─── 11. Integrations: platform context factory ─────────────────────────────
+export { createMinimalContext } from "@melandlabs/integrations/core";
+export type {
+	AIHandler,
+	AIHandlerOptions,
+	AppConfigProvider,
+	AttachmentDownloadPayload,
+	AuthProvider,
+	BaileysAuthStateProvider,
+	Bot,
+	ClientRegistry,
+	CloudSyncProvider,
+	ConfigProvider,
+	CredentialStore,
+	FileIngester,
+	InboundMessageHandler,
+	IngestExternalOptions,
+	IngestResult,
+	IngestedAttachment,
+	IntegrationAccount,
+	IntegrationAccountWithBot,
+	IntegrationContext,
+	LocalUserType,
+	PlatformId,
+	SessionStore,
+} from "@melandlabs/integrations/core";
+
+// Tutorial-compatibility aliases for integration APIs that were renamed.
+export { createMinimalContext as getIntegrationManager } from "@melandlabs/integrations/core";
+
+// ─── 12. CLI entry points (used by the bundled bin scripts in dist/cli/) ──
 // Re-export the server starters so the CLI bins can import them through
 // the facade's main bundle (one canonical copy of the code).
 export { startHttpServer } from "@melandlabs/memory-store/http";

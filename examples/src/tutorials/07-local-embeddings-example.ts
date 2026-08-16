@@ -10,7 +10,7 @@ async function main() {
 	});
 
 	const store = await createMemoryStore({
-		db: { type: "sqlite-vec", path: "./tutorials-embeddings.db" },
+		dbPath: "./tutorials-embeddings.db",
 		unified: {
 			embedQuery: async ({ query }) => {
 				return await embeddingProvider.embedQuery(query);
@@ -43,6 +43,7 @@ async function main() {
 		userId: "user-42",
 		query: "What theme does the user like?",
 		limit: 5,
+		threshold: 0.0,
 	});
 
 	console.log("Found", results.count, "results");

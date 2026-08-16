@@ -63,5 +63,11 @@ export default defineConfig({
 		// ai-rag ships native deps (@huggingface/transformers ONNX runtime,
 		// chromadb). Now bundled as a regular dependency since the facade has
 		// static re-exports from it.
+		// `fernet` is a CommonJS-only token-encryption library used by
+		// `@melandlabs/security`. Bundling it into an ESM facade wraps its
+		// `require('crypto')` call in tsup's `__commonJS` shim, which throws
+		// `Dynamic require of "crypto" is not supported` at runtime. Keep it
+		// external so Node's resolver loads the real CJS package.
+		"fernet",
 	],
 });

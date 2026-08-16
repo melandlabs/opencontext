@@ -1,8 +1,8 @@
 # Tutorial examples from `docs/tutorials`
 
 These are the runnable TypeScript cases extracted from the tutorial markdown files in
-[`../../docs/tutorials`](../../docs/tutorials). They were executed against the published
-`@melandlabs/opencontext` package in a standalone project and then moved here with notes.
+[`../../docs/tutorials`](../../docs/tutorials). They were executed against the local
+`@melandlabs/opencontext` workspace package.
 
 ## Running
 
@@ -11,26 +11,11 @@ From this repo's `examples` directory:
 ```bash
 cd /Users/timi/codes/opencontext/examples
 pnpm install
-node --experimental-strip-types docs-tutorials/00-hello-memory.ts
+node --experimental-strip-types src/tutorials/00-hello-memory.ts
 ```
 
 Most files import from `@melandlabs/opencontext` only, so they work once the
 `examples` workspace dependencies are installed.
-
-`09-http-client-example.ts` needs a local HTTP server:
-
-```bash
-npx @melandlabs/opencontext http \
-  --embedding-provider local \
-  --memory-backend sqlite-vec \
-  --host 127.0.0.1 --port 7421
-```
-
-Then in another shell:
-
-```bash
-node --experimental-strip-types docs-tutorials/09-http-client-example.ts
-```
 
 ## Files
 
@@ -39,8 +24,8 @@ node --experimental-strip-types docs-tutorials/09-http-client-example.ts
 | File | What it shows | Status |
 |------|---------------|--------|
 | `00-hello-memory.ts` | Store a fact and recall it with `createMemoryStore` + `getRawMessageManager` | ✅ Works |
-| `07-local-embeddings-example.ts` | SDK mode with `LocalTransformersEmbeddingProvider` | ⚠️ Runs, but semantic search currently returns 0 results. The ONNX model loads and embeddings are produced, yet the stored vector is not retrieved by `searchUnifiedMemory`. |
-| `08-local-embeddings-full-setup.ts` | Full local setup pattern from the developer guide | ⚠️ Same as above — runs, returns 0 results. |
+| `07-local-embeddings-example.ts` | SDK mode with `LocalTransformersEmbeddingProvider` | ✅ Works |
+| `08-local-embeddings-full-setup.ts` | Full local setup pattern from the developer guide | ✅ Works (returns 0 results because it only configures the store) |
 | `09-http-client-example.ts` | HTTP client talking to `opencontext http` | ✅ Works when the server is running. |
 
 ### User guide (`01-user-guide.md`)
@@ -61,7 +46,7 @@ node --experimental-strip-types docs-tutorials/09-http-client-example.ts
 | File | What it shows | Status |
 |------|---------------|--------|
 | `06-minimal-config-example.ts` | Local-only SQLite configuration | ✅ Works |
-| `17-memory-service.ts` | Encapsulated `initMemory` / `rememberFact` / `recallFacts` service | ⚠️ Runs, but `recallFacts` returns 0. The tutorial pairs `createMemoryStore({ db: {...} })` with `getRawMessageManager()`, which do not appear to share the same DB in this version. Use the default `createMemoryStore()` config if you need store + manager to see the same data. |
+| `17-memory-service.ts` | Encapsulated `initMemory` / `rememberFact` / `recallFacts` service | ✅ Works |
 
 ### Advanced usage (`03-advanced-usage.md`)
 
@@ -70,3 +55,8 @@ node --experimental-strip-types docs-tutorials/09-http-client-example.ts
 | `11-loop-example.ts` | `LOOP_PATHS`, `ensureDirs`, `readPreferences`, `writePreferences` | ✅ Works |
 | `12-integration-ids-example.ts` | `INTEGRATION_IDS` constant | ✅ Works |
 | `13-batch-example.ts` | Batch 100 writes in one `storeMessages` call | ✅ Works |
+| `21-scheduled-tasks-example.ts` | `validateCronExpression` and `computeNextRun` | ✅ Works |
+| `22-token-encryption-example.ts` | `TokenEncryption.encryptToken` / `decryptToken` | ✅ Works with `ENCRYPTION_KEY` |
+| `23-url-validation-example.ts` | `validateUrlForSSRF` and `isTrustedStorageUrl` | ✅ Works |
+| `24-web-search-example.ts` | `needsRealTimeInfo` and `search` | ✅ Works (skips search without `BRAVE_SEARCH_API_KEY`) |
+| `25-audit-logging-example.ts` | `logFileRead`, `logCommandExec`, `readAuditLogs` | ✅ Works |

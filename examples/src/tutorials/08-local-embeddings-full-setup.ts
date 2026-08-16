@@ -1,14 +1,12 @@
-import { createMemoryStore } from "@melandlabs/opencontext";
-import { LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
+import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
 
 async function main() {
-	const embedder = new LocalTransformersEmbeddingProvider();
+	const embedder = new LocalTransformersEmbeddingProvider({
+		modelName: "Xenova/all-MiniLM-L6-v2",
+	});
 
 	const store = await createMemoryStore({
-		db: {
-			type: "sqlite-vec",
-			path: "./tutorials-full-setup.db",
-		},
+		dbPath: "./tutorials-full-setup.db",
 		unified: {
 			embedQuery: async ({ query }) => {
 				return await embedder.embedQuery(query);
@@ -20,6 +18,7 @@ async function main() {
 		userId: "user-123",
 		query: "What are my preferences?",
 		limit: 5,
+		threshold: 0.0,
 	});
 
 	console.log(`Found ${results.count} result(s)`);

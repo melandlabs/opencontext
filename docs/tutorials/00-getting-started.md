@@ -136,14 +136,13 @@ import { createMemoryStore, getRawMessageManager, LocalTransformersEmbeddingProv
 
 async function main() {
   const embeddingProvider = new LocalTransformersEmbeddingProvider({
-    model: "Xenova/all-MiniLM-L6-v2",
+    modelName: "Xenova/all-MiniLM-L6-v2",
   });
 
   const store = await createMemoryStore({
     unified: {
       embedQuery: async ({ query }) => {
-        const result = await embeddingProvider.embedQuery({ query });
-        return result;
+        return await embeddingProvider.embedQuery(query);
       },
     },
   });
@@ -152,9 +151,7 @@ async function main() {
   const now = Date.now();
 
   // Store with pre-computed embedding
-  const embedding = await embeddingProvider.embedQuery({
-    query: "User prefers dark mode"
-  });
+  const embedding = await embeddingProvider.embedQuery("User prefers dark mode");
 
   await messages.storeMessages([{
     messageId: `msg-${now}`,

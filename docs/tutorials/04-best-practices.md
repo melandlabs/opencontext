@@ -72,9 +72,8 @@ const results = await store.searchUnifiedMemory({ ... });
 ```typescript
 // ✅ GOOD: Match backend to use case
 const store = await createMemoryStore({
-  db: isDesktop()
-    ? { type: "sqlite-vec", path: "./memory.db" }
-    : { getDb: () => postgresDb },
+  dbPath: isDesktop() ? "./memory.db" : undefined,
+  db: isDesktop() ? undefined : { getDb: () => postgresDb },
 });
 
 // ❌ BAD: Use Postgres for desktop app
@@ -147,8 +146,9 @@ const results = await store.searchUnifiedMemory({
 import { TokenEncryption } from "@melandlabs/opencontext";
 
 // ✅ GOOD: Encrypt API keys before storage
-const encryptor = new TokenEncryption(process.env.ENCRYPTION_KEY!);
-const encrypted = await encryptor.encrypt(apiKey);
+// TokenEncryption reads ENCRYPTION_KEY from the environment.
+const encryptor = new TokenEncryption();
+const encrypted = encryptor.encryptToken(apiKey);
 await database.save({ userId, encryptedToken: encrypted });
 
 // ❌ BAD: Store secrets in plain text
@@ -161,9 +161,13 @@ await database.save({ userId, apiToken });  // Dangerous!
 import { validateUrlForSSRF } from "@melandlabs/opencontext";
 
 // ✅ GOOD: Validate URLs before calling
-const safeUrl = await validateUrlForSSRF(userProvidedUrl);
-if (safeUrl.isValid) {
-  await fetch(safeUrl.url);
+// The default mode enforces HTTPS and blocks private/loopback targets.
+// Use { strictWhitelist: false } to skip the known-storage-provider whitelist.
+try {
+  const safeUrl = await validateUrlForSSRF(userProvidedUrl, { strictWhitelist: false });
+  await fetch(safeUrl.toString());
+} catch (error) {
+  console.error("Blocked potentially unsafe URL:", error);
 }
 
 // ❌ BAD: Call user-provided URLs directly
@@ -274,6 +278,8 @@ it("handles missing embedder gracefully", async () => {
 ### 15. Mock External Services
 
 ```typescript
+import { createMinimalContext } from "@melandlabs/opencontext";
+
 // ✅ GOOD: Mock integrations in tests
 const mockIntegrations = {
   isConnected: vi.fn().mockResolvedValue(true),
@@ -281,7 +287,9 @@ const mockIntegrations = {
 };
 
 // ❌ BAD: Real API calls in tests
-const integrations = await getIntegrationManager();  // Real calls!
+const context = await createMinimalContext({
+  /* real credentials */
+});  // Real calls!
 ```
 
 ## Monitoring Best Practices
@@ -300,17 +308,11 @@ npx @melandlabs/opencontext doctor --section integrations
 ### 17. Log Important Events
 
 ```typescript
-import { AuditLogger } from "@melandlabs/opencontext";
+import { logFileRead, logCommandExec } from "@melandlabs/opencontext";
 
 // ✅ GOOD: Log critical operations
-const logger = new AuditLogger();
-await logger.log({
-  level: "info",
-  event: "memory_correction",
-  userId: "user-123",
-  messageId: "msg-456",
-  reason: "User correction",
-});
+logFileRead("/sensitive/config.json");
+logCommandExec("deploy", ["--env", "production"]);
 
 // ❌ BAD: No audit trail
 await improve({ userId, messageId, correction });

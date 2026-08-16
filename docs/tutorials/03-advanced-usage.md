@@ -14,13 +14,13 @@ import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandla
 
 async function main() {
   const embeddingProvider = new LocalTransformersEmbeddingProvider({
-    model: "Xenova/all-MiniLM-L6-v2",
+    modelName: "Xenova/all-MiniLM-L6-v2",
   });
 
   const store = await createMemoryStore({
     unified: {
       embedQuery: async ({ query }) => {
-        return await embeddingProvider.embedQuery({ query });
+        return await embeddingProvider.embedQuery(query);
       },
 
       // Optional: search extracted insights (provide your own index).
@@ -293,7 +293,7 @@ Use the `@melandlabs/cron` package to validate cron expressions and compute the 
 ```typescript
 // scheduled-tasks-example.ts
 // Run with: npx tsx scheduled-tasks-example.ts
-import { computeNextRun, validateCronExpression } from "@melandlabs/cron";
+import { computeNextRun, validateCronExpression } from "@melandlabs/opencontext";
 
 async function main() {
   // Validate a cron expression
@@ -321,7 +321,7 @@ main().catch((error) => {
 
 ## Encryption and Security
 
-These utilities live in `@melandlabs/security` (not re-exported from `@melandlabs/opencontext`).
+These utilities are re-exported from `@melandlabs/opencontext` for convenience.
 
 ### Encrypting Secrets
 
@@ -330,7 +330,7 @@ These utilities live in `@melandlabs/security` (not re-exported from `@melandlab
 ```typescript
 // token-encryption-example.ts
 // Run with: ENCRYPTION_KEY=your-32-byte-key-here!!!! npx tsx token-encryption-example.ts
-import { TokenEncryption } from "@melandlabs/security";
+import { TokenEncryption } from "@melandlabs/opencontext";
 
 async function main() {
   const encryptor = new TokenEncryption();
@@ -356,12 +356,15 @@ main().catch((error) => {
 ```typescript
 // url-validation-example.ts
 // Run with: npx tsx url-validation-example.ts
-import { isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/security";
+import { isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/opencontext";
 
 async function main() {
-  // validateUrlForSSRF rejects plain HTTP, loopback, private IPs, cloud metadata by default.
+  // validateUrlForSSRF rejects plain HTTP, loopback and private IPs by default.
+  // Pass { strictWhitelist: false } to skip the known-storage-provider whitelist.
   try {
-    const safe = await validateUrlForSSRF("https://api.example.com/data");
+    const safe = await validateUrlForSSRF("https://api.example.com/data", {
+      strictWhitelist: false,
+    });
     console.log("Safe URL:", safe.toString());
   } catch (error) {
     console.error("Unsafe URL:", error);
@@ -380,15 +383,13 @@ main().catch((error) => {
 
 ## Voice Capabilities
 
-Voice packages are not re-exported from `@melandlabs/opencontext`; install the specific package you need.
+Voice plugins are re-exported from `@melandlabs/opencontext` for convenience. They are browser-oriented; the TTS plugin uses `HTMLAudioElement` and the STT plugin expects web `Blob` inputs, so these snippets are not runnable in a plain Node.js/CLI script.
 
 ### Text-to-Speech (Kokoro)
 
-`KokoroPlugin` is browser-focused: it fetches audio from a Kokoro-compatible endpoint and plays it via `HTMLAudioElement`. It is not usable in Node.js/CLI scripts.
-
 ```typescript
 // Browser-only example
-import { KokoroPlugin } from "@melandlabs/voice-kokoro";
+import { KokoroPlugin } from "@melandlabs/opencontext";
 
 const tts = new KokoroPlugin({ enabled: true, voice: "af_bella" });
 
@@ -402,8 +403,8 @@ await tts.speak("Hello, world!");
 
 ```typescript
 // whisper-example.ts
-// Run with: OPENAI_API_KEY=your-key npx tsx whisper-example.ts
-import { WhisperPlugin } from "@melandlabs/voice-whisper";
+// Browser-only; run in an environment with Blob/File support.
+import { WhisperPlugin } from "@melandlabs/opencontext";
 
 async function main() {
   const stt = new WhisperPlugin({
@@ -431,12 +432,12 @@ main().catch((error) => {
 
 ## Web Search Integration
 
-Web search utilities live in `@melandlabs/search` (not re-exported from `@melandlabs/opencontext`).
+Web search utilities are re-exported from `@melandlabs/opencontext` for convenience.
 
 ```typescript
 // web-search-example.ts
 // Run with: BRAVE_SEARCH_API_KEY=your-key npx tsx web-search-example.ts
-import { needsRealTimeInfo, search } from "@melandlabs/search";
+import { needsRealTimeInfo, search } from "@melandlabs/opencontext";
 
 async function main() {
   // Classify if a query needs real-time info
@@ -464,21 +465,38 @@ main().catch((error) => {
 
 ## Audit Logging
 
-OpenContext writes structured audit logs to `~/.opencontext/logs/audit.jsonl`:
+OpenContext writes structured audit logs to `~/.opencontext/logs/audit.jsonl`. The audit helpers are re-exported from `@melandlabs/opencontext`.
 
-```jsonl
-{"timestamp":1704067200000,"level":"info","event":"memory_write","userId":"user-123","messageId":"msg-456"}
-{"timestamp":1704067260000,"level":"info","event":"memory_recall","userId":"user-123","query":"project status","count":5}
+```typescript
+// audit-logging-example.ts
+// Run with: npx tsx audit-logging-example.ts
+import { logCommandExec, logFileRead, readAuditLogs } from "@melandlabs/opencontext";
+
+async function main() {
+  logFileRead("/etc/passwd");
+  logCommandExec("git", ["status"]);
+
+  const { entries, total } = readAuditLogs({ type: "file_read", limit: 10 });
+  console.log(`Total audit entries: ${total}`);
+  for (const entry of entries) {
+    console.log(`[${entry.type}] ${entry.detail}`);
+  }
+}
+
+main().catch((error) => {
+  console.error("Audit logging example failed:", error);
+  process.exit(1);
+});
 ```
 
-Parse the audit log:
+Parse the audit log from the shell:
 
 ```bash
 # View recent audit entries
 tail -f ~/.opencontext/logs/audit.jsonl | jq
 
-# Count memory writes per user
-cat ~/.opencontext/logs/audit.jsonl | jq -r 'select(.event=="memory_write") | .userId' | sort | uniq -c
+# Count file-read entries
+cat ~/.opencontext/logs/audit.jsonl | jq -r 'select(.type=="file_read") | .detail' | sort | uniq -c
 ```
 
 ## Performance Optimization
