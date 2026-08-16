@@ -1150,7 +1150,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		}
 	}
 
-	private upsertVectorForMessage(messageId: string, embedding: number[] | undefined): void {
+	/** Update sqlite-vec vector table for a message (called after embeddings are added/updated). */
+	upsertVectorForMessage(messageId: string, embedding: number[] | undefined): void {
 		if (!this.vectorSearchAvailable) {
 			return;
 		}

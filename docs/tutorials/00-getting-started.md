@@ -198,19 +198,6 @@ npx @melandlabs/opencontext http \
 
 > **Tip:** For frequent use, install globally: `pnpm add -g @melandlabs/opencontext`, then use `opencontext http` directly.
 
-OpenContext can run as a standalone HTTP server:
-
-```bash
-# Start the server with local embeddings and SQLite
-npx @melandlabs/opencontext http \
-  --embedding-provider local \
-  --memory-backend sqlite-vec \
-  --host 127.0.0.1 \
-  --port 7421
-```
-
-> **Tip:** For frequent use, install globally: `pnpm add -g @melandlabs/opencontext`, then use `opencontext http` directly.
-
 Test it:
 
 ```bash

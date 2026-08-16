@@ -62,6 +62,13 @@ interface RawMessageManagerLike {
 	upsertRawMessages?: RawMessageUpsertFn;
 	storeMessages?: RawMessageStoreFn;
 	getMessageById?: RawMessageGetFn;
+	upsertVectorForMessage?(messageId: string, embedding: number[] | undefined): void;
+	lexicalSearchMessages?(input: {
+		userId: string;
+		keywords: string[];
+		limit?: number;
+		botId?: string;
+	}): Promise<unknown[]>;
 }
 
 async function embedMissingMessages(messages: RawMessage[], deps: UnifiedSearchDeps): Promise<RawMessage[]> {
@@ -100,7 +107,34 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 	const rawStore = createRawMessageStore({
 		env: options.env,
 	});
-	const search = createUnifiedSearch(options.unified);
+
+	// Configure lexical search for keyword fallback
+	const manager = await rawStore.getManager();
+	const search = createUnifiedSearch({
+		...options.unified,
+		searchRawMessagesLexical: async (input) => {
+			if (typeof manager.lexicalSearchMessages === "function") {
+				const results = await manager.lexicalSearchMessages(input);
+				return (
+					results as Array<{
+						id: string;
+						content: string;
+						similarity: number;
+						metadata: Record<string, unknown>;
+					}>
+				)
+					.filter(Boolean)
+					.map((r) => ({
+						type: "memory" as const,
+						id: r.id,
+						content: r.content,
+						similarity: r.similarity,
+						metadata: r.metadata ?? {},
+					}));
+			}
+			return [];
+		},
+	});
 
 	const app = new Hono();
 
@@ -178,6 +212,27 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			await upsertRawMessagesToChroma(messages as never);
 		} catch (error) {
 			console.warn("[memory-store/http] chroma upsert failed:", error);
+		}
+
+		// ── 4. sqlite-vec vector table update (for messages with embeddings)
+		try {
+			const messagesWithEmbeddings = messages.filter(
+				(m) => Array.isArray(m.embedding) && m.embedding.length > 0,
+			);
+			if (messagesWithEmbeddings.length > 0) {
+				for (const message of messagesWithEmbeddings) {
+					if (typeof manager.upsertVectorForMessage === "function") {
+						manager.upsertVectorForMessage(message.messageId, message.embedding);
+					}
+				}
+				console.log(
+					"[memory-store/http] Updated sqlite-vec vector table for",
+					messagesWithEmbeddings.length,
+					"message(s)",
+				);
+			}
+		} catch (error) {
+			console.warn("[memory-store/http] sqlite-vec vector update failed:", error);
 		}
 
 		return c.json({ ok: true, count: messages.length, result });
