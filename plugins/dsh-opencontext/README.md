@@ -1,5 +1,7 @@
 # dsh-opencontext
 
+[![npm version](https://img.shields.io/npm/v/dsh-opencontext.svg)](https://www.npmjs.com/package/dsh-opencontext)
+
 DeepSeek Harness plugin that gives any DSH agent durable memory +
 retrieval-augmented context by plugging into
 [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext).

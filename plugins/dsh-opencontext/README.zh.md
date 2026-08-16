@@ -1,5 +1,7 @@
 # dsh-opencontext
 
+[![npm version](https://img.shields.io/npm/v/dsh-opencontext.svg)](https://www.npmjs.com/package/dsh-opencontext)
+
 为 DeepSeek Harness (DSH) agent 提供持久化记忆与检索增强上下文的插件,
 基于 [`@melandlabs/opencontext`](https://www.npmjs.com/package/@melandlabs/opencontext)。
 

@@ -282,6 +282,18 @@ function sqliteDistanceToScore(distance: number): number {
 	return 1 / (1 + Math.max(0, distance));
 }
 
+/**
+ * Convert an sqlite-vec L2 distance to cosine similarity.
+ * Embeddings are L2-normalized by the local transformer provider, so
+ * `cosine_similarity = 1 - distance^2 / 2`.
+ */
+function sqliteVectorDistanceToCosineSimilarity(distance: number): number {
+	if (!Number.isFinite(distance)) {
+		return 0;
+	}
+	return Math.max(-1, 1 - (distance * distance) / 2);
+}
+
 function normalizeTimestampToMs(value: number): number {
 	if (value < 1e11) {
 		return Math.floor(value * 1000);
@@ -1337,7 +1349,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				.map((message) =>
 					this.toSemanticSearchResult(
 						message,
-						sqliteDistanceToScore(byDistance.get(message.messageId) ?? Number.POSITIVE_INFINITY),
+						sqliteVectorDistanceToCosineSimilarity(
+							byDistance.get(message.messageId) ?? Number.POSITIVE_INFINITY,
+						),
 					),
 				)
 				.filter(

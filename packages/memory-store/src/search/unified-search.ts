@@ -314,6 +314,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						userId: input.userId,
 						queryEmbedding,
 						limit,
+						threshold,
 					});
 					semantic = (
 						results as Array<{
