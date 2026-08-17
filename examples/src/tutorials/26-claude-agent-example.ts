@@ -4,7 +4,7 @@
  * This example shows the provider-agnostic IAgent lifecycle using Anthropic's
  * Claude Code as the underlying runtime:
  *
- *   1. Build a ClaudeAgent directly with createClaudeAgent().
+ *   1. Build a ClaudeAgent directly with `new ClaudeAgent()`.
  *   2. Run a simple prompt and stream AgentMessage events.
  *   3. Plan a multi-step task and then execute the stored plan.
  *
@@ -21,7 +21,7 @@
  */
 
 import process from "node:process";
-import { type AgentMessage, ClaudeAgent, claudeAgentPlugin, createClaudeAgent } from "@melandlabs/ai/agent";
+import { ClaudeAgent, claudeAgentPlugin } from "@melandlabs/ai/agent";
 import { runIfMain } from "../_helpers.ts";
 import { collectAgentMessages, hasCommand } from "./_agents.ts";
 
@@ -29,7 +29,6 @@ async function main() {
 	// ---- Static surface checks ----
 	console.log("Static surface checks:");
 	console.log(`- ClaudeAgent is a class: ${typeof ClaudeAgent === "function"}`);
-	console.log(`- createClaudeAgent is callable: ${typeof createClaudeAgent === "function"}`);
 	console.log(`- claudeAgentPlugin metadata type: ${claudeAgentPlugin.metadata.type}`);
 	console.log(`- claudeAgentPlugin supports plan: ${claudeAgentPlugin.metadata.supportsPlan}`);
 
@@ -41,7 +40,7 @@ async function main() {
 	}
 
 	const workDir = "./.tmp-claude-agent";
-	const agent = createClaudeAgent({
+	const agent = new ClaudeAgent({
 		provider: "claude",
 		model: "claude-sonnet-4-20250514",
 		workDir,

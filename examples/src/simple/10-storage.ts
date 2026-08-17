@@ -46,7 +46,12 @@ const roundTripped = new TextDecoder().decode(loaded);
 // Path-traversal keys are sanitised into a flat filename.
 await store.save("../../escape-attempt", new TextEncoder().encode("nope"));
 const escapedOutside = existsSync(path.resolve("..", "..", "escape-attempt"));
-const sanitisedInside = existsSync(path.join(root, "____escape-attempt"));
+// storage@0.2 sanitises separators only (".._.._escape-attempt"); newer
+// versions additionally strip ".." ("____escape-attempt"). Both stay inside
+// the root, so accept either spelling.
+const sanitisedInside =
+    existsSync(path.join(root, "____escape-attempt")) ||
+    existsSync(path.join(root, ".._.._escape-attempt"));
 
 await store.delete("greeting.txt");
 const existsAfterDelete = await store.exists("greeting.txt");

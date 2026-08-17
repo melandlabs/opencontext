@@ -192,9 +192,7 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 		const targetId = (event as any)?.target?.id ?? undefined;
 		const raw = event?.sourcePlatformObject as { conversation_id?: string } | undefined;
 		const conversationId =
-			typeof targetId === "string" && targetId.length > 0
-				? targetId
-				: raw?.conversation_id;
+			typeof targetId === "string" && targetId.length > 0 ? targetId : raw?.conversation_id;
 		if (!conversationId) {
 			throw new Error("[facebook_messenger] Cannot determine conversation to reply to");
 		}

@@ -4,7 +4,7 @@
  * This example shows the provider-agnostic IAgent lifecycle using OpenAI's
  * Codex CLI (`codex exec --json`) as the underlying runtime:
  *
- *   1. Build a CodexAgent directly with createCodexAgent().
+ *   1. Build a CodexAgent directly with `new CodexAgent()`.
  *   2. Run a read-only prompt and stream AgentMessage events.
  *   3. Plan a multi-step task (always read-only) and inspect the TaskPlan.
  *
@@ -22,7 +22,7 @@
  */
 
 import process from "node:process";
-import { type AgentMessage, CodexAgent, codexAgentPlugin, createCodexAgent } from "@melandlabs/ai/agent";
+import { CodexAgent, codexAgentPlugin } from "@melandlabs/ai/agent";
 import { runIfMain } from "../_helpers.ts";
 import { collectAgentMessages, hasCommand } from "./_agents.ts";
 
@@ -30,7 +30,6 @@ async function main() {
 	// ---- Static surface checks ----
 	console.log("Static surface checks:");
 	console.log(`- CodexAgent is a class: ${typeof CodexAgent === "function"}`);
-	console.log(`- createCodexAgent is callable: ${typeof createCodexAgent === "function"}`);
 	console.log(`- codexAgentPlugin metadata type: ${codexAgentPlugin.metadata.type}`);
 	console.log(`- codexAgentPlugin supports plan: ${codexAgentPlugin.metadata.supportsPlan}`);
 
@@ -41,7 +40,7 @@ async function main() {
 	}
 
 	const workDir = "./.tmp-codex-agent";
-	const agent = createCodexAgent({
+	const agent = new CodexAgent({
 		provider: "codex",
 		model: "gpt-4.1",
 		workDir,
