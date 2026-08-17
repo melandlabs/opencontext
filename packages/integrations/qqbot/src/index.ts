@@ -155,6 +155,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 			this.assertTextOnlyMessages("sendMessages", messages);
 			const text = messagesToQQText(messages);
 			if (!text) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log("[QQBotAdapter] No text content, skipping send");
 				return;
 			}
@@ -164,12 +165,14 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 					content: text,
 					msg_type: 0,
 				});
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[QQBotAdapter] Sent private chat openid=${id}`);
 			} else {
 				await this.qqApiRequest("POST", `/v2/groups/${id}/messages`, {
 					content: text,
 					msg_type: 0,
 				});
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[QQBotAdapter] Sent group chat group_openid=${id}`);
 			}
 		});
@@ -178,7 +181,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			this.assertTextOnlyMessages("replyMessages", messages);
-			const raw = event.sourcePlatformObject;
+			const raw = event.sourcePlatformObject as any;
 			const targetId = (raw?.group_openid ?? raw?.openid ?? (event.sender as Friend)?.id) as
 				| string
 				| undefined;
@@ -203,6 +206,7 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 			} else {
 				await this.qqApiRequest("POST", `/v2/groups/${targetId}/messages`, body);
 			}
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[QQBotAdapter] Replied target=${target} id=${targetId}`);
 		});
 	}

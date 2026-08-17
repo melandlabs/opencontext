@@ -88,6 +88,7 @@ export class XAdapter {
 	 */
 	private async refreshAccessToken(): Promise<string> {
 		if (!this.refreshToken || !this.clientId || !this.clientSecret) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn(`[Bot ${this.botId}] No refresh token available for X, cannot refresh.`);
 			const token = this.client.accessToken;
 			if (!token) {
@@ -99,6 +100,7 @@ export class XAdapter {
 			return token;
 		}
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log(`[Bot ${this.botId}] Refreshing X access token...`);
 
 		try {
@@ -120,6 +122,7 @@ export class XAdapter {
 
 			if (!response.ok) {
 				const text = await response.text();
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X token refresh failed (${response.status}): ${text}`);
 				const token = this.client.accessToken;
 				if (!token) {
@@ -163,13 +166,16 @@ export class XAdapter {
 						expiresAt: newExpiresAt ?? undefined,
 					});
 				} catch (err) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error(`[Bot ${this.botId}] Failed to persist refreshed X credentials:`, err);
 				}
 			}
 
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[Bot ${this.botId}] X access token refreshed successfully.`);
 			return newAccessToken;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] X token refresh threw an error:`, error);
 			const token = this.client.accessToken;
 			if (!token) {
@@ -191,7 +197,9 @@ export class XAdapter {
 			return await fn();
 		} catch (error) {
 			if (error instanceof ApiError) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X SDK error (${name}): ${error.status} ${error.statusText}`);
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X SDK error data:`, JSON.stringify(error.data, null, 2));
 				if (error.status === 401) {
 					throw new AppError(
@@ -202,6 +210,7 @@ export class XAdapter {
 				const data = error.data as { detail?: string; title?: string; errors?: unknown[] } | undefined;
 				const errorMsg = data?.detail ?? data?.title ?? `X API error (${error.status})`;
 				if (data?.errors && Array.isArray(data.errors)) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error(`[Bot ${this.botId}] X API errors:`, JSON.stringify(data.errors, null, 2));
 				}
 				throw new AppError("bad_request:bot", `X API error: ${errorMsg}`);
@@ -220,6 +229,7 @@ export class XAdapter {
 			});
 			if (!response.ok) {
 				const text = await response.text();
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X API error ${path}: ${text}`);
 				if (response.status === 401) {
 					throw new AppError(
@@ -302,6 +312,7 @@ export class XAdapter {
 			});
 			if (!response.ok) {
 				const text = await response.text();
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X DM send failed: ${response.status} ${text}`);
 				if (response.status === 401) {
 					throw new AppError(
@@ -324,6 +335,7 @@ export class XAdapter {
 	 * Post a new tweet (text only)
 	 */
 	async postTweet(text: string, quoteTweetId?: string): Promise<{ id: string; text: string }> {
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log(`[X postTweet] userId=${this.userId} username=${this.username} botId=${this.botId}`);
 		return this.withTokenRefresh(async () => {
 			const result = await this.client.posts.create({
@@ -332,6 +344,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[X postTweet] failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X postTweet failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -359,6 +372,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X postTweetWithMedia failed: ${JSON.stringify(err)}`);
 				throw new AppError(
 					"bad_request:bot",
@@ -408,6 +422,7 @@ export class XAdapter {
 
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X uploadMedia failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X uploadMedia failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -438,6 +453,7 @@ export class XAdapter {
 			const result = await this.client.posts.getById(tweetId, {
 				tweetFields: ["createdAt", "authorId", "publicMetrics"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const tweet = result.data as any;
 			if (!tweet) {
 				throw new AppError("bad_request:bot", "Tweet not found");
@@ -462,6 +478,7 @@ export class XAdapter {
 			const result = await this.client.posts.delete(tweetId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X deleteTweet failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X deleteTweet failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -507,6 +524,7 @@ export class XAdapter {
 				maxResults,
 				userFields: ["username", "name"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((user: any) => ({
 				id: user.id,
 				username: user.username ?? "",
@@ -533,6 +551,7 @@ export class XAdapter {
 				maxResults,
 				userFields: ["username", "name"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((user: any) => ({
 				id: user.id,
 				username: user.username ?? "",
@@ -560,6 +579,7 @@ export class XAdapter {
 				maxResults,
 				tweetFields: ["createdAt", "authorId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((tweet: any) => ({
 				id: tweet.id,
 				text: tweet.text,
@@ -581,6 +601,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X followUser failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X followUser failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -596,6 +617,7 @@ export class XAdapter {
 			const result = await this.client.users.unfollowUser(this.userId, userId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X unfollowUser failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X unfollowUser failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -613,6 +635,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X muteUser failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X muteUser failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -628,6 +651,7 @@ export class XAdapter {
 			const result = await this.client.users.unmuteUser(this.userId, userId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X unmuteUser failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X unmuteUser failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -655,6 +679,7 @@ export class XAdapter {
 				maxResults,
 				userFields: ["username", "name", "publicMetrics"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((user: any) => ({
 				id: user.id,
 				username: user.username ?? "",
@@ -685,6 +710,7 @@ export class XAdapter {
 				maxResults,
 				userFields: ["username", "name", "publicMetrics"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((user: any) => ({
 				id: user.id,
 				username: user.username ?? "",
@@ -714,6 +740,7 @@ export class XAdapter {
 				maxResults,
 				userFields: ["username", "name", "description"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((user: any) => ({
 				id: user.id,
 				username: user.username ?? "",
@@ -739,6 +766,7 @@ export class XAdapter {
 			const result = await this.client.users.getByUsername(username, {
 				userFields: ["username", "name", "description", "publicMetrics"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const user = result.data as any;
 			if (!user) {
 				throw new AppError("bad_request:bot", "User not found");
@@ -771,6 +799,7 @@ export class XAdapter {
 				maxResults,
 				tweetFields: ["createdAt", "authorId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((tweet: any) => ({
 				id: tweet.id,
 				text: tweet.text,
@@ -798,6 +827,7 @@ export class XAdapter {
 			const result = await this.client.lists.getById(listId, {
 				listFields: ["ownerId", "memberCount", "followerCount", "isPrivate"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const list = result.data as any;
 			if (!list) {
 				throw new AppError("bad_request:bot", "List not found");
@@ -834,6 +864,7 @@ export class XAdapter {
 				maxResults,
 				listFields: ["memberCount", "followerCount"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((list: any) => ({
 				id: list.id,
 				name: list.name ?? "",
@@ -854,6 +885,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X followList failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X followList failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -869,6 +901,7 @@ export class XAdapter {
 			const result = await this.client.users.unfollowList(this.userId, listId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X unfollowList failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X unfollowList failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -886,6 +919,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X pinList failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X pinList failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -901,6 +935,7 @@ export class XAdapter {
 			const result = await this.client.users.unpinList(this.userId, listId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X unpinList failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X unpinList failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -925,6 +960,7 @@ export class XAdapter {
 			const result = await this.client.spaces.getById(spaceId, {
 				spaceFields: ["hostId", "participantCount", "subscriberCount"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const space = result.data as any;
 			if (!space) {
 				throw new AppError("bad_request:bot", "Space not found");
@@ -959,6 +995,7 @@ export class XAdapter {
 				maxResults,
 				spaceFields: ["hostId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((space: any) => ({
 				id: space.id,
 				title: space.title,
@@ -987,6 +1024,7 @@ export class XAdapter {
 				maxResults,
 				tweetFields: ["createdAt", "authorId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((tweet: any) => ({
 				id: tweet.id,
 				text: tweet.text,
@@ -1012,6 +1050,7 @@ export class XAdapter {
 			const result = await this.client.communities.getById(communityId, {
 				communityFields: ["memberCount", "isPrivate"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const community = result.data as any;
 			if (!community) {
 				throw new AppError("bad_request:bot", "Community not found");
@@ -1042,6 +1081,7 @@ export class XAdapter {
 	> {
 		return this.withTokenRefresh(async () => {
 			const result = await this.client.trends.getByWoeid(woeid);
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((trend: any) => ({
 				name: trend.name ?? "",
 				url: trend.url,
@@ -1070,6 +1110,7 @@ export class XAdapter {
 				maxResults,
 				tweetFields: ["createdAt", "authorId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((tweet: any) => ({
 				id: tweet.id,
 				text: tweet.text,
@@ -1089,6 +1130,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X createBookmark failed: ${JSON.stringify(err)}`);
 				throw new AppError(
 					"bad_request:bot",
@@ -1107,6 +1149,7 @@ export class XAdapter {
 			const result = await this.client.users.deleteBookmark(this.userId, tweetId);
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X deleteBookmark failed: ${JSON.stringify(err)}`);
 				throw new AppError(
 					"bad_request:bot",
@@ -1133,6 +1176,7 @@ export class XAdapter {
 				maxResults,
 				tweetFields: ["createdAt", "authorId"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			return (result.data ?? []).map((tweet: any) => ({
 				id: tweet.id,
 				text: tweet.text,
@@ -1168,6 +1212,7 @@ export class XAdapter {
 		);
 		if (!response.ok) {
 			const text = await response.text();
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] X searchTweets failed: ${text}`);
 			throw new AppError("bad_request:bot", `X searchTweets failed (${response.status})`);
 		}
@@ -1215,6 +1260,7 @@ export class XAdapter {
 		);
 		if (!response.ok) {
 			const text = await response.text();
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] X getNotifications failed: ${text}`);
 			throw new AppError("bad_request:bot", `X getNotifications failed (${response.status})`);
 		}
@@ -1245,6 +1291,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X replyTo failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X replyTo failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -1266,6 +1313,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X retweet failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X retweet failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -1283,6 +1331,7 @@ export class XAdapter {
 			});
 			if (result.errors?.length) {
 				const err = result.errors[0];
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] X likeTweet failed: ${JSON.stringify(err)}`);
 				throw new AppError("bad_request:bot", `X likeTweet failed: ${err.detail ?? JSON.stringify(err)}`);
 			}
@@ -1306,6 +1355,7 @@ export class XAdapter {
 			const result = await this.client.users.getById(this.userId, {
 				userFields: ["publicMetrics", "description"],
 			});
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const user = result.data as any;
 			if (!user) {
 				throw new AppError("bad_request:bot", "X getProfile returned no data");

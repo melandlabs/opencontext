@@ -276,6 +276,7 @@ export class HubspotClient {
 				},
 			});
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn("[HubSpot] Failed to persist refreshed credentials", error);
 		}
 	}

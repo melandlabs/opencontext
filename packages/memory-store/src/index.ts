@@ -77,16 +77,38 @@ export type {
 	UnifiedMemorySearchResult,
 	UnifiedMemorySearchSource,
 	UnifiedMemorySearchWarning,
+	UnifiedMemoryReasoningStrategy,
+	UnifiedMemoryReasoningInfo,
 } from "./search/utilities";
 export {
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
 	isRawMemorySemanticResult,
 	mergeUnifiedMemorySearchResults,
+	normalizeUnifiedMemoryReasoningStrategy,
 	normalizeUnifiedMemorySearchSources,
 	toKnowledgeResult,
 	toMemoryResult,
 } from "./search/utilities";
+export {
+	createUserVoiceRewriter,
+	createIdentityRewriter,
+	type QueryRewriter,
+	type QueryRewriterInput,
+	type QueryRewriterOptions,
+} from "./search/query-rewriter";
+export {
+	createIterativeRecallPlanner,
+	createIdentityIterativePlanner,
+	type IterativeRecallCandidate,
+	type IterativeRecallExecutor,
+	type IterativeRecallPlanner,
+	type IterativeRecallPlannerOptions,
+	type IterativeRecallResult,
+	type IterativeRecallSearchRequest,
+	type IterativeRecallSearchResult,
+	type IterativeRecallStats,
+} from "./search/iterative-recall";
 export type {
 	MemoryStoreDb,
 	MemoryStoreEnv,
@@ -94,5 +116,6 @@ export type {
 	EmbedQueryFn,
 	UnifiedSearchKnowledgeResult,
 	UnifiedSearchInsightsResult,
+	UnifiedSearchReasoningDeps,
 } from "./config";
 export type { RawMessage } from "./config";

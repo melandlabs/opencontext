@@ -34,6 +34,7 @@ export type IntegrationAccountWithBot = {
 
 type LoadIntegrationCredentialsResult = Record<string, unknown> | null;
 
+// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 function loadIntegrationCredentials<T = Record<string, unknown>>(
 	_account: IntegrationAccountWithBot,
 ): LoadIntegrationCredentialsResult | null {
@@ -218,9 +219,11 @@ export async function listRecentDocuments({
 
 	const files = response.data.files ?? [];
 	const results: GoogleDocSummary[] = files
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		.map((file: any) => {
 			const modified = file.modifiedTime ? new Date(file.modifiedTime) : new Date();
 			const owners =
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				file.owners?.map((owner: any) => owner.displayName ?? owner.emailAddress ?? null).filter(Boolean) ??
 				[];
 			return {
@@ -231,6 +234,7 @@ export async function listRecentDocuments({
 				webViewLink: file.webViewLink ?? null,
 			};
 		})
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		.filter((item: any) => item.id);
 
 	await persistDocsCredentials(context);

@@ -94,6 +94,7 @@ export async function lexicalSearchRawMessages(input: {
 // Kept for back-compat with the historical `MemoryStoreEnv` interface.
 // The resolved env is no longer read by the SQLite layer, but the symbol
 // stays exported so external code that still calls `resolveEnv` compiles.
+// biome-ignore lint/correctness/noUnusedVariables: kept for back-compat with the historical MemoryStoreEnv interface
 function resolveEnv(_env?: MemoryStoreEnv): MemoryStoreEnv {
 	return {};
 }

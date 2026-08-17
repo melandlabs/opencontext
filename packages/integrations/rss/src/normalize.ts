@@ -28,6 +28,7 @@ export type InsertRssItem = {
 const DEFAULT_MAX_ITEMS = 25;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 type RssItem = Record<string, any>;
 
 type BuildOptions = {

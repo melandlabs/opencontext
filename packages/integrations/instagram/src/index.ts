@@ -50,6 +50,7 @@ export class InstagramAdapter {
 		const response = await fetch(url);
 		if (!response.ok) {
 			const text = await response.text();
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] Instagram API error ${path}: ${text}`);
 			throw new AppError("bad_request:bot", `Instagram API failed (${response.status})`);
 		}
@@ -123,6 +124,7 @@ export class InstagramAdapter {
 		});
 		if (!response.ok) {
 			const text = await response.text();
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] Instagram send DM failed: ${text}`);
 			throw new AppError("bad_request:bot", `Instagram send failed (${response.status})`);
 		}

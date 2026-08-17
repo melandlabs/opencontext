@@ -215,6 +215,7 @@ export class GoogleCalendarAdapter {
 				maxResults: 50,
 			}),
 		);
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		return (response as any).data?.items ?? [];
 	}
 
@@ -242,16 +243,18 @@ export class GoogleCalendarAdapter {
 						orderBy,
 					})
 				: ((
-						(await this.withCalendar((calendar) =>
-							calendar.events.list({
-								calendarId,
-								timeMin: since.toISOString(),
-								timeMax: until?.toISOString(),
-								maxResults,
-								singleEvents: true,
-								orderBy,
-								showDeleted: false,
-							}),
+						(await this.withCalendar(
+							(calendar) =>
+								calendar.events.list({
+									calendarId,
+									timeMin: since.toISOString(),
+									timeMax: until?.toISOString(),
+									maxResults,
+									singleEvents: true,
+									orderBy,
+									showDeleted: false,
+								}),
+							// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 						)) as any
 					).data?.items ?? []);
 
@@ -309,25 +312,25 @@ export class GoogleCalendarAdapter {
 				: undefined,
 		};
 
-		const item = (
-			this.composioCalendar
-				? await this.composioCalendar.createEvent({
-						calendarId,
-						conferenceDataVersion: createConference ? 1 : conferenceDataVersion,
-						sendUpdates,
-						requestBody,
-					})
-				: (
-						(await this.withCalendar((calendar) =>
+		const item = this.composioCalendar
+			? await this.composioCalendar.createEvent({
+					calendarId,
+					conferenceDataVersion: createConference ? 1 : conferenceDataVersion,
+					sendUpdates,
+					requestBody,
+				})
+			: (
+					(await this.withCalendar(
+						(calendar) =>
 							calendar.events.insert({
 								calendarId,
 								conferenceDataVersion: createConference ? 1 : conferenceDataVersion,
 								sendUpdates,
 								requestBody,
 							}),
-						)) as any
-					).data
-		) as any;
+						// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
+					)) as any
+				).data;
 		if (!item.id) {
 			throw new AppError("bad_request:api", "Failed to create Google event");
 		}
@@ -340,6 +343,7 @@ export class GoogleCalendarAdapter {
 	}
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 function toGoogleCalendarEvent(item: any, calendarId: string): GoogleCalendarEvent | null {
 	if (!item.id || item.status === "cancelled") return null;
 	const startDate = parseDate(item.start);
@@ -356,6 +360,7 @@ function toGoogleCalendarEvent(item: any, calendarId: string): GoogleCalendarEve
 		start: startDate,
 		end: endDate,
 		attendees:
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			item.attendees?.map((attendee: any) => ({
 				email: attendee.email ?? null,
 				displayName: attendee.displayName ?? null,

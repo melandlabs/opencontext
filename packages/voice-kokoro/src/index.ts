@@ -317,6 +317,7 @@ export class KokoroPlugin {
 
 	public async speak(text: string): Promise<void> {
 		if (!this.enabled) {
+			// biome-ignore lint/suspicious/noConsole: intentional user-facing disabled message
 			console.log("[KokoroPlugin] Disabled, skipping TTS.");
 			return;
 		}
@@ -326,6 +327,7 @@ export class KokoroPlugin {
 		if (chunks.length === 0) return;
 
 		if (typeof window === "undefined") {
+			// biome-ignore lint/suspicious/noConsole: intentional user-facing browser API warning
 			console.warn("[KokoroPlugin] Browser APIs are unavailable.");
 			return;
 		}
@@ -345,6 +347,7 @@ export class KokoroPlugin {
 			}
 
 			this.stop();
+			// biome-ignore lint/suspicious/noConsole: intentional user-facing remote TTS warning
 			console.warn("[KokoroPlugin] Remote TTS unavailable:", error);
 			if (didStartRemotePlayback) {
 				return;
@@ -566,6 +569,7 @@ export class KokoroPlugin {
 	private speakViaBrowser(text: string): boolean {
 		const synthesis = getBrowserSpeechSynthesis();
 		if (!synthesis) {
+			// biome-ignore lint/suspicious/noConsole: intentional user-facing Web Speech API fallback warning
 			console.warn("[KokoroPlugin] No Web Speech API available for fallback.");
 			return false;
 		}
@@ -607,6 +611,7 @@ export class KokoroPlugin {
 
 	private logDebug(message: string, data?: Record<string, unknown>): void {
 		if (!isKokoroDebugEnabled()) return;
+		// biome-ignore lint/suspicious/noConsole: intentional debug logging gated by localStorage flag
 		console.info("[KokoroPlugin]", message, data ?? {});
 	}
 }

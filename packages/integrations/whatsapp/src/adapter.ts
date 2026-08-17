@@ -220,6 +220,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			if (existingAdapter?.sock) {
 				existingSock = existingAdapter.sock as WASocket;
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[whatsapp] [${this.sessionId}] Found existing socket in activeAdapters for botId=${this.botId}, reusing`,
 					);
@@ -244,6 +245,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		const sock = this.sock;
 		if (sock && this.clientRegistry) {
 			this.clientRegistry.registerClient(key, sock);
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] Socket also registered under ${key}`);
 		}
 	}
@@ -256,6 +258,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		const adapter = activeAdapters.get(sessionId);
 		if (!adapter) {
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(`[whatsapp] [${sessionId}] No active adapter found to register under ${accountId}`);
 			return;
 		}
@@ -281,18 +284,22 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		}
 
 		if (DEBUG)
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[whatsapp] [${this.sessionId}] createSocket() called, current sock: ${!!this.sock}`);
 
 		// Reuse existing sentMessageCache on reconnect so pending msgRetry requests
 		// can still find cached plaintext from before the reconnect.
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const existingCache = this.sock ? (this.sock as any).sentMessageCache : undefined;
 		if (existingCache) {
 			this.sentMessageCache = existingCache;
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] Reusing existing sentMessageCache on reconnect`);
 		}
 
 		// Ensure auth state is loaded before passing to makeWASocket
 		const auth = await this.ensureAuthState();
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] Auth state loaded, me: ${!!auth.creds.me?.id}`);
 
 		const { version } = await fetchLatestBaileysVersion();
@@ -316,6 +323,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			// msgRetry requests from the phone so it can retransmit the plaintext.
 			getMessage: async (key) => {
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[whatsapp] [${this.sessionId}] getMessage called: id=${key.id} remoteJid=${key.remoteJid} fromMe=${key.fromMe}`,
 					);
@@ -323,10 +331,12 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				// v7 also uses messageRetryManager internally when enableRecentMessageCache is enabled.
 				const cached = this.sentMessageCache.get(key.id || "");
 				if (cached) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] getMessage: CACHE HIT for ${key.id}`);
 					return cached;
 				}
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[whatsapp] [${this.sessionId}] getMessage: NOT FOUND for ${key.id} (remoteJid=${key.remoteJid}), returning empty`,
 					);
@@ -337,11 +347,13 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		});
 
 		if (DEBUG)
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[whatsapp] [${this.sessionId}] makeWASocket() returned, sock.ev exists: ${!!sock.ev}`);
 
 		// Attach sent message cache for msgRetry requests.
 		// v7 also manages recent messages internally via messageRetryManager when
 		// enableRecentMessageCache is enabled.
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		(sock as any).sentMessageCache = this.sentMessageCache;
 
 		// Store the socket so subsequent calls can reference it (reconnect flow)
@@ -375,6 +387,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					}
 				}
 				if (DEBUG) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[whatsapp] [DEBUG] messages.upsert: jid=${msg.key.remoteJid} fromMe=${msg.key.fromMe} id=${msg.key.id}`,
 					);
@@ -390,6 +403,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		const connHandler = (update: Partial<ConnectionState>) => {
 			const { connection, qr, lastDisconnect } = update;
 
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[whatsapp] connection update: ${connection}, hasQR: ${!!qr}`);
 
 			if (qr) {
@@ -398,6 +412,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				// Delegate QR code state validation to state.ts pure function
 				const qrState = parseQrCodeState(qr);
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[whatsapp] [${this.sessionId}] QR received (len=${qr.length}, valid=${qrState.isValid}, index=${qrState.codeIndex}), loginDeferred exists: ${!!this.loginDeferred}, firstQrResolved: ${this.loginDeferred?.firstQrResolved ?? false}`,
 					);
@@ -407,6 +422,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					this.loginDeferred.resolveFirstQr(qr);
 				}
 				void this.loginDeferred?.callbacks.onQr?.(qr);
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] onQr callback fired, updating session...`);
 			}
 
@@ -423,6 +439,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (this.botId && this.clientRegistry) {
 					this.clientRegistry.registerClient(this.botId, sock);
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[whatsapp] [${this.sessionId}] Socket registered in client registry, sock.user: ${sock.user?.id}`,
 						);
@@ -452,6 +469,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					errObj?.statusCode ??
 					0;
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(
 						`[whatsapp] Socket closed: ${reason} (code=${errorCode}, tag=${disconnectTag}, statusCode=${statusCode})`,
 					);
@@ -479,6 +497,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 						statusCode === DisconnectReason.connectionReplaced
 					) {
 						if (DEBUG)
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log(
 								`[whatsapp] [${this.sessionId}] Got recoverable error (${statusCode}), reconnecting (no promise reject)...`,
 							);
@@ -486,6 +505,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 						// The in-flight createSocket() will handle the reconnection.
 						if (this._pendingReconnect) {
 							if (DEBUG)
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.log(`[whatsapp] [${this.sessionId}] Reconnect already in progress, skipping...`);
 							return;
 						}
@@ -507,6 +527,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 									resolve(newSock);
 								} catch (err) {
 									if (DEBUG)
+										// biome-ignore lint/suspicious/noConsole: platform adapter logging
 										console.error(`[whatsapp] [${this.sessionId}] Reconnect createSocket failed:`, err);
 									resolve(null);
 								} finally {
@@ -567,6 +588,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		sock.ev.on("chats.upsert", (newChats: import("@whiskeysockets/baileys/lib/Types/Chat").Chat[]) => {
 			for (const chat of newChats) {
 				if (!chat.id || chat.id === "status@broadcast") continue;
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const name = (chat as any).name ?? (chat as any).subject ?? jidToUser(chat.id);
 				this.chats.set(chat.id, {
 					id: chat.id,
@@ -581,6 +603,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (!update.id) continue;
 				const existing = this.chats.get(update.id);
 				if (existing) {
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const name = (update as any).name ?? (update as any).subject;
 					if (name) {
 						existing.name = name;
@@ -598,6 +621,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			}) => {
 				for (const chat of historyChats) {
 					if (!chat.id || chat.id === "status@broadcast") continue;
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const name = (chat as any).name ?? (chat as any).subject ?? jidToUser(chat.id);
 					this.chats.set(chat.id, {
 						id: chat.id,
@@ -614,6 +638,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 
 	private async saveAuthState(): Promise<void> {
 		if (!this.authState) return;
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const saveFn = (this.authState as any).saveCreds;
 		if (saveFn) await saveFn();
 	}
@@ -640,6 +665,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (this.botId && this.clientRegistry) {
 					this.clientRegistry.registerClient(this.botId, sock);
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[whatsapp] [${this.sessionId}] Socket registered in client registry, sock.user: ${sock.user?.id}`,
 						);
@@ -665,6 +691,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 						: (errObj?.attrs?.code as number | undefined)) ??
 					errObj?.statusCode ??
 					0;
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[whatsapp] Socket closed: ${reason} (statusCode=${statusCode})`);
 				const wasClean =
 					lastDisconnect?.error === undefined || lastDisconnect?.error?.message?.includes("clean");
@@ -684,11 +711,13 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 						statusCode === DisconnectReason.connectionReplaced
 					) {
 						if (DEBUG)
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log(
 								`[whatsapp] [${this.sessionId}] Got recoverable error (${statusCode}), reconnecting...`,
 							);
 						if (this._pendingReconnect) {
 							if (DEBUG)
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.log(`[whatsapp] [${this.sessionId}] Reconnect already in progress, skipping...`);
 							return;
 						}
@@ -708,6 +737,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 									const newSock = await this.createSocket();
 									resolve(newSock);
 								} catch (e) {
+									// biome-ignore lint/suspicious/noConsole: platform adapter logging
 									if (DEBUG) console.error(`[whatsapp] [${this.sessionId}] Reconnect failed:`, e);
 									resolve(null);
 								} finally {
@@ -779,6 +809,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		// is pointless — history sync is a one-time phone push.
 		const sockAny = this.sock as (WASocket & { __historySyncWaitTimedOut?: boolean }) | null;
 		if (sockAny?.__historySyncWaitTimedOut) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log("[whatsapp] Initial history sync already timed out on this socket, skipping wait");
 			return;
 		}
@@ -800,6 +831,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 	 * session reads the same persisted data.
 	 */
 	private ensureMessageStore(sock: WASocket): void {
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const sockAny = sock as any;
 		const existingIsClosed = sockAny.store instanceof WhatsAppMessageHistoryStore && sockAny.store.isClosed;
 		if (sockAny.store && !existingIsClosed) {
@@ -819,6 +851,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			// Random session ids change every instance — persisted files could
 			// never be found again after a restart NOR purged on account deletion
 			// (orphaned plain-text dirs). The store runs memory-only instead.
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn(
 				`[whatsapp] [${this.sessionId}] No stable botId/sessionKey — message store runs in-memory only`,
 			);
@@ -833,6 +866,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		this.messageStore = store;
 		store.attach(sock);
 		sockAny.store = store;
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[whatsapp] [${this.sessionId}] Persistent message store attached to socket`);
 	}
 
@@ -842,6 +876,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 	 * right after a restart, before any new history sync events arrive.
 	 */
 	private hydrateChatsFromStore(sock: WASocket): void {
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const store = (sock as any).store as
 			| { loadChats?: () => Array<{ id: string; name?: string }> }
 			| undefined;
@@ -855,6 +890,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			});
 		}
 		if (this.chats.size > 0) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[whatsapp] Restored ${this.chats.size} chats from persisted history store`);
 		}
 	}
@@ -878,6 +914,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			) => Promise<string>;
 		};
 		if (typeof sockExtra.fetchMessageHistory !== "function") return;
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const store = (sock as any).store as
 			| {
 					getOldestMessage?: (jid: string) => WAMessage | undefined;
@@ -922,6 +959,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			try {
 				await sockExtra.fetchMessageHistory(BACKFILL_PAGE_SIZE, oldest.key, oldestTs);
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[whatsapp] fetchMessageHistory failed for ${chatJid}:`, error);
 				return;
 			}
@@ -948,6 +986,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			if (breaker.__backfillTimeouts >= MAX_CONSECUTIVE_BACKFILL_TIMEOUTS) {
 				breaker.__backfillOfflineUntil = Date.now() + BACKFILL_OFFLINE_BACKOFF_MS;
 				breaker.__backfillTimeouts = 0;
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[whatsapp] Backfill paused for ${BACKFILL_OFFLINE_BACKOFF_MS / 60000}min — phone appears offline`,
 				);
@@ -1001,6 +1040,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					const oldAuthDir = path.join(process.cwd(), ".wwebjs_auth");
 					try {
 						if (existsSync(oldAuthDir)) {
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log("[whatsapp] Removing old wwebjs auth directory");
 							rmSync(oldAuthDir, { recursive: true, force: true });
 						}
@@ -1011,6 +1051,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 
 				const exists = await this.authStateExists();
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(`[whatsapp] Session check: ${exists ? "exists" : "not found"} for ${this.sessionId}`);
 
 				// Create socket — Baileys restores session automatically if exists,
@@ -1020,6 +1061,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (this.botId && this.clientRegistry) {
 					const existing = this.clientRegistry.getClientBySessionKey(this.botId) as WASocket | undefined;
 					if (existing) {
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[whatsapp] [${this.sessionId}] Reusing existing socket from registry for botId=${this.botId}`,
 						);
@@ -1029,6 +1071,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					}
 				}
 
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[whatsapp] [${this.sessionId}] Creating new socket (sessionId=${this.sessionId} botId=${this.botId})`,
 				);
@@ -1056,6 +1099,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					throw new Error(`[whatsapp] Socket failed to connect within ${maxWaitTime}ms`);
 				}
 
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[whatsapp] Ready for session ${this.sessionId}`);
 			})().catch((error) => {
 				this.initializationPromise = null;
@@ -1071,6 +1115,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 	async startQrLogin(callbacks: WhatsAppLoginCallbacks = {}): Promise<string> {
 		// If socket already exists and is connected, user is already logged in — call onReady immediately
 		if (this.sock && this.isReady) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[whatsapp] [${this.sessionId}] Socket already connected, calling onReady directly`);
 			void this.handleLoginReady();
 			return "";
@@ -1148,6 +1193,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (!sock) throw new Error("Socket not initialized");
 
 				const code = await sock.requestPairingCode(cleanPhone);
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[whatsapp] Pairing code for ${cleanPhone}: ${code}`);
 
 				if (this.loginDeferred && !this.loginDeferred.firstQrResolved) {
@@ -1229,6 +1275,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 						);
 					}
 				} catch (error) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					if (DEBUG) console.error(`[whatsapp] Failed to send message to ${chatId}:`, error);
 					throw error;
 				}
@@ -1338,7 +1385,9 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		this.ensureMessageStore(sock);
 		// Adopt the socket's existing sentMessageCache so getMessage reads the
 		// same cache that self-listener writes to.
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		if ((sock as any).sentMessageCache) {
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			this.sentMessageCache = (sock as any).sentMessageCache;
 		}
 		// Set up listeners so QR callbacks get triggered
@@ -1349,6 +1398,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		sock.ev.on("chats.upsert", (newChats: import("@whiskeysockets/baileys/lib/Types/Chat").Chat[]) => {
 			for (const chat of newChats) {
 				if (!chat.id || chat.id === "status@broadcast") continue;
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const name = (chat as any).name ?? (chat as any).subject ?? jidToUser(chat.id);
 				this.chats.set(chat.id, {
 					id: chat.id,
@@ -1363,6 +1413,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				if (!update.id) continue;
 				const existing = this.chats.get(update.id);
 				if (existing) {
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const name = (update as any).name ?? (update as any).subject;
 					if (name) {
 						existing.name = name;
@@ -1380,6 +1431,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			}) => {
 				for (const chat of historyChats) {
 					if (!chat.id || chat.id === "status@broadcast") continue;
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const name = (chat as any).name ?? (chat as any).subject ?? jidToUser(chat.id);
 					this.chats.set(chat.id, {
 						id: chat.id,
@@ -1452,6 +1504,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			}
 			return true;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error("[whatsapp] Failed to shutdown socket:", error);
 			return false;
 		}
@@ -1487,9 +1540,11 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		// returns message history, and WhatsApp rate-limits it aggressively
 		// (rate-overlimit), which used to break onboarding entirely.
 		if (this.chats.size === 0) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log("[whatsapp] getChatsByChunk: this.chats is empty, waiting for initial history sync...");
 			await this.waitForInitialHistorySync();
 			if (this.chats.size === 0) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log("[whatsapp] getChatsByChunk: this.chats still empty after waiting, returning empty");
 				return { messages: [], hasMore: false };
 			}
@@ -1530,6 +1585,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					await this.backfillChatHistory(sock, chatJid, offsetDate);
 				}
 
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const store = (sock as any).store;
 				const history = (await store?.loadMessages?.(chatJid, maxMessageCount, {})) ?? [];
 
@@ -1561,6 +1617,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				this.asyncIteratorState.currentMessageIndex = 0;
 				this.asyncIteratorState.currentChatIndex = chatIndex + 1;
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[whatsapp] Failed to load messages for ${chatJid}:`, error);
 			}
 		}
@@ -1583,6 +1640,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		}
 
 		const extractedMessages: ExtractedMessageInfo[] = [];
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const store = (sock as any).store;
 		const selfJid = jidToUser(sock.user?.id ?? "");
 		const chatIds = Array.from(this.chats.keys())
@@ -1619,6 +1677,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 					if (info) extractedMessages.push(info);
 				}
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[whatsapp] Failed to load messages for ${chatJid}:`, error);
 			}
 		}
@@ -1665,6 +1724,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 				isOutgoing: msg.key.fromMe ?? false,
 			};
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn("[whatsapp] Failed to extract message info:", error);
 			return null;
 		}
@@ -1766,6 +1826,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		// Check via the auth state provider's underlying storage
 		// This is a simplified check - actual implementation may vary by provider
 		if (!this.authState) return false;
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const creds = (this.authState as any).creds;
 		return !!creds && !!creds.me;
 	}
@@ -1779,6 +1840,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 
 	async forceSaveSession(): Promise<void> {
 		await this.saveAuthState();
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[whatsapp] Session saved for ${this.sessionId}`);
 	}
 
@@ -1804,18 +1866,22 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 		try {
 			const exists = await this.authStateExists();
 			if (!exists) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[whatsapp] No session found for ${this.sessionId}`);
 				return false;
 			}
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[whatsapp] Restoring session for ${this.sessionId}`);
 			await this.ensureReady();
 			return this.isReady;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.error(`[whatsapp] Failed to restore session for ${this.sessionId}:`, error);
 			return false;
 		}
 	}
 
+	// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 	async ingestMessageAttachments(msg: WAMessage): Promise<any[]> {
 		if (!this.ownerUserId || !this.ownerUserType || !this.fileIngester) return [];
 
@@ -1861,6 +1927,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 			const ingested = await this.fileIngester.ingestForUser({
 				source: "whatsapp",
 				ownerUserId: this.ownerUserId,
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				ownerLocalUserType: this.ownerUserType as any,
 				maxSizeBytes: WHATSAPP_MAX_ATTACHMENT_BYTES,
 				originalFileName: fileName,
@@ -1883,6 +1950,7 @@ export class WhatsAppAdapter extends MessagePlatformAdapter {
 
 			return ingested ? [ingested] : [];
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(
 				`[whatsapp${this.botId ? ` ${this.botId}` : ""}] Failed to ingest attachment ${msg.key.id}`,
 				error,

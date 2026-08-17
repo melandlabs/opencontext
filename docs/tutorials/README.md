@@ -59,6 +59,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 | You want to... | Read this |
 |----------------|------------|
 | Search across memory + insights + knowledge | [Advanced Usage](./03-advanced-usage.md#multi-source-unified-search) |
+| Use LLM reasoning to improve memory retrieval | [Advanced Usage](./03-advanced-usage.md#reasoning-backed-memory-retrieval) |
 | Query as of a specific time (time-travel) | [Advanced Usage](./03-advanced-usage.md#temporal-time-travel-queries) |
 | Work with the temporal graph | [Advanced Usage](./03-advanced-usage.md#working-with-the-temporal-graph) |
 | Add web search to your agent | [Advanced Usage](./03-advanced-usage.md#web-search-integration) |
@@ -114,7 +115,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 | [00-getting-started.md](./00-getting-started.md) | Quick Start | Installation, first API call, HTTP server, MCP |
 | [01-user-guide.md](./01-user-guide.md) | Core Concepts | Four verbs, temporal graph, IAgent, memory-aware agents |
 | [02-developer-guide.md](./02-developer-guide.md) | Integration | Embedding, HTTP server, MCP, backend selection |
-| [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, temporal queries, platforms, DeepSeek Harness plugin |
+| [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, reasoning-backed retrieval, temporal queries, platforms, DeepSeek Harness plugin |
 | [04-best-practices.md](./04-best-practices.md) | Production | Idempotency, performance, security, deployment |
 | **Use Cases** | **Real-World Applications** | **End-to-end scenarios** |
 | [05-personal-memory-assistant.md](./use-cases/05-personal-memory-assistant.md) | Individual | Preferences, notes, time-travel, metadata |

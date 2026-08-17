@@ -159,6 +159,7 @@ export function installAuditInterceptors() {
 			return origSpawnSync.apply(cp, [command, spawnArgs, ...rest]);
 		};
 	} catch (e) {
+		// biome-ignore lint/suspicious/noConsole: error logging
 		console.error("[Audit] Error:", e);
 	}
 }

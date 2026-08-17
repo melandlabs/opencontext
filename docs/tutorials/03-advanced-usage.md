@@ -66,6 +66,155 @@ main().catch((error) => {
 });
 ```
 
+## Reasoning-Backed Memory Retrieval
+
+Dense retrieval works best when the query matches the language of the stored memories. Chat logs are usually written in the first person ("I told you I prefer dark mode"), but agents often ask questions in the third person ("What does the user prefer?"). OpenContext can plug in small LLM-powered reasoning providers to close that gap.
+
+Two strategies are available:
+
+- `rewrite`: rephrases the assistant's question into a first-person memory-check question before running semantic search.
+- `iterative`: runs a small ReAct-style planner that searches, notes evidence, and searches again — useful for multi-hop or temporally constrained questions.
+
+Configure them through `unified.reasoning`:
+
+```typescript
+// reasoning-memory-example.ts
+// Run with: node --env-file=../.env --experimental-strip-types src/tutorials/10-reasoning-memory-example.ts
+import {
+  createMemoryReasoningProviders,
+  createMemoryStore,
+  getRawMessageManager,
+  LocalTransformersEmbeddingProvider,
+} from "@melandlabs/opencontext";
+
+async function main() {
+  const embeddingProvider = new LocalTransformersEmbeddingProvider({
+    modelName: "Xenova/all-MiniLM-L6-v2",
+  });
+
+  // Reads OPENCONTEXT_LLM_API_KEY / BASE_URL / MODEL from the environment.
+  const reasoning = createMemoryReasoningProviders({});
+
+  const store = await createMemoryStore({
+    dbPath: "./tutorials-reasoning.db",
+    unified: {
+      embedQuery: async ({ query }) => embeddingProvider.embedQuery(query),
+      reasoning: {
+        queryRewriter: reasoning.queryRewriter,
+        iterativePlanner: reasoning.iterativePlanner,
+      },
+    },
+  });
+
+  // ...store messages, then search with a reasoning strategy...
+  const results = await store.searchUnifiedMemory({
+    userId: "user-42",
+    query: "What does the user enjoy doing on weekends?",
+    reasoningStrategy: "rewrite", // or "iterative"
+    limit: 5,
+    threshold: 0.0,
+  });
+
+  console.log(`Found ${results.count} result(s)`);
+  console.log("Reasoning metadata:", results.reasoning);
+  for (const hit of results.results) {
+    console.log(`- ${hit.content}`);
+  }
+
+  await store.raw.close();
+}
+
+main().catch((error) => {
+  console.error("Reasoning search failed:", error);
+  process.exit(1);
+});
+```
+
+Required environment variables:
+
+```bash
+OPENCONTEXT_LLM_API_KEY=your-key
+OPENCONTEXT_LLM_BASE_URL=https://api.deepseek.com/v1   # or any OpenAI-compatible endpoint
+OPENCONTEXT_LLM_MODEL=deepseek-chat                    # or e.g. openai/gpt-4o-mini
+```
+
+Optional tuning variables for the iterative planner:
+
+```bash
+OPENCONTEXT_LLM_REASONING_MAX_ITERATIONS=4   # maximum planner actions per search
+OPENCONTEXT_LLM_REASONING_SEARCH_TOP_K=5     # results exposed to the planner per internal search
+```
+
+You can also pass these values explicitly when constructing providers:
+
+```typescript
+const reasoning = createMemoryReasoningProviders({}, {
+  planner: { maxIterations: 6, searchTopK: 10 },
+});
+```
+
+The `reasoning` field on the result tells you which strategy ran and includes diagnostic details such as rewritten queries or iteration counts. If no reasoning providers are configured, setting `reasoningStrategy` emits a warning and falls back to the default search path.
+
+> Runnable example: `examples/src/tutorials/10-reasoning-memory-example.ts`
+
+### Server-wide Default
+
+Callers usually want one global default — every search on this store should use the planner unless the caller overrides it. Set `unified.reasoning.defaultStrategy` when constructing the store:
+
+```typescript
+const store = await createMemoryStore({
+  dbPath: "./tutorials-reasoning.db",
+  unified: {
+    embedQuery: async ({ query }) => embeddingProvider.embedQuery(query),
+    reasoning: {
+      queryRewriter: reasoning.queryRewriter,
+      iterativePlanner: reasoning.iterativePlanner,
+      // No per-call reasoningStrategy? Use this as the default.
+      defaultStrategy: "iterative",
+    },
+  },
+});
+
+// Inherits "iterative" from the store config.
+const results = await store.searchUnifiedMemory({ userId: "u-1", query: "..." });
+
+// Per-call value still wins.
+const adHoc = await store.searchUnifiedMemory({
+  userId: "u-1",
+  query: "...",
+  reasoningStrategy: "rewrite",
+});
+```
+
+Resolution order at lookup time is: per-call `reasoningStrategy` → store-level `unified.reasoning.defaultStrategy` → `"none"`. Set `defaultStrategy: "none"` explicitly if you want to opt out of a default that another module turned on.
+
+
+### Date-Range Filtering
+
+In addition to the single-point `asOf` snapshot, you can pass an inclusive `dateFrom` / `dateTo` range to restrict the memory source to a calendar window. The iterative planner receives the bounds and may emit narrower ranges in its own search actions; the default one-shot path simply filters candidates by their timestamp metadata.
+
+> Note: `dateFrom` / `dateTo` only filter the `memory` source. `insights` and `knowledge` results are not affected by this range, and memory candidates without a recognised timestamp are retained.
+
+```typescript
+const results = await store.searchUnifiedMemory({
+  userId: "user-42",
+  query: "What outdoor activities did I mention last summer?",
+  reasoningStrategy: "iterative",
+  dateFrom: "2024-06-01",
+  dateTo: "2024-08-31",
+  limit: 5,
+  threshold: 0.0,
+});
+
+console.log("Reasoning metadata:", results.reasoning);
+// -> { strategy: "iterative", dateRange: { from: "2024-06-01", to: "2024-08-31" }, ... }
+```
+
+`asOf` and `dateFrom/dateTo` are intentionally different:
+
+- `asOf` asks "what was true at this exact instant?" — a temporal snapshot over facts with validity windows.
+- `dateFrom` / `dateTo` ask "which memories were recorded inside this calendar window?" — an interval filter over message timestamps.
+
 ## Temporal (Time-Travel) Queries
 
 Every fact has `valid_from` and `valid_until`, enabling queries as of a specific time. Pass an ISO-8601 string to `asOf`:
@@ -106,6 +255,8 @@ main().catch((error) => {
 - Audit: "What was the strategy on April 1st?"
 - Debugging: "Why did we make that decision last week?"
 - Compliance: "What information did we have then?"
+
+> Runnable example: `examples/src/tutorials/05-time-travel-example.ts`
 
 ## Working with the Temporal Graph
 
@@ -152,6 +303,8 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+> See also `examples/src/tutorials/17-memory-service.ts` for a reusable service wrapper around the raw-message store.
 
 ## Platform Integrations
 
@@ -228,6 +381,13 @@ main().catch((error) => {
 
 See the individual `@melandlabs/integrations-*` packages for platform-specific authentication, fetching, and sending APIs.
 
+### Platform Adapter Examples
+
+- `examples/src/tutorials/12-integration-ids-example.ts` — list every supported integration ID.
+- `examples/src/tutorials/38-channels-example.ts` — build and round-trip platform adapter error envelopes.
+- `examples/src/tutorials/39-integrations-runtime-example.ts` — platform display info, connectability checks, and task-integration inference.
+- `examples/src/tutorials/40-contracts-example.ts` — validate user types and integration IDs from the contracts package.
+
 ## The Loop Engine
 
 The Loop engine is a deterministic scheduler that wakes your agent on a schedule. It stores its config in `~/.opencontext/loop/config.json`.
@@ -286,6 +446,8 @@ After running the example, `~/.opencontext/loop/config.json` looks similar to:
 }
 ```
 
+> Runnable example: `examples/src/tutorials/11-loop-example.ts`
+
 ### Scheduled Tasks
 
 Use the `@melandlabs/cron` package to validate cron expressions and compute the next run time:
@@ -318,6 +480,10 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+> Runnable examples:
+> - `examples/src/tutorials/21-scheduled-tasks-example.ts` — compute next cron run times.
+> - `examples/src/tutorials/29-cron-example.ts` — validate expressions, compute next runs, and check `isJobDue`.
 
 ## Encryption and Security
 
@@ -380,6 +546,10 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+> Runnable examples:
+> - `examples/src/tutorials/22-token-encryption-example.ts` — encrypt and decrypt a token with `TokenEncryption`.
+> - `examples/src/tutorials/23-url-validation-example.ts` — validate URLs and check trusted storage URLs.
 
 ## Voice Capabilities
 
@@ -463,6 +633,10 @@ main().catch((error) => {
 });
 ```
 
+> Runnable examples:
+> - `examples/src/tutorials/24-web-search-example.ts` — classify search intent and call Brave Search.
+> - `examples/src/tutorials/33-search-example.ts` — `needsRealTimeInfo` classification with assertions.
+
 ## Audit Logging
 
 OpenContext writes structured audit logs to `~/.opencontext/logs/audit.jsonl`. The audit helpers are re-exported from `@melandlabs/opencontext`.
@@ -499,6 +673,10 @@ tail -f ~/.opencontext/logs/audit.jsonl | jq
 cat ~/.opencontext/logs/audit.jsonl | jq -r 'select(.type=="file_read") | .detail' | sort | uniq -c
 ```
 
+> Runnable examples:
+> - `examples/src/tutorials/25-audit-logging-example.ts` — write and read audit log entries.
+> - `examples/src/tutorials/28-audit-example.ts` — structured audit-log surface checks with assertions.
+
 ## Performance Optimization
 
 ### Batch Operations
@@ -533,6 +711,8 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+> Runnable example: `examples/src/tutorials/13-batch-example.ts`
 
 ### Embedding Caching
 
@@ -573,6 +753,10 @@ main().catch((error) => {
 });
 ```
 
+> Runnable examples:
+> - `examples/src/tutorials/07-local-embeddings-example.ts` — generate embeddings locally.
+> - `examples/src/tutorials/08-local-embeddings-full-setup.ts` — full local embedding + vector store setup.
+
 ### Connection Pooling (Postgres)
 
 When using the Postgres backend for raw-message storage, configure a connection pool with `postgres` + `drizzle-orm`. These are not bundled with `@melandlabs/opencontext`, so install them separately.
@@ -610,6 +794,35 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+> Runnable examples:
+> - `examples/src/tutorials/35-db-example.ts` — `batchInsert`, password hashing, and dummy-password generation.
+> - `examples/src/tutorials/36-sqlite-example.ts` — SQLite raw-message storage and BM25 lexical search.
+
+### Agent Runtimes
+
+OpenContext exposes provider-agnostic agent primitives. You can drive Claude Code or OpenAI Codex CLI through the same `IAgent` lifecycle:
+
+- `examples/src/tutorials/26-claude-agent-example.ts` — run and plan with `ClaudeAgent`.
+- `examples/src/tutorials/27-codex-agent-example.ts` — run and plan with `CodexAgent` in a read-only sandbox.
+
+### Memory Consolidation
+
+For LLM-free memory planning, use the pure utilities in `@melandlabs/memory-consolidation` to cluster evidence, discover relation candidates, and build a consolidation plan:
+
+- `examples/src/tutorials/37-memory-consolidation-example.ts`
+
+### Generic HTTP Client
+
+The `@melandlabs/api` package provides typed `get`/`post` helpers and `ApiError`:
+
+- `examples/src/tutorials/34-api-example.ts`
+
+### Environment Mode Detection
+
+Detect Tauri vs server mode and read canonical defaults:
+
+- `examples/src/tutorials/30-env-config-example.ts`
 
 ## Monitoring
 
@@ -802,6 +1015,53 @@ Returns plugin status, database path, memory count, and enabled features.
 ### Trust Model
 
 Recalled memories are appended as **untrusted historical evidence**. If they contradict the user's current statement, the user always takes precedence.
+
+## Complete Advanced Example Index
+
+All runnable examples referenced in this guide:
+
+| Example | Topic |
+|---|---|
+| `examples/src/tutorials/00-hello-memory-example.ts` | Store and search a first memory |
+| `examples/src/tutorials/01-remember-example.ts` | Store a fact with metadata |
+| `examples/src/tutorials/02-recall-example.ts` | Search unified memory across sources |
+| `examples/src/tutorials/03-forget-example.ts` | Archive a message |
+| `examples/src/tutorials/04-improve-example.ts` | Deprecate and supersede a fact |
+| `examples/src/tutorials/05-time-travel-example.ts` | Time-travel / `asOf` queries |
+| `examples/src/tutorials/06-minimal-config-example.ts` | Minimal SQLite-vec backend setup |
+| `examples/src/tutorials/07-local-embeddings-example.ts` | Local embedding generation |
+| `examples/src/tutorials/08-local-embeddings-full-setup.ts` | Full local embedding + vector-store setup |
+| `examples/src/tutorials/09-http-client-example.ts` | HTTP client for the memory HTTP server |
+| `examples/src/tutorials/10-reasoning-memory-example.ts` | Reasoning-backed retrieval + date-range filtering |
+| `examples/src/tutorials/11-loop-example.ts` | Loop engine preferences |
+| `examples/src/tutorials/12-integration-ids-example.ts` | List supported integration IDs |
+| `examples/src/tutorials/13-batch-example.ts` | Batch memory writes |
+| `examples/src/tutorials/17-memory-service.ts` | Reusable memory service wrapper |
+| `examples/src/tutorials/18-remember-everything-example.ts` | Ingest incoming platform messages |
+| `examples/src/tutorials/19-warning-handling-example.ts` | Inspect search warnings |
+| `examples/src/tutorials/20-metadata-example.ts` | Store structured metadata with a fact |
+| `examples/src/tutorials/21-scheduled-tasks-example.ts` | Cron next-run computation |
+| `examples/src/tutorials/22-token-encryption-example.ts` | Token encryption / decryption |
+| `examples/src/tutorials/23-url-validation-example.ts` | SSRF URL validation |
+| `examples/src/tutorials/24-web-search-example.ts` | Web search with Brave |
+| `examples/src/tutorials/25-audit-logging-example.ts` | Structured audit logging |
+| `examples/src/tutorials/26-claude-agent-example.ts` | ClaudeAgent `run`/`plan`/`execute` |
+| `examples/src/tutorials/27-codex-agent-example.ts` | CodexAgent `run`/`plan` |
+| `examples/src/tutorials/28-audit-example.ts` | Audit log surface checks |
+| `examples/src/tutorials/29-cron-example.ts` | Cron validation, next-run, and due checks |
+| `examples/src/tutorials/30-env-config-example.ts` | Tauri / server mode detection |
+| `examples/src/tutorials/31-storage-example.ts` | Storage provider operations |
+| `examples/src/tutorials/32-insights-example.ts` | Insight filtering and EventRank scoring |
+| `examples/src/tutorials/33-search-example.ts` | Search-intent classification |
+| `examples/src/tutorials/34-api-example.ts` | Typed HTTP client helpers |
+| `examples/src/tutorials/35-db-example.ts` | `batchInsert`, password hashing |
+| `examples/src/tutorials/36-sqlite-example.ts` | SQLite raw-message storage + BM25 search |
+| `examples/src/tutorials/37-memory-consolidation-example.ts` | Evidence clustering and consolidation planning |
+| `examples/src/tutorials/38-channels-example.ts` | Platform adapter error envelopes |
+| `examples/src/tutorials/39-integrations-runtime-example.ts` | Integration runtime helpers |
+| `examples/src/tutorials/40-contracts-example.ts` | User-type and integration-id guards |
+
+For end-to-end use cases, see the examples linked from [Personal Memory Assistant](./use-cases/05-personal-memory-assistant.md), [Customer Support Agent](./use-cases/06-customer-support-agent.md), and [Research Knowledge Tracker](./use-cases/07-research-tracker.md).
 
 ## Next Steps
 

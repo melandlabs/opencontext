@@ -81,6 +81,7 @@ class QQBotConversationStore {
 		this.cache.get(userKey)?.get(accountId)?.push(message);
 		saveChannelMessage(this.memoryDir, PLATFORM, userKey, accountId, message);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(
 			`[QQBotConversationStore] Added ${role} message for sender ${senderId}, account ${accountId}`,
 		);
@@ -94,6 +95,7 @@ class QQBotConversationStore {
 		this.loadedPairs.delete(pk);
 		clearChannelConversationFromAllDays(this.memoryDir, PLATFORM, userKey, accountId);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[QQBotConversationStore] Cleared conversation for sender ${senderId}, account ${accountId}`);
 	}
 
@@ -108,6 +110,7 @@ class QQBotConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, PLATFORM, userKey);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[QQBotConversationStore] Cleared all conversations for sender ${senderId}`);
 	}
 

@@ -26,6 +26,7 @@ Most files import from `@melandlabs/opencontext` only, so they work once the
 | `00-hello-memory.ts` | Store a fact and recall it with `createMemoryStore` + `getRawMessageManager` | ✅ Works |
 | `07-local-embeddings-example.ts` | SDK mode with `LocalTransformersEmbeddingProvider` | ✅ Works |
 | `08-local-embeddings-full-setup.ts` | Full local setup pattern from the developer guide | ✅ Works (returns 0 results because it only configures the store) |
+| `10-reasoning-memory-example.ts` | Reasoning-backed retrieval (`rewrite` / `iterative`) | ✅ Works when `OPENCONTEXT_LLM_API_KEY` is set |
 | `09-http-client-example.ts` | HTTP client talking to `opencontext http` | ✅ Works when the server is running. |
 
 ### User guide (`01-user-guide.md`)

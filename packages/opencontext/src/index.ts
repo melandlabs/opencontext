@@ -35,9 +35,14 @@ export {
 	clampUnifiedMemorySearchThreshold,
 	isRawMemorySemanticResult,
 	mergeUnifiedMemorySearchResults,
+	normalizeUnifiedMemoryReasoningStrategy,
 	normalizeUnifiedMemorySearchSources,
 	toKnowledgeResult,
 	toMemoryResult,
+	createUserVoiceRewriter,
+	createIdentityRewriter,
+	createIterativeRecallPlanner,
+	createIdentityIterativePlanner,
 } from "@melandlabs/memory-store";
 
 export type {
@@ -52,18 +57,44 @@ export type {
 	UnifiedMemorySearchResult,
 	UnifiedMemorySearchSource,
 	UnifiedMemorySearchWarning,
+	UnifiedMemoryReasoningStrategy,
+	UnifiedMemoryReasoningInfo,
 	MemoryStoreDb,
 	MemoryStoreEnv,
 	VectorBackend,
 	EmbedQueryFn,
 	UnifiedSearchKnowledgeResult,
 	UnifiedSearchInsightsResult,
+	UnifiedSearchReasoningDeps,
 	RawMessage,
+	QueryRewriter,
+	QueryRewriterInput,
+	QueryRewriterOptions,
+	IterativeRecallCandidate,
+	IterativeRecallExecutor,
+	IterativeRecallPlanner,
+	IterativeRecallPlannerOptions,
+	IterativeRecallResult,
+	IterativeRecallSearchRequest,
+	IterativeRecallSearchResult,
+	IterativeRecallStats,
 } from "@melandlabs/memory-store";
 
 // Unified search facade (its own subpath entry).
 export { createUnifiedSearch } from "@melandlabs/memory-store/unified-search";
 export type { UnifiedSearch } from "@melandlabs/memory-store/unified-search";
+
+// Reasoning-backed memory retrieval providers.
+export {
+	createQueryRewriter,
+	createIterativePlanner,
+	createMemoryReasoningProviders,
+	createDisabledMemoryReasoningProviders,
+} from "./memory-reasoning";
+export type {
+	ReasoningModelOptions,
+	MemoryReasoningProviders,
+} from "./memory-reasoning";
 
 // ─── 3. Retrieval: chunking, embeddings, vector stores, parsers ──────────
 export {

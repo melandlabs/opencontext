@@ -75,6 +75,7 @@ export class LinkedInAdapter {
 		});
 
 		if (!response.ok) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] LinkedIn refresh failed ${response.status}`, await response.text());
 			return this.accessToken ?? "";
 		}
@@ -103,6 +104,7 @@ export class LinkedInAdapter {
 			},
 		});
 		if (!response.ok) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(
 				`[Bot ${this.botId}] LinkedIn API ${url} failed ${response.status}`,
 				await response.text(),
@@ -124,6 +126,7 @@ export class LinkedInAdapter {
 		return "LinkedIn User";
 	}
 
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async getMessagesByTime(since: number, platform: Platform = "linkedin"): Promise<ExtractedMessageInfo[]> {
 		const conversationsResponse = await this.fetchLinkedIn<{
 			elements?: LinkedInConversation[];

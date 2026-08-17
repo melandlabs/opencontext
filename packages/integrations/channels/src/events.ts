@@ -28,9 +28,9 @@ export class BaseMessageEvent {
 	 * Raw platform-specific event object.
 	 * Preserved for adapter developers who need access to original platform data.
 	 */
-	public sourcePlatformObject?: any;
+	public sourcePlatformObject?: unknown;
 
-	constructor(messages: Messages, time?: number, sourcePlatformObject?: any) {
+	constructor(messages: Messages, time?: number, sourcePlatformObject?: unknown) {
 		this.messages = messages;
 		this.time = time;
 		this.sourcePlatformObject = sourcePlatformObject;
@@ -46,7 +46,7 @@ export class PrivateMessageEvent extends BaseMessageEvent {
 	public sender: Friend;
 	targetType = "private" as const;
 
-	constructor(sender: Friend, messages: Messages, time?: number, sourcePlatformObject?: any) {
+	constructor(sender: Friend, messages: Messages, time?: number, sourcePlatformObject?: unknown) {
 		super(messages, time, sourcePlatformObject);
 		this.sender = sender;
 	}
@@ -60,7 +60,7 @@ export class GroupMessageEvent extends BaseMessageEvent {
 	public sender: GroupMember;
 	targetType = "group" as const;
 
-	constructor(sender: GroupMember, messages: Messages, time?: number, sourcePlatformObject?: any) {
+	constructor(sender: GroupMember, messages: Messages, time?: number, sourcePlatformObject?: unknown) {
 		super(messages, time, sourcePlatformObject);
 		this.sender = sender;
 	}

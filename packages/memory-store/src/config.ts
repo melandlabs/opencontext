@@ -31,6 +31,8 @@
  */
 
 import type { RawMessage } from "./contracts";
+import type { IterativeRecallPlanner } from "./search/iterative-recall";
+import type { QueryRewriter } from "./search/query-rewriter";
 
 export interface MemoryStoreDb {
 	/** Resolve the active Drizzle DB handle. Must be server-side. */
@@ -103,6 +105,15 @@ export interface UnifiedSearchInsightsResult {
 	metadata: Record<string, unknown>;
 }
 
+export interface UnifiedSearchReasoningDeps {
+	/** Optional query rewriter. When present, "rewrite" strategy is available. */
+	queryRewriter?: QueryRewriter;
+	/** Optional iterative recall planner. When present, "iterative" strategy is available. */
+	iterativePlanner?: IterativeRecallPlanner;
+	/** Default reasoning strategy when callers do not specify one. @default "none" */
+	defaultStrategy?: import("./search/utilities").UnifiedMemoryReasoningStrategy;
+}
+
 export interface UnifiedSearchDeps {
 	/** Embed a query string using the active user's provider. */
 	embedQuery?: EmbedQueryFn;
@@ -162,6 +173,8 @@ export interface UnifiedSearchDeps {
 			metadata: Record<string, unknown>;
 		}>
 	>;
+	/** Optional reasoning providers. */
+	reasoning?: UnifiedSearchReasoningDeps;
 }
 
 export interface MemoryStoreConfig {

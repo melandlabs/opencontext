@@ -86,6 +86,7 @@ class GmailConversationStore {
 		this.cache.get(userKey)?.get(accountId)?.push(message);
 		saveChannelMessage(this.memoryDir, this.PREFIX, userKey, accountId, message);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[GmailConversationStore] Added ${role} message for user ${userId}, account ${accountId}`);
 	}
 
@@ -97,6 +98,7 @@ class GmailConversationStore {
 		this.loadedPairs.delete(pk);
 		clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, userKey, accountId);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[GmailConversationStore] Cleared conversation for user ${userId}, account ${accountId}`);
 	}
 
@@ -111,6 +113,7 @@ class GmailConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, this.PREFIX, userKey);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[GmailConversationStore] Cleared all conversations for user ${userId}`);
 	}
 
