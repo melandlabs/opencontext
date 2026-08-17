@@ -198,6 +198,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			);
 		}
 		unified.searchRawMessagesAnn = async ({ userId, queryEmbedding, limit, threshold, botId }) => {
+			// biome-ignore lint/style/noNonNullAssertion: guarded by the function check above
 			const rows = (await manager.searchMessagesSemantically!({
 				userId,
 				queryEmbedding,
@@ -216,7 +217,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 	} else if (args.memoryBackend === "chroma") {
 		if (!args.chromaUrl)
 			throw new Error("--memory-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
-		const store = new aiRag!.ChromaVectorStore({
+		if (!aiRag) {
+			throw new Error("ai-rag modules not loaded");
+		}
+		const store = new aiRag.ChromaVectorStore({
 			url: args.chromaUrl,
 			collectionName: "opencontext_raw_messages",
 		});
@@ -258,7 +262,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			throw new Error("--insights-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
 		if (!unified.embedQuery)
 			throw new Error("--insights-backend=chroma requires --embedding-provider local|openrouter");
-		const store = new aiRag!.ChromaVectorStore({
+		if (!aiRag) {
+			throw new Error("ai-rag modules not loaded");
+		}
+		const store = new aiRag.ChromaVectorStore({
 			url: args.chromaUrl,
 			collectionName: args.insightsCollection,
 		});
@@ -279,7 +286,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			throw new Error("--knowledge-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
 		if (!unified.embedQuery)
 			throw new Error("--knowledge-backend=chroma requires --embedding-provider local|openrouter");
-		const store = new aiRag!.ChromaVectorStore({
+		if (!aiRag) {
+			throw new Error("ai-rag modules not loaded");
+		}
+		const store = new aiRag.ChromaVectorStore({
 			url: args.chromaUrl,
 			collectionName: args.knowledgeCollection,
 		});
@@ -310,6 +320,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
  * (server-only flags like `--port`/`--host`).
  */
 export function printUnifiedHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`Embedding (wires unified.embedQuery):
   --embedding-provider <name>     local | openrouter | none
                                   (env: EMBEDDING_PROVIDER, default: none)

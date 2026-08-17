@@ -172,7 +172,7 @@ describe("Memory Store End-to-End", () => {
 
 	it("stores and retrieves messages without embeddings", async () => {
 		const dbPath = join(scratchDir, "retrieve-test.db");
-		const store = await createMemoryStore({
+		const _store = await createMemoryStore({
 			dbPath,
 		});
 

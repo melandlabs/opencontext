@@ -29,12 +29,14 @@
 	"keywords": ["opencontext", "env", "config", "tauri"],
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
-		"typescript": "^5.6.3"
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
 	},
 	"scripts": {
 		"build": "tsup",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run"
 	}
 }

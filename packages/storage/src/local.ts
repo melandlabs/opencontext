@@ -2,19 +2,23 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { StorageProvider } from "./provider";
 
-// Define local storage directory path
-const LOCAL_STORAGE_PATH = path.resolve("data", "storage");
-
 /**
  * Local file system implementation of the StorageProvider interface
  * Stores data as files in a designated directory
  */
 export class LocalStorageProvider implements StorageProvider {
+	private readonly storagePath: string;
+
 	/**
 	 * Initialize local storage provider
-	 * @param ap - Application instance
+	 * @param basePath - Optional custom directory to use as the storage root.
+	 *                   Defaults to "data/storage" resolved against the
+	 *                   current working directory at construction time (not
+	 *                   at module-load time, so re-chdir'd callers get a
+	 *                   fresh root).
 	 */
-	constructor() {
+	constructor(basePath?: string) {
+		this.storagePath = basePath ? path.resolve(basePath) : path.resolve("data", "storage");
 		this.ensureStorageDirectory();
 	}
 
@@ -23,10 +27,10 @@ export class LocalStorageProvider implements StorageProvider {
 	 */
 	private async ensureStorageDirectory(): Promise<void> {
 		try {
-			await fs.access(LOCAL_STORAGE_PATH);
+			await fs.access(this.storagePath);
 		} catch {
 			// Create directory recursively if it doesn't exist
-			await fs.mkdir(LOCAL_STORAGE_PATH, { recursive: true });
+			await fs.mkdir(this.storagePath, { recursive: true });
 		}
 	}
 
@@ -37,12 +41,20 @@ export class LocalStorageProvider implements StorageProvider {
 	 * @throws Error if the key attempts to escape the storage directory
 	 */
 	private resolveSafePath(key: string): string {
-		// Filter out potentially dangerous path characters
-		const sanitizedKey = key.replace(/[\/\\]/g, "_");
-		const filePath = path.resolve(LOCAL_STORAGE_PATH, sanitizedKey);
+		// Strip separators and dot-dot sequences so a key like
+		// `../../etc/passwd` becomes a flat filename inside the storage root.
+		const sanitizedKey = key.replace(/[/\\]/g, "_").replace(/\.\./g, "_");
+		const filePath = path.resolve(this.storagePath, sanitizedKey);
 
-		// Ensure the resolved path is still within the storage directory
-		if (!filePath.startsWith(LOCAL_STORAGE_PATH)) {
+		// Belt-and-braces guard: if a future code path re-introduces separators,
+		// `path.relative` detects real traversal (`..` or an absolute path).
+		const relative = path.relative(this.storagePath, filePath);
+		if (
+			relative === "" ||
+			relative.startsWith(`..${path.sep}`) ||
+			relative === ".." ||
+			path.isAbsolute(relative)
+		) {
 			throw new Error(`Invalid key: path traversal detected for "${key}"`);
 		}
 

@@ -151,6 +151,7 @@ export class OutlookCalendarAdapter {
 				credentials: this.credentials,
 			});
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: adapter error logging
 			console.warn("[Outlook Calendar] Failed to persist credentials", error);
 		}
 	}

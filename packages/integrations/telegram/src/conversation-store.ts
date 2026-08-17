@@ -85,6 +85,7 @@ class TelegramConversationStore {
 				maxMessages: this.DEFAULT_MAX_MESSAGES,
 				lastUpdated: new Date(),
 			});
+			// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 			console.log(`[TelegramConversationStore] Created new conversation for ${key}`);
 		}
 
@@ -106,6 +107,7 @@ class TelegramConversationStore {
 			timestamp: Date.now(),
 		});
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[TelegramConversationStore] Added ${role} message for ${key}`);
 	}
 
@@ -122,6 +124,7 @@ class TelegramConversationStore {
 		this.loadedPairs.delete(pk);
 		clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, key, "");
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[TelegramConversationStore] Cleared conversation: ${key}`);
 	}
 
@@ -143,6 +146,7 @@ class TelegramConversationStore {
 
 		clearChannelForUserPrefix(this.memoryDir, this.PREFIX, prefix);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[TelegramConversationStore] Cleared ${clearedCount} conversation(s) for user ${userId}`);
 	}
 
@@ -157,6 +161,7 @@ class TelegramConversationStore {
 				this.cache.delete(key);
 				clearedCount++;
 				clearChannelConversationFromAllDays(this.memoryDir, this.PREFIX, key, "");
+				// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 				console.log(
 					`[TelegramConversationStore] Cleared expired conversation: ${key} (${hoursSinceLastUpdate.toFixed(1)}h old)`,
 				);
@@ -164,6 +169,7 @@ class TelegramConversationStore {
 		}
 
 		if (clearedCount > 0) {
+			// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 			console.log(`[TelegramConversationStore] Cleanup: ${clearedCount} expired conversation(s) cleared`);
 		}
 	}
@@ -174,6 +180,7 @@ class TelegramConversationStore {
 		oldestConversation: Date | null;
 		newestConversation: Date | null;
 	} {
+		// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 		const now = new Date();
 		let totalMessages = 0;
 		let oldest: Date | null = null;

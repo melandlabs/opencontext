@@ -26,6 +26,7 @@ class WhatsAppClientRegistry implements ClientRegistry {
 		const existing = this.clients.get(sessionKey);
 		if (existing && existing !== client) {
 			if (DEBUG_WHATSAPP) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[WhatsAppClientRegistry] SKIP REGISTER: sessionKey=${sessionKey} already has socket (new sock.user=${client.user?.id}, existing sock.user=${existing.user?.id}), not overwriting`,
 				);
@@ -41,6 +42,7 @@ class WhatsAppClientRegistry implements ClientRegistry {
 	unregisterClient(sessionKey: string): void {
 		if (!this.clients.has(sessionKey)) return;
 		if (DEBUG_WHATSAPP) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(
 				`[WhatsAppClientRegistry] UNREGISTER instance=${MODULE_ID} sessionKey=${sessionKey} (before keys=${[...this.clients.keys()]})`,
 			);

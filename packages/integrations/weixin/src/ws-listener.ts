@@ -222,6 +222,7 @@ function extractContent(msg: WeixinMessage): {
 
 			default:
 				if (DEBUG && it.type) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log("[Weixin] Unrecognized message item type:", it.type);
 				}
 		}
@@ -253,6 +254,7 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 				}
 				// errcode=-14: iLink session or Token has expired
 				if (resp.ret !== 0 && resp.errcode === -14) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error(
 						"[Weixin] iLink session expired (errcode=-14), long polling stopped for this account. Please rescan QR code.",
 						conn.accountId,
@@ -278,6 +280,7 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 					const contextToken = raw.context_token?.trim() ?? "";
 					if (!contextToken) {
 						if (DEBUG)
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.warn("[Weixin] Message has no context_token, skipping messageId=%s", messageId);
 						continue;
 					}
@@ -310,11 +313,13 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 									mimeType,
 								});
 								if (DEBUG) {
+									// biome-ignore lint/suspicious/noConsole: platform adapter logging
 									console.log(
 										`[Weixin] Image download decryption successful ${buf.length} bytes mimeType=${mimeType}`,
 									);
 								}
 							} catch (err) {
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.error("[Weixin] Image CDN download/decryption failed:", err);
 								mediaHints.push("[User sent an image (download failed)]");
 							}
@@ -347,6 +352,7 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 									mediaHints.push(task.hintOnSuccess);
 								}
 							} catch (err) {
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.error("[Weixin] File/voice CDN download or decryption failed:", err);
 								mediaHints.push(`[Attachment ${task.fileName} download failed]`);
 							}
@@ -361,6 +367,7 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 									...downloadedFiles.map((f) => `Attachment: ${f.name}`),
 								].join(", ")}]`
 							: "";
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[Weixin] Received message messageId=${messageId} fromId=${fromId.slice(0, 12)}… contextToken=${contextToken.slice(0, 16)}…(len=${contextToken.length})${mediaDesc}`,
 					);
@@ -391,6 +398,7 @@ function runPollLoop(conn: WeixinConn, onMessage: InboundMessageHandler): void {
 				}
 			} catch (e) {
 				if (conn.stopped) return;
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error("[Weixin] getUpdates error accountId=%s", conn.accountId, e);
 				await new Promise((r) => setTimeout(r, 3000));
 			}
@@ -430,6 +438,7 @@ export async function startWeixinConnection(
 			loopPromise: null,
 		};
 		connections.set(accountId, conn);
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log("[Weixin] Starting long polling accountId=%s", accountId);
 		runPollLoop(conn, onMessage);
 	})();
@@ -447,6 +456,7 @@ export function stopWeixinConnection(accountId: string): void {
 	if (!conn) return;
 	conn.stopped = true;
 	connections.delete(accountId);
+	// biome-ignore lint/suspicious/noConsole: platform adapter logging
 	if (DEBUG) console.log("[Weixin] Stopped accountId=%s", accountId);
 }
 

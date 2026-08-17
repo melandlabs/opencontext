@@ -33,6 +33,7 @@ type MessagesResponse = {
 const GRAPH_BASE = "https://graph.facebook.com";
 const DEFAULT_GRAPH_VERSION = "v19.0";
 const DEFAULT_MAX_MESSAGE_CHUNK_COUNT = 40;
+// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 const FIRST_LANDING_MESSAGE_CHUNK_COUNT = 10;
 
 export class FacebookMessengerAdapter extends MessagePlatformAdapter {
@@ -158,6 +159,7 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 			this.participantCache.set(conversationId, participant ?? null);
 			return participant ?? null;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(
 				`[facebook_messenger] Failed to resolve participant for conversation ${conversationId}`,
 				error,
@@ -186,16 +188,15 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 	}
 
 	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const targetId = (event as any)?.target?.id ?? undefined;
+		const raw = event?.sourcePlatformObject as { conversation_id?: string } | undefined;
 		const conversationId =
-			typeof targetId === "string" && targetId.length > 0
-				? targetId
-				: event?.sourcePlatformObject?.conversation_id;
-		const resolvedConversationId = conversationId ?? event?.attachments?.[0];
-		if (!resolvedConversationId) {
+			typeof targetId === "string" && targetId.length > 0 ? targetId : raw?.conversation_id;
+		if (!conversationId) {
 			throw new Error("[facebook_messenger] Cannot determine conversation to reply to");
 		}
-		await this.sendMessages("private", resolvedConversationId, messages);
+		await this.sendMessages("private", conversationId, messages);
 	}
 
 	async getDialogs(): Promise<DialogInfo[]> {
@@ -232,6 +233,7 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 			});
 			return data.data ?? [];
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[facebook_messenger] Failed to fetch conversations for page ${this.pageId}`, error);
 			return [];
 		}
@@ -332,6 +334,7 @@ export class FacebookMessengerAdapter extends MessagePlatformAdapter {
 
 			return mapped.sort((a, b) => a.timestamp - b.timestamp);
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(
 				`[facebook_messenger] Failed to fetch messages for conversation ${conversationId}`,
 				error,

@@ -13,6 +13,7 @@ import type { Messages } from "./message";
 export abstract class MessagePlatformAdapter {
 	public name: string;
 	public botAccountId: number;
+	// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 	protected listeners: Map<MessageTarget, MessageHandler<any>> = new Map();
 
 	/**
@@ -33,7 +34,7 @@ export abstract class MessagePlatformAdapter {
 	 * @param id - Target ID
 	 * @param message - Message chain to send
 	 */
-	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
+	async sendMessages(_target: MessageTarget, _id: string, _messages: Messages): Promise<void> {
 		throw new Error("Method not implemented");
 	}
 
@@ -43,7 +44,7 @@ export abstract class MessagePlatformAdapter {
 	 * @param messages - Message chain to send as reply
 	 * @param quoteOrigin - Whether to quote the original message (default: false)
 	 */
-	async replyMessages(event: MessageEvent, messages: Messages, quoteOrigin = false): Promise<void> {
+	async replyMessages(_event: MessageEvent, _messages: Messages, _quoteOrigin = false): Promise<void> {
 		throw new Error("Method not implemented");
 	}
 

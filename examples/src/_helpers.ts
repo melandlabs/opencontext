@@ -23,6 +23,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 
 export type Check = (label: string, ok: boolean, detail?: string) => void;
 export type Skip = (label: string, reason: string, detail?: string) => void;
@@ -107,4 +108,28 @@ export async function withTmp<T>(prefix: string, fn: (dir: string) => Promise<T>
 export async function runSection(label: string, fn: PackageTest) {
 	console.log(`\n── ${label} ──`);
 	await fn();
+}
+
+/**
+ * Entry-point guard for runnable tutorial files.
+ *
+ * Each `examples/src/tutorials/*-example.ts` exports a default async `main`
+ * and ends with the same `if (import.meta.url === ...) main().catch(...)`
+ * block so it can be run both standalone (`node --experimental-strip-types
+ * src/tutorials/30-…-example.ts`) and imported by `index.ts`'s demo runner
+ * without re-running the demo at import time.
+ *
+ * Call `runIfMain(label, main)` at the bottom of a tutorial file to install
+ * that guard exactly once.
+ */
+export function runIfMain(label: string, main: () => Promise<unknown>): void {
+	// `process.argv[1]` is undefined when the module is evaluated from a
+	// REPL or an `node --input-type=module -e "…"` script — guard against
+	// that so importing a tutorial for its default export never throws.
+	const entry = process.argv[1];
+	if (!entry || import.meta.url !== pathToFileURL(entry).href) return;
+	main().catch((error) => {
+		console.error(`${label} failed:`, error);
+		process.exit(1);
+	});
 }

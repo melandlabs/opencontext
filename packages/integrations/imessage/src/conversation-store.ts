@@ -101,6 +101,7 @@ class IMessageConversationStore {
 	private clearExpiredConversations(): void {
 		const now = Date.now();
 		const expiryMs = this.EXPIRY_HOURS * 60 * 60 * 1000;
+		// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 		let changed = false;
 
 		for (const [userKey, channels] of this.cache.entries()) {

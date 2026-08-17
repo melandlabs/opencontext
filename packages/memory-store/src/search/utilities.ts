@@ -8,10 +8,32 @@
 
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
 
+export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative";
+
 export interface UnifiedMemorySearchWarning {
 	source: UnifiedMemorySearchSource;
 	code: string;
 	message: string;
+}
+
+export interface UnifiedMemoryReasoningInfo {
+	strategy: UnifiedMemoryReasoningStrategy;
+	/**
+	 * True when the caller asked for a non-`"none"` strategy but the
+	 * corresponding reasoning provider was not configured (or its LLM
+	 * call failed), so the unified search silently fell back to the default
+	 * one-shot semantic + lexical path. Callers can use this to surface a
+	 * degraded-mode warning to their users.
+	 */
+	degraded?: boolean;
+	/** Query variants produced by the rewriter (original + rewritten). */
+	rewrittenQueries?: string[];
+	/** Number of planner iterations executed (iterative mode only). */
+	iterations?: number;
+	/** Number of evidence items collected by the planner (iterative mode only). */
+	evidenceCount?: number;
+	/** Date range that was applied to the memory source, if any. */
+	dateRange?: { from?: string; to?: string };
 }
 
 export interface UnifiedMemorySearchInput {
@@ -29,8 +51,31 @@ export interface UnifiedMemorySearchInput {
 	 * snapshot consumers drop nodes / edges whose `applicability.validFrom` /
 	 * `validUntil` window is closed at that instant. Backward-compatible:
 	 * omitted `asOf` keeps the legacy behaviour exactly.
+	 *
+	 * This is a single-point snapshot, not a date range. For interval filtering
+	 * over memory timestamps use `dateFrom` / `dateTo`.
 	 */
 	asOf?: string;
+	/**
+	 * Optional inclusive start date (ISO-8601). When set, the memory source
+	 * filters out candidates whose timestamp is before this boundary. The
+	 * iterative planner also receives this bound and may emit narrower ranges.
+	 *
+	 * This only affects the `memory` source; `insights` and `knowledge` are
+	 * not filtered by this range. Candidates without a recognised timestamp are
+	 * retained.
+	 */
+	dateFrom?: string;
+	/**
+	 * Optional inclusive end date (ISO-8601). When set, the memory source
+	 * filters out candidates whose timestamp is after this boundary. Date-only
+	 * strings are treated as the end of that day.
+	 *
+	 * This only affects the `memory` source; `insights` and `knowledge` are
+	 * not filtered by this range. Candidates without a recognised timestamp are
+	 * retained.
+	 */
+	dateTo?: string;
 	/**
 	 * How to merge per-source result lists. Defaults to `"similarity"` —
 	 * the legacy global sort by similarity, then type/id tie-break. The
@@ -38,6 +83,12 @@ export interface UnifiedMemorySearchInput {
 	 * lists fed via the (internal) `rankedLists` option.
 	 */
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
+	/**
+	 * Optional reasoning strategy. `"rewrite"` rewrites the query before
+	 * embedding; `"iterative"` runs an LLM planner that searches, notes
+	 * evidence, and searches again. Defaults to `"none"`.
+	 */
+	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
 }
 
 export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
@@ -66,6 +117,12 @@ export interface UnifiedMemorySearchOutput {
 	results: UnifiedMemorySearchResult[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	/**
+	 * Diagnostic information about reasoning and date filtering. Present
+	 * when (a) a non-`"none"` reasoning strategy was requested, or (b) a
+	 * `dateFrom` / `dateTo` filter was applied to the memory source.
+	 */
+	reasoning?: UnifiedMemoryReasoningInfo;
 }
 
 const DEFAULT_LIMIT = 10;
@@ -131,6 +188,16 @@ export function normalizeUnifiedMemoryMergeStrategy(value: unknown): UnifiedMemo
 	return value === "rrf" ? "rrf" : "similarity";
 }
 
+export function normalizeUnifiedMemoryReasoningStrategy(
+	value: unknown,
+	defaultStrategy: UnifiedMemoryReasoningStrategy = "none",
+): UnifiedMemoryReasoningStrategy {
+	if (value === "rewrite" || value === "iterative") {
+		return value;
+	}
+	return defaultStrategy;
+}
+
 const DEFAULT_RRF_K = 60;
 
 /**
@@ -168,7 +235,13 @@ export function mergeUnifiedMemorySearchResultsRrf(
 	}
 
 	const ranked = order
-		.map((key) => scores.get(key)!)
+		.map((key) => {
+			const entry = scores.get(key);
+			if (!entry) {
+				throw new Error(`Invariant violation: missing RRF score for key "${key}"`);
+			}
+			return entry;
+		})
 		.sort((a, b) => {
 			if (b.rrf !== a.rrf) {
 				return b.rrf - a.rrf;

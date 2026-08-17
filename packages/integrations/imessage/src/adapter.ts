@@ -148,6 +148,7 @@ end tell`;
 			});
 			this.isInitialized = true;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed:`, error);
 			throw new Error(
 				"Failed to initialize iMessage client. Please ensure @photon-ai/imessage-kit is installed and running on macOS with Full Disk Access permission granted.",
@@ -187,9 +188,11 @@ end tell`;
 				dialogs.push(dialogInfo);
 			}
 
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Retrieved ${dialogs.length} dialogs`);
 			return dialogs;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed to get dialog list:`, error);
 			throw error;
 		}
@@ -216,6 +219,7 @@ end tell`;
 
 			if (!result) return extractedMessages;
 
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Retrieved ${result.messages.length} messages`);
 
 			for (const msg of result.messages) {
@@ -226,9 +230,11 @@ end tell`;
 			}
 
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(`[Bot ${this.botId}] [imessage] Extracted ${extractedMessages.length} valid messages`);
 			return extractedMessages;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed to get messages:`, error);
 			throw error;
 		}
@@ -279,6 +285,7 @@ end tell`;
 
 			return { messages: extractedMessages, hasMore };
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed to get messages in chunks:`, error);
 			return { messages: [], hasMore: false };
 		}
@@ -287,6 +294,7 @@ end tell`;
 	/**
 	 * Extract message information
 	 */
+	// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 	private extractMessageInfo(msg: any): ExtractedMessageInfo | null {
 		try {
 			const chatName = msg.chatId || "Unknown chat";
@@ -307,6 +315,7 @@ end tell`;
 				attachments: undefined, // TODO: Handle attachments
 			};
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed to extract message info:`, error);
 			return null;
 		}
@@ -316,6 +325,7 @@ end tell`;
 	 * Send messages
 	 * Supports text, images (URL/path/base64), and files (URL)
 	 */
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		// Collect temp files that need cleanup
 		const tempFilesToCleanup: string[] = [];
@@ -399,12 +409,15 @@ end tell`;
 					}
 					try {
 						await this.sdk?.send(id, combinedText);
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Successfully sent text message to ${id}`);
 					} catch (sdkError) {
 						// Use AppleScript fallback when SDK fails
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.warn(`[Bot ${this.botId}] [imessage] SDK send failed, trying AppleScript:`, sdkError);
 						await this.sendViaAppleScript(id, combinedText);
 						if (DEBUG)
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log(
 								`[Bot ${this.botId}] [imessage] AppleScript successfully sent text message to ${id}`,
 							);
@@ -414,6 +427,7 @@ end tell`;
 				else if (!hasText && hasImages && !hasFiles) {
 					await this.sdk?.send(id, { images: imagePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent ${imagePaths.length} images to ${id}`,
 						);
@@ -422,6 +436,7 @@ end tell`;
 				else if (!hasText && !hasImages && hasFiles) {
 					await this.sdk?.send(id, { files: filePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent ${filePaths.length} files to ${id}`,
 						);
@@ -430,6 +445,7 @@ end tell`;
 				else if (hasText && hasImages && !hasFiles) {
 					await this.sdk?.send(id, { text: combinedText, images: imagePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent text and ${imagePaths.length} images to ${id}`,
 						);
@@ -438,6 +454,7 @@ end tell`;
 				else if (hasText && !hasImages && hasFiles) {
 					await this.sdk?.send(id, { text: combinedText, files: filePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent text and ${filePaths.length} files to ${id}`,
 						);
@@ -446,11 +463,13 @@ end tell`;
 				else if (!hasText && hasImages && hasFiles) {
 					await this.sdk?.send(id, { images: imagePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent ${imagePaths.length} images to ${id}`,
 						);
 					await this.sdk?.send(id, { files: filePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent ${filePaths.length} files to ${id}`,
 						);
@@ -459,17 +478,20 @@ end tell`;
 				else if (hasText && hasImages && hasFiles) {
 					await this.sdk?.send(id, { text: combinedText, images: imagePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent text and ${imagePaths.length} images to ${id}`,
 						);
 					await this.sdk?.send(id, { files: filePaths });
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [imessage] Successfully sent ${filePaths.length} files to ${id}`,
 						);
 				}
 			}
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [imessage] Failed to send message to ${id}:`, error);
 			throw this.toAdapterError("sendMessages", error);
 		} finally {
@@ -568,6 +590,7 @@ end tell`;
 		const buffer = Buffer.from(pureBase64, "base64");
 		await writeFile(tempPath, buffer);
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] base64 data saved to temp file: ${tempPath}`);
 		return tempPath;
 	}
@@ -603,6 +626,7 @@ end tell`;
 
 		const tempPath = join(tempDir, `${randomUUID()}-${finalFilename}`);
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Downloading remote file: ${url}`);
 
 		const response = await fetch(url);
@@ -613,6 +637,7 @@ end tell`;
 		const buffer = Buffer.from(await response.arrayBuffer());
 		await writeFile(tempPath, buffer);
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Remote file downloaded to: ${tempPath}`);
 		return tempPath;
 	}
@@ -658,6 +683,7 @@ end tell`;
 		// Extract actual pathname from /files/xxx
 		const pathname = virtualPath.replace(/^\/files\//, "");
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Reading file from local storage: ${pathname}`);
 
 		// Check if in Tauri mode
@@ -682,6 +708,7 @@ end tell`;
 
 		await writeFile(tempPath, buffer);
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Local file copied to temp directory: ${tempPath}`);
 
 		return tempPath;
@@ -695,8 +722,10 @@ end tell`;
 		for (const path of paths) {
 			try {
 				await unlink(path);
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Cleaned up temp file: ${path}`);
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[Bot ${this.botId}] [imessage] Failed to cleanup temp file: ${path}`, error);
 			}
 		}
@@ -710,6 +739,7 @@ end tell`;
 			try {
 				await this.sdk.close();
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] [imessage] Failed to close SDK:`, error);
 			}
 		}
@@ -722,6 +752,7 @@ end tell`;
 			offsetDate: 0,
 			isInitialized: false,
 		};
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [imessage] Adapter closed`);
 	}
 
@@ -764,6 +795,7 @@ end tell`;
 
 				// If database is locked and retries remaining, wait and retry
 				if (isDatabaseLockedError && attempt < MAX_RETRIES) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(`[iMessage] Database locked, retrying (${attempt}/${MAX_RETRIES})...`);
 					await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY * attempt));
 					continue;

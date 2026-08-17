@@ -62,6 +62,7 @@ function parseArgs(argv: string[]): McpArgs {
 }
 
 function printHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.log(`opencontext-memory-mcp — standalone memory-store MCP daemon.
 
 Usage:
@@ -72,6 +73,7 @@ Server identity (advertised to MCP clients):
   --version <version>             Server version (env: MEMORY_MCP_VERSION)
 `);
 	printUnifiedHelp();
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.log(`
 Examples:
   # Minimal — same as before, all three *not_configured warnings remain
@@ -100,9 +102,11 @@ async function main(): Promise<void> {
 		name: args.name,
 		version: args.version,
 	});
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.error("[memory-store/mcp] listening on stdio");
 
 	const shutdown = async (signal: NodeJS.Signals) => {
+		// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 		console.error(`[memory-store/mcp] ${signal} received, shutting down…`);
 		await server.close();
 		process.exit(0);
@@ -112,6 +116,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.error("[memory-store/mcp] fatal:", error);
 	process.exit(1);
 });

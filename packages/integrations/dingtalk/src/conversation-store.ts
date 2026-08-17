@@ -81,6 +81,7 @@ class DingTalkConversationStore {
 		this.cache.get(userKey)?.get(chatId)?.push(message);
 		saveChannelMessage(this.memoryDir, PLATFORM, userKey, chatId, message);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[DingTalkConversationStore] Added ${role} message for sender ${senderId}, chat ${chatId}`);
 	}
 
@@ -92,6 +93,7 @@ class DingTalkConversationStore {
 		this.loadedPairs.delete(pk);
 		clearChannelConversationFromAllDays(this.memoryDir, PLATFORM, userKey, chatId);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[DingTalkConversationStore] Cleared conversation for sender ${senderId}, chat ${chatId}`);
 	}
 
@@ -106,6 +108,7 @@ class DingTalkConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, PLATFORM, userKey);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[DingTalkConversationStore] Cleared all conversations for sender ${senderId}`);
 	}
 

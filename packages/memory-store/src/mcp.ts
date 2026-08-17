@@ -149,6 +149,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			title: "Search Unified Memory",
 			description:
 				"Semantic search across raw messages (always), and optionally insights and uploaded knowledge.",
+			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
 			inputSchema: searchSchema as any,
 		},
 		async (args: unknown) => {
@@ -176,6 +177,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		{
 			title: "Write Raw Message",
 			description: "Persist a single raw message to the user's memory store.",
+			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
 			inputSchema: writeSchema as any,
 		},
 		async (args: unknown) => {
@@ -204,6 +206,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			try {
 				await upsertRawMessagesToChroma(messages as never);
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: intentional server logging
 				console.warn("[memory-store/mcp] chroma upsert failed:", error);
 			}
 			return {
@@ -223,6 +226,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		{
 			title: "Get Raw Message",
 			description: "Fetch a single raw message by its message id.",
+			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
 			inputSchema: getSchema as any,
 		},
 		async (args: unknown) => {

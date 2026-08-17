@@ -371,6 +371,7 @@ export class AsanaClient {
 		try {
 			await this.onCredentialsUpdate(this.credentials);
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: adapter error logging
 			console.warn("[Asana] Failed to persist refreshed credentials", error);
 		}
 	}
