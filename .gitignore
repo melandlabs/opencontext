@@ -155,3 +155,9 @@ examples/data/
 # `pnpm install --ignore-workspace` run. Tracking it leads to stale
 # lockfiles that conflict with the just-bumped manifest specifiers.
 examples/pnpm-lock.yaml
+
+# Generated SQLite databases from tutorial runs
+tutorials-*.db
+
+# Temporary scratch directories created by demos
+.tmp/

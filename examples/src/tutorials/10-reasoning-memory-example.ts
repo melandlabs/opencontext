@@ -26,6 +26,9 @@ import {
 	getRawMessageManager,
 } from "@melandlabs/opencontext";
 
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 async function main() {
 	const apiKey = process.env.OPENCONTEXT_LLM_API_KEY;
 	if (!apiKey) {
@@ -40,7 +43,7 @@ async function main() {
 	const reasoning = createMemoryReasoningProviders({});
 
 	const store = await createMemoryStore({
-		dbPath: "./tutorials-reasoning.db",
+		dbPath: join(tmpdir(), `tutorials-reasoning-${process.pid}-${Date.now()}.db`),
 		unified: {
 			embedQuery: async ({ query }) => embeddingProvider.embedQuery(query),
 			reasoning: {
