@@ -1,5 +1,11 @@
 # @melandlabs/env-config
 
+## 0.3.0
+
+### Minor Changes
+
+- Bump the remaining @melandlabs/\* packages to 0.3.0 alongside the test-suite / memory-search minor release. Aligns every published package on the 0.3 line so the facade `@melandlabs/opencontext@0.3.0` and its transitive workspace dependencies share a single coherent version.
+
 ## 0.1.4
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # @melandlabs/memory-store
 
+## 0.3.0
+
+### Minor Changes
+
+- 351c6b2: Add an LLM-backed query rewriter and iterative recall planner to memory-store unified search, and a reasoning-backed memory layer exported from the opencontext facade. Also make LocalStorageProvider storage root injectable with hardened key sanitization, fix API error-body parsing, re-export createClaudeAgent/createCodexAgent factories from @melandlabs/ai/agent, and add vitest suites plus runnable tutorial examples across the monorepo.
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [351c6b2]
+  - @melandlabs/indexeddb@0.3.0
+  - @melandlabs/sqlite@0.3.0
+  - @melandlabs/ai@0.3.0
+  - @melandlabs/shared@0.3.0
+  - @melandlabs/ai-rag@0.2.4
+  - @melandlabs/rag@0.2.2
+
 ## 0.2.7
 
 ### Patch Changes
