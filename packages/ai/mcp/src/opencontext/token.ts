@@ -1,7 +1,7 @@
 import { Buffer } from "node:buffer";
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 export type OpenContextAuthTokenSource = "env" | "file" | "missing";
 
@@ -13,7 +13,7 @@ export interface OpenContextAuthToken {
 }
 
 export function getOpenContextTokenPath(): string {
-	return process.env.OPENCONTEXT_TOKEN_PATH ?? path.join(os.homedir(), ".opencontext", "token");
+	return process.env.OPENCONTEXT_TOKEN_PATH ?? getOpenContextPath("token");
 }
 
 function looksLikeJwt(token: string): boolean {

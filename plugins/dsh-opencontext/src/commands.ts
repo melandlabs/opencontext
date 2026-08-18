@@ -3,6 +3,7 @@
  */
 
 import { classifyBackendError, constants } from "./errors.js";
+import { getOpenContextPath } from "@melandlabs/env-config";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
 
@@ -31,8 +32,7 @@ async function handleDoctor(
 	const probe = await backend.health();
 	const scope = config.scopeId || "(auto)";
 	const url = backend.mode === "http" ? (process.env.OPENCONTEXT_DSH_HTTP_URL ?? config.baseUrl) : "(lib)";
-	const libPath =
-		process.env.MEMORY_STORE_DB_PATH ?? `${process.env.HOME ?? "~"}/.opencontext/memory/store.db`;
+	const libPath = process.env.MEMORY_STORE_DB_PATH ?? getOpenContextPath("memory", "store.db");
 
 	let recentCount: number | null = null;
 	try {

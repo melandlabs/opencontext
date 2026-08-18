@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/integrations-dingtalk",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -25,6 +25,7 @@
 	"keywords": ["opencontext"],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*",
+		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/integrations": "workspace:*",
 		"@melandlabs/integrations-channels": "workspace:*"
 	},

@@ -1,5 +1,11 @@
 # @melandlabs/opencontext
 
+## 0.4.0
+
+### Minor Changes
+
+- Add a server-only `app-paths` module to `@melandlabs/env-config` that centralizes the `~/.opencontext` user-directory path logic: `getOpenContextDir()`, `getOpenContextPath(...segments)`, `ensureOpenContextDir(...segments)`, plus the `OPENCONTEXT_HOME` override (with `~/` expansion). Migrate every hardcoded `.opencontext` path computation across the monorepo (loop, audit, memory-store, ai, mcp, integrations, and the `dsh-opencontext` plugin) to use the new helpers, and re-export the unified path API from the `@melandlabs/opencontext` facade.
+
 ## 0.3.0
 
 ### Minor Changes

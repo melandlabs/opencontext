@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/integrations-feishu",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -29,6 +29,7 @@
 	"keywords": ["opencontext"],
 	"dependencies": {
 		"@larksuiteoapi/node-sdk": "^1.11.0",
+		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/integrations": "workspace:*",
 		"@melandlabs/integrations-channels": "workspace:*"
 	},

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -53,6 +53,7 @@
 		"@melandlabs/audit": "workspace:*",
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/cron": "workspace:*",
+		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
 		"@melandlabs/loop": "workspace:*",
 		"@melandlabs/memory-store": "workspace:*",

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/mcp",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -27,6 +27,7 @@
 	"description": "OpenContext · mcp module",
 	"keywords": ["opencontext"],
 	"dependencies": {
+		"@melandlabs/env-config": "workspace:*",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"zod": "^4.3.6"
 	},
