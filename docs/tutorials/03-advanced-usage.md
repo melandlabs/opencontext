@@ -68,8 +68,6 @@ main().catch((error) => {
 
 ## Reflection and Write-Back
 
-> **Runnable companion:** [`examples/src/tutorials/41-reflect-writeback-example.ts`](../../examples/src/tutorials/41-reflect-writeback-example.ts)
-
 The four-verb memory API (`remember`, `recall`, `forget`, `improve`) covers the day-to-day operations of an agent: write a fact, recall it, archive it, supersede it. This section covers the **fifth** operation — `reflect` — which gathers evidence and either synthesises an answer or, in write-back mode, asks the LLM to vet a consolidation plan and persists the result.
 
 There are two flavours, sharing the same evidence pipeline:
@@ -244,14 +242,7 @@ Schema migration: IndexedDB `DB_VERSION` 3 → 4, SQLite `RAW_MESSAGES_SCHEMA_VE
 
 ### End-to-end example
 
-See [`examples/src/tutorials/41-reflect-writeback-example.ts`](../../examples/src/tutorials/41-reflect-writeback-example.ts) for a runnable, in-memory walkthrough that exercises:
-
-1. `store.reflect()` — read-only synthesis.
-2. `store.reflectWithPlan({ dryRun: true })` — plan inspection.
-3. `store.reflectWithPlan({ dryRun: false })` — actual write-back.
-4. `factTypes` narrowing — fact-type-filtered recall.
-
-The same surface is also covered by the demos at [`examples/src/simple/15-http-server.ts`](../../examples/src/simple/15-http-server.ts) (HTTP) and [`examples/src/simple/16-mcp-server.ts`](../../examples/src/simple/16-mcp-server.ts) (MCP).
+The same surface is also covered by the demos at [`examples/src/simple/15-http-server.ts`](../../examples/src/simple/15-http-server.ts) (HTTP) and [`examples/src/simple/16-mcp-server.ts`](../../examples/src/simple/16-mcp-server.ts) (MCP). A dedicated runnable companion for the reflect / write-back loop is on the roadmap and will be re-added once `@melandlabs/memory-store@0.4.0` ships to npm.
 
 ## Reasoning-Backed Memory Retrieval
 

@@ -62,7 +62,6 @@
 		"@melandlabs/storage": "^0.3.0",
 		"@melandlabs/ui-runtime": "^0.3.0",
 		"@melandlabs/voice-kokoro": "^0.3.0",
-		"@melandlabs/vsa": "^0.1.0",
 		"@melandlabs/voice-whisper": "^0.3.0"
 	},
 	"engines": {
