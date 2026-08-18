@@ -140,19 +140,20 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 				if (Array.isArray(args.categories)) {
 					categories = args.categories
 						.map((c) => String(c).toLowerCase())
-						.filter((c) => INSIGHT_CATEGORIES.includes(c as any));
+						.filter((c): c is (typeof INSIGHT_CATEGORIES)[number] =>
+							(INSIGHT_CATEGORIES as readonly string[]).includes(c),
+						);
 				}
 
 				// Call backend - this will be implemented in backend-extended
-				const result = await (backend as any).searchInsights?.(
+				const result = await backend.searchInsights?.(
 					{
 						query,
 						categories,
 						limit: coerceLimit(args.limit, 10, 50),
-						since: typeof args.since === "number" ? args.since : undefined,
 						scopeId,
 						userId,
-					},
+					} as unknown as Parameters<NonNullable<OpenContextBackend["searchInsights"]>>[0],
 					{ signal: ctx.signal, timeoutMs: config.timeoutMs },
 				);
 
@@ -165,7 +166,7 @@ function createInsightsSearchTool(backend: OpenContextBackend, config: ResolvedC
 				}
 
 				return toolOk({
-					insights: (result.insights ?? []).map((insight: any) => ({
+					insights: (result.insights ?? []).map((insight) => ({
 						id: insight.id,
 						content: insight.content,
 						category: insight.category,
@@ -210,13 +211,13 @@ function createInsightCaptureTool(backend: OpenContextBackend, config: ResolvedC
 				if (containsSecret(content)) return toolError("secret_rejected", "content looks like a secret");
 
 				const category = String(args.category ?? "fact").toLowerCase();
-				if (!INSIGHT_CATEGORIES.includes(category as any)) {
+				if (!(INSIGHT_CATEGORIES as readonly string[]).includes(category)) {
 					return toolError("invalid_arguments", `category must be one of: ${INSIGHT_CATEGORIES.join(", ")}`);
 				}
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
-				const result = await (backend as any).captureInsight?.(
+				const result = await backend.captureInsight?.(
 					{
 						content,
 						category,

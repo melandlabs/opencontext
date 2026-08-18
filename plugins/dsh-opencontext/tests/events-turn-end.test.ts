@@ -25,7 +25,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			expect(listeners.some((l) => l.event === "turn/end")).toBe(true);
 		});
@@ -38,7 +42,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			const disposer = registerTurnEndListener(ctx as any, backend, config as any);
+			const disposer = registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			expect(typeof disposer).toBe("function");
 		});
@@ -67,7 +75,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			expect(handler).not.toBeNull();
 
@@ -114,7 +126,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			const payload = {
 				messages: [{ role: "user", content: "Hello" }],
@@ -148,7 +164,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			const payload = {
 				messages: [
@@ -192,7 +212,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			const payload = {
 				messages: [{ role: "user", content: "Hello" }],
@@ -202,7 +226,7 @@ describe("events-turn-end", () => {
 			const result = await handler!(payload);
 
 			expect(ctx.logger.warn).toHaveBeenCalled();
-			expect((result as any).errors).toHaveLength(1);
+			expect((result as unknown as { errors: unknown[] }).errors).toHaveLength(1);
 		});
 	});
 
@@ -229,7 +253,11 @@ describe("events-turn-end", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerTurnEndListener(ctx as any, backend, config as any);
+			registerTurnEndListener(
+				ctx as unknown as Parameters<typeof registerTurnEndListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerTurnEndListener>[2],
+			);
 
 			const payload = {
 				messages: [

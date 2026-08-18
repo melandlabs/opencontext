@@ -113,7 +113,6 @@ export async function beginMultipartUpload(
 
 	if (!resp.ok) {
 		const err = await resp.text();
-		console.error(`[Blob MPU] create failed: status=${resp.status} body=${err} pathname=${pathname}`);
 		throw new Error(`Failed to create multipart upload: ${resp.status} ${err}`);
 	}
 
@@ -149,9 +148,6 @@ export async function uploadBlobPart(
 
 	if (!resp.ok) {
 		const err = await resp.text();
-		console.error(
-			`[Blob MPU] uploadPart failed: status=${resp.status} body=${err} key=${key} uploadId=${uploadId} partNumber=${partNumber}`,
-		);
 		throw new Error(`Failed to upload part: ${resp.status} ${err}`);
 	}
 
@@ -166,7 +162,7 @@ export async function uploadBlobPart(
 export async function finishMultipartUpload(
 	key: string,
 	parts: { etag: string; partNumber: number }[],
-	contentType: string,
+	_contentType: string,
 	uploadId: string,
 	signal?: AbortSignal,
 ): Promise<BlobUploadResult> {

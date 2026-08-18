@@ -45,8 +45,7 @@ export function computeNextRun(config: ScheduleConfig, now: Date = new Date()): 
 			});
 			const next = cron.nextRun(now);
 			return next || null;
-		} catch (error) {
-			console.error("[Cron] Invalid cron expression:", config.expression, error);
+		} catch (_error) {
 			return null;
 		}
 	}

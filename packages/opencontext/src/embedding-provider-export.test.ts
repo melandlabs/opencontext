@@ -7,7 +7,7 @@
  * factory honours `EMBEDDING_PROVIDER=local`. Crucially, this test does
  * **not** call `embedQuery` / `embedDocuments` — those would trigger the
  * ONNX model load (network + ~30 MB download on first run). Routing
- * construction only, mirroring the openloomi unit test pattern.
+ * construction only, mirroring the opencontext unit test pattern.
  */
 
 import { afterEach, describe, expect, it } from "vitest";

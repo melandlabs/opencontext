@@ -144,10 +144,10 @@ export const deduplicateInsights = <T extends InsightBase>(
 ): T[] => {
 	if (list && Array.isArray(list)) {
 		const uniqueMap = new Map<string, T>();
-		list.forEach((insight) => {
+		for (const insight of list) {
 			const key = (insight[keyField] as string) || `__empty_${String(keyField)}_`;
 			uniqueMap.set(key, insight);
-		});
+		}
 
 		return Array.from(uniqueMap.values());
 	}

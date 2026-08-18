@@ -291,9 +291,11 @@ export function assignMemoryRelationGraph(
 		);
 		const supportScore = mean(supportEdges.map((edge) => edge.effectiveWeight));
 		const latestTimestamp = Math.max(
-			...recordIdsInCluster.map(
-				(recordId) => nodesByRecordId.get(recordId)!.timestamp ?? recordsById.get(recordId)!.timestamp,
-			),
+			...recordIdsInCluster.map((recordId) => {
+				const nodeTimestamp = nodesByRecordId.get(recordId)?.timestamp;
+				if (nodeTimestamp !== undefined) return nodeTimestamp;
+				return recordsById.get(recordId)?.timestamp ?? 0;
+			}),
 		);
 		const status: MemoryGraphClusterStatus =
 			recordIdsInCluster.length > 1 && supportScore >= thresholds.stableSupportScore ? "stable" : "tentative";
@@ -328,10 +330,10 @@ export function assignMemoryRelationGraph(
 	);
 
 	for (const edge of strongCompeteEdges) {
-		clusterDisjointSet.union(
-			clusterByRecordId.get(edge.fromRecordId)!,
-			clusterByRecordId.get(edge.toRecordId)!,
-		);
+		const fromCluster = clusterByRecordId.get(edge.fromRecordId);
+		const toCluster = clusterByRecordId.get(edge.toRecordId);
+		if (fromCluster === undefined || toCluster === undefined) continue;
+		clusterDisjointSet.union(fromCluster, toCluster);
 	}
 
 	const groupedClusters = groupByRoot(clusterIds, clusterDisjointSet);

@@ -9,8 +9,23 @@ export function cn(...inputs: ClassValue[]) {
 
 // ============ Network Utilities ============
 
+type NetworkErrorShape = {
+	name?: string;
+	code?: string;
+	message?: string;
+};
+
+function isTimeoutError(error: NetworkErrorShape): boolean {
+	return (
+		error?.name === "TimeoutError" ||
+		error?.code === "UND_ERR_CONNECT_TIMEOUT" ||
+		!!error?.message?.includes("timeout") ||
+		!!error?.message?.includes("Timeout")
+	);
+}
+
 export async function fetchWithRetry(url: string, options: RequestInit = {}, retries = 2): Promise<Response> {
-	let lastError: Error | undefined;
+	let lastError: unknown;
 
 	for (let i = 0; i <= retries; i++) {
 		try {
@@ -19,16 +34,12 @@ export async function fetchWithRetry(url: string, options: RequestInit = {}, ret
 				signal: AbortSignal.timeout(10000),
 			});
 			return response;
-		} catch (error: any) {
-			const isTimeout =
-				error?.name === "TimeoutError" ||
-				error?.code === "UND_ERR_CONNECT_TIMEOUT" ||
-				error?.message?.includes("timeout") ||
-				error?.message?.includes("Timeout");
+		} catch (error: unknown) {
+			const timeout = isTimeoutError(error as NetworkErrorShape);
 
 			lastError = error;
 
-			if (!isTimeout || i === retries) {
+			if (!timeout || i === retries) {
 				throw error;
 			}
 
@@ -39,12 +50,13 @@ export async function fetchWithRetry(url: string, options: RequestInit = {}, ret
 	throw lastError;
 }
 
-export function isNetworkError(error: any): boolean {
+export function isNetworkError(error: unknown): boolean {
+	const candidate = error as NetworkErrorShape;
 	return (
-		error?.name === "TimeoutError" ||
-		error?.code === "UND_ERR_CONNECT_TIMEOUT" ||
-		error?.message?.includes("timeout") ||
-		error?.message?.includes("ECONNREFUSED")
+		candidate?.name === "TimeoutError" ||
+		candidate?.code === "UND_ERR_CONNECT_TIMEOUT" ||
+		!!candidate?.message?.includes("timeout") ||
+		!!candidate?.message?.includes("ECONNREFUSED")
 	);
 }
 
@@ -488,15 +500,24 @@ export class MemoCache<T> {
 	private cache = new Map<string, { value: T; expiresAt: number }>();
 
 	/**
-	 * Get a cached value if it exists and hasn't expired
+	 * Get a cached value if it exists and hasn't expired.
+	 *
+	 * When `ttlMs` is provided, the entry's expiration is refreshed on read
+	 * (sliding TTL): `expiresAt` becomes `now + ttlMs`. Omit it to read
+	 * without affecting the existing TTL.
+	 *
 	 * @param key Cache key
-	 * @param ttlMs Time-to-live in milliseconds (default: 60 seconds)
+	 * @param ttlMs Optional new TTL in milliseconds. If passed, extends the
+	 *              entry's expiration to `Date.now() + ttlMs` on hit.
 	 */
 	get(key: string, ttlMs?: number): T | undefined {
 		const entry = this.cache.get(key);
 		if (!entry || Date.now() > entry.expiresAt) {
 			this.cache.delete(key);
 			return undefined;
+		}
+		if (ttlMs !== undefined) {
+			entry.expiresAt = Date.now() + ttlMs;
 		}
 		return entry.value;
 	}

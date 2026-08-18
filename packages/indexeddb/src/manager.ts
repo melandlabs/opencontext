@@ -23,7 +23,7 @@ import type {
 } from "./storage";
 
 const DB_NAME = "opencontext_messages_db";
-const DB_VERSION = 3; // Incremented to add memory stage fields and summaries store
+const DB_VERSION = 4; // v4: added factType index for retrieval-side filtering
 const STORE_NAME = "raw_messages";
 const SUMMARY_STORE_NAME = "memory_summaries";
 
@@ -104,10 +104,8 @@ class IndexedDBManager implements RawMessageStorageManager {
 			request.onerror = () => {
 				// Handle version mismatch (e.g., user has version 2 but code expects version 1)
 				if (request.error?.name === "VersionError") {
-					console.warn("[IndexedDB] Database version mismatch. Deleting and recreating database...");
 					const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
 					deleteRequest.onsuccess = () => {
-						console.log("[IndexedDB] Deleted old database. Reopening...");
 						const reopenRequest = indexedDB.open(DB_NAME, DB_VERSION);
 						reopenRequest.onerror = () =>
 							reject(new Error(`Failed to recreate IndexedDB: ${reopenRequest.error}`));
@@ -146,7 +144,6 @@ class IndexedDBManager implements RawMessageStorageManager {
 	private createObjectStore(db: IDBDatabase, transaction?: IDBTransaction | null): void {
 		const tx = transaction ?? (db as IDBDatabase & { transaction?: IDBTransaction | null }).transaction;
 		if (!tx) {
-			console.error("[IndexedDB] No transaction available for upgrade");
 			return;
 		}
 
@@ -163,11 +160,8 @@ class IndexedDBManager implements RawMessageStorageManager {
 						unique,
 						...(options ?? {}),
 					});
-					console.log(`[IndexedDB] Created missing index: ${name}`);
 				}
-			} catch (error) {
-				console.warn(`[IndexedDB] Warning with index ${name}:`, error);
-			}
+			} catch (_error) {}
 		};
 
 		let rawStore: IDBObjectStore;
@@ -192,6 +186,7 @@ class IndexedDBManager implements RawMessageStorageManager {
 		ensureIndex(rawStore, "archivedAt", "archivedAt", false);
 		ensureIndex(rawStore, "isPinned", "isPinned", false);
 		ensureIndex(rawStore, "summaryRefId", "summaryRefId", false);
+		ensureIndex(rawStore, "factType", "factType", false);
 		// Compound indexes used by memory lifecycle:
 		// - userId+memoryStage for stage-specific candidate scans
 		// - userId+timestamp for bounded time window queries
@@ -215,8 +210,6 @@ class IndexedDBManager implements RawMessageStorageManager {
 		// Keep a simple text index for keyword contains filtering (inverted index can be added later).
 		ensureIndex(summaryStore, "keywords", "keywordsText", false);
 		ensureIndex(summaryStore, "keywordsText", "keywordsText", false);
-
-		console.log("[IndexedDB] Database initialized successfully");
 	}
 
 	/**
@@ -436,6 +429,17 @@ class IndexedDBManager implements RawMessageStorageManager {
 							return;
 						}
 
+						if (
+							query.factTypes &&
+							query.factTypes.length > 0 &&
+							(!message.factType || !query.factTypes.includes(message.factType))
+						) {
+							// Untagged rows are excluded when an explicit `factTypes`
+							// filter is supplied (parity with `memoryStages`).
+							cursor.continue();
+							return;
+						}
+
 						if (!includeArchived && message.archivedAt !== undefined) {
 							cursor.continue();
 							return;
@@ -467,7 +471,6 @@ class IndexedDBManager implements RawMessageStorageManager {
 				};
 
 				request.onerror = () => {
-					console.error("[IndexedDB] Query error:", request.error);
 					reject(request.error);
 				};
 			});

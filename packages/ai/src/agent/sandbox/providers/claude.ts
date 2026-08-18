@@ -6,6 +6,7 @@
 
 import { execSync } from "node:child_process";
 import { spawn } from "node:child_process";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { existsSync } from "node:fs";
 import { platform } from "node:os";
 import { join } from "node:path";
@@ -120,8 +121,7 @@ export class ClaudeProvider extends BaseSandboxProvider {
 		const srtPath = this.srtPath;
 
 		return new Promise((resolve) => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const proc: any = spawn(srtPath, ["run", "--", command, ...args], {
+			const proc: ChildProcessWithoutNullStreams = spawn(srtPath, ["run", "--", command, ...args], {
 				cwd: workDir,
 				env: { ...process.env, ...env },
 			});

@@ -25,7 +25,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			expect(listeners.some((l) => l.event === "tool/result")).toBe(true);
 		});
@@ -47,7 +51,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			expect(listeners.some((l) => l.event === "tool/result")).toBe(false);
 		});
@@ -64,7 +72,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			const disposer = registerToolResultListener(ctx as any, backend, config as any);
+			const disposer = registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			expect(typeof disposer).toBe("function");
 		});
@@ -93,7 +105,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => {
 				nextCalled();
@@ -133,7 +149,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => ({ result: "success" }));
 
@@ -176,7 +196,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => ({ result: "success" }));
 
@@ -222,7 +246,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => ({ result: "success" }));
 
@@ -260,7 +288,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => ({ result: "success" }));
 
@@ -301,7 +333,11 @@ describe("events-tool-result", () => {
 				logger: { warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 			};
 
-			registerToolResultListener(ctx as any, backend, config as any);
+			registerToolResultListener(
+				ctx as unknown as Parameters<typeof registerToolResultListener>[0],
+				backend,
+				config as unknown as Parameters<typeof registerToolResultListener>[2],
+			);
 
 			const next = vi.fn(async () => ({ result: "success" }));
 

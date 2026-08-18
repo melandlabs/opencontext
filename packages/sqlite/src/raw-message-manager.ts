@@ -51,6 +51,7 @@ interface RawMessageRow {
 	deprecation_reason: string | null;
 	superseded_by_summary_id: string | null;
 	source_episode_id: string | null;
+	fact_type: string | null;
 }
 
 interface MemorySummaryRow {
@@ -94,6 +95,8 @@ export interface SQLiteRawMessageSemanticSearchInput {
 	person?: string;
 	startTime?: number;
 	endTime?: number;
+	/** Optional `FactType` filter — narrows to rows whose `fact_type` is in this set. */
+	factTypes?: Array<"world" | "experience" | "mental_model">;
 }
 
 export interface SQLiteRawMessageSemanticSearchResult {
@@ -110,6 +113,7 @@ export interface SQLiteRawMessageSemanticSearchResult {
 		timestamp: number;
 		memoryStage?: string;
 		embeddingModel?: string;
+		factType?: "world" | "experience" | "mental_model";
 	};
 	message: RawMessage;
 }
@@ -128,6 +132,8 @@ export interface SQLiteRawMessageLexicalSearchInput {
 	includeDeprecated?: boolean;
 	platform?: string;
 	botId?: string;
+	/** Optional `FactType` filter — narrows to rows whose `fact_type` is in this set. */
+	factTypes?: Array<"world" | "experience" | "mental_model">;
 }
 
 export interface SQLiteRawMessageLexicalSearchResult {
@@ -144,6 +150,7 @@ export interface SQLiteRawMessageLexicalSearchResult {
 		person?: string;
 		timestamp: number;
 		memoryStage?: string;
+		factType?: "world" | "experience" | "mental_model";
 		scoring: "bm25";
 	};
 	message: RawMessage;
@@ -219,6 +226,7 @@ function toRawMessage(row: RawMessageRow): RawMessage {
 		deprecationReason: row.deprecation_reason ?? undefined,
 		supersededBySummaryId: row.superseded_by_summary_id ?? undefined,
 		sourceEpisodeId: row.source_episode_id ?? undefined,
+		factType: (row.fact_type as RawMessage["factType"]) ?? undefined,
 	};
 }
 
@@ -430,6 +438,12 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			);
 			query.memoryStages.forEach((stage, index) => {
 				params[`memoryStage${index}`] = stage;
+			});
+		}
+		if (query.factTypes?.length) {
+			where.push(`fact_type IN (${query.factTypes.map((_, index) => `@factType${index}`).join(", ")})`);
+			query.factTypes.forEach((factType, index) => {
+				params[`factType${index}`] = factType;
 			});
 		}
 		if (!query.includeArchived) {
@@ -956,7 +970,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             embedding_content_hash, embedding_dimensions, embedding_updated_at,
             metadata, created_at, memory_stage, access_count, last_access_at,
             importance_score, archived_at, is_pinned, summary_ref_id,
-            source_episode_id
+            source_episode_id, fact_type
           )
           VALUES (
             @messageId, @platform, @botId, @userId, @channel, @person,
@@ -964,7 +978,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             @embeddingContentHash, @embeddingDimensions, @embeddingUpdatedAt,
             @metadata, @createdAt, @memoryStage, @accessCount, @lastAccessAt,
             @importanceScore, @archivedAt, @isPinned, @summaryRefId,
-            @sourceEpisodeId
+            @sourceEpisodeId, @factType
           )
           ON CONFLICT(message_id) DO UPDATE SET
             platform = excluded.platform,
@@ -989,7 +1003,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             archived_at = excluded.archived_at,
             is_pinned = excluded.is_pinned,
             summary_ref_id = excluded.summary_ref_id,
-            source_episode_id = excluded.source_episode_id
+            source_episode_id = excluded.source_episode_id,
+            fact_type = excluded.fact_type
           WHERE raw_messages.user_id = excluded.user_id
         `,
 			)
@@ -1018,6 +1033,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				isPinned: normalized.isPinned ? 1 : 0,
 				summaryRefId: normalized.summaryRefId ?? null,
 				sourceEpisodeId: normalized.sourceEpisodeId ?? null,
+				factType: normalized.factType ?? null,
 			});
 
 		if (result.changes === 0) {
@@ -1042,22 +1058,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 
 		if (this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length)) {
 			const results = this.searchMessagesWithVectorTable(input);
-			console.error("[SQLite Raw Messages] Semantic search completed", {
-				backend: "sqlite-vec",
-				dimensions: input.queryEmbedding.length,
-				count: results.length,
-			});
 			return results;
 		}
 
 		const results = this.searchMessagesWithStoredEmbeddings(input);
-		console.warn("[SQLite Raw Messages] Semantic search used stored-embedding fallback", {
-			backend: "stored-embedding-fallback",
-			dimensions: input.queryEmbedding.length,
-			count: results.length,
-			vectorSearchAvailable: this.vectorSearchAvailable,
-			vectorTableExists: this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length),
-		});
 		return results;
 	}
 
@@ -1109,6 +1113,14 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			where.push("raw_messages.bot_id = @botId");
 			params.botId = input.botId;
 		}
+		if (input.factTypes && input.factTypes.length > 0) {
+			where.push(
+				`raw_messages.fact_type IN (${input.factTypes.map((_, i) => `@lexFactType${i}`).join(", ")})`,
+			);
+			input.factTypes.forEach((factType, i) => {
+				params[`lexFactType${i}`] = factType;
+			});
+		}
 
 		const limit = input.limit ?? 10;
 		params.limit = limit;
@@ -1140,6 +1152,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					person: message.person,
 					timestamp: message.timestamp,
 					memoryStage: message.memoryStage,
+					factType: message.factType,
 					scoring: "bm25" as const,
 				},
 				message,
@@ -1156,9 +1169,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			sqliteVec.load(this.db);
 			this.vectorSearchAvailable = true;
 			this.rebuildVectorTables();
-		} catch (error) {
+		} catch (_error) {
 			this.vectorSearchAvailable = false;
-			console.warn("[SQLite Raw Messages] sqlite-vec unavailable:", error);
 		}
 	}
 
@@ -1440,6 +1452,13 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (input.endTime !== undefined && message.timestamp >= input.endTime) {
 			return false;
 		}
+		if (
+			input.factTypes &&
+			input.factTypes.length > 0 &&
+			(message.factType === undefined || !input.factTypes.includes(message.factType))
+		) {
+			return false;
+		}
 		return true;
 	}
 
@@ -1465,6 +1484,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				timestamp: normalizeTimestampToMs(message.timestamp),
 				memoryStage: message.memoryStage,
 				embeddingModel: message.embeddingModel,
+				factType: message.factType,
 			},
 			message,
 		};

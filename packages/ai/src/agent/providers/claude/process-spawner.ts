@@ -6,8 +6,8 @@
  * boundary that preserves Windows process-tree cancellation and drains
  * stderr through the bounded line sink before the caller redacts and logs it.
  *
- * The reference port strips the openloomi distribution-specific bundle
- * detection (legacy `cli-bundle/{sh,cmd}` wrappers + a `~/.openloomi/node`
+ * The reference port strips the opencontext distribution-specific bundle
+ * detection (legacy `cli-bundle/{sh,cmd}` wrappers + a `~/.opencontext/node`
  * fallback) — callers should configure `pathToClaudeCodeExecutable` to point
  * at the installed `claude` binary (or a custom path via `providerConfig`)
  * and rely on this helper only for cross-platform spawning quirks.

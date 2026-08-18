@@ -23,7 +23,9 @@
 	"license": "Apache-2.0",
 	"description": "OpenContext · indexeddb module",
 	"keywords": ["opencontext"],
-	"dependencies": {},
+	"dependencies": {
+		"@melandlabs/contracts": "workspace:*"
+	},
 	"peerDependencies": {
 		"react": ">=18.0.0"
 	},

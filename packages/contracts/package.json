@@ -17,7 +17,9 @@
 		"./episode": "./dist/episode.js",
 		"./decision": "./dist/decision.js",
 		"./errors": "./dist/errors.js",
-		"./schemas": "./dist/schemas.js"
+		"./peer": "./dist/peer.js",
+		"./schemas": "./dist/schemas.js",
+		"./fact-type": "./dist/fact-type.js"
 	},
 	"repository": {
 		"type": "git",

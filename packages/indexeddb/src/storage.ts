@@ -8,6 +8,11 @@
 
 export type MemoryStage = "short" | "mid" | "long";
 export type MemorySummaryTier = "L1" | "L2" | "L3";
+// `FactType` is the single source of truth defined in `@melandlabs/contracts`
+// (a shared leaf package); re-exported here so `indexeddb` consumers keep
+// importing it from this path without mirroring the union locally.
+import type { FactType } from "@melandlabs/contracts";
+export type { FactType };
 
 export interface RawMessage {
 	id?: number;
@@ -53,6 +58,12 @@ export interface RawMessage {
 	 * `RawMessage.sourceEpisodeId` in `@melandlabs/memory-store/contracts`.
 	 */
 	sourceEpisodeId?: string;
+	/**
+	 * Optional fact-type classification (mirrors `MemoryRecord.factType` in
+	 * `@melandlabs/ai`). Stored verbatim; lets retrieval narrow to "world",
+	 * "experience", or "mental_model" without re-classifying at query time.
+	 */
+	factType?: FactType;
 }
 
 export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
@@ -93,6 +104,7 @@ export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: Ra
 		deprecationReason: existing.deprecationReason ?? incoming.deprecationReason,
 		supersededBySummaryId: existing.supersededBySummaryId ?? incoming.supersededBySummaryId,
 		sourceEpisodeId: existing.sourceEpisodeId ?? incoming.sourceEpisodeId,
+		factType: existing.factType ?? incoming.factType,
 	};
 }
 
@@ -121,6 +133,12 @@ export interface RawMessageQuery {
 	 * Set true to include deprecated records (audits / chain traversal).
 	 */
 	includeDeprecated?: boolean;
+	/**
+	 * Optional fact-type filter; only messages whose `factType` matches one
+	 * of these values are returned. Messages missing `factType` are excluded
+	 * when this filter is non-empty (parity with `memoryStages`).
+	 */
+	factTypes?: FactType[];
 }
 
 export interface MemorySummaryRecord {

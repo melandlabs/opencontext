@@ -9,6 +9,8 @@ export default defineConfig({
 		episode: "src/episode.ts",
 		decision: "src/decision.ts",
 		errors: "src/errors.ts",
+		peer: "src/peer.ts",
+		"fact-type": "src/fact-type.ts",
 		schemas: "src/schemas.ts",
 	},
 	format: ["esm"],

@@ -149,9 +149,7 @@ export async function storeRawMessagesFromInsight(
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteStoreRawMessagesFromInsight(userId, messages, graphEvolution);
-		} catch (error) {
-			console.warn("[Client Raw Messages API] Failed to store messages, falling back to IndexedDB:", error);
-		}
+		} catch (_error) {}
 	}
 
 	try {
@@ -175,8 +173,7 @@ export async function storeRawMessagesFromInsight(
 			errors: 0,
 			graphEvolution: stored.graphEvolution,
 		};
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to store messages:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			stored: 0,
@@ -192,9 +189,7 @@ export async function queryRawMessages(query: RawMessageQuery): Promise<RawMessa
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return (await sqliteQueryRawMessages(query)) as RawMessageQueryResultItem[];
-		} catch (error) {
-			console.warn("[Client Raw Messages API] Failed to query messages, falling back to IndexedDB:", error);
-		}
+		} catch (_error) {}
 	}
 
 	// Opt-in switch to keep old behavior stable unless caller requests fallback.
@@ -207,8 +202,7 @@ export async function queryRawMessages(query: RawMessageQuery): Promise<RawMessa
 		const manager = await getManager();
 		const rawMessages = await manager.queryMessages(query);
 		return rawMessages.map(toRawSourceItem);
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to query messages:", error);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -325,8 +319,7 @@ export async function queryRawMessagesWithFallback(
 		});
 
 		return items.slice(0, pageSize);
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to query messages with fallback:", error);
+	} catch (_error) {
 		return [];
 	}
 }
@@ -339,20 +332,14 @@ export async function queryRawMessagesGrouped(query: RawMessageQuery): Promise<R
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteQueryRawMessagesGrouped(query);
-		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to query grouped messages, falling back to IndexedDB:",
-				error,
-			);
-		}
+		} catch (_error) {}
 	}
 
 	// Normal IndexedDB query
 	try {
 		const manager = await getManager();
 		return await manager.queryMessagesGrouped(query);
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to query grouped messages:", error);
+	} catch (_error) {
 		return {};
 	}
 }
@@ -370,17 +357,14 @@ export async function getRawMessagesStats(): Promise<{
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteGetRawMessagesStats();
-		} catch (error) {
-			console.warn("[Client Raw Messages API] Failed to get stats, falling back to IndexedDB:", error);
-		}
+		} catch (_error) {}
 	}
 
 	// Normal IndexedDB query
 	try {
 		const manager = await getManager();
 		return await manager.getStats();
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to get stats:", error);
+	} catch (_error) {
 		return {
 			totalMessages: 0,
 			messagesByPlatform: {},
@@ -399,12 +383,7 @@ export async function clearOldRawMessages(
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteClearOldRawMessages(olderThan, userId);
-		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to clear old messages, falling back to IndexedDB:",
-				error,
-			);
-		}
+		} catch (_error) {}
 	}
 
 	try {
@@ -414,8 +393,7 @@ export async function clearOldRawMessages(
 			success: true,
 			deleted,
 		};
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to clear messages:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			deleted: 0,
@@ -430,12 +408,7 @@ export async function runMemoryForgettingCycleForUser(
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteRunMemoryForgettingCycleForUser(userId, options);
-		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to run forgetting cycle, falling back to IndexedDB:",
-				error,
-			);
-		}
+		} catch (_error) {}
 	}
 
 	try {
@@ -453,7 +426,6 @@ export async function runMemoryForgettingCycleForUser(
 			graphLifecycle: result.graphLifecycle,
 		};
 	} catch (error) {
-		console.error("[Client IndexedDB] Failed to run memory forgetting cycle:", error);
 		return {
 			success: false,
 			error: error instanceof Error ? error.message : String(error),
@@ -475,12 +447,7 @@ export async function runRawMessageEmbeddingDreamForUser(
 	if (shouldUseRawMessageApiStorage()) {
 		try {
 			return await sqliteRunRawMessageEmbeddingDreamForUser(userId, options);
-		} catch (error) {
-			console.warn(
-				"[Client Raw Messages API] Failed to run embedding dream, falling back to IndexedDB:",
-				error,
-			);
-		}
+		} catch (_error) {}
 	}
 
 	const manager = await getManager();
@@ -603,8 +570,7 @@ export async function sendRawMessagesToServer(
 			success: data.success,
 			stored: data.stored || messages.length,
 		};
-	} catch (error) {
-		console.error("[Client IndexedDB] Failed to send messages to server:", error);
+	} catch (_error) {
 		return {
 			success: false,
 			stored: 0,
@@ -637,7 +603,6 @@ export async function initializeRawMessagesStorage(userId?: string): Promise<{
 					? await ensureRawMessagesSQLiteMigration({ userId })
 					: undefined;
 			const stats = await sqliteGetRawMessagesStats();
-			console.log("[Client Raw Messages API] Initialized with stats:", stats);
 			return {
 				success: true,
 				migration,
@@ -652,8 +617,6 @@ export async function initializeRawMessagesStorage(userId?: string): Promise<{
 		const manager = await getManager();
 		const stats = await manager.getStats();
 
-		console.log("[Client IndexedDB] Initialized with stats:", stats);
-
 		return {
 			success: true,
 			stats: {
@@ -662,8 +625,7 @@ export async function initializeRawMessagesStorage(userId?: string): Promise<{
 				messagesByBot: stats.messagesByBot,
 			},
 		};
-	} catch (error) {
-		console.error("[Client IndexedDB] Initialization failed:", error);
+	} catch (_error) {
 		return { success: false };
 	}
 }
@@ -703,8 +665,7 @@ export async function useRawMessages() {
 				messagesByPlatform: stats.messagesByPlatform,
 				messagesByBot: stats.messagesByBot,
 			});
-		} catch (error) {
-			console.error("[useRawMessages] Failed to load stats:", error);
+		} catch (_error) {
 		} finally {
 			setLoading(false);
 		}

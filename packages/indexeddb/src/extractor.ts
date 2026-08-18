@@ -4,6 +4,50 @@
  * during insight generation for storage in IndexedDB
  */
 
+/**
+ * Coerce a `LooseValue` to an array (used for attachment / file lists).
+ * Returns `undefined` when the value isn't an array.
+ */
+function toArray(value: LooseValue): unknown[] | undefined {
+	return Array.isArray(value) ? (value as unknown[]) : undefined;
+}
+
+/**
+ * Loose value shape used while extracting from untyped platform payloads.
+ * Each access can return any of these shapes; the callers coerce as needed.
+ */
+type LooseValue = string | number | boolean | null | undefined | object | LooseValue[];
+
+/**
+ * Loose record shape used while extracting from untyped platform payloads.
+ * We index through arbitrary keys to mirror the original `any` behaviour
+ * while staying inside `noExplicitAny`. The shape is recursive so that
+ * nested objects (e.g. `msg.body.content`, `msg.from.email`) keep working.
+ */
+type LooseRecord = { [key: string]: LooseValue };
+
+/**
+ * Coerce a record value to a non-empty string, falling back when the
+ * underlying payload contains an unexpected primitive (e.g. number/boolean).
+ */
+function coerceString(value: LooseValue, fallback: string): string {
+	if (value === undefined || value === null || value === "") return fallback;
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return fallback;
+}
+
+/**
+ * Coerce a `content`-style record value to a string suitable for hashing.
+ * Anything that isn't a string falls back to its stringified form.
+ */
+function coerceContent(value: LooseValue): string {
+	if (value === undefined || value === null) return "";
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean") return String(value);
+	return "";
+}
+
 export interface RawMessageData {
 	messageId: string;
 	platform: string;
@@ -18,7 +62,7 @@ export interface RawMessageData {
 		contentType?: string;
 		sizeBytes?: number;
 	}>;
-	metadata?: Record<string, any>;
+	metadata?: Record<string, unknown>;
 }
 
 /**
@@ -31,11 +75,12 @@ export function extractSlackMessages(messages: unknown[], botId: string): RawMes
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.ts || msg.timestamp || msg.time;
-			const content = msg.text || msg.content || msg.message || msg.snippet || "";
-			const channel = msg.channel || msg.chatName || msg.chatId || "unknown";
-			const sender = msg.user || msg.userName || msg.sender || msg.from || "unknown";
+			const content = String(msg.text || msg.content || msg.message || msg.snippet || "");
+			const channel = String(msg.channel || msg.chatName || msg.chatId || "unknown");
+			const sender = String(msg.user || msg.userName || msg.sender || msg.from || "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -43,7 +88,7 @@ export function extractSlackMessages(messages: unknown[], botId: string): RawMes
 				messageId = String(msg.clientMsgId || msg.msgId);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `slack_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `slack_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -54,7 +99,7 @@ export function extractSlackMessages(messages: unknown[], botId: string): RawMes
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
 				content: String(content),
-				attachments: extractAttachments(msg.attachments, msg.files),
+				attachments: extractAttachments(toArray(msg.attachments), toArray(msg.files)),
 				metadata: {
 					slackTs: msg.ts,
 					threadTs: msg.threadTs,
@@ -74,11 +119,13 @@ export function extractDiscordMessages(messages: unknown[], botId: string): RawM
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.timestamp || msg.createdTimestamp;
-			const content = msg.content || msg.message || msg.text || msg.snippet || "";
-			const channel = msg.channelName || msg.channelId || msg.guildId || "unknown";
-			const sender = msg.authorName || msg.authorUsername || msg.userName || "unknown";
+			const contentRaw = msg.content || msg.message || msg.text || msg.snippet || "";
+			const content = coerceContent(contentRaw);
+			const channel = coerceString(msg.channelName || msg.channelId || msg.guildId, "unknown");
+			const sender = coerceString(msg.authorName || msg.authorUsername || msg.userName, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -86,7 +133,7 @@ export function extractDiscordMessages(messages: unknown[], botId: string): RawM
 				messageId = String(msg.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `discord_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `discord_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -96,8 +143,8 @@ export function extractDiscordMessages(messages: unknown[], botId: string): RawM
 				channel,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					guildId: msg.guildId,
 					channelId: msg.channelId,
@@ -120,7 +167,8 @@ export function extractUnifiedInsightMessages(
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any) => {
+		.map((rawMsg: unknown) => {
+			const msg = rawMsg as LooseRecord;
 			const content = String(msg.text ?? msg.content ?? msg.message ?? "");
 			const channel = String(msg.chatName ?? msg.chatId ?? "unknown");
 			const sender = String(msg.sender ?? "unknown");
@@ -149,7 +197,7 @@ export function extractUnifiedInsightMessages(
 				person: sender,
 				timestamp: timestampSec > 0 ? timestampSec : Math.floor(Date.now() / 1000),
 				content,
-				attachments: extractAttachments(msg.attachments),
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					chatType: msg.chatType,
 				},
@@ -167,11 +215,12 @@ export function extractTelegramMessages(messages: unknown[], botId: string): Raw
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.date || msg.timestamp || msg.time;
-			const content = msg.text || msg.message || msg.content || msg.snippet;
-			const chatId = msg.chatName || msg.chatTitle || msg.chatId || "unknown";
-			const sender = msg.fromName || msg.fromFirstName || msg.sender || "unknown";
+			const content = coerceContent(msg.text || msg.message || msg.content || msg.snippet);
+			const chatId = coerceString(msg.chatName || msg.chatTitle || msg.chatId, "unknown");
+			const sender = coerceString(msg.fromName || msg.fromFirstName || msg.sender, "unknown");
 
 			// Generate unique messageId using combination of fields
 			// Use msg.id if available, otherwise create a unique composite key
@@ -183,7 +232,7 @@ export function extractTelegramMessages(messages: unknown[], botId: string): Raw
 				const contentHash = content
 					? btoa(encodeURIComponent(content.substring(0, 100))).substring(0, 16)
 					: "";
-				messageId = `telegram_${botId}_${timestamp}_${chatId}_${sender}_${contentHash}`;
+				messageId = `telegram_${botId}_${String(timestamp)}_${chatId}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -193,8 +242,8 @@ export function extractTelegramMessages(messages: unknown[], botId: string): Raw
 				channel: chatId,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					chatId: msg.chatId,
 					fromId: msg.fromId,
@@ -213,19 +262,22 @@ export function extractWhatsAppMessages(messages: unknown[], botId: string): Raw
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
+			const keyRecord = msg.key as LooseRecord | undefined;
 			const timestamp = msg.timestamp || msg.time || msg.date;
-			const content = msg.body || msg.text || msg.message || msg.content;
-			const channel = msg.chatName || msg.from || msg.chatId || "unknown";
-			const sender = msg.author || msg.sender || msg.pushName || "unknown";
+			const content = coerceContent(msg.body || msg.text || msg.message || msg.content);
+			const channel = coerceString(msg.chatName || msg.from || msg.chatId, "unknown");
+			const sender = coerceString(msg.author || msg.sender || msg.pushName, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
-			if (msg.id || msg.key?.id) {
-				messageId = String(msg.id || msg.key?.id);
+			const keyId = keyRecord?.id;
+			if (msg.id || keyId) {
+				messageId = String(msg.id || keyId);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `whatsapp_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `whatsapp_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -235,11 +287,11 @@ export function extractWhatsAppMessages(messages: unknown[], botId: string): Raw
 				channel,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					fromMe: msg.fromMe,
-					remoteJid: msg.key?.remoteJid,
+					remoteJid: keyRecord?.remoteJid,
 				},
 			};
 		});
@@ -255,11 +307,12 @@ export function extractIMessageMessages(messages: unknown[], botId: string): Raw
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.timestamp || msg.time || msg.date;
-			const content = msg.text || msg.message || msg.content || "";
-			const channel = msg.chatName || msg.chat_id || msg.chatId || "unknown";
-			const sender = msg.sender || msg.from || msg.isFromMe ? "Me" : "unknown";
+			const content = coerceContent(msg.text || msg.message || msg.content);
+			const channel = coerceString(msg.chatName || msg.chat_id || msg.chatId, "unknown");
+			const sender = msg.isFromMe ? "Me" : coerceString(msg.sender || msg.from, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -269,7 +322,7 @@ export function extractIMessageMessages(messages: unknown[], botId: string): Raw
 				const contentHash = content
 					? btoa(encodeURIComponent(content.substring(0, 100))).substring(0, 16)
 					: "";
-				messageId = `imessage_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `imessage_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -279,8 +332,8 @@ export function extractIMessageMessages(messages: unknown[], botId: string): Raw
 				channel,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					chatId: msg.chatId || msg.chat_id,
 					isFromMe: msg.isFromMe || msg.is_from_me,
@@ -304,11 +357,13 @@ export function extractEmailMessages(
 
 	return emails
 		.filter((email) => email && typeof email === "object")
-		.map((email: any, index: number) => {
+		.map((rawEmail: unknown, _index: number) => {
+			const email = rawEmail as LooseRecord;
+			const fromRecord = email.from as LooseRecord | undefined;
 			const timestamp = email.timestamp || email.date || email.time || Math.floor(Date.now() / 1000);
-			const content = email.text || email.snippet || email.subject || email.body || "";
-			const channel = email.from?.email || email.sender || email.fromEmail || "unknown";
-			const sender = email.from?.name || email.senderName || email.fromName || "unknown";
+			const content = coerceContent(email.text || email.snippet || email.subject || email.body);
+			const channel = coerceString(fromRecord?.email || email.sender || email.fromEmail, "unknown");
+			const sender = coerceString(fromRecord?.name || email.senderName || email.fromName, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -316,7 +371,7 @@ export function extractEmailMessages(
 				messageId = String(email.uid || email.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `${platform}_${botId}_${timestamp || 0}_${channel}_${sender}_${contentHash}`;
+				messageId = `${platform}_${botId}_${String(timestamp || 0)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -326,8 +381,8 @@ export function extractEmailMessages(
 				channel,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content),
-				attachments: extractAttachments(email.attachments),
+				content,
+				attachments: extractAttachments(toArray(email.attachments)),
 				metadata: {
 					subject: email.subject,
 					to: email.to,
@@ -348,11 +403,15 @@ export function extractTeamsMessages(messages: unknown[], botId: string): RawMes
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
+			const bodyRecord = msg.body as LooseRecord | undefined;
+			const fromRecord = msg.from as LooseRecord | undefined;
+			const userRecord = fromRecord?.user as LooseRecord | undefined;
 			const timestamp = msg.timestamp || msg.createdDateTime || msg.time;
-			const content = msg.body?.content || msg.content || msg.text || "";
-			const channel = msg.channelName || msg.chatName || msg.channelId || "unknown";
-			const sender = msg.from?.user?.displayName || msg.senderName || msg.userName || "unknown";
+			const content = coerceContent(bodyRecord?.content || msg.content || msg.text);
+			const channel = coerceString(msg.channelName || msg.chatName || msg.channelId, "unknown");
+			const sender = coerceString(userRecord?.displayName || msg.senderName || msg.userName, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -360,7 +419,7 @@ export function extractTeamsMessages(messages: unknown[], botId: string): RawMes
 				messageId = String(msg.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `teams_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `teams_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
@@ -370,8 +429,8 @@ export function extractTeamsMessages(messages: unknown[], botId: string): RawMes
 				channel,
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					channelId: msg.channelId,
 					teamId: msg.teamId,
@@ -390,11 +449,12 @@ export function extractLinkedInMessages(messages: unknown[], botId: string): Raw
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.timestamp || msg.createdTime || msg.time;
-			const content = msg.body || msg.text || msg.message || msg.content;
-			const channel = msg.chatName || msg.from || "unknown";
-			const sender = msg.senderName || msg.author || "unknown";
+			const content = coerceContent(msg.body || msg.text || msg.message || msg.content);
+			const channel = coerceString(msg.chatName || msg.from, "unknown");
+			const sender = coerceString(msg.senderName || msg.author, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -402,18 +462,18 @@ export function extractLinkedInMessages(messages: unknown[], botId: string): Raw
 				messageId = String(msg.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `linkedin_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `linkedin_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
 				messageId,
 				platform: "linkedin",
 				botId,
-				channel: msg.chatName || msg.conversationId,
-				person: msg.senderName || msg.author || msg.from,
+				channel: String(msg.chatName || msg.conversationId || ""),
+				person: String(msg.senderName || msg.author || msg.from || ""),
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					conversationId: msg.conversationId,
 				},
@@ -431,11 +491,12 @@ export function extractInstagramMessages(messages: unknown[], botId: string): Ra
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.timestamp || msg.createdTime || msg.time;
-			const content = msg.text || msg.message || msg.content;
-			const channel = msg.chatName || msg.conversationId || "unknown";
-			const sender = msg.username || msg.senderName || msg.from || "unknown";
+			const content = coerceContent(msg.text || msg.message || msg.content);
+			const channel = coerceString(msg.chatName || msg.conversationId, "unknown");
+			const sender = coerceString(msg.username || msg.senderName || msg.from, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -443,18 +504,18 @@ export function extractInstagramMessages(messages: unknown[], botId: string): Ra
 				messageId = String(msg.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `instagram_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `instagram_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
 				messageId,
 				platform: "instagram",
 				botId,
-				channel: msg.chatName || msg.conversationId,
+				channel: String(msg.chatName || msg.conversationId || ""),
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments)),
 				metadata: {
 					conversationId: msg.conversationId,
 				},
@@ -472,11 +533,12 @@ export function extractXMessages(messages: unknown[], botId: string): RawMessage
 
 	return messages
 		.filter((msg) => msg && typeof msg === "object")
-		.map((msg: any, index: number) => {
+		.map((rawMsg: unknown, _index: number) => {
+			const msg = rawMsg as LooseRecord;
 			const timestamp = msg.timestamp || msg.createdTime || msg.time;
-			const content = msg.text || msg.message || msg.content;
-			const channel = msg.chatName || msg.conversationId || "unknown";
-			const sender = msg.username || msg.senderName || msg.from || "unknown";
+			const content = coerceContent(msg.text || msg.message || msg.content);
+			const channel = coerceString(msg.chatName || msg.conversationId, "unknown");
+			const sender = coerceString(msg.username || msg.senderName || msg.from, "unknown");
 
 			// Generate unique messageId
 			let messageId: string;
@@ -484,18 +546,18 @@ export function extractXMessages(messages: unknown[], botId: string): RawMessage
 				messageId = String(msg.id);
 			} else {
 				const contentHash = content ? btoa(content.substring(0, 100)).substring(0, 16) : "";
-				messageId = `twitter_${botId}_${timestamp}_${channel}_${sender}_${contentHash}`;
+				messageId = `twitter_${botId}_${String(timestamp)}_${channel}_${sender}_${contentHash}`;
 			}
 
 			return {
 				messageId,
 				platform: "twitter",
 				botId,
-				channel: msg.chatName || msg.conversationId,
+				channel: String(msg.chatName || msg.conversationId || ""),
 				person: sender,
 				timestamp: typeof timestamp === "number" ? timestamp : Date.now(),
-				content: String(content || ""),
-				attachments: extractAttachments(msg.attachments, msg.media),
+				content,
+				attachments: extractAttachments(toArray(msg.attachments), toArray(msg.media)),
 				metadata: {
 					conversationId: msg.conversationId,
 				},
@@ -513,28 +575,34 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 
 	return items
 		.filter((item) => item && typeof item === "object")
-		.map((item: any, index: number) => {
+		.map((rawItem: unknown, _index: number) => {
+			const item = rawItem as LooseRecord;
 			const timestamp = item.pubDate || item.publishedAt || item.date || item.isoDate;
-			const parsedTimestamp = timestamp ? new Date(timestamp).getTime() / 1000 : Date.now() / 1000;
+			const parsedTimestamp = timestamp ? new Date(String(timestamp)).getTime() / 1000 : Date.now() / 1000;
 
 			// Extract content from various RSS fields
 			const content = item["content:encoded"] || item.content || item.summary || item.description || "";
 			const title = item.title || item.titleText || "";
 
 			// Combine title and content for better context
-			const fullContent = title ? `${title}\n\n${content}` : content;
+			const fullContent = title ? `${title}\n\n${content}` : String(content || "");
 
 			// Extract author from various fields
 			const author = item.creator || item.author || item["dc:creator"] || "";
-			const person = typeof author === "string" ? author : author?.name || "";
+			const person =
+				typeof author === "string" ? author : (author as { name?: string } | undefined)?.name || "";
 
 			// Extract link/URL
-			const link = item.link || item.guid || item.url;
+			const link = String(item.link || item.guid || item.url || "");
 
 			// Extract categories/tags
 			const categories = item.categories || item.tags || [];
 			const categoryList = Array.isArray(categories)
-				? categories.map((c: any) => (typeof c === "string" ? c : c?.name || c?.term)).filter(Boolean)
+				? categories
+						.map((c: unknown) =>
+							typeof c === "string" ? c : (c as { name?: unknown })?.name || (c as { term?: unknown })?.term,
+						)
+						.filter(Boolean)
 				: [];
 
 			// Generate unique messageId
@@ -542,7 +610,9 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 			if (item.guid || item.id || item.link) {
 				messageId = String(item.guid || item.id || item.link);
 			} else {
-				const contentHash = fullContent ? btoa(fullContent.substring(0, 100)).substring(0, 16) : "";
+				const contentHash = fullContent
+					? btoa(encodeURIComponent(String(fullContent)).substring(0, 100)).substring(0, 16)
+					: "";
 				messageId = `rss_${botId}_${parsedTimestamp}_${feedTitle || "feed"}_${person || "unknown"}_${contentHash}`;
 			}
 
@@ -550,14 +620,14 @@ export function extractRSSMessages(items: unknown[], botId: string, feedTitle?: 
 				messageId,
 				platform: "rss",
 				botId,
-				channel: feedTitle || item.feedTitle || "RSS Feed",
+				channel: String(feedTitle || item.feedTitle || "RSS Feed"),
 				person: person || feedTitle || "Unknown",
 				timestamp: typeof parsedTimestamp === "number" ? parsedTimestamp : Date.now() / 1000,
 				content: String(fullContent).trim(),
 				attachments: link
 					? [
 							{
-								name: title ? `${title.substring(0, 50)}...` : "Article",
+								name: title ? `${String(title).substring(0, 50)}...` : "Article",
 								url: link,
 								contentType: "text/html",
 							},
@@ -598,13 +668,13 @@ function extractAttachments(
 		for (const attachment of attachments) {
 			if (!attachment || typeof attachment !== "object") continue;
 
-			const att = attachment as any;
+			const att = attachment as LooseRecord;
 			if (att.url || att.link || att.permalink) {
 				result.push({
-					name: att.name || att.filename || att.title || "attachment",
-					url: att.url || att.link || att.permalink,
-					contentType: att.mimetype || att.contentType || att.type,
-					sizeBytes: att.sizeBytes || att.size || att.fileSize,
+					name: (att.name as string) || (att.filename as string) || (att.title as string) || "attachment",
+					url: (att.url as string) || (att.link as string) || (att.permalink as string),
+					contentType: (att.mimetype as string) || (att.contentType as string) || (att.type as string),
+					sizeBytes: (att.sizeBytes as number) || (att.size as number) || (att.fileSize as number),
 				});
 			}
 		}
@@ -615,13 +685,13 @@ function extractAttachments(
 		for (const file of files) {
 			if (!file || typeof file !== "object") continue;
 
-			const f = file as any;
+			const f = file as LooseRecord;
 			if (f.url_private || f.url_private_download || f.permalink) {
 				result.push({
-					name: f.name || f.filename || f.title || "file",
-					url: f.url_private || f.url_private_download || f.permalink,
-					contentType: f.mimetype || f.filetype || f.type,
-					sizeBytes: f.size || f.fileSize,
+					name: (f.name as string) || (f.filename as string) || (f.title as string) || "file",
+					url: (f.url_private as string) || (f.url_private_download as string) || (f.permalink as string),
+					contentType: (f.mimetype as string) || (f.filetype as string) || (f.type as string),
+					sizeBytes: (f.size as number) || (f.fileSize as number),
 				});
 			}
 		}
@@ -632,12 +702,12 @@ function extractAttachments(
 		for (const media of files) {
 			if (!media || typeof media !== "object") continue;
 
-			const m = media as any;
+			const m = media as LooseRecord;
 			if (m.media_url_https || m.media_url || m.url) {
 				result.push({
-					name: m.type || "media",
-					url: m.media_url_https || m.media_url || m.url,
-					contentType: m.type,
+					name: (m.type as string) || "media",
+					url: (m.media_url_https as string) || (m.media_url as string) || (m.url as string),
+					contentType: m.type as string,
 				});
 			}
 		}
@@ -693,7 +763,6 @@ export function extractRawMessages(
 		case "dingtalk":
 			return extractUnifiedInsightMessages(messageArray, "dingtalk", botId);
 		default:
-			console.warn(`[Raw Messages] Unknown platform: ${platform}`);
 			return [];
 	}
 }

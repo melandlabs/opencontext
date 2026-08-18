@@ -127,7 +127,6 @@ export async function addDocumentToVectorStore(
 	}));
 
 	await vectorStore.addChunks(documentChunks);
-	console.log(`✅ Added ${chunks.length} chunks to vector store`);
 }
 
 export async function searchVectorStore(
@@ -149,7 +148,6 @@ export async function searchVectorStore(
 export async function deleteDocumentFromVectorStore(documentId: string): Promise<void> {
 	const vectorStore = await getVectorStore();
 	await vectorStore.deleteDocument(documentId);
-	console.log(`✅ Deleted document ${documentId} from vector store`);
 }
 
 export async function getVectorStoreStats(): Promise<{

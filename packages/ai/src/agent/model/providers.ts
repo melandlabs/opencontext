@@ -116,7 +116,6 @@ export function setAIUserContext(context: AIUserContext | null) {
 				context.llmApiSettings?.anthropicCompatible?.model;
 
 		if (_initialized && contextChanged) {
-			console.log("[AI Provider] User context changed, reinitializing models...");
 			_initialized = false;
 		}
 	}
@@ -158,7 +157,6 @@ function createFetchWithContext(
 					"[AI Provider] Cloud auth token is required but not provided. " +
 						"Please ensure you are logged in with cloud authentication.",
 				);
-				console.error(error.message);
 				throw error;
 			}
 
@@ -191,13 +189,8 @@ function getOpenAICompatibleBaseUrl(isNativeMode: boolean): string {
 				if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
 					localUrl = configuredAppUrl;
 				} else {
-					console.warn(
-						`[LLM Provider] Ignoring NEXT_PUBLIC_APP_URL with unsupported protocol: ${configuredAppUrl}`,
-					);
 				}
-			} catch {
-				console.warn(`[LLM Provider] Ignoring invalid NEXT_PUBLIC_APP_URL: ${configuredAppUrl}`);
-			}
+			} catch {}
 		}
 
 		const proxyPath = "/api/ai/v1";
@@ -225,13 +218,8 @@ function getAnthropicCompatibleBaseUrl(isNativeMode: boolean): string {
 				if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
 					localUrl = configuredAppUrl;
 				} else {
-					console.warn(
-						`[Anthropic Provider] Ignoring NEXT_PUBLIC_APP_URL with unsupported protocol: ${configuredAppUrl}`,
-					);
 				}
-			} catch {
-				console.warn(`[Anthropic Provider] Ignoring invalid NEXT_PUBLIC_APP_URL: ${configuredAppUrl}`);
-			}
+			} catch {}
 		}
 
 		// Use /api/ai/v1 Anthropic-compatible endpoint
@@ -244,7 +232,6 @@ function getAnthropicCompatibleBaseUrl(isNativeMode: boolean): string {
 	if (!externalUrl) {
 		throw new Error("ANTHROPIC_BASE_URL environment variable is not set (web mode)");
 	}
-	console.log("[Anthropic Provider] Using external AI provider (web mode):", externalUrl);
 	return externalUrl;
 }
 
@@ -351,8 +338,16 @@ function initializeModels(isNativeMode: boolean) {
 			fetch: customFetch,
 		});
 
-		const anthropicModel = anthropicProvider.languageModel(modelName) as any;
-		const anthropicVlmModel = anthropicProvider.languageModel(vlmModelName) as any;
+		// `@ai-sdk/anthropic` ships LanguageModelV4, but the `ai` package's
+		// `customProvider` still expects LanguageModelV2. We bridge the two
+		// via `unknown` instead of `any` to keep `noExplicitAny` happy.
+		// The structural type is derived from the consumer so the cast stays
+		// self-documenting when SDK versions shift.
+		type ProviderLanguageModel = NonNullable<Parameters<typeof customProvider>[0]["languageModels"]>[string];
+		const anthropicModel = anthropicProvider.languageModel(modelName) as unknown as ProviderLanguageModel;
+		const anthropicVlmModel = anthropicProvider.languageModel(
+			vlmModelName,
+		) as unknown as ProviderLanguageModel;
 
 		_modelProvider = customProvider({
 			languageModels: {
@@ -485,7 +480,7 @@ export function createDynamicModel(isNativeMode: boolean, modelName?: string): L
 			baseURL: env.baseUrl,
 			apiKey: env.apiKey,
 			fetch: debugFetch,
-		}).languageModel(actualModelName) as any;
+		}).languageModel(actualModelName) as unknown as LanguageModel;
 	}
 
 	return createOpenAICompatible({

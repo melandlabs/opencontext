@@ -1,4 +1,5 @@
 import type { IntegrationId } from "@melandlabs/contracts/integration-id";
+import type { TFunction } from "i18next";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	formatConnectorAuthError,
@@ -37,8 +38,8 @@ describe("platform visuals", () => {
 	});
 
 	it("localizes the Weixin label when a t function is provided", () => {
-		const t = (key: string) => (key === "platform.weixin" ? "WeChat" : undefined);
-		expect(getPlatformDisplayInfo("weixin", t as any).label).toBe("WeChat");
+		const t = ((key: string) => (key === "platform.weixin" ? "WeChat" : undefined)) as unknown as TFunction;
+		expect(getPlatformDisplayInfo("weixin", t).label).toBe("WeChat");
 		expect(getPlatformDisplayInfo("weixin").label).toBe("Weixin");
 	});
 

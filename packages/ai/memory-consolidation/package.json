@@ -21,6 +21,7 @@
 		"./governance": "./dist/governance.js",
 		"./persistence": "./dist/persistence.js",
 		"./pipeline": "./dist/pipeline.js",
+		"./reflect-planner": "./dist/reflect-planner.js",
 		"./relation-graph": "./dist/relation-graph.js",
 		"./retrieval": "./dist/retrieval.js",
 		"./revision": "./dist/revision.js",

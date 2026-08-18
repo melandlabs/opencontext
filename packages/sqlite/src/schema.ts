@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-export const RAW_MESSAGES_SCHEMA_VERSION = 3;
+export const RAW_MESSAGES_SCHEMA_VERSION = 4;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -134,5 +134,17 @@ export function initializeRawMessageSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_raw_messages_source_episode_id
       ON raw_messages(source_episode_id)
       WHERE source_episode_id IS NOT NULL;
+  `);
+
+	// --- v4: factType classification ---
+	// `fact_type` mirrors `MemoryRecord.factType` from `@melandlabs/ai`'s
+	// `memory/contracts`: "world" / "experience" / "mental_model". Stored
+	// verbatim so retrieval can filter by classification without
+	// re-classifying at query time.
+	addColumnIfMissing(db, "raw_messages", "fact_type", "TEXT");
+	db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_raw_messages_fact_type
+      ON raw_messages(user_id, fact_type)
+      WHERE fact_type IS NOT NULL;
   `);
 }

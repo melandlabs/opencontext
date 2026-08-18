@@ -162,8 +162,7 @@ async function runPreflight(options: CodexRuntimePreflightOptions): Promise<Code
 	let availableModels: string[];
 	try {
 		availableModels = await probeCodexModels(options);
-	} catch (probeError) {
-		console.error("[DIAG] probeCodexModels failed:", probeError);
+	} catch (_probeError) {
 		return {
 			version,
 			modelCatalogChecked: false,

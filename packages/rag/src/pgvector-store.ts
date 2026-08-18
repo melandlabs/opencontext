@@ -21,6 +21,17 @@ const EMBEDDING_PRICING: Record<string, number> = {
 
 const CREDIT_COST_MULTIPLIER = 100; // 1 USD = 100 credits
 
+type LocalMetadataFilter = Record<
+	string,
+	string | number | boolean | { [key: string]: unknown } | unknown[] | null
+>;
+
+/**
+ * LangChain's `MetadataFilter` is internal to `@langchain/community`, so
+ * we expose a permissive public alias and cast at the SDK boundary.
+ */
+type PgVectorMetadataFilter = NonNullable<Parameters<PGVectorStore["similaritySearchWithScore"]>[2]>;
+
 export interface PGVectorConfig {
 	parseFile: (
 		buffer: Buffer,
@@ -79,7 +90,6 @@ export async function getPGVectorStore(userId: string, embeddings?: UniversalEmb
  */
 export async function processDocumentWithPGVector(
 	userId: string,
-	userType: string,
 	fileName: string,
 	contentType: string,
 	buffer: Buffer,
@@ -143,19 +153,23 @@ export async function searchWithPGVector(
 	query: string,
 	options: {
 		limit?: number;
-		filter?: Record<string, any>;
+		filter?: LocalMetadataFilter;
 	} = {},
 ): Promise<
 	Array<{
 		content: string;
-		metadata: Record<string, any>;
+		metadata: Record<string, unknown>;
 		similarity: number;
 	}>
 > {
 	const { vectorStore, pool } = await getPGVectorStore(userId);
 
 	// Perform similarity search
-	const results = await vectorStore.similaritySearchWithScore(query, options.limit || 5, options.filter);
+	const results = await vectorStore.similaritySearchWithScore(
+		query,
+		options.limit || 5,
+		options.filter as unknown as PgVectorMetadataFilter | undefined,
+	);
 
 	// Clean up
 	await pool.end();
@@ -172,12 +186,12 @@ export async function searchWithPGVector(
  */
 export async function deleteDocumentsFromPGVector(
 	userId: string,
-	filter?: Record<string, any>,
+	filter?: LocalMetadataFilter,
 ): Promise<void> {
 	const { vectorStore, pool } = await getPGVectorStore(userId);
 
 	await vectorStore.delete({
-		filter,
+		filter: filter as unknown as PgVectorMetadataFilter | undefined,
 	});
 
 	await pool.end();
@@ -203,7 +217,7 @@ export async function listUserDocuments(userId: string): Promise<
 	Array<{
 		id: string;
 		content: string;
-		metadata: Record<string, any>;
+		metadata: Record<string, unknown>;
 	}>
 > {
 	const { vectorStore, pool } = await getPGVectorStore(userId);
@@ -212,7 +226,7 @@ export async function listUserDocuments(userId: string): Promise<
 
 	await pool.end();
 
-	return result.rows.map((row: any) => ({
+	return result.rows.map((row: { id: string; content: string; metadata: Record<string, unknown> }) => ({
 		id: row.id,
 		content: row.content,
 		metadata: row.metadata,

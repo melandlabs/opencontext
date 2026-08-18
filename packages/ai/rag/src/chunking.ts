@@ -232,6 +232,7 @@ export async function chunkDocument(text: string, config: ChunkingConfig): Promi
 				strategy: "atomic" as const,
 				confidence: fact.confidence,
 				sourceText: fact.sourceText,
+				factType: fact.factType,
 			},
 		}));
 	}

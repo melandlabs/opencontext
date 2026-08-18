@@ -81,6 +81,7 @@ export async function lexicalSearchRawMessages(input: {
 	includeArchived?: boolean;
 	platform?: string;
 	botId?: string;
+	factTypes?: Array<"world" | "experience" | "mental_model">;
 }): Promise<unknown[]> {
 	const mgr = await getSQLiteRawMessageManager();
 	if (typeof mgr.lexicalSearchMessages !== "function") {

@@ -159,8 +159,9 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 			throw new Error("Invalid response format from embeddings API. Expected data.data array.");
 		}
 
-		const sortedData = data.data.sort((a: any, b: any) => a.index - b.index);
-		const embeddings = sortedData.map((item: any) => {
+		type EmbeddingItem = { index: number; embedding: number[] };
+		const sortedData = (data.data as EmbeddingItem[]).sort((a, b) => a.index - b.index);
+		const embeddings = sortedData.map((item) => {
 			if (!item.embedding || !Array.isArray(item.embedding)) {
 				throw new Error("Invalid embedding format in response");
 			}

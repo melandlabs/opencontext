@@ -310,7 +310,7 @@ export class LibKnowledgeStore {
 		const db = new Database(this.dbPath);
 		db.pragma("journal_mode = WAL");
 		try {
-			(sqliteVec as any).load(db);
+			sqliteVec.load(db);
 		} catch (error) {
 			db.close();
 			throw new KnowledgeUnavailableError(`failed to load sqlite-vec extension: ${(error as Error).message}`);

@@ -208,14 +208,14 @@ export function buildEventGraph<T extends InsightBase>(insights: T[]): EventEdge
 	const baseScores = new Map<string, number>();
 	// Pre-build ID -> Insight map for O(1) lookup
 	const insightById = new Map<string, T>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		baseScores.set(insight.id, calculateBaseScore(insight));
 		insightById.set(insight.id, insight);
-	});
+	}
 
 	// 2. Pre-build lookup maps: person -> insights containing that person
 	const peopleMap = new Map<string, Set<string>>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		if (insight.people) {
 			for (const person of insight.people) {
 				if (!peopleMap.has(person)) {
@@ -224,11 +224,11 @@ export function buildEventGraph<T extends InsightBase>(insights: T[]): EventEdge
 				peopleMap.get(person)?.add(insight.id);
 			}
 		}
-	});
+	}
 
 	// 3. Pre-build lookup maps: keyword -> insights containing that keyword
 	const keywordMap = new Map<string, Set<string>>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		if (insight.topKeywords) {
 			for (const keyword of insight.topKeywords) {
 				if (!keywordMap.has(keyword)) {
@@ -237,13 +237,13 @@ export function buildEventGraph<T extends InsightBase>(insights: T[]): EventEdge
 				keywordMap.get(keyword)?.add(insight.id);
 			}
 		}
-	});
+	}
 
 	// 4. Build edges (using hash index instead of nested loops)
 	// Collect source nodes of each edge for subsequent limiting
 	const outgoingEdgesMap = new Map<string, EventEdge[]>();
 
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		// If event A's people overlap with event B's people
 		// then B -> A (B is a prerequisite for A, if B is more urgent)
 		if (insight.people && insight.people.length > 0) {
@@ -319,20 +319,20 @@ export function buildEventGraph<T extends InsightBase>(insights: T[]): EventEdge
 				outgoingEdgesMap.get(other.id)?.push(edge);
 			}
 		}
-	});
+	}
 
 	// 5. Limit outgoing edges per node (max 10), to avoid edge explosion
 	const MAX_OUTGOING_EDGES = 10;
 	const limitedEdges: EventEdge[] = [];
 
 	// Sort by weight and limit outgoing edges per node
-	outgoingEdgesMap.forEach((nodeEdges) => {
+	for (const nodeEdges of outgoingEdgesMap.values()) {
 		// Sort by weight descending
 		nodeEdges.sort((a, b) => b.weight - a.weight);
 		// Keep only the highest weighted edges
 		const limited = nodeEdges.slice(0, MAX_OUTGOING_EDGES);
 		limitedEdges.push(...limited);
-	});
+	}
 
 	return limitedEdges;
 }
@@ -382,10 +382,10 @@ export function calculateEventRank<T extends InsightBase>(
 
 	// 1. Calculate inherent base scores
 	const baseScores = new Map<string, number>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		const customMultiplier = options.weightMultipliers?.get(insight.id);
 		baseScores.set(insight.id, calculateBaseScore(insight, { customMultiplier }));
-	});
+	}
 
 	// 2. Build event graph
 	const edges = buildEventGraph(insights);
@@ -393,7 +393,7 @@ export function calculateEventRank<T extends InsightBase>(
 	// For large dataset (>200), directly return base scores as result
 	if (n > 200 || maxIterations === 0) {
 		const result = new Map<string, EventRankScore>();
-		insights.forEach((insight) => {
+		for (const insight of insights) {
 			const baseScore = baseScores.get(insight.id) || 0;
 			result.set(insight.id, {
 				insightId: insight.id,
@@ -404,7 +404,7 @@ export function calculateEventRank<T extends InsightBase>(
 					total: baseScore,
 				},
 			});
-		});
+		}
 		return result;
 	}
 
@@ -412,41 +412,41 @@ export function calculateEventRank<T extends InsightBase>(
 	const incomingEdges = new Map<string, Array<{ fromId: string; weight: number }>>();
 	const outgoingCount = new Map<string, number>();
 
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		incomingEdges.set(insight.id, []);
 		outgoingCount.set(insight.id, 0);
-	});
+	}
 
-	edges.forEach((edge) => {
+	for (const edge of edges) {
 		const incoming = incomingEdges.get(edge.toId);
 		if (incoming) {
 			incoming.push({ fromId: edge.fromId, weight: edge.weight });
 		}
 		outgoingCount.set(edge.fromId, (outgoingCount.get(edge.fromId) || 0) + 1);
-	});
+	}
 
 	// 4. Initialize EventRank to base scores
 	const eventRank = new Map<string, number>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		eventRank.set(insight.id, baseScores.get(insight.id) || 0);
-	});
+	}
 
 	// 5. Iterative calculation
 	for (let iter = 0; iter < maxIterations; iter++) {
 		const newEventRank = new Map<string, number>();
 		let maxDiff = 0;
 
-		insights.forEach((insight) => {
+		for (const insight of insights) {
 			const baseScore = baseScores.get(insight.id) || 0;
 			const incoming = incomingEdges.get(insight.id) || [];
 
 			// ER(Ei) = (1-d)×Si + d×Σ(ER(Ej) / Out(Ej)) × Wj→i
 			let incomingSum = 0;
-			incoming.forEach(({ fromId, weight }) => {
+			for (const { fromId, weight } of incoming) {
 				const erFrom = eventRank.get(fromId) || 0;
 				const outCount = outgoingCount.get(fromId) || 1;
 				incomingSum += (erFrom / outCount) * weight;
-			});
+			}
 
 			const newScore = (1 - dampingFactor) * baseScore + dampingFactor * incomingSum;
 			newEventRank.set(insight.id, newScore);
@@ -454,12 +454,12 @@ export function calculateEventRank<T extends InsightBase>(
 			// Calculate max difference (for convergence detection)
 			const oldScore = eventRank.get(insight.id) || 0;
 			maxDiff = Math.max(maxDiff, Math.abs(newScore - oldScore));
-		});
+		}
 
 		// Update EventRank
-		newEventRank.forEach((score, id) => {
+		for (const [id, score] of newEventRank) {
 			eventRank.set(id, score);
-		});
+		}
 
 		// Check convergence
 		if (maxDiff < convergenceThreshold) {
@@ -469,7 +469,7 @@ export function calculateEventRank<T extends InsightBase>(
 
 	// 6. Build return result
 	const result = new Map<string, EventRankScore>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		const baseScore = baseScores.get(insight.id) || 0;
 		const erScore = eventRank.get(insight.id) || 0;
 
@@ -482,7 +482,7 @@ export function calculateEventRank<T extends InsightBase>(
 				total: erScore,
 			},
 		});
-	});
+	}
 
 	return result;
 }
@@ -635,7 +635,7 @@ export function sortInsightsByEventRank<T extends InsightBase>(
 
 	// 2. Categorize (apply gradual degradation)
 	const categories = new Map<string, ActionCategory>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		const score = scores.get(insight.id);
 		if (score) {
 			const baseCategory = categorizeByActionability(insight, score.score);
@@ -643,7 +643,7 @@ export function sortInsightsByEventRank<T extends InsightBase>(
 			const finalCategory = applyCategoryDecay(baseCategory, insight, lastViewedAt);
 			categories.set(insight.id, finalCategory);
 		}
-	});
+	}
 
 	// 3. Sort
 	const categoryOrder: Record<ActionCategory, number> = {
@@ -734,7 +734,7 @@ export async function sortInsightsByEventRankEnhanced<T extends InsightBase>(
 
 	// 2. Categorize (apply gradual degradation)
 	const categories = new Map<string, ActionCategory>();
-	insights.forEach((insight) => {
+	for (const insight of insights) {
 		const score = scores.get(insight.id);
 		if (score) {
 			const baseCategory = categorizeByActionability(insight, score.score);
@@ -742,7 +742,7 @@ export async function sortInsightsByEventRankEnhanced<T extends InsightBase>(
 			const finalCategory = applyCategoryDecay(baseCategory, insight, lastViewedAt);
 			categories.set(insight.id, finalCategory);
 		}
-	});
+	}
 
 	// 3. Sort
 	const categoryOrder: Record<ActionCategory, number> = {
