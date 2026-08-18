@@ -50,12 +50,15 @@ export interface AcpRuntimeDefinition {
 		command: string;
 		args: string[];
 	};
-	/** Extract normalised provider options (e.g. timeoutMs). */
+	/** Extract normalised provider options (e.g. timeoutMs, env). */
 	normalizeProviderConfig: (providerConfig?: Record<string, unknown>) => {
 		timeoutMs?: number;
+		env?: Record<string, string>;
 	};
 	/** Whether the runtime supports `session/set_model`. */
 	supportsSetModel?: boolean;
+	/** Rewrite the model id before `session/set_model` (e.g. prefix provider). */
+	formatModelId?: (model: string, providerConfig?: Record<string, unknown>) => string;
 }
 
 interface ActiveAcpRun {
@@ -252,6 +255,7 @@ export class AcpAgent extends BaseAgent {
 			cwd,
 			signal: this.getSession(sessionId)?.abortController.signal,
 			timeoutMs: providerConfig.timeoutMs,
+			env: providerConfig.env,
 			onRequest: async (request) => {
 				if (request.method !== "session/request_permission") {
 					return { outcome: { outcome: "cancelled" } };
@@ -287,7 +291,8 @@ export class AcpAgent extends BaseAgent {
 		if (this.config.model && this.runtime.supportsSetModel) {
 			await client.request("session/set_model", {
 				sessionId: acpSessionId,
-				modelId: this.config.model,
+				modelId:
+					this.runtime.formatModelId?.(this.config.model, this.config.providerConfig) ?? this.config.model,
 			});
 		}
 

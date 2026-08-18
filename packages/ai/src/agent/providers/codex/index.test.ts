@@ -46,6 +46,8 @@ describe("Codex command builder", () => {
 		expect(command.args).toEqual([
 			"exec",
 			"--json",
+			"--disable",
+			"goals",
 			"-p",
 			"work",
 			"-m",
