@@ -203,6 +203,9 @@ importers:
       '@melandlabs/voice-whisper':
         specifier: ^0.3.0
         version: link:../packages/voice-whisper
+      '@melandlabs/vsa':
+        specifier: ^0.1.0
+        version: link:../packages/vsa
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0
@@ -227,6 +230,9 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.3.227
         version: 0.3.227(@anthropic-ai/sdk@0.109.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(zod@4.4.3)
+      '@melandlabs/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@melandlabs/env-config':
         specifier: workspace:*
         version: link:../env-config
@@ -319,6 +325,9 @@ importers:
       '@langchain/textsplitters':
         specifier: ^1.0.1
         version: 1.0.1(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))
+      '@melandlabs/contracts':
+        specifier: workspace:*
+        version: link:../../contracts
       '@melandlabs/shared':
         specifier: workspace:*
         version: link:../../shared
@@ -482,6 +491,9 @@ importers:
 
   packages/indexeddb:
     dependencies:
+      '@melandlabs/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       react:
         specifier: '>=18.0.0'
         version: 19.2.8
@@ -1005,12 +1017,18 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../ai
+      '@melandlabs/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@melandlabs/env-config':
         specifier: workspace:*
         version: link:../env-config
       '@melandlabs/indexeddb':
         specifier: workspace:*
         version: link:../indexeddb
+      '@melandlabs/memory-consolidation':
+        specifier: workspace:*
+        version: link:../ai/memory-consolidation
       '@melandlabs/rag':
         specifier: workspace:*
         version: link:../rag
@@ -1361,6 +1379,18 @@ importers:
 
   packages/voice-whisper:
     devDependencies:
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
+
+  packages/vsa:
+    devDependencies:
+      '@melandlabs/config':
+        specifier: workspace:*
+        version: link:../config
       typescript:
         specifier: ^5.6.3
         version: 5.9.3

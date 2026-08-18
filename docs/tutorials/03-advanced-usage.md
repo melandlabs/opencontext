@@ -66,6 +66,193 @@ main().catch((error) => {
 });
 ```
 
+## Reflection and Write-Back
+
+> **Runnable companion:** [`examples/src/tutorials/41-reflect-writeback-example.ts`](../../examples/src/tutorials/41-reflect-writeback-example.ts)
+
+The four-verb memory API (`remember`, `recall`, `forget`, `improve`) covers the day-to-day operations of an agent: write a fact, recall it, archive it, supersede it. This section covers the **fifth** operation — `reflect` — which gathers evidence and either synthesises an answer or, in write-back mode, asks the LLM to vet a consolidation plan and persists the result.
+
+There are two flavours, sharing the same evidence pipeline:
+
+| Method | Writes? | Purpose |
+|---|---|---|
+| `store.reflect(input)` | **No** | Read-only LLM synthesis over unified evidence |
+| `store.reflectWithPlan(input)` | **Yes** | Agentic gather → plan → vet → persist loop |
+
+Both methods are also exposed over HTTP and MCP:
+
+| Transport | Read-only | Write-back |
+|---|---|---|
+| SDK | `store.reflect(input)` | `store.reflectWithPlan(input)` |
+| HTTP | `POST /v1/reflect` | `POST /v1/reflect:apply` |
+| MCP | `memory.reflect` | `memory.reflectWithPlan` |
+
+### Read-only `reflect()`
+
+`reflect()` fans a single query out across **four tiers**:
+
+1. **Raw messages** — `searchRawMessagesAnn` (semantic) + `searchRawMessagesLexical` (BM25)
+2. **Summaries** — `searchSummaries` (L1/L2/L3)
+3. **Insights** — `searchInsights`
+4. **Knowledge** — `searchKnowledge` (uploaded RAG docs)
+
+…then asks the configured LLM (`unified.reasoning.complete`) to produce a single synthesised answer with bracket-cited evidence. No writes.
+
+```ts
+import { createMemoryStore } from "@melandlabs/opencontext";
+
+const store = await createMemoryStore({
+	unified: {
+		embedQuery: async ({ query }) => myEmbedder.embed(query),
+		searchSummaries: mySummariesBackend,
+		searchInsights: myInsightsBackend,
+		searchKnowledge: myKnowledgeBackend,
+		reasoning: {
+			complete: async (prompt) => myLlm.complete(prompt),
+		},
+	},
+});
+
+const out = await store.reflect({
+	userId: "u-42",
+	query: "what does the user like to do on weekends?",
+	tiers: ["summary", "raw", "insight", "knowledge"],
+	limit: 20,
+	threshold: 0.7,
+});
+
+console.log(out.answer); // LLM synthesis, bracket-cites [1], [2], …
+console.log(out.evidence); // the underlying evidence items
+console.log(out.warnings); // structured warnings, never throws
+```
+
+**Behaviour under failure**:
+
+- No LLM configured → returns the gathered evidence with a `reflect_llm_not_configured` warning instead of throwing.
+- LLM throws → evidence is preserved, a `reflect_llm_failed` warning is added, `out.answer` falls back to the raw evidence text.
+- Tier provider absent → the tier is skipped silently.
+- Empty `query` → short-circuits with `{ evidence: [], warnings: [] }`.
+
+### Agentic write-back `reflectWithPlan()`
+
+`reflectWithPlan()` is the additive write counterpart. The loop is:
+
+```
+    ┌──────────────┐    ┌─────────────────┐    ┌────────────┐
+    │ gather (4tier)│ →  │ build plan (rule)│ →  │ vet w/ LLM │ (optional)
+    └──────────────┘    └─────────────────┘    └────────────┘
+                                                       ↓
+                            ┌─────────────────┐    ┌──────────────┐
+                            │ deprecateRecords │ ←  │ persistPlan  │ (graph store)
+                            │  storage adapter │    └──────────────┘
+                            └─────────────────┘
+```
+
+1. **Gather** — same evidence pipeline as `reflect()`.
+2. **Build plan** — `buildMemoryConsolidationPlan(records, thresholds)` produces a `MemoryConsolidationPlan` with `preserve` / `decay` / `deprecate` entries. Rule-based; no LLM invention.
+3. **Vet (optional)** — when `reasoning.complete` is configured, the LLM is asked to approve or veto each entry. It may only mark entries as `approve` / `veto` with a reason; it cannot add new operations.
+4. **Persist** — `graphStore.persistPlan(translate(plan))` writes the graph updates; `storage.deprecateRecords(...)` soft-deprecates the records replaced by `deprecate` entries.
+
+```ts
+import { createMemoryStore, attachMemoryGraphStore } from "@melandlabs/opencontext";
+
+// 1. Wire the graph store (opt-in).
+attachMemoryGraphStore(store, {
+	storage: myIndexedDbStorage,
+	ownerScope: { userId: "u-42" },
+});
+
+// 2. Inspect the plan first (dry-run).
+const dry = await store.reflectWithPlan({
+	userId: "u-42",
+	query: "summarise the last week",
+	ownerScope: { userId: "u-42" },
+	tiers: ["raw", "summary"],
+	dryRun: true,
+});
+console.log(dry.plan); // MemoryConsolidationPlan
+console.log(dry.applied); // false
+
+// 3. Apply for real.
+const result = await store.reflectWithPlan({
+	userId: "u-42",
+	query: "summarise the last week",
+	ownerScope: { userId: "u-42" },
+	tiers: ["raw", "summary"],
+	dryRun: false,
+});
+console.log(result.applied); // true
+console.log(result.persistenceResult); // { applied, skipped, conflicts }
+console.log(result.deprecationCounts); // [{ supersededBySummaryId, count }]
+```
+
+#### Failure modes
+
+Each failure mode emits a typed warning and falls back deterministically:
+
+| Code | Triggered when | Behaviour |
+|---|---|---|
+| `reflect_apply_llm_skipped` | No `reasoning.complete` configured | The rule-based plan runs without vet. |
+| `reflect_apply_llm_vet_failed` | LLM threw or returned invalid JSON | All entries marked `approve` (no-op plan). |
+| `reflect_apply_graph_store_not_configured` | No graph store attached | `deprecateRecords` still runs against the storage adapter. |
+| `reflect_apply_dry_run` | `dryRun: true` | Nothing is written; `applied: false`. |
+| `reflect_apply_no_writes` | Plan has no actionable entries | `applied: false`, returns the plan for inspection. |
+
+#### Replay / A/B testing
+
+The `plan` field accepts a pre-built `MemoryConsolidationPlan`. Skips the plan-builder step so the same input can be replayed against different LLM configurations:
+
+```ts
+const dry1 = await store.reflectWithPlan({
+	/* … */
+	dryRun: true,
+});
+// dry1.plan is a MemoryConsolidationPlan
+
+const replayed = await store.reflectWithPlan({
+	/* same inputs */
+	plan: dry1.plan,
+});
+```
+
+### FactType classification
+
+Atomic facts are classified as one of three kinds, declared in `@melandlabs/ai/memory/contracts`:
+
+```ts
+type FactType = "world" | "experience" | "mental_model";
+```
+
+| Kind | Meaning |
+|---|---|
+| `world` | Facts about the world (e.g. "water boils at 100 °C"). |
+| `experience` | First-person events ("I went hiking last weekend"). |
+| `mental_model` | Generalised patterns ("the user prefers outdoors on weekends"). |
+
+The classifier runs at LLM extraction time; the result rides along the `RawMessage.factType?` field and surfaces on `MemoryRecord.factType`. The read-side filter `MemorySearchQuery.factTypes` lets a caller narrow a search to one or more kinds:
+
+```ts
+await store.searchUnifiedMemory({
+	userId: "u-42",
+	query: "what did I do last weekend?",
+	sources: ["memory"], // restrict to memory source — insights/knowledge don't carry factType
+	factTypes: ["experience"],
+});
+```
+
+Schema migration: IndexedDB `DB_VERSION` 3 → 4, SQLite `RAW_MESSAGES_SCHEMA_VERSION` 3 → 4. Both are idempotent and tolerate v3 rows whose `factType` is undefined.
+
+### End-to-end example
+
+See [`examples/src/tutorials/41-reflect-writeback-example.ts`](../../examples/src/tutorials/41-reflect-writeback-example.ts) for a runnable, in-memory walkthrough that exercises:
+
+1. `store.reflect()` — read-only synthesis.
+2. `store.reflectWithPlan({ dryRun: true })` — plan inspection.
+3. `store.reflectWithPlan({ dryRun: false })` — actual write-back.
+4. `factTypes` narrowing — fact-type-filtered recall.
+
+The same surface is also covered by the demos at [`examples/src/simple/15-http-server.ts`](../../examples/src/simple/15-http-server.ts) (HTTP) and [`examples/src/simple/16-mcp-server.ts`](../../examples/src/simple/16-mcp-server.ts) (MCP).
+
 ## Reasoning-Backed Memory Retrieval
 
 Dense retrieval works best when the query matches the language of the stored memories. Chat logs are usually written in the first person ("I told you I prefer dark mode"), but agents often ask questions in the third person ("What does the user prefer?"). OpenContext can plug in small LLM-powered reasoning providers to close that gap.

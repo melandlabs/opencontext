@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
-import type { RawMessage } from "@melandlabs/indexeddb/storage";
+import type { RawMessage } from "@melandlabs/indexeddb";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 import { createMemoryStore } from "./index";
 import { createRawMessageStore } from "./storage/raw-message-store";

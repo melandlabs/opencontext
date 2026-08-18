@@ -1,0 +1,40 @@
+{
+	"name": "@melandlabs/vsa",
+	"version": "0.1.0",
+	"type": "module",
+	"files": ["dist", "README.md", "LICENSE"],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": "./dist/index.js",
+		"./hrr": "./dist/hrr.js",
+		"./facts": "./dist/facts.js",
+		"./types": "./dist/types.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/vsa"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · Vector Symbolic Architecture primitives (HRR bind/unbind/superpose + in-memory FactStore).",
+	"keywords": ["opencontext", "vsa", "hrr", "memory"],
+	"dependencies": {},
+	"devDependencies": {
+		"@melandlabs/config": "workspace:*",
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
+	},
+	"scripts": {
+		"build": "tsup",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	}
+}

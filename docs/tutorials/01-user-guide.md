@@ -2,9 +2,9 @@
 
 This guide explains the core concepts of OpenContext and how to use them effectively. By the end, you'll understand how to store, search, and manage temporal context, and how to build memory-aware AI agents.
 
-## The Four Verbs of Memory
+## The Five Verbs of Memory
 
-OpenContext's memory API is built around four verbs that cover every persistent memory operation:
+OpenContext's memory API is built around five verbs that cover every persistent memory operation:
 
 | Verb | Purpose | Use When | SDK Method |
 |------|---------|----------|------------|
@@ -12,6 +12,20 @@ OpenContext's memory API is built around four verbs that cover every persistent 
 | `recall` | Search, lookup, and graph traversal | Finding what's relevant | `store.searchUnifiedMemory({...})` |
 | `forget` | Soft-delete and GDPR erasure | Cleaning up old data | `manager.archiveMessages([...])` |
 | `improve` | Correction, supersession, and merge | Fixing outdated facts | `manager.storeMessages([...])` + `manager.deprecateMessages([...])` |
+| `reflect` | LLM synthesis + write-back | "What does the user like?" / "Summarise the last week" | `store.reflect(...)` / `store.reflectWithPlan(...)` |
+
+`reflect` has two flavours — read-only LLM synthesis and agentic write-back
+(plan → vet → persist). See [Advanced Usage → Reflection and Write-Back](./03-advanced-usage.md#reflection-and-write-back)
+for the full guide.
+
+## FactType classification
+
+Atomic facts are classified as one of three kinds — `world`, `experience`,
+or `mental_model` — at extraction time. The classifier rides along the
+`RawMessage.factType?` field and surfaces on the read side as the
+`factTypes` filter on `searchUnifiedMemory`. Schema migration is
+idempotent across both IndexedDB (v3 → v4) and SQLite (v3 → v4). See
+[Advanced Usage → FactType classification](./03-advanced-usage.md#facttype-classification).
 
 ### Remember: Storing Facts
 

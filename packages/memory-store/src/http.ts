@@ -9,10 +9,12 @@
  *   });
  *
  * Endpoints (all POST, JSON in/out):
- *   GET  /health            → { ok: true }
- *   POST /v1/search         → UnifiedMemorySearchOutput
- *   POST /v1/raw-messages   → upsert raw messages (returns count)
- *   GET  /v1/raw-messages/:id  → single raw message
+ *   GET  /health              → { ok: true }
+ *   POST /v1/search           → UnifiedMemorySearchOutput
+ *   POST /v1/raw-messages     → upsert raw messages (returns count)
+ *   GET  /v1/raw-messages/:id → single raw message
+ *   POST /v1/reflect          → ReflectOutput (read-only LLM synthesis)
+ *   POST /v1/reflect:apply    → ApplyReflectOutput (agentic write-back)
  *
  * `POST /v1/raw-messages` supports two body keys beyond `userId` /
  * `messages[]`:
@@ -27,16 +29,24 @@
  *      and the messages persist without an embedding (so ANN search
  *      won't return them).
  *
+ * `POST /v1/reflect:apply` runs the same evidence pipeline as `/v1/reflect`,
+ * then builds a memory-consolidation plan, optionally asks the LLM to
+ * veto unsafe entries, and persists via the attached graph store (when
+ * the host wired one into `options.graphStore`) + soft-deprecates
+ * superseded records via the storage adapter.
+ *
  * The HTTP server speaks only to the raw-message + vector layers; it does
  * not expose RAG/insights cross-source search (callers wire those up
  * server-side or use the MCP server with a fully-wired store).
  */
 
 import { serve } from "@hono/node-server";
-import type { RawMessage } from "@melandlabs/indexeddb/storage";
+import type { RawMessage } from "@melandlabs/indexeddb";
 import { Hono } from "hono";
 import type { UnifiedSearchDeps } from "./config";
 import type { MemoryStoreConfig } from "./index";
+import { type ApplyReflectInput, applyReflectedPlan } from "./search/apply-reflect";
+import { reflect as reflectImpl } from "./search/reflect";
 import { createUnifiedSearch } from "./search/unified-search";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
 import { createRawMessageStore } from "./storage/raw-message-store";
@@ -158,6 +168,78 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			includeArchivedInsights: body.includeArchivedInsights,
 			authToken: body.authToken,
 		});
+		return c.json(result);
+	});
+
+	app.post("/v1/reflect", async (c) => {
+		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+		const userId = typeof body.userId === "string" ? body.userId : null;
+		const query = typeof body.query === "string" ? body.query : "";
+		if (!userId || !query) {
+			return c.json({ error: "userId and query are required" }, 400);
+		}
+		const result = await reflectImpl(
+			{ ...(options.unified ?? {}) },
+			{
+				userId,
+				query,
+				botIds: Array.isArray(body.botIds) ? (body.botIds as string[]) : undefined,
+				dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
+				dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
+				tiers: Array.isArray(body.tiers)
+					? (body.tiers as Array<"summary" | "raw" | "insight" | "knowledge">)
+					: undefined,
+				limit: typeof body.limit === "number" ? body.limit : undefined,
+				threshold: typeof body.threshold === "number" ? body.threshold : undefined,
+				authToken: typeof body.authToken === "string" ? body.authToken : undefined,
+			},
+			console,
+		);
+		return c.json(result);
+	});
+
+	app.post("/v1/reflect:apply", async (c) => {
+		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+		const userId = typeof body.userId === "string" ? body.userId : null;
+		const query = typeof body.query === "string" ? body.query : "";
+		const ownerScope = (body.ownerScope ?? {}) as { userId?: string };
+		if (!userId || !query) {
+			return c.json({ error: "userId and query are required" }, 400);
+		}
+		if (typeof ownerScope.userId !== "string") {
+			return c.json({ error: "ownerScope.userId is required" }, 400);
+		}
+		const input: ApplyReflectInput = {
+			userId,
+			query,
+			ownerScope: { userId: ownerScope.userId },
+			botIds: Array.isArray(body.botIds) ? (body.botIds as string[]) : undefined,
+			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
+			dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
+			tiers: Array.isArray(body.tiers)
+				? (body.tiers as Array<"summary" | "raw" | "insight" | "knowledge">)
+				: undefined,
+			limit: typeof body.limit === "number" ? body.limit : undefined,
+			threshold: typeof body.threshold === "number" ? body.threshold : undefined,
+			dryRun: body.dryRun === true,
+			expectedVersion: typeof body.expectedVersion === "string" ? body.expectedVersion : undefined,
+			authToken: typeof body.authToken === "string" ? body.authToken : undefined,
+			llmPlanReview:
+				body.llmPlanReview && typeof body.llmPlanReview === "object"
+					? {
+							maxTokens:
+								typeof (body.llmPlanReview as { maxTokens?: unknown }).maxTokens === "number"
+									? (body.llmPlanReview as { maxTokens: number }).maxTokens
+									: undefined,
+						}
+					: undefined,
+		};
+		const result = await applyReflectedPlan(
+			{ ...(options.unified ?? {}) },
+			{ graphStore: options.graphStore, storage: options.storage },
+			input,
+			console,
+		);
 		return c.json(result);
 	});
 

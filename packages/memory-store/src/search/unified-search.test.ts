@@ -118,11 +118,21 @@ describe("createUnifiedSearch", () => {
 		expect(out.warnings.some((w) => w.code === "memory_lexical_search_not_configured")).toBe(true);
 	});
 
-	it("keeps working when lexical is configured but only emits similarity merge by default", async () => {
+	it("uses rrf merge by default, and falls back to similarity when explicitly requested", async () => {
 		const search = createUnifiedSearch(baseDeps);
 		const out = await search.searchUnifiedMemory({ userId: "u1", query: "anything here" });
-		// Default strategy — no rrfScore on any hit.
-		expect(out.results.every((r) => r.metadata.rrfScore === undefined)).toBe(true);
+		// RRF is now the default merge strategy (see the memory-store changeset),
+		// so every fused hit carries an rrfScore.
+		expect(out.results.every((r) => typeof r.metadata.rrfScore === "number")).toBe(true);
+
+		// Explicit similarity opt-out — equivalent to wiring
+		// `deps.reasoning.defaultMergeStrategy = "similarity"`.
+		const similarityOut = await search.searchUnifiedMemory({
+			userId: "u1",
+			query: "anything here",
+			mergeStrategy: "similarity",
+		});
+		expect(similarityOut.results.every((r) => r.metadata.rrfScore === undefined)).toBe(true);
 	});
 
 	it("uses a query rewriter when reasoningStrategy='rewrite' is requested", async () => {

@@ -69,3 +69,10 @@ Most files import from `@melandlabs/opencontext` only, so they work once the
 | `use-cases/30-personal-memory-assistant.ts` | Personal assistant with preferences, notes, time-travel, metadata | ✅ Works |
 | `use-cases/31-customer-support-agent.ts` | Multi-user support agent with customer history, repeat detection, batch import | ✅ Works |
 | `use-cases/32-research-knowledge-tracker.ts` | Research tracker with findings, citations, evolution tracking, synthesis | ✅ Works |
+
+### Reflection & write-back (folded into [`03-advanced-usage.md` → Reflection and Write-Back](../../docs/tutorials/03-advanced-usage.md#reflection-and-write-back))
+
+| File | What it shows | Status |
+|------|---------------|--------|
+| `41-reflect-writeback-example.ts` | `store.reflect()` (read-only) + `store.reflectWithPlan({ dryRun })` (agentic write-back) end-to-end loop with a deterministic mock LLM | ✅ Works |
+| `42-facttype-filter-example.ts` | Classify raw messages as `world` / `experience` / `mental_model`; narrow recall with the `factTypes` filter | ✅ Works |

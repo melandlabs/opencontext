@@ -6,6 +6,9 @@
  * storage/search implementations.
  */
 
+import type { FactType } from "@melandlabs/contracts";
+import type { Peer } from "@melandlabs/contracts/peer";
+
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
 
 export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative";
@@ -84,11 +87,27 @@ export interface UnifiedMemorySearchInput {
 	 */
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
 	/**
+	 * Optional additive scope-narrowing filter expressed as structured
+	 * peers. Coexists with `userId`/`botIds`. When supplied, the host's
+	 * `UnifiedSearchDeps.peerScopeCheck` is consulted; peers that fall
+	 * outside `userId` are dropped with a `peer_filter_outside_user_scope`
+	 * warning rather than broadening the scope.
+	 */
+	peerFilter?: ReadonlyArray<Peer>;
+	/**
 	 * Optional reasoning strategy. `"rewrite"` rewrites the query before
 	 * embedding; `"iterative"` runs an LLM planner that searches, notes
 	 * evidence, and searches again. Defaults to `"none"`.
 	 */
 	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
+	/**
+	 * Optional `FactType` read-side filter. When supplied, the memory
+	 * source narrows candidates to rows whose `factType` is in this set.
+	 * Only affects the `memory` source; `insights` and `knowledge` are
+	 * not filtered by this. Empty array is treated as "no filter" so
+	 * callers can pass `searchInput.factTypes ?? []` without surprises.
+	 */
+	factTypes?: FactType[];
 }
 
 export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
@@ -99,7 +118,9 @@ export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
  * flattening them into a single similarity score first.
  */
 export interface UnifiedMemoryRankedList {
-	name: "memory-bm25" | "memory-semantic" | "insights" | "knowledge";
+	/** Label for the source list (e.g. a tier or channel). Free-form; the
+	 * RRF fusion only reads `hits`, so `name` is purely diagnostic. */
+	name: string;
 	hits: UnifiedMemorySearchResult[];
 }
 
@@ -309,4 +330,79 @@ export function isRawMemorySemanticResult(result: unknown): result is {
 		Boolean(item.metadata) &&
 		typeof item.metadata === "object"
 	);
+}
+
+export interface ResolvedPeerScope {
+	/** Peers to apply to the underlying retrieval (never wider than userId). */
+	peers: ReadonlyArray<Peer>;
+	/** Warnings to surface when the input was over-broad or empty. */
+	warnings: UnifiedMemorySearchWarning[];
+}
+
+/**
+ * Resolve a `peerFilter` against the active `userId`. The returned
+ * `peers` is always a strict narrowing — never broader than `userId`.
+ *
+ *   - Empty input → `{ peers: [], warnings: [] }` (legacy behaviour).
+ *   - All peers pass the host's `peerScopeCheck` → return as-is.
+ *   - Any peer fails `peerScopeCheck` → emit a `peer_filter_outside_user_scope`
+ *     warning and drop the offending peers. If every peer is dropped, the
+ *     search falls back to the unfiltered `userId` scope (with warning).
+ */
+export async function resolveScopePeer(input: {
+	userId: string;
+	peerFilter: ReadonlyArray<Peer> | undefined;
+	scopeCheck?: (input: { userId: string; peers: ReadonlyArray<Peer> }) => Promise<boolean> | boolean;
+}): Promise<ResolvedPeerScope> {
+	const peers = input.peerFilter ?? [];
+	if (peers.length === 0) {
+		return { peers: [], warnings: [] };
+	}
+	if (typeof input.scopeCheck !== "function") {
+		// No host-side check wired up: trust the caller's filter.
+		return { peers, warnings: [] };
+	}
+
+	const retained: Peer[] = [];
+	const dropped: Peer[] = [];
+	for (const peer of peers) {
+		const ok = await input.scopeCheck({ userId: input.userId, peers: [peer] });
+		if (ok) {
+			retained.push(peer);
+		} else {
+			dropped.push(peer);
+		}
+	}
+
+	if (dropped.length === 0) {
+		return { peers, warnings: [] };
+	}
+
+	if (retained.length === 0) {
+		return {
+			peers: [],
+			warnings: [
+				{
+					source: "memory",
+					code: "peer_filter_outside_user_scope",
+					message: `${dropped
+						.map((peer) => `${peer.kind}:${peer.id}`)
+						.join(",")} ignored; falling back to userId scope`,
+				},
+			],
+		};
+	}
+
+	return {
+		peers: retained,
+		warnings: [
+			{
+				source: "memory",
+				code: "peer_filter_outside_user_scope",
+				message: `${dropped
+					.map((peer) => `${peer.kind}:${peer.id}`)
+					.join(",")} ignored because they fall outside userId ${input.userId}`,
+			},
+		],
+	};
 }
