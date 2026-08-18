@@ -393,6 +393,109 @@ console.log("Reasoning metadata:", results.reasoning);
 - `asOf` asks "what was true at this exact instant?" — a temporal snapshot over facts with validity windows.
 - `dateFrom` / `dateTo` ask "which memories were recorded inside this calendar window?" — an interval filter over message timestamps.
 
+## Vector Symbolic Architecture (VSA) Recall
+
+`store.search()` returns the top-K nearest neighbours by cosine similarity. That's the right tool when the answer is "what's close to X?". Sometimes the right tool is "given a closed vocabulary, which entry matches X?". That's what VSA is for: it stores (role, filler) bindings as holographic reduced representations (HRR), and at recall time it superposes every stored binding, unbinds by the requested role, and picks the best-match vocabulary entry by cosine cleanup.
+
+The two surfaces are intentionally separate — VSA recall is a single best-match, not a ranked list. Folding both into one result shape would require a confusing union type and a fake `similarity` field that doesn't mean the same thing across sources.
+
+### When to use VSA
+
+VSA shines when:
+
+- You have a **closed, labelled answer space** (a vocabulary). E.g. `mood ∈ { "happy", "neutral", "tired" }`.
+- The question can be phrased as a **role lookup** ("what is the user's mood?").
+- You want **millisecond-scale recall** over a few thousand facts.
+- The role→filler relation is dense — you have many examples of "for this user, on a question like this, the answer is Y".
+
+Reach for semantic search instead when:
+
+- The answer space is open-ended (long-form text, document retrieval).
+- You need multiple candidates ranked by similarity.
+- The vocabulary is too large for cleanup to discriminate (rule of thumb: D ≥ √N where N is the vocabulary size).
+
+### The four verbs
+
+`createMemoryStore()` always returns a `store.vsa` facade backed by the same SQLite database as the raw-message store. The four verbs are:
+
+| Verb | Purpose |
+| --- | --- |
+| `vsaStoreFact` | Persist a `(role, filler)` binding as a HRR pair. Idempotent on `factId`. |
+| `vsaRecall` | Re-superpose all stored facts for the user/scope, unbind by the requested role, cleanup against a vocabulary, return the best-match label. |
+| `vsaListFacts` | Read-side projection of stored facts (no vectors). Useful for diagnostics and audit. |
+| `vsaForget` | Soft-delete by id. Idempotent. |
+
+### End-to-end example
+
+```typescript
+import { createMemoryStore } from "@melandlabs/memory-store";
+import { randomHRRVector } from "@melandlabs/vsa";
+
+const DIM = 128;
+
+function toVector(seed: number): number[] {
+  const v = randomHRRVector(DIM, seed);
+  return Array.from(v.data);
+}
+
+async function main() {
+  const store = await createMemoryStore();
+
+  const vocabulary = [
+    { label: "happy",   vector: toVector(1) },
+    { label: "neutral", vector: toVector(2) },
+    { label: "tired",   vector: toVector(3) },
+  ];
+
+  const roleVector = toVector(100);
+  const fillerVector = vocabulary[0].vector;
+
+  // Persist three (role, filler) bindings. Each call returns a unique
+  // factId; the superposed memory vector grows by one term per fact.
+  for (let i = 0; i < 3; i += 1) {
+    await store.vsa.storeFact({
+      userId: "user-123",
+      scopeTag: "demo",
+      roleLabel: "user:mood",
+      roleVector,
+      fillerLabel: "happy",
+      fillerVector,
+      dim: DIM,
+    });
+  }
+
+  // Recall — given the same role vector, the superposed memory vector
+  // should decode to the most-bound filler.
+  const recall = await store.vsa.recall({
+    userId: "user-123",
+    scopeTag: "demo",
+    roleLabel: "user:mood",
+    roleVector,
+    vocabulary,
+  });
+
+  console.log(recall.fillerLabel); // → "happy"
+  console.log(recall.allScores);  // → [{ label: "happy", score: 0.7 }, ...]
+}
+```
+
+### HTTP / MCP exposure
+
+The same verbs are exposed over HTTP and MCP for any host that doesn't want to wire `createMemoryStore` directly:
+
+- `POST /v1/vsa/store` — `vsaStoreFact`
+- `POST /v1/vsa/recall` — `vsaRecall`
+- `POST /v1/vsa/list` — `vsaListFacts`
+- `POST /v1/vsa/forget` — `vsaForget`
+
+And the MCP tool names are `memory.vsaStore`, `memory.vsaRecall`, `memory.vsaList`, `memory.vsaForget`.
+
+### Capacity notes
+
+HRR superpositions tolerate noise gracefully but degrade as you approach √D stored facts (rule of thumb from Plate, 1995). For `D = 128` that's roughly 11 facts before crosstalk dominates a single best-match cleanup. For dense recall (thousands of facts) use `D = 512` or `D = 1024`. The facade accepts whatever dimension you store; mismatches between facts with different `dim` values are surfaced as `vsa_dim_mismatch` warnings and dropped before superposition.
+
+> Runnable example: `examples/src/simple/19-vsa.ts`
+
 ## Temporal (Time-Travel) Queries
 
 Every fact has `valid_from` and `valid_until`, enabling queries as of a specific time. Pass an ISO-8601 string to `asOf`:

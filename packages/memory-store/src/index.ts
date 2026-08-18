@@ -16,19 +16,46 @@ import {
 	createRawMessageStore,
 	getRawMessageManager,
 } from "./storage/raw-message-store";
+import { resolveSQLiteRawMessageDbPath } from "./storage/sqlite-raw-message-store";
+import type {
+	StoreVsaFactInput,
+	StoreVsaFactOutput,
+	VsaFactSummary,
+	VsaForgetInput,
+	VsaForgetOutput,
+	VsaListInput,
+	VsaRecallInput,
+	VsaRecallOutput,
+} from "@melandlabs/contracts";
+import { getSQLiteVsaStore, type SQLiteVsaStore } from "@melandlabs/sqlite";
+import { createVsaRecall, type VsaRecallFacade } from "./search/vsa";
 
 export interface MemoryStore {
 	/** Underlying raw-message store (sqlite vs postgres). */
 	raw: RawMessageStore;
-	/** Unified semantic search facade (memory + insights + knowledge). */
+	/**
+	 * Unified semantic search facade (memory + insights + knowledge).
+	 * The primary entry point is `store.search.search(input)`. Set
+	 * `synthesize: true` to opt into LLM synthesis (the `reflect`
+	 * behaviour).
+	 */
 	search: UnifiedSearch;
 	/** Resolve the active raw-message manager. */
 	getRawMessageManager: typeof getRawMessageManager;
-	/** Run `searchUnifiedMemory` against the wired-up unified search. */
+	/**
+	 * @deprecated Use `store.search.search(input)` instead. Forwarding
+	 * shim kept for one release window before removal.
+	 */
 	searchUnifiedMemory: UnifiedSearch["searchUnifiedMemory"];
-	/** Convenience: semantic search over raw messages only. */
+	/**
+	 * @deprecated Use `store.search.search({ ...input, sources: ["memory"] })`
+	 * and read `.results` instead.
+	 */
 	searchRawMemorySemantically: UnifiedSearch["searchRawMemorySemantically"];
-	/** Single-turn LLM synthesis over the unified evidence pipeline. */
+	/**
+	 * @deprecated Use `store.search.search({ ...input, synthesize: true })`
+	 * instead.
+	 */
 	reflect: UnifiedSearch["reflect"];
 	/**
 	 * Agentic write-back: gathers evidence, vets a consolidation plan with
@@ -50,6 +77,17 @@ export interface MemoryStore {
 	 * attaching a full graph store.
 	 */
 	storage?: import("@melandlabs/memory-consolidation").MemoryStorageAdapterLike;
+	/**
+	 * Vector Symbolic Architecture facade. Always available — backed by
+	 * the same SQLite DB the raw-message manager uses. Routes through its
+	 * own `vsa_facts` table; never mixed into the unified search.
+	 *
+	 *   - `vsaStoreFact(input)` — persist a (role, filler) binding.
+	 *   - `vsaRecall(input)`    — rebuild memory vector + best-match cleanup.
+	 *   - `vsaListFacts(input)` — read-side projection (no vectors).
+	 *   - `vsaForget(input)`    — soft-delete by id.
+	 */
+	vsa: VsaRecallFacade;
 }
 
 export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise<MemoryStore> {
@@ -80,9 +118,25 @@ export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise
 		storage: config.storage,
 	};
 
+	// VSA facade — lazily open the SQLite VSA store. Shares the same DB
+	// file as the raw-message store, so `init()` is a no-op if the schema
+	// has already been brought up by `raw.init()`. Resolve the DB path
+	// here because `getSQLiteVsaStore` lives in `@melandlabs/sqlite`
+	// (which `memory-store` depends on) and can't import the env-aware
+	// `resolveSQLiteRawMessageDbPath` helper without forming a cycle.
+	const vsaDbPath =
+		config.dbPath ??
+		(config.db && "path" in config.db ? (config.db as { path?: string }).path : undefined) ??
+		resolveSQLiteRawMessageDbPath();
+	const vsaStorage: SQLiteVsaStore = await getSQLiteVsaStore({
+		dbPath: vsaDbPath,
+	});
+	const vsa = createVsaRecall(vsaStorage);
+
 	const store: MemoryStore = {
 		raw,
 		search,
+		vsa,
 		getRawMessageManager,
 		searchUnifiedMemory: search.searchUnifiedMemory,
 		searchRawMemorySemantically: search.searchRawMemorySemantically,
@@ -106,6 +160,7 @@ export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise
 			wiring.storage = value;
 		},
 	};
+
 	return store;
 }
 
@@ -149,6 +204,16 @@ export type {
 	UnifiedMemoryReasoningStrategy,
 	UnifiedMemoryReasoningInfo,
 } from "./search/utilities";
+export type {
+	SearchInput,
+	SearchOutput,
+	SearchSource,
+	SearchTier,
+	SearchEvidence,
+	UnifiedMemoryMergeStrategy,
+	UnifiedMemoryRankedList,
+} from "./search/utilities";
+export { mergeUnifiedMemorySearchResultsRrf } from "./search/utilities";
 export {
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
@@ -196,3 +261,27 @@ export type {
 	UnifiedSearchReasoningDeps,
 } from "./config";
 export type { RawMessage } from "./config";
+export {
+	createVsaRecall,
+	type VsaRecallFacade,
+} from "./search/vsa";
+export type {
+	StoreVsaFactInput,
+	StoreVsaFactOutput,
+	VsaFact,
+	VsaFactSummary,
+	VsaFactStorage,
+	VsaForgetInput,
+	VsaForgetOutput,
+	VsaListInput,
+	VsaRecallInput,
+	VsaRecallOutput,
+	VsaRecallScore,
+	VsaVocabularyEntry,
+} from "@melandlabs/contracts";
+export {
+	getSQLiteVsaStore,
+	closeSQLiteVsaStore,
+	type SQLiteVsaStore,
+	type SQLiteVsaStoreOptions,
+} from "@melandlabs/sqlite";

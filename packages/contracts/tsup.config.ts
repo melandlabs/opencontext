@@ -11,6 +11,7 @@ export default defineConfig({
 		errors: "src/errors.ts",
 		peer: "src/peer.ts",
 		"fact-type": "src/fact-type.ts",
+		"vsa-fact": "src/vsa-fact.ts",
 		schemas: "src/schemas.ts",
 	},
 	format: ["esm"],

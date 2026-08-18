@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/vsa",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -22,7 +26,12 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · Vector Symbolic Architecture primitives (HRR bind/unbind/superpose + in-memory FactStore).",
-	"keywords": ["opencontext", "vsa", "hrr", "memory"],
+	"keywords": [
+		"opencontext",
+		"vsa",
+		"hrr",
+		"memory"
+	],
 	"dependencies": {},
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",

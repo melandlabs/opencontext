@@ -39,6 +39,7 @@ import demoLocalEmbedding from "./simple/14-local-embedding.ts";
 import demoHttpServer from "./simple/15-http-server.ts";
 import demoMcpServer from "./simple/16-mcp-server.ts";
 import demoAiAgent from "./simple/17-ai-agent.ts";
+import demoVsa from "./simple/19-vsa.ts";
 import demoClaudeAgent from "./tutorials/26-claude-agent-example.ts";
 import demoCodexAgent from "./tutorials/27-codex-agent-example.ts";
 import demoAudit from "./tutorials/28-audit-example.ts";
@@ -89,6 +90,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: ai-rag — local Transformers embedding", demoLocalEmbedding],
 	["demo: memory-store — fully-wired HTTP daemon (all 3 unified deps)", demoHttpServer],
 	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
+	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
 ];
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {
