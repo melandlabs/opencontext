@@ -1,0 +1,62 @@
+{
+  "scale": "sample",
+  "conversations": [
+    {
+      "entry_id": "sample_001",
+      "scale": "sample",
+      "chat": [
+        {
+          "speaker": "user",
+          "text": "Hey, I just moved to Berlin last week.",
+          "timestamp": "2024-05-01T10:00:00Z"
+        },
+        {
+          "speaker": "assistant",
+          "text": "Welcome! How are you finding it so far?",
+          "timestamp": "2024-05-01T10:00:05Z"
+        },
+        {
+          "speaker": "user",
+          "text": "Pretty good. I started a new job at a fintech on Tuesday.",
+          "timestamp": "2024-05-01T10:01:00Z"
+        },
+        {
+          "speaker": "assistant",
+          "text": "Nice — what kind of role?",
+          "timestamp": "2024-05-01T10:01:10Z"
+        },
+        {
+          "speaker": "user",
+          "text": "I'm a backend engineer, mostly Go and Postgres.",
+          "timestamp": "2024-05-01T10:01:30Z"
+        },
+        {
+          "speaker": "assistant",
+          "text": "Cool. Anything fun planned for the weekend?",
+          "timestamp": "2024-05-01T10:02:00Z"
+        },
+        {
+          "speaker": "user",
+          "text": "I think I'm going to check out the flea market at Mauerpark on Saturday.",
+          "timestamp": "2024-05-04T09:00:00Z"
+        },
+        {
+          "speaker": "assistant",
+          "text": "Mauerpark on a Saturday is iconic — you'll love it.",
+          "timestamp": "2024-05-04T09:00:30Z"
+        }
+      ],
+      "probing_questions": [
+        {
+          "question_id": "sample_001_q1",
+          "category": "information_extraction",
+          "question": "What city did the user recently move to?",
+          "atoms": [
+            "Berlin"
+          ],
+          "gold_answer": "Berlin"
+        }
+      ]
+    }
+  ]
+}

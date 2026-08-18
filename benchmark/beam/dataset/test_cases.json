@@ -1,0 +1,86 @@
+{
+  "scale": "test",
+  "conversations": [
+    {
+      "entry_id": "tc_001_info_extraction",
+      "scale": "test",
+      "chat": [
+        {"speaker": "user", "text": "I just adopted a cat named Mochi.", "timestamp": "2024-06-01T10:00:00Z"},
+        {"speaker": "assistant", "text": "Congratulations! What color is Mochi?", "timestamp": "2024-06-01T10:00:30Z"},
+        {"speaker": "user", "text": "Orange tabby.", "timestamp": "2024-06-01T10:01:00Z"}
+      ],
+      "probing_questions": [
+        {
+          "question_id": "tc_001_q1",
+          "category": "information_extraction",
+          "question": "What is the name of the user's cat?",
+          "atoms": ["Mochi"],
+          "gold_answer": "Mochi"
+        }
+      ]
+    },
+    {
+      "entry_id": "tc_002_abstention",
+      "scale": "test",
+      "chat": [
+        {"speaker": "user", "text": "Hi!", "timestamp": "2024-06-02T09:00:00Z"},
+        {"speaker": "assistant", "text": "Hello! How can I help?", "timestamp": "2024-06-02T09:00:05Z"}
+      ],
+      "probing_questions": [
+        {
+          "question_id": "tc_002_q1",
+          "category": "abstention",
+          "question": "What is the user's home address?",
+          "atoms": ["The answer should refuse or abstain"]
+        }
+      ]
+    },
+    {
+      "entry_id": "tc_003_knowledge_update",
+      "scale": "test",
+      "chat": [
+        {"speaker": "user", "text": "I'm working at Google right now.", "timestamp": "2024-01-15T10:00:00Z"},
+        {"speaker": "assistant", "text": "Cool, what do you do there?", "timestamp": "2024-01-15T10:00:30Z"},
+        {"speaker": "user", "text": "Software engineer.", "timestamp": "2024-01-15T10:01:00Z"},
+        {"speaker": "user", "text": "Actually I switched jobs in March — now I'm at Anthropic.", "timestamp": "2024-03-20T14:00:00Z"},
+        {"speaker": "assistant", "text": "Nice! What's the new role?", "timestamp": "2024-03-20T14:00:30Z"},
+        {"speaker": "user", "text": "Research engineer on the Claude team.", "timestamp": "2024-03-20T14:01:00Z"}
+      ],
+      "probing_questions": [
+        {
+          "question_id": "tc_003_q1",
+          "category": "knowledge_update",
+          "question": "Where does the user currently work?",
+          "atoms": ["Anthropic"],
+          "gold_answer": "Anthropic"
+        },
+        {
+          "question_id": "tc_003_q2",
+          "category": "knowledge_update",
+          "question": "What is the user's current role?",
+          "atoms": ["Research engineer"],
+          "gold_answer": "Research engineer"
+        }
+      ]
+    },
+    {
+      "entry_id": "tc_004_preference_following",
+      "scale": "test",
+      "chat": [
+        {"speaker": "user", "text": "I love spicy food.", "timestamp": "2024-05-10T12:00:00Z"},
+        {"speaker": "assistant", "text": "Got it, noted.", "timestamp": "2024-05-10T12:00:30Z"},
+        {"speaker": "user", "text": "Actually, I've been eating mild food lately, my stomach can't handle spice.", "timestamp": "2024-06-15T19:00:00Z"},
+        {"speaker": "assistant", "text": "Updated — mild food preference.", "timestamp": "2024-06-15T19:00:30Z"}
+      ],
+      "probing_questions": [
+        {
+          "question_id": "tc_004_q1",
+          "category": "preference_following",
+          "question": "What kind of food does the user currently prefer?",
+          "atoms": ["Mild food", "No spice"],
+          "gold_answer": "Mild food"
+        }
+      ]
+    }
+  ]
+}
