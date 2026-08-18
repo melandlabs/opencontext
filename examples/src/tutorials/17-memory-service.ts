@@ -26,7 +26,7 @@ export async function rememberFact(userId: string, content: string) {
 }
 
 export async function recallFacts(userId: string, query: string, limit = 10) {
-	return store.searchUnifiedMemory({ userId, query, limit });
+	return store.search({ userId, query, limit });
 }
 
 async function main() {

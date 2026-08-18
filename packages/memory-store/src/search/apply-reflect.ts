@@ -1,16 +1,17 @@
 /**
  * `applyReflectedPlan` — agentic write-back facade.
  *
- * Composes the read-only `reflect()` evidence pipeline with the
- * `applyReflectedConsolidationPlan` write-side so a single call gathers
- * evidence (raw + summaries + insights + knowledge), vets the plan with
- * the LLM (optional), and persists the result to the graph store + storage.
+ * Composes the read-only `search({ synthesize })` evidence pipeline with
+ * the `applyReflectedConsolidationPlan` write-side so a single call
+ * gathers evidence (raw + summaries + insights + knowledge), vets the
+ * plan with the LLM (optional), and persists the result to the graph
+ * store + storage.
  *
- * Behaviour parity with `reflect()`:
- *   - Reuses the same `gatherSummaries` / `gatherRaw` / `gatherInsights` /
- *     `gatherKnowledge` pipeline so the answer + evidence are identical to
- *     a read-only `reflect()` call.
- *   - Honours `peerFilter` via the same scope check used by `searchUnifiedMemory`.
+ * Behaviour parity with `search({ synthesize: true })`:
+ *   - Reuses the same gather-evidence pipeline so the answer + evidence
+ *     are identical to a read-only search call.
+ *   - Honours `peerFilter` via the same scope check used by the unified
+ *     read pipeline.
  *   - LLM `complete` is the same `deps.reasoning.complete` the read-only
  *     path uses — no new injection point.
  *
@@ -38,22 +39,22 @@ import type {
 } from "@melandlabs/memory-consolidation";
 import { applyReflectedConsolidationPlan } from "@melandlabs/memory-consolidation";
 import type { UnifiedSearchDeps } from "../config";
-import type { ReflectEvidence, ReflectInput, ReflectOutput, ReflectTier } from "./reflect";
-import { reflect } from "./reflect";
+import { createUnifiedSearch } from "./unified-search";
+import type { SearchEvidence, SearchInput, SearchSource, SearchTier } from "./utilities";
 import {
 	type UnifiedMemorySearchWarning,
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
 } from "./utilities";
 
-export interface ApplyReflectInput {
+export interface ApplyConsolidateInput {
 	userId: string;
 	query: string;
 	ownerScope: OwnerScope;
 	botIds?: string[];
 	dateFrom?: string;
 	dateTo?: string;
-	tiers?: ReadonlyArray<ReflectTier>;
+	tiers?: ReadonlyArray<SearchTier>;
 	limit?: number;
 	threshold?: number;
 	plan?: MemoryConsolidationPlan;
@@ -76,17 +77,17 @@ export interface ApplyReflectInput {
 	graphStore?: MemoryGraphStoreWithOperationHistory;
 }
 
-export interface ApplyReflectOutput {
+export interface ApplyConsolidateOutput {
 	answer: string;
 	plan: MemoryConsolidationPlan;
 	persistenceResult?: MemoryGraphUpdateResult;
 	deprecationCounts?: Array<{ supersededBySummaryId: string; count: number }>;
 	warnings: UnifiedMemorySearchWarning[];
 	applied: boolean;
-	evidence: ReflectEvidence[];
+	evidence: SearchEvidence[];
 }
 
-const DEFAULT_TIERS: ReflectTier[] = ["summary", "raw", "insight", "knowledge"];
+const DEFAULT_TIERS: SearchTier[] = ["summary", "raw", "insight", "knowledge"];
 
 interface MemoryStoreLike {
 	graphStore?: MemoryGraphStoreWithOperationHistory;
@@ -96,12 +97,12 @@ interface MemoryStoreLike {
 type MemoryEvidenceTier = MemoryEvidenceRecord["tier"];
 
 /**
- * Map the read-side `ReflectTier` vocabulary onto the consolidation
- * `MemoryEvidenceTier` vocabulary. `ReflectEvidence` carries its tier in
- * `source` (it has no `metadata.tier`), so reading `metadata?.tier` was
- * always undefined and collapsed to `"mid"`.
+ * Map the read-side source/tier vocabulary onto the consolidation
+ * `MemoryEvidenceTier` vocabulary. Accepts the full `SearchEvidence.source`
+ * union (both `SearchSource` and `SearchTier` shapes), so anything that
+ * isn't a `raw` / `summary` hit falls through to `mid`.
  */
-function reflectTierToEvidenceTier(source: ReflectTier): MemoryEvidenceTier {
+function reflectTierToEvidenceTier(source: SearchSource | SearchTier): MemoryEvidenceTier {
 	switch (source) {
 		case "raw":
 			return "short";
@@ -112,11 +113,8 @@ function reflectTierToEvidenceTier(source: ReflectTier): MemoryEvidenceTier {
 	}
 }
 
-function toMemoryEvidenceRecord(input: ReflectEvidence, fallbackUserId: string): MemoryEvidenceRecord {
+function toMemoryEvidenceRecord(input: SearchEvidence, fallbackUserId: string): MemoryEvidenceRecord {
 	const tier = reflectTierToEvidenceTier(input.source);
-	// Prefer the original message / posting timestamp carried through from the
-	// search result so consolidation's temporal ordering stays accurate. Fall
-	// back to `Date.now()` only when the source had no usable timestamp.
 	const timestamp = input.timestamp ?? Date.now();
 	return {
 		id: input.id,
@@ -135,16 +133,16 @@ function toMemoryEvidenceRecord(input: ReflectEvidence, fallbackUserId: string):
 export async function applyReflectedPlan(
 	deps: UnifiedSearchDeps,
 	store: MemoryStoreLike,
-	input: ApplyReflectInput,
-	logger: Pick<Console, "log" | "warn" | "error">,
-): Promise<ApplyReflectOutput> {
+	input: ApplyConsolidateInput,
+	_logger: Pick<Console, "log" | "warn" | "error">,
+): Promise<ApplyConsolidateOutput> {
 	const query = input.query.trim();
 	const warnings: UnifiedMemorySearchWarning[] = [];
 	const limit = clampUnifiedMemorySearchLimit(input.limit);
 	const threshold = clampUnifiedMemorySearchThreshold(input.threshold);
 	const tiers = input.tiers && input.tiers.length > 0 ? input.tiers : DEFAULT_TIERS;
 
-	const reflectInput: ReflectInput = {
+	const searchInput: SearchInput = {
 		userId: input.userId,
 		query,
 		botIds: input.botIds,
@@ -155,12 +153,20 @@ export async function applyReflectedPlan(
 		threshold,
 		authToken: input.authToken,
 		peerFilter: input.peerFilter,
+		synthesize: true,
 	};
 
-	const reflectOutput: ReflectOutput = await reflect(deps, reflectInput, logger);
-	warnings.push(...reflectOutput.warnings);
+	const search = createUnifiedSearch(deps);
+	const result = await search.search(searchInput);
+	warnings.push(...result.warnings);
 
-	const evidence: ReflectEvidence[] = reflectOutput.evidence;
+	const evidence: SearchEvidence[] = result.evidence.map((item) => ({
+		id: item.id,
+		source: (item.source as SearchTier) ?? "raw",
+		snippet: item.snippet,
+		score: item.score,
+		timestamp: item.timestamp,
+	}));
 
 	const records = evidence.map((item) => toMemoryEvidenceRecord(item, input.userId));
 
@@ -183,10 +189,6 @@ export async function applyReflectedPlan(
 	};
 
 	const applyOutput = await applyReflectedConsolidationPlan(applyInput);
-	// Planner-side warnings may carry a `source: string` (e.g. `"reflectApply"`),
-	// but `UnifiedMemorySearchWarning` here expects the strict
-	// `UnifiedMemorySearchSource` union. Coerce so the narrowest allowed
-	// value wins at the type boundary; unknown sources collapse to "memory".
 	for (const warning of applyOutput.warnings) {
 		warnings.push({
 			source: "memory",
@@ -198,9 +200,7 @@ export async function applyReflectedPlan(
 	const summaryAnswer = makePlanSummary(applyOutput.plan);
 
 	return {
-		answer: reflectOutput.answer
-			? `${reflectOutput.answer}\n\nPlan summary:\n${summaryAnswer}`
-			: summaryAnswer,
+		answer: result.answer ? `${result.answer}\n\nPlan summary:\n${summaryAnswer}` : summaryAnswer,
 		plan: applyOutput.plan,
 		persistenceResult: applyOutput.persistenceResult,
 		deprecationCounts: applyOutput.deprecationCounts,

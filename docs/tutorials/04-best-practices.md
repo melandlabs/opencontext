@@ -34,7 +34,7 @@ await messages.storeMessages([{
 OpenContext degrades gracefully - never ignore warnings:
 
 ```typescript
-const results = await store.searchUnifiedMemory({
+const results = await store.search({
   userId: "user-123",
   query: "preferences",
   limit: 10,
@@ -55,7 +55,7 @@ for (const warning of results.warnings) {
 }
 
 // ❌ BAD: Silently ignore warnings
-const results = await store.searchUnifiedMemory({ ... });
+const results = await store.search({ ... });
 // No warning handling
 ```
 
@@ -124,7 +124,7 @@ async function embedWithCache(text: string) {
 
 ```typescript
 // ✅ GOOD: Reasonable limits for UI
-const results = await store.searchUnifiedMemory({
+const results = await store.search({
   userId: "user-123",
   query: "recent messages",
   limit: 10,  // UI typically shows 5-20 results
@@ -132,7 +132,7 @@ const results = await store.searchUnifiedMemory({
 });
 
 // ❌ BAD: Excessive limits
-const results = await store.searchUnifiedMemory({
+const results = await store.search({
   limit: 10000,  // Too many results, slow
   threshold: 0.1,  // Too permissive, poor quality
 });
@@ -259,7 +259,7 @@ it("handles missing embedder gracefully", async () => {
     },
   });
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "test-user",
     query: "test",
     limit: 10,

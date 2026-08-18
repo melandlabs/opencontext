@@ -14,7 +14,7 @@
  *                                LLM synthesis)
  *   POST /v1/raw-messages     → upsert raw messages (returns count)
  *   GET  /v1/raw-messages/:id → single raw message
- *   POST /v1/reflect:apply    → ApplyReflectOutput (agentic write-back)
+ *   POST /v1/consolidate:apply → ApplyConsolidateOutput (agentic write-back)
  *   POST /v1/vsa/store        → StoreVsaFactOutput
  *   POST /v1/vsa/recall       → VsaRecallOutput
  *   POST /v1/vsa/list         → VsaFactSummary[]
@@ -33,7 +33,7 @@
  *      and the messages persist without an embedding (so ANN search
  *      won't return them).
  *
- * `POST /v1/reflect:apply` runs the same evidence pipeline as
+ * `POST /v1/consolidate:apply` runs the same evidence pipeline as
  * `POST /v1/search` with `synthesize: true`, then builds a
  * memory-consolidation plan, optionally asks the LLM to veto unsafe
  * entries, and persists via the attached graph store (when the host
@@ -47,14 +47,14 @@
 
 import { serve } from "@hono/node-server";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import { Hono } from "hono";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
+import { Hono } from "hono";
 import type { UnifiedSearchDeps } from "./config";
 import type { MemoryStoreConfig } from "./index";
-import { type ApplyReflectInput, applyReflectedPlan } from "./search/apply-reflect";
+import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
-import { createVsaRecall, type VsaRecallFacade } from "./search/vsa";
+import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
 import { createRawMessageStore } from "./storage/raw-message-store";
 import { resolveSQLiteRawMessageDbPath } from "./storage/sqlite-raw-message-store";
@@ -180,8 +180,8 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 				: typeof body.synthesize === "object" && body.synthesize !== null;
 		const responseSchema =
 			typeof body.synthesize === "object" && body.synthesize !== null
-				? (body.synthesize as { responseSchema?: Record<string, unknown> }).responseSchema ??
-					(body.responseSchema as Record<string, unknown> | undefined)
+				? ((body.synthesize as { responseSchema?: Record<string, unknown> }).responseSchema ??
+					(body.responseSchema as Record<string, unknown> | undefined))
 				: (body.responseSchema as Record<string, unknown> | undefined);
 		const input: SearchInput = {
 			userId,
@@ -195,9 +195,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			limit: typeof body.limit === "number" ? body.limit : undefined,
 			threshold: typeof body.threshold === "number" ? body.threshold : undefined,
 			botIds: Array.isArray(body.botIds) ? (body.botIds as string[]) : undefined,
-			documentIds: Array.isArray(body.documentIds)
-				? (body.documentIds as string[])
-				: undefined,
+			documentIds: Array.isArray(body.documentIds) ? (body.documentIds as string[]) : undefined,
 			includeArchivedInsights: body.includeArchivedInsights === true,
 			authToken: typeof body.authToken === "string" ? body.authToken : undefined,
 			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
@@ -214,7 +212,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		return c.json(result);
 	});
 
-	app.post("/v1/reflect:apply", async (c) => {
+	app.post("/v1/consolidate:apply", async (c) => {
 		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
 		const userId = typeof body.userId === "string" ? body.userId : null;
 		const query = typeof body.query === "string" ? body.query : "";
@@ -225,7 +223,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		if (typeof ownerScope.userId !== "string") {
 			return c.json({ error: "ownerScope.userId is required" }, 400);
 		}
-		const input: ApplyReflectInput = {
+		const input: ApplyConsolidateInput = {
 			userId,
 			query,
 			ownerScope: { userId: ownerScope.userId },
@@ -355,10 +353,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		const roleLabel = typeof body.roleLabel === "string" ? body.roleLabel : null;
 		const fillerLabel = typeof body.fillerLabel === "string" ? body.fillerLabel : null;
 		if (!userId || !roleLabel || !fillerLabel) {
-			return c.json(
-				{ error: "userId, roleLabel, and fillerLabel are required" },
-				400,
-			);
+			return c.json({ error: "userId, roleLabel, and fillerLabel are required" }, 400);
 		}
 		if (!Array.isArray(body.roleVector) || !Array.isArray(body.fillerVector)) {
 			return c.json({ error: "roleVector[] and fillerVector[] are required" }, 400);
@@ -376,10 +371,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			});
 			return c.json(result);
 		} catch (error) {
-			return c.json(
-				{ error: (error as Error).message ?? "vsa.store failed" },
-				400,
-			);
+			return c.json({ error: (error as Error).message ?? "vsa.store failed" }, 400);
 		}
 	});
 
@@ -390,10 +382,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		const roleVector = Array.isArray(body.roleVector) ? (body.roleVector as number[]) : null;
 		const vocabulary = Array.isArray(body.vocabulary) ? body.vocabulary : null;
 		if (!userId || !roleLabel || !roleVector || !vocabulary) {
-			return c.json(
-				{ error: "userId, roleLabel, roleVector[], and vocabulary[] are required" },
-				400,
-			);
+			return c.json({ error: "userId, roleLabel, roleVector[], and vocabulary[] are required" }, 400);
 		}
 		try {
 			const result = await vsa.recall({
@@ -407,10 +396,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			});
 			return c.json(result);
 		} catch (error) {
-			return c.json(
-				{ error: (error as Error).message ?? "vsa.recall failed" },
-				400,
-			);
+			return c.json({ error: (error as Error).message ?? "vsa.recall failed" }, 400);
 		}
 	});
 
@@ -427,10 +413,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			});
 			return c.json({ facts });
 		} catch (error) {
-			return c.json(
-				{ error: (error as Error).message ?? "vsa.list failed" },
-				400,
-			);
+			return c.json({ error: (error as Error).message ?? "vsa.list failed" }, 400);
 		}
 	});
 
@@ -449,10 +432,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			});
 			return c.json(result);
 		} catch (error) {
-			return c.json(
-				{ error: (error as Error).message ?? "vsa.forget failed" },
-				400,
-			);
+			return c.json({ error: (error as Error).message ?? "vsa.forget failed" }, 400);
 		}
 	});
 

@@ -2,7 +2,7 @@
  * demo: @melandlabs/opencontext — fully-wired MCP server (stdio).
  *
  * The bare `opencontext mcp` CLI is a minimal stdio daemon — every
- * `memory.searchUnified` call returns three structured warnings:
+ * `memory.search` call returns three structured warnings:
  *
  *   - memory      → "embedQuery is not configured"
  *   - insights    → "insights_search_not_configured"
@@ -150,8 +150,8 @@ export default async function demoMcpServer() {
 				const toolNames = new Set(tools?.result?.tools.map((t) => t.name) ?? []);
 				check(
 					"tools/list exposes all four memory tools",
-					["memory.health", "memory.searchUnified", "memory.writeRawMessage", "memory.getRawMessage"].every(
-						(n) => toolNames.has(n),
+					["memory.health", "memory.search", "memory.writeRawMessage", "memory.getRawMessage"].every((n) =>
+						toolNames.has(n),
 					),
 					[...toolNames].sort().join(", "),
 				);
@@ -225,20 +225,14 @@ export default async function demoMcpServer() {
 				// fail on an unrelated downstream check.
 				const stderr = stderrLines.join("");
 				if (!stderr.includes("embedQuery wired")) {
-					skip(
-						"memory.searchUnified returns memory hits",
-						"local embedder never came up; check stderr above",
-					);
-					skip(
-						"memory.searchUnified has no embedQuery/insights/knowledge warnings",
-						"depends on the model loading",
-					);
+					skip("memory.search returns memory hits", "local embedder never came up; check stderr above");
+					skip("memory.search has no embedQuery/insights/knowledge warnings", "depends on the model loading");
 					skip("memory.getRawMessage round-trips the just-written message", "depends on the model loading");
 					skip("memory.health returns ok=true", "depends on the model loading");
 					return;
 				}
 
-				// 4. memory.searchUnified with a related query. Expect the
+				// 4. memory.search with a related query. Expect the
 				//    hiking message to rank above the pizza message, with
 				//    NO `embedQuery is not configured` warning (only the
 				//    expected insights/knowledge warnings).
@@ -247,7 +241,7 @@ export default async function demoMcpServer() {
 					id: 5,
 					method: "tools/call",
 					params: {
-						name: "memory.searchUnified",
+						name: "memory.search",
 						arguments: { userId: "u-mcp-1", query: "outdoor activities and nature", limit: 5, threshold: 0 },
 					},
 				});
@@ -279,7 +273,7 @@ export default async function demoMcpServer() {
 				}
 
 				check(
-					"memory.searchUnified returns at least one memory hit",
+					"memory.search returns at least one memory hit",
 					(searchParsed?.count ?? 0) >= 1,
 					`${searchParsed?.count ?? 0} hits`,
 				);

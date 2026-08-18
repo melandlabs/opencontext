@@ -49,7 +49,7 @@ export async function rememberFact(userId: string, content: string) {
 }
 
 export async function recallFacts(userId: string, query: string, limit = 10) {
-  return store.searchUnifiedMemory({ userId, query, limit });
+  return store.search({ userId, query, limit });
 }
 ```
 
@@ -162,7 +162,7 @@ Add the OpenContext MCP server to your coding agent's configuration:
 **Tools exposed:**
 
 - `memory.health` - Check if the server is running
-- `memory.searchUnified` - Search memory
+- `memory.search` - Search memory (set `synthesize: true` for LLM-synthesized answers)
 - `memory.writeRawMessage` - Store messages
 - `memory.getRawMessage` - Retrieve a message
 
@@ -381,7 +381,7 @@ describe("Memory Integration", () => {
       createdAt: now,
     }]);
 
-    const results = await store.searchUnifiedMemory({
+    const results = await store.search({
       userId: "test-user",
       query: "test",
       limit: 5,

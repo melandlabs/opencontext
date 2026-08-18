@@ -124,7 +124,7 @@ Use semantic search to find relevant information:
 
 ```typescript
 // Search for project-related notes
-const projectNotes = await store.searchUnifiedMemory({
+const projectNotes = await store.search({
   userId: "user-123",
   query: "What project ideas have I had?",
   limit: 10,
@@ -138,7 +138,7 @@ for (const hit of projectNotes.results) {
 }
 
 // Filter by metadata type
-const preferences = await store.searchUnifiedMemory({
+const preferences = await store.search({
   userId: "user-123",
   query: "user preferences",
   metadata: {
@@ -182,7 +182,7 @@ await messages.storeMessages([
 ]);
 
 // Query: What was I thinking before the update?
-const beforeUpdate = await store.searchUnifiedMemory({
+const beforeUpdate = await store.search({
   userId: "user-123",
   query: "knowledge graph project",
   asOf: noteTimestamp + 3600000, // 1 hour after original note
@@ -194,7 +194,7 @@ for (const hit of beforeUpdate.results) {
 }
 
 // Query: What's my current thinking?
-const currentThinking = await store.searchUnifiedMemory({
+const currentThinking = await store.search({
   userId: "user-123",
   query: "knowledge graph project",
 });
@@ -231,7 +231,7 @@ await messages.storeMessages([
 ]);
 
 // Now when searching, the latest understanding surfaces
-const latestUnderstanding = await store.searchUnifiedMemory({
+const latestUnderstanding = await store.search({
   userId: "user-123",
   query: "what are my principles for knowledge management",
 });
@@ -345,7 +345,7 @@ node --experimental-strip-types src/tutorials/use-cases/30-personal-memory-assis
 ### Searching by Category
 
 ```typescript
-const workNotes = await store.searchUnifiedMemory({
+const workNotes = await store.search({
   userId: "user-123",
   query: "work tasks",
   metadata: { category: "work" },
@@ -355,7 +355,7 @@ const workNotes = await store.searchUnifiedMemory({
 ### Finding High-Priority Items
 
 ```typescript
-const urgent = await store.searchUnifiedMemory({
+const urgent = await store.search({
   userId: "user-123",
   query: "important items",
   metadata: { importance: "high" },
@@ -367,13 +367,13 @@ const urgent = await store.searchUnifiedMemory({
 Use the `asOf` parameter to see how your thinking changed:
 
 ```typescript
-const then = await store.searchUnifiedMemory({
+const then = await store.search({
   userId: "user-123",
   query: "my approach",
   asOf: thirtyDaysAgo,
 });
 
-const now = await store.searchUnifiedMemory({
+const now = await store.search({
   userId: "user-123",
   query: "my approach",
 });

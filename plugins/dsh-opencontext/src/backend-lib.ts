@@ -2,7 +2,7 @@
  * LibBackend — in-process implementation of OpenContextBackend.
  *
  * Calls `@melandlabs/opencontext` directly:
- *   - `createUnifiedSearch().searchUnifiedMemory` for search
+ *   - `createUnifiedSearch().search` for search
  *   - `getRawMessageManager().storeMessages` / `queryMessages` /
  *     `getMessageById` / `deprecateMessages` for memory CRUD
  *
@@ -49,7 +49,7 @@ interface RawManager {
 }
 
 interface UnifiedSearchLike {
-	searchUnifiedMemory(input: {
+	search(input: {
 		userId: string;
 		query: string;
 		limit?: number;
@@ -64,19 +64,6 @@ interface UnifiedSearchLike {
 		}>;
 		warnings: Array<{ source: string; code: string; message: string }>;
 	}>;
-	searchRawMemorySemantically?(input: {
-		userId: string;
-		query: string;
-		limit?: number;
-		threshold?: number;
-	}): Promise<
-		Array<{
-			id: string;
-			content: string;
-			similarity: number;
-			metadata: Record<string, unknown>;
-		}>
-	>;
 }
 
 let _createUnifiedSearch: ((deps?: unknown) => UnifiedSearchLike) | null = null;
@@ -211,7 +198,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		if (search) {
 			try {
 				const result = await withTimeout(
-					search.searchUnifiedMemory({ userId, query, limit, threshold }),
+					search.search({ userId, query, limit, threshold }),
 					opts?.timeoutMs ?? config.timeoutMs,
 					opts?.signal,
 				);
@@ -547,7 +534,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 			const userId = resolveUser();
 			if (search) {
 				await withTimeout(
-					search.searchUnifiedMemory({
+					search.search({
 						userId,
 						query: "__health__",
 						limit: 1,

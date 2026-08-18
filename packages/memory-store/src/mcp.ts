@@ -9,7 +9,7 @@
  *                                `synthesize: true` for LLM synthesis)
  *   - memory.writeRawMessage   → { ok: boolean }
  *   - memory.getRawMessage     → RawMessage | null
- *   - memory.reflectWithPlan   → ApplyReflectOutput (agentic write-back)
+ *   - memory.consolidate       → ApplyConsolidateOutput (agentic write-back)
  *   - memory.vsaStore          → StoreVsaFactOutput
  *   - memory.vsaRecall         → VsaRecallOutput
  *   - memory.vsaList           → VsaFactSummary[]
@@ -22,17 +22,17 @@
  */
 
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
 import type { UnifiedSearchDeps } from "./config";
 import type { MemoryStoreConfig } from "./index";
-import { type ApplyReflectInput, applyReflectedPlan } from "./search/apply-reflect";
+import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
-import { createVsaRecall, type VsaRecallFacade } from "./search/vsa";
+import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
 import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
 import { createRawMessageStore } from "./storage/raw-message-store";
 import { resolveSQLiteRawMessageDbPath } from "./storage/sqlite-raw-message-store";
@@ -330,9 +330,9 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	server.registerTool(
-		"memory.reflectWithPlan",
+		"memory.consolidate",
 		{
-			title: "Reflect With Plan",
+			title: "Consolidate",
 			description:
 				"Agentic write-back: gathers evidence like `memory.search({ synthesize: true })`, builds a memory-consolidation plan, optionally asks the LLM to veto unsafe entries, then persists via the attached graph store + soft-deprecates via the storage adapter. Set `dryRun: true` to inspect the plan without writing.",
 			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
@@ -354,7 +354,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				llmPlanReviewMaxTokens?: number;
 				authToken?: string;
 			};
-			const input: ApplyReflectInput = {
+			const input: ApplyConsolidateInput = {
 				userId: a.userId,
 				query: a.query,
 				ownerScope: { userId: a.ownerScopeUserId },

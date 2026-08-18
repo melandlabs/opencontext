@@ -111,10 +111,10 @@ importers:
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.4.0
+        specifier: ^0.5.0
         version: link:../packages/ai
       '@melandlabs/ai-rag':
-        specifier: ^0.2.5
+        specifier: ^0.2.6
         version: link:../packages/ai/rag
       '@melandlabs/api':
         specifier: ^0.3.0
@@ -126,7 +126,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/config
       '@melandlabs/contracts':
-        specifier: ^0.4.0
+        specifier: ^0.5.0
         version: link:../packages/contracts
       '@melandlabs/cron':
         specifier: ^0.3.0
@@ -144,7 +144,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/i18n
       '@melandlabs/indexeddb':
-        specifier: ^0.4.0
+        specifier: ^0.5.0
         version: link:../packages/indexeddb
       '@melandlabs/insights':
         specifier: ^0.3.0
@@ -165,7 +165,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
         specifier: ^0.3.0
@@ -174,7 +174,7 @@ importers:
         specifier: ^0.3.1
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
         specifier: ^0.3.0
@@ -186,7 +186,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
         specifier: ^0.3.0
@@ -198,19 +198,19 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
-        specifier: ^0.3.1
+        specifier: ^0.3.2
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
         specifier: ^0.3.0
@@ -222,13 +222,13 @@ importers:
         specifier: ^0.3.1
         version: link:../packages/ai/mcp
       '@melandlabs/memory-consolidation':
-        specifier: ^0.4.0
+        specifier: ^0.5.0
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
         specifier: ^1.0.0
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.5.0
+        specifier: ^0.4.1
         version: link:../packages/opencontext
       '@melandlabs/rag':
         specifier: ^0.2.2
@@ -246,7 +246,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/shared
       '@melandlabs/sqlite':
-        specifier: ^0.4.0
+        specifier: ^0.5.0
         version: link:../packages/sqlite
       '@melandlabs/storage':
         specifier: ^0.3.0
@@ -261,7 +261,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/voice-whisper
       '@melandlabs/vsa':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/vsa
       better-sqlite3:
         specifier: ^11.7.0
@@ -1130,7 +1130,7 @@ importers:
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.1)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.5
+        specifier: ^0.2.6
         version: link:../ai/rag
       '@melandlabs/integrations':
         specifier: ^0.3.0
@@ -8221,6 +8221,14 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
+  '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
+
   '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -9632,7 +9640,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0)
+      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -10597,7 +10605,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0):
+  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 
@@ -11331,7 +11339,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.20.1)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

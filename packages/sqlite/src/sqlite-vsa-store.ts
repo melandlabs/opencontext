@@ -11,8 +11,8 @@
  * migration step — opening the manager is enough.
  */
 
-import Database from "better-sqlite3";
 import type { VsaFact, VsaFactStorage } from "@melandlabs/contracts";
+import Database from "better-sqlite3";
 import { bufferToFloatArray, floatArrayToBuffer } from "./raw-message-manager";
 
 type DatabaseLike = Database.Database;

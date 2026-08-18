@@ -15,7 +15,7 @@
  * Returns the same `MemoryStore` reference for chaining. When
  * `storage.compareAndSwapGraphLedger` is missing, no graph store is
  * attached and a warning is emitted via the supplied logger — callers
- * may still run `reflectWithPlan`, but it will skip `persistPlan` and
+ * may still run `consolidate`, but it will skip `persistPlan` and
  * emit a `reflect_apply_graph_store_not_configured` warning. The
  * deprecation path through `storage.deprecateRecords` continues to
  * work as long as a `MemoryStorageAdapter` is wired elsewhere.

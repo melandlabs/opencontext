@@ -3,7 +3,7 @@ import { createMemoryStore } from "@melandlabs/opencontext";
 async function main() {
 	const store = await createMemoryStore();
 
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-123",
 		query: "What are the user's preferences?",
 		limit: 10,

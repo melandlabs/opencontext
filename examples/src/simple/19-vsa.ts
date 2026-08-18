@@ -93,10 +93,7 @@ export default async function demoVsa() {
 				storedIds.length === fillersToStore.length && storedIds.every((id) => typeof id === "string"),
 				`ids: ${storedIds.join(", ")}`,
 			);
-			check(
-				"all generated factIds are unique",
-				new Set(storedIds).size === storedIds.length,
-			);
+			check("all generated factIds are unique", new Set(storedIds).size === storedIds.length);
 
 			// 3. Recall — superposed memory vector + best-match cleanup
 			//    should pick the most-bound filler from the vocabulary.
@@ -138,13 +135,15 @@ export default async function demoVsa() {
 			);
 			check(
 				"recall is idempotent (same input → same output)",
-				(await store.vsa.recall({
-					userId: "demo-user",
-					scopeTag: "demo",
-					roleLabel: role.label,
-					roleVector: role.vector,
-					vocabulary,
-				})).fillerLabel === "happy",
+				(
+					await store.vsa.recall({
+						userId: "demo-user",
+						scopeTag: "demo",
+						roleLabel: role.label,
+						roleVector: role.vector,
+						vocabulary,
+					})
+				).fillerLabel === "happy",
 			);
 
 			// 4. listFacts — read-side projection, vectors stripped.

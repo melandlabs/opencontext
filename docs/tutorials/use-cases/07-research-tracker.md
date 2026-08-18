@@ -152,7 +152,7 @@ Find related research beyond exact keywords:
 
 ```typescript
 // Search for efficiency improvements
-const efficiencyFindings = await store.searchUnifiedMemory({
+const efficiencyFindings = await store.search({
   userId: "researcher-001",
   query: "approaches to improve transformer efficiency for long sequences",
   limit: 20,
@@ -173,7 +173,7 @@ See what was understood at specific points:
 
 ```typescript
 // What did we know before the new research?
-const knowledgeBeforeSparse = await store.searchUnifiedMemory({
+const knowledgeBeforeSparse = await store.search({
   userId: "researcher-001",
   query: "transformer attention complexity limitations",
   asOf: now + 86400000 * 90, // 3 months after initial finding
@@ -185,7 +185,7 @@ for (const hit of knowledgeBeforeSparse.results) {
 }
 
 // What do we know now?
-const currentKnowledge = await store.searchUnifiedMemory({
+const currentKnowledge = await store.search({
   userId: "researcher-001",
   query: "transformer attention complexity solutions",
 });
@@ -202,7 +202,7 @@ Use metadata to find connected research:
 
 ```typescript
 async function findByTheme(theme: string) {
-  const findings = await store.searchUnifiedMemory({
+  const findings = await store.search({
     userId: "researcher-001",
     query: `research related to ${theme}`,
     metadata: {
@@ -268,7 +268,7 @@ Search by paper or author:
 
 ```typescript
 async function searchByPaper(paperId: string) {
-  const findings = await store.searchUnifiedMemory({
+  const findings = await store.search({
     userId: "researcher-001",
     query: `findings from paper ${paperId}`,
     limit: 20,
@@ -350,7 +350,7 @@ node --experimental-strip-types src/tutorials/use-cases/32-research-knowledge-tr
 ### Finding Recent Research
 
 ```typescript
-const recent = await store.searchUnifiedMemory({
+const recent = await store.search({
   query: "recent research findings",
   metadata: {
     type: "finding",
@@ -367,7 +367,7 @@ const lastMonth = recent.results.filter(
 ### Tracking Confidence Levels
 
 ```typescript
-const highConfidence = await store.searchUnifiedMemory({
+const highConfidence = await store.search({
   query: "well-established findings",
   metadata: {
     type: "finding",
@@ -379,7 +379,7 @@ const highConfidence = await store.searchUnifiedMemory({
 ### Finding Synthesis Documents
 
 ```typescript
-const syntheses = await store.searchUnifiedMemory({
+const syntheses = await store.search({
   query: "research syntheses and overviews",
   metadata: {
     type: "synthesis",
@@ -392,7 +392,7 @@ const syntheses = await store.searchUnifiedMemory({
 ```typescript
 // How has our understanding of a theme evolved?
 async function themeEvolution(theme: string) {
-  const allFindings = await store.searchUnifiedMemory({
+  const allFindings = await store.search({
     query: `research on ${theme}`,
     limit: 100,
   });

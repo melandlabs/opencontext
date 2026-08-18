@@ -71,82 +71,21 @@ function parseCliArgs(): CliArgs {
 	};
 }
 
-function printHelp(): void {
-	console.log(`LongMemEval Benchmark CLI
-
-Usage:
-  pnpm benchmark -- --dataset <path.json> [options]
-
-Required:
-  -d, --dataset <path>   Path to LongMemEval JSON dataset
-
-Filter:
-  -s, --samples <csv>    Comma-separated question IDs to run
-  -q, --quick            Limit to first 5 entries (smoke test)
-
-Mode:
-      --resume / --no-resume   Reuse cached results (default: resume)
-
-API:
-  -p, --port <n>         OpenContext memory daemon port (default: 7421,
-                         env: OPENCONTEXT_PORT / OPENCONTEXT_URL)
-
-Output:
-  -o, --output <path>    Write results JSON to this path
-
-Examples:
-  # Quick mode (first 5 entries)
-  pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --quick
-
-  # Run with specific question IDs
-  pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --samples qid1,qid2
-
-  # Full run with results file
-  pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --output results.json
-`);
-}
+function printHelp(): void {}
 
 async function printEvaluationSummary(resultsByType: Record<string, Prediction[]>): Promise<void> {
-	console.log("=".repeat(80));
-	console.log("LongMemEval Evaluation Results Summary");
-	console.log("=".repeat(80));
-
 	// Calculate overall metrics
 	const allResults: Prediction[] = [];
 	for (const [, results] of Object.entries(resultsByType)) {
 		allResults.push(...results);
 	}
 
-	const overallMetrics = calculateCategoryMetrics(allResults);
-
-	console.log("\n📊 Overall Results:");
-	console.log(`  Total Questions: ${overallMetrics.count}`);
-	console.log(
-		`  LLM Judge Accuracy: ${overallMetrics.llm_judge_accuracy.toFixed(4)} (${overallMetrics.llm_judge_correct}/${overallMetrics.count})`,
-	);
-	console.log(`  F1 Score (Mean): ${overallMetrics.f1_mean.toFixed(4)}`);
-	console.log(`  BLEU-1 (Mean): ${overallMetrics.bleu1_mean.toFixed(4)}`);
-	console.log(`  BLEU-4 (Mean): ${overallMetrics.bleu4_mean.toFixed(4)}`);
-
-	console.log(`\n${"=".repeat(80)}`);
-	console.log("Results by Question Type");
-	console.log("=".repeat(80));
+	const _overallMetrics = calculateCategoryMetrics(allResults);
 
 	for (const [qtype, results] of Object.entries(resultsByType).sort()) {
-		const metrics = calculateCategoryMetrics(results);
-		const typeName = QUESTION_TYPE_NAMES[qtype] || qtype;
-
-		console.log(`\n${qtype} (${typeName}):`);
-		console.log(`  Count: ${metrics.count}`);
-		console.log(
-			`  LLM Judge Accuracy: ${metrics.llm_judge_accuracy.toFixed(4)} (${metrics.llm_judge_correct}/${metrics.count})`,
-		);
-		console.log(`  F1 Score: ${metrics.f1_mean.toFixed(4)}`);
-		console.log(`  BLEU-1: ${metrics.bleu1_mean.toFixed(4)}`);
-		console.log(`  BLEU-4: ${metrics.bleu4_mean.toFixed(4)}`);
+		const _metrics = calculateCategoryMetrics(results);
+		const _typeName = QUESTION_TYPE_NAMES[qtype] || qtype;
 	}
-
-	console.log(`\n${"=".repeat(80)}`);
 }
 
 async function main() {
@@ -156,29 +95,21 @@ async function main() {
 	const baseUrl = args.port ? `http://127.0.0.1:${args.port}` : getOpencontextBaseUrl();
 	try {
 		await checkOpencontextHealth(baseUrl);
-		console.log(`🔌 OpenContext memory daemon: ${baseUrl}`);
-	} catch (error) {
-		console.error(`${error}`);
+	} catch (_error) {
 		process.exit(1);
 	}
-
-	console.log(`\n📁 Loading dataset from: ${args.dataset}`);
 	const entries = await loadLongMemEvalDatasetFromJson(args.dataset);
 
 	// Filter entries if sample_ids provided
 	let filteredEntries = entries;
 	if (args.samples && args.samples.length > 0) {
 		filteredEntries = entries.filter((e) => args.samples?.includes(e.question_id));
-		console.log(`🔍 Filtered to ${filteredEntries.length} entries by ID`);
 	}
 
 	// Apply quick mode (first 5 entries only)
 	if (args.quick) {
 		filteredEntries = filteredEntries.slice(0, 5);
-		console.log("⚡ Quick mode: limiting to first 5 entries");
 	}
-
-	console.log(`📊 Loaded ${filteredEntries.length} LongMemEval entries for evaluation\n`);
 
 	// Run evaluation
 	const allPredictionsByType: Record<string, Prediction[]> = {};
@@ -206,11 +137,8 @@ async function main() {
 				correct++;
 			}
 			total++;
-
-			console.log(`  ${entry.question_id}: ${pred.correct ? "✓" : "✗"} (${pred.question_type})`);
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			console.error(`Error evaluating entry ${entry.question_id}: ${errorMessage}`);
 
 			// Record failed prediction
 			const failedPred: Prediction = {
@@ -278,7 +206,6 @@ async function main() {
 	// Save output if requested
 	if (args.output) {
 		await writeFile(args.output, JSON.stringify(output, null, 2), "utf-8");
-		console.log(`\n💾 Results saved to: ${args.output}`);
 	}
 
 	return output;

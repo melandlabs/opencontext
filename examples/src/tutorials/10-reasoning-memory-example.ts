@@ -1,7 +1,7 @@
 /**
  * Reasoning-backed memory retrieval.
  *
- * This example shows how to enhance `searchUnifiedMemory` with an LLM:
+ * This example shows how to enhance `store.search()` with an LLM:
  *
  *   - "rewrite" rephrases the assistant's question into a first-person
  *     memory-check question, which often matches the register of chat logs.
@@ -86,7 +86,7 @@ async function main() {
 
 	// Rewrite strategy: one LLM call to rephrase, then semantic search.
 	console.log("\n--- rewrite strategy ---");
-	const rewriteResults = await store.searchUnifiedMemory({
+	const rewriteResults = await store.search({
 		userId: "user-42",
 		query: "What does the user enjoy doing on weekends?",
 		reasoningStrategy: "rewrite",
@@ -101,7 +101,7 @@ async function main() {
 
 	// Iterative strategy: planner searches multiple times under LLM control.
 	console.log("\n--- iterative strategy ---");
-	const iterativeResults = await store.searchUnifiedMemory({
+	const iterativeResults = await store.search({
 		userId: "user-42",
 		query: "What outdoor activities has the user mentioned?",
 		reasoningStrategy: "iterative",
@@ -116,7 +116,7 @@ async function main() {
 
 	// Date-range filtering: restrict the planner to a calendar window.
 	console.log("\n--- iterative strategy with date range ---");
-	const dateRangeResults = await store.searchUnifiedMemory({
+	const dateRangeResults = await store.search({
 		userId: "user-42",
 		query: "What outdoor activities has the user mentioned?",
 		reasoningStrategy: "iterative",

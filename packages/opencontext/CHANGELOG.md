@@ -1,5 +1,42 @@
 # @melandlabs/opencontext
 
+## 0.4.1
+
+### Minor Changes
+
+- `store.search()` is now the single read entry point. The previous
+  `searchUnifiedMemory` / `searchRawMemorySemantically` / `reflect` methods
+  remain available as `@deprecated` aliases forwarding to `search()`. The
+  `reflect` LLM synthesis is now opt-in via
+  `search({ synthesize: true | { responseSchema } })`.
+
+  `reflectWithPlan()` is unchanged — its write-side surface (graph +
+  storage) is intentionally separate from read.
+
+  **Migration**
+
+  - `store.searchUnifiedMemory(input)` → `store.search(input)`
+  - `store.reflect(input)` → `store.search({ ...input, synthesize: true })`
+  - `store.searchRawMemorySemantically(input)` →
+    `store.search({ ...input, sources: ["memory"] }).results`
+
+  **MCP / HTTP**
+
+  - `memory.searchUnified` + `memory.reflect` → single `memory.search`
+    tool. **No deprecation aliases** on the wire surface.
+  - `POST /v1/search` + `POST /v1/reflect` → single `POST /v1/search`
+    (set `synthesize: true` for LLM synthesis). **No deprecation alias.**
+
+  **SDK public methods**
+
+  - `store.searchUnifiedMemory` / `store.searchRawMemorySemantically` /
+    `store.reflect` remain as `@deprecated` thin wrappers forwarding to
+    `store.search`. Removal planned for the next minor.
+
+### Patch Changes
+
+- @melandlabs/ai-rag@0.2.5
+
 ## 0.4.0
 
 ### Minor Changes

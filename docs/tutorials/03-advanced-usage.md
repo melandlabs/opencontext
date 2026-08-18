@@ -39,7 +39,7 @@ async function main() {
     },
   });
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What did we decide about the architecture?",
     sources: ["memory", "insights", "knowledge"],
@@ -74,20 +74,20 @@ There are two flavours, sharing the same evidence pipeline:
 
 | Method | Writes? | Purpose |
 |---|---|---|
-| `store.reflect(input)` | **No** | Read-only LLM synthesis over unified evidence |
-| `store.reflectWithPlan(input)` | **Yes** | Agentic gather → plan → vet → persist loop |
+| `store.search({ ...input, synthesize: true })` | **No** | Read-only LLM synthesis over unified evidence |
+| `store.consolidate(input)` | **Yes** | Agentic gather → plan → vet → persist loop |
 
 Both methods are also exposed over HTTP and MCP:
 
 | Transport | Read-only | Write-back |
 |---|---|---|
-| SDK | `store.reflect(input)` | `store.reflectWithPlan(input)` |
-| HTTP | `POST /v1/reflect` | `POST /v1/reflect:apply` |
-| MCP | `memory.reflect` | `memory.reflectWithPlan` |
+| SDK | `store.search({ ...input, synthesize: true })` | `store.consolidate(input)` |
+| HTTP | `POST /v1/search` (set `synthesize: true`) | `POST /v1/consolidate:apply` |
+| MCP | `memory.search` (set `synthesize: true`) | `memory.consolidate` |
 
-### Read-only `reflect()`
+### Read-only `search({ synthesize: true })`
 
-`reflect()` fans a single query out across **four tiers**:
+`store.search({ ...input, synthesize: true })` fans a single query out across **four tiers**:
 
 1. **Raw messages** — `searchRawMessagesAnn` (semantic) + `searchRawMessagesLexical` (BM25)
 2. **Summaries** — `searchSummaries` (L1/L2/L3)
@@ -111,12 +111,13 @@ const store = await createMemoryStore({
 	},
 });
 
-const out = await store.reflect({
+const out = await store.search({
 	userId: "u-42",
 	query: "what does the user like to do on weekends?",
 	tiers: ["summary", "raw", "insight", "knowledge"],
 	limit: 20,
 	threshold: 0.7,
+	synthesize: true,
 });
 
 console.log(out.answer); // LLM synthesis, bracket-cites [1], [2], …
@@ -131,9 +132,9 @@ console.log(out.warnings); // structured warnings, never throws
 - Tier provider absent → the tier is skipped silently.
 - Empty `query` → short-circuits with `{ evidence: [], warnings: [] }`.
 
-### Agentic write-back `reflectWithPlan()`
+### Agentic write-back `consolidate()`
 
-`reflectWithPlan()` is the additive write counterpart. The loop is:
+`consolidate()` is the additive write counterpart. The loop is:
 
 ```
     ┌──────────────┐    ┌─────────────────┐    ┌────────────┐
@@ -146,7 +147,7 @@ console.log(out.warnings); // structured warnings, never throws
                             └─────────────────┘
 ```
 
-1. **Gather** — same evidence pipeline as `reflect()`.
+1. **Gather** — same evidence pipeline as `search({ synthesize: true })`.
 2. **Build plan** — `buildMemoryConsolidationPlan(records, thresholds)` produces a `MemoryConsolidationPlan` with `preserve` / `decay` / `deprecate` entries. Rule-based; no LLM invention.
 3. **Vet (optional)** — when `reasoning.complete` is configured, the LLM is asked to approve or veto each entry. It may only mark entries as `approve` / `veto` with a reason; it cannot add new operations.
 4. **Persist** — `graphStore.persistPlan(translate(plan))` writes the graph updates; `storage.deprecateRecords(...)` soft-deprecates the records replaced by `deprecate` entries.
@@ -161,7 +162,7 @@ attachMemoryGraphStore(store, {
 });
 
 // 2. Inspect the plan first (dry-run).
-const dry = await store.reflectWithPlan({
+const dry = await store.consolidate({
 	userId: "u-42",
 	query: "summarise the last week",
 	ownerScope: { userId: "u-42" },
@@ -172,7 +173,7 @@ console.log(dry.plan); // MemoryConsolidationPlan
 console.log(dry.applied); // false
 
 // 3. Apply for real.
-const result = await store.reflectWithPlan({
+const result = await store.consolidate({
 	userId: "u-42",
 	query: "summarise the last week",
 	ownerScope: { userId: "u-42" },
@@ -201,13 +202,13 @@ Each failure mode emits a typed warning and falls back deterministically:
 The `plan` field accepts a pre-built `MemoryConsolidationPlan`. Skips the plan-builder step so the same input can be replayed against different LLM configurations:
 
 ```ts
-const dry1 = await store.reflectWithPlan({
+const dry1 = await store.consolidate({
 	/* … */
 	dryRun: true,
 });
 // dry1.plan is a MemoryConsolidationPlan
 
-const replayed = await store.reflectWithPlan({
+const replayed = await store.consolidate({
 	/* same inputs */
 	plan: dry1.plan,
 });
@@ -230,7 +231,7 @@ type FactType = "world" | "experience" | "mental_model";
 The classifier runs at LLM extraction time; the result rides along the `RawMessage.factType?` field and surfaces on `MemoryRecord.factType`. The read-side filter `MemorySearchQuery.factTypes` lets a caller narrow a search to one or more kinds:
 
 ```ts
-await store.searchUnifiedMemory({
+await store.search({
 	userId: "u-42",
 	query: "what did I do last weekend?",
 	sources: ["memory"], // restrict to memory source — insights/knowledge don't carry factType
@@ -285,7 +286,7 @@ async function main() {
   });
 
   // ...store messages, then search with a reasoning strategy...
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-42",
     query: "What does the user enjoy doing on weekends?",
     reasoningStrategy: "rewrite", // or "iterative"
@@ -354,10 +355,10 @@ const store = await createMemoryStore({
 });
 
 // Inherits "iterative" from the store config.
-const results = await store.searchUnifiedMemory({ userId: "u-1", query: "..." });
+const results = await store.search({ userId: "u-1", query: "..." });
 
 // Per-call value still wins.
-const adHoc = await store.searchUnifiedMemory({
+const adHoc = await store.search({
   userId: "u-1",
   query: "...",
   reasoningStrategy: "rewrite",
@@ -374,7 +375,7 @@ In addition to the single-point `asOf` snapshot, you can pass an inclusive `date
 > Note: `dateFrom` / `dateTo` only filter the `memory` source. `insights` and `knowledge` results are not affected by this range, and memory candidates without a recognised timestamp are retained.
 
 ```typescript
-const results = await store.searchUnifiedMemory({
+const results = await store.search({
   userId: "user-42",
   query: "What outdoor activities did I mention last summer?",
   reasoningStrategy: "iterative",
@@ -511,7 +512,7 @@ async function main() {
   // What did we believe about the project last month?
   const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "project status and timeline",
     asOf: lastMonth,  // Query as of this ISO-8601 timestamp
@@ -1153,7 +1154,7 @@ async function trackedRemember(userId: string, content: string) {
 async function trackedRecall(userId: string, query: string) {
   const store = await createMemoryStore();
   metrics.memoryRecalls++;
-  const results = await store.searchUnifiedMemory({ userId, query, limit: 5 });
+  const results = await store.search({ userId, query, limit: 5 });
   await store.raw.close();
   return results;
 }

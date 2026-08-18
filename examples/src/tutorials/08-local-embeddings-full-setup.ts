@@ -14,7 +14,7 @@ async function main() {
 		},
 	});
 
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-123",
 		query: "What are my preferences?",
 		limit: 5,

@@ -4,7 +4,7 @@
  *
  * Both `cli-http.ts` (the HTTP daemon) and `cli-mcp.ts` (the MCP daemon)
  * take the same `--embedding-provider` / `--*-backend` flag surface —
- * the MCP server exposes the same `searchUnifiedMemory` tool the HTTP
+ * the MCP server exposes the same `memory.search` tool the HTTP
  * `/v1/search` route does, so they must speak the same config. This
  * module owns that surface so the two bins stay in lock-step.
  *

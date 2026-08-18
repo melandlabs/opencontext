@@ -90,7 +90,7 @@ describe("createVsaRecall — storeFact", () => {
 				userId: "u1",
 				roleLabel: "color",
 				fillerLabel: "blue",
-				roleVector: [NaN, 0.2],
+				roleVector: [Number.NaN, 0.2],
 				fillerVector: [0.1, 0.2],
 				dim: 2,
 			}),
@@ -197,7 +197,7 @@ describe("createVsaRecall — recall", () => {
 		expect(result.allScores).toHaveLength(4);
 		// Sorted descending.
 		for (let i = 1; i < result.allScores.length; i += 1) {
-			expect(result.allScores[i - 1]!.score).toBeGreaterThanOrEqual(result.allScores[i]!.score);
+			expect(result.allScores[i - 1]?.score).toBeGreaterThanOrEqual(result.allScores[i]?.score);
 		}
 	});
 
@@ -368,7 +368,7 @@ describe("createVsaRecall — listFacts", () => {
 			fillerVector: roleVec,
 			dim: 4,
 		});
-		await vsa.forget({ userId: "u1", factIds: [(storage.facts[1]?.factId) ?? ""], reason: "test" });
+		await vsa.forget({ userId: "u1", factIds: [storage.facts[1]?.factId ?? ""], reason: "test" });
 
 		const active = await vsa.listFacts({ userId: "u1" });
 		expect(active).toHaveLength(1);

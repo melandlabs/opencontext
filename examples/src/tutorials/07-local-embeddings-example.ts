@@ -39,7 +39,7 @@ async function main() {
 	]);
 
 	// Semantic search
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-42",
 		query: "What theme does the user like?",
 		limit: 5,

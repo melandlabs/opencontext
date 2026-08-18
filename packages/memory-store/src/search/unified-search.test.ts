@@ -84,7 +84,7 @@ afterEach(() => {
 describe("createUnifiedSearch", () => {
 	it("uses similarity merge by default and dedupes by (type,id)", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({ userId: "u1", query: "anything here" });
+		const out = await search.search({ userId: "u1", query: "anything here" });
 		expect(out.warnings).toEqual([]);
 		// m2 appears in both semantic and lexical; similarity wins.
 		const ids = out.results.map((r) => `${r.type}:${r.id}`);
@@ -97,7 +97,7 @@ describe("createUnifiedSearch", () => {
 
 	it("uses RRF when mergeStrategy='rrf' and surfaces lexical hits", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			mergeStrategy: "rrf",
@@ -110,7 +110,7 @@ describe("createUnifiedSearch", () => {
 	it("emits a warning when rrf is requested but lexical is not configured", async () => {
 		const { searchRawMessagesLexical: _lexical, ...depsWithoutLexical } = baseDeps;
 		const search = createUnifiedSearch(depsWithoutLexical);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			mergeStrategy: "rrf",
@@ -120,14 +120,14 @@ describe("createUnifiedSearch", () => {
 
 	it("uses rrf merge by default, and falls back to similarity when explicitly requested", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({ userId: "u1", query: "anything here" });
+		const out = await search.search({ userId: "u1", query: "anything here" });
 		// RRF is now the default merge strategy (see the memory-store changeset),
 		// so every fused hit carries an rrfScore.
 		expect(out.results.every((r) => typeof r.metadata.rrfScore === "number")).toBe(true);
 
 		// Explicit similarity opt-out — equivalent to wiring
 		// `deps.reasoning.defaultMergeStrategy = "similarity"`.
-		const similarityOut = await search.searchUnifiedMemory({
+		const similarityOut = await search.search({
 			userId: "u1",
 			query: "anything here",
 			mergeStrategy: "similarity",
@@ -144,7 +144,7 @@ describe("createUnifiedSearch", () => {
 			embedQuery,
 			reasoning: { queryRewriter: rewriter },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what about alpha?",
 			reasoningStrategy: "rewrite",
@@ -158,7 +158,7 @@ describe("createUnifiedSearch", () => {
 
 	it("falls back to default search when reasoningStrategy='rewrite' is requested but no rewriter is configured", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			reasoningStrategy: "rewrite",
@@ -188,7 +188,7 @@ describe("createUnifiedSearch", () => {
 			reasoning: { iterativePlanner: planner },
 		};
 		const search = createUnifiedSearch(searchDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what is my cat's name?",
 			reasoningStrategy: "iterative",
@@ -225,7 +225,7 @@ describe("createUnifiedSearch", () => {
 			reasoning: { iterativePlanner: planner },
 		};
 		const search = createUnifiedSearch(searchDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what is my cat's name?",
 			reasoningStrategy: "iterative",
@@ -239,7 +239,7 @@ describe("createUnifiedSearch", () => {
 
 	it("filters memory results by dateFrom/dateTo", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			sources: ["memory"],
@@ -284,7 +284,7 @@ describe("createUnifiedSearch", () => {
 			],
 		};
 		const search = createUnifiedSearch(searchDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			sources: ["memory"],
@@ -307,7 +307,7 @@ describe("createUnifiedSearch", () => {
 			embedQuery: async () => new Array(4).fill(0.1),
 			reasoning: { queryRewriter: rewriter },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what about alpha?",
 			reasoningStrategy: "rewrite",
@@ -330,7 +330,7 @@ describe("createUnifiedSearch", () => {
 			...baseDeps,
 			reasoning: { iterativePlanner: planner },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			reasoningStrategy: "iterative",
@@ -350,7 +350,7 @@ describe("createUnifiedSearch", () => {
 
 	it("reports degraded when reasoningStrategy='iterative' has no planner configured", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			reasoningStrategy: "iterative",
@@ -368,7 +368,7 @@ describe("createUnifiedSearch", () => {
 			...baseDeps,
 			reasoning: { iterativePlanner: planner },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			reasoningStrategy: "iterative",
@@ -395,7 +395,7 @@ describe("createUnifiedSearch", () => {
 			searchRawMessagesLexical: async () => candidates,
 			reasoning: { iterativePlanner: planner },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what is my cat's name?",
 			reasoningStrategy: "iterative",
@@ -413,7 +413,7 @@ describe("createUnifiedSearch", () => {
 			embedQuery: async () => new Array(4).fill(0.1),
 			reasoning: { queryRewriter: rewriter },
 		});
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "what about alpha?",
 			reasoningStrategy: "rewrite",
@@ -425,7 +425,7 @@ describe("createUnifiedSearch", () => {
 
 	it("emits reasoning.dateRange even when strategy is 'none'", async () => {
 		const search = createUnifiedSearch(baseDeps);
-		const out = await search.searchUnifiedMemory({
+		const out = await search.search({
 			userId: "u1",
 			query: "anything here",
 			sources: ["memory"],

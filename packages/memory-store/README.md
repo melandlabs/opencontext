@@ -35,7 +35,7 @@ const store = await createMemoryStore({
 	},
 });
 
-const hits = await store.searchUnifiedMemory({ userId, query });
+const hits = await store.search({ userId, query });
 ```
 
 ## Capabilities
@@ -45,11 +45,11 @@ endpoints:
 
 | Capability | SDK method | HTTP | MCP tool |
 |---|---|---|---|
-| Read-only search across all sources | `store.searchUnifiedMemory(input)` | `POST /v1/search` | `memory.searchUnified` |
+| Read-only search across all sources | `store.search(input)` | `POST /v1/search` | `memory.search` |
 | Read a single `RawMessage` | `manager.getMessageById(id)` | `GET /v1/raw-messages/:id?userId=…` | `memory.getRawMessage` |
 | Persist a `RawMessage` | `manager.storeMessages([…])` | `POST /v1/raw-messages` | `memory.writeRawMessage` |
-| Read-only LLM synthesis over evidence | `store.reflect(input)` | `POST /v1/reflect` | `memory.reflect` |
-| **Agentic write-back** (gather → plan → vet → persist) | `store.reflectWithPlan(input)` | `POST /v1/reflect:apply` | `memory.reflectWithPlan` |
+| Read-only LLM synthesis over evidence | `store.search({ ...input, synthesize: true })` | `POST /v1/search` (set `synthesize: true`) | `memory.search` (set `synthesize: true`) |
+| **Agentic write-back** (gather → plan → vet → persist) | `store.consolidate(input)` | `POST /v1/consolidate:apply` | `memory.consolidate` |
 | Health probe | — | `GET /health` | `memory.health` |
 
 ## Entry points
@@ -85,7 +85,7 @@ opencontext-memory-mcp
 | `unified.searchSummaries`                              | optional                        | L1/L2/L3 summary recall (used by `reflect`)               |
 | `unified.peerScopeCheck`                              | optional                        | host check that gates `peerFilter` narrowing              |
 | `unified.reranker`                                    | optional                        | cross-encoder / learned ranker applied after merge        |
-| `graphStore`                                          | optional                        | `MemoryGraphStoreWithOperationHistory`; powers `reflectWithPlan` |
+| `graphStore`                                          | optional                        | `MemoryGraphStoreWithOperationHistory`; powers `consolidate` |
 | `storage`                                             | optional                        | `MemoryStorageAdapter` for `deprecateRecords` writes      |
 | `logger`                                              | optional                        | `console`-shaped logger; defaults to `console`            |
 
@@ -260,7 +260,7 @@ await manager.storeMessages([
 ]);
 
 // Read side — filter by factType.
-const hits = await store.searchUnifiedMemory({
+const hits = await store.search({
 	userId: "u-42",
 	query: "what did I do recently?",
 	factTypes: ["experience"],
@@ -273,19 +273,21 @@ Schema migration: IndexedDB `DB_VERSION` 3 → 4 (additive `factType` index on
 `fact_type` column + partial index). Both migrations are idempotent and
 tolerate v3 rows whose `factType` is undefined.
 
-### 6. Read-only `reflect()` — LLM synthesis
+### 6. Read-only `search({ synthesize: true })` — LLM synthesis
 
-`store.reflect()` is the read-only sibling of the write-back loop. It
-fans out across raw messages, summaries, insights, and knowledge chunks,
-then asks the LLM to produce a single synthesised answer. No writes.
+`store.search({ ...input, synthesize: true })` is the read-only sibling of
+the write-back loop. It fans out across raw messages, summaries,
+insights, and knowledge chunks, then asks the LLM to produce a single
+synthesised answer. No writes.
 
 ```ts
-const out = await store.reflect({
+const out = await store.search({
 	userId: "u-42",
 	query: "what does the user like to do on weekends?",
 	tiers: ["summary", "raw", "insight", "knowledge"],
 	limit: 20,
 	threshold: 0.7,
+	synthesize: true,
 });
 
 console.log(out.answer);          // LLM synthesis
@@ -298,9 +300,9 @@ the search-rewrite and iterative-recall strategies. When no LLM is wired,
 `reflect()` returns the gathered evidence with a
 `reflect_llm_not_configured` warning instead of throwing.
 
-### 7. Agentic write-back `reflectWithPlan()` — gather → plan → vet → persist
+### 7. Agentic write-back `consolidate()` — gather → plan → vet → persist
 
-`store.reflectWithPlan()` is the agentic counterpart. It runs the same
+`store.consolidate()` is the agentic counterpart. It runs the same
 evidence pipeline as `reflect()`, then:
 
 1. Builds a `MemoryConsolidationPlan` from the evidence (rule-based; the
@@ -321,7 +323,7 @@ attachMemoryGraphStore(store, {
 });
 
 // 2. Inspect the plan first (dry-run).
-const dry = await store.reflectWithPlan({
+const dry = await store.consolidate({
 	userId: "u-42",
 	query: "summarise the last week",
 	ownerScope: { userId: "u-42" },
@@ -332,7 +334,7 @@ console.log(dry.plan);             // MemoryConsolidationPlan
 console.log(dry.applied);          // false
 
 // 3. Apply for real.
-const result = await store.reflectWithPlan({
+const result = await store.consolidate({
 	userId: "u-42",
 	query: "summarise the last week",
 	ownerScope: { userId: "u-42" },
@@ -399,9 +401,8 @@ Endpoints:
 | Method + path                          | Body                                                                                                |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `GET  /health`                         | —                                                                                                   |
-| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds?, factTypes? }`                 |
-| `POST /v1/reflect`                     | `{ userId, query, tiers?, limit?, threshold?, botIds?, dateFrom?, dateTo? }`                        |
-| `POST /v1/reflect:apply`               | `{ userId, query, ownerScope, tiers?, limit?, threshold?, dryRun?, expectedVersion?, llmPlanReview? }` |
+| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds?, factTypes?, synthesize? }`    |
+| `POST /v1/consolidate:apply`           | `{ userId, query, ownerScope, tiers?, limit?, threshold?, dryRun?, expectedVersion?, llmPlanReview? }` |
 | `POST /v1/raw-messages`                | `{ userId, messages: RawMessage[] }`                                                                |
 | `GET  /v1/raw-messages/:id?userId=...` | —                                                                                                   |
 
@@ -426,11 +427,10 @@ Tools exposed over stdio:
 | Tool                     | Required args                                                                                                                       |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `memory.health`          | —                                                                                                                                   |
-| `memory.searchUnified`   | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds`, `factTypes`                                   |
+| `memory.search`          | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds`, `factTypes`, `synthesize`, `tiers`           |
 | `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, factType?, peer?, ... }`                                                    |
 | `memory.getRawMessage`   | `userId`, `messageId`                                                                                                               |
-| `memory.reflect`         | `userId`, `query`, optional `tiers`, `limit`, `threshold`, `botIds`, `dateFrom`, `dateTo`                                           |
-| `memory.reflectWithPlan` | `userId`, `query`, `ownerScope`, optional `tiers`, `dryRun`, `expectedVersion`, `llmPlanReview`, `plan`                             |
+| `memory.consolidate`     | `userId`, `query`, `ownerScope`, optional `tiers`, `dryRun`, `expectedVersion`, `llmPlanReview`, `plan`                             |
 
 #### Claude Desktop (`claude_desktop_config.json`)
 
@@ -513,8 +513,8 @@ editor. Tool calls appear in the chat like any other MCP tool.
   silent inflation. `threshold` is clamped to `[-1, 1]`.
 - Chroma failures fall back to `unified.searchRawMessagesAnn` when both
   are configured; otherwise the memory source returns empty.
-- `reflect()` and `reflectWithPlan()` reuse the same evidence pipeline;
-  `reflect()` is read-only, `reflectWithPlan()` additionally persists
+- `reflect()` and `consolidate()` reuse the same evidence pipeline;
+  `reflect()` is read-only, `consolidate()` additionally persists
   via the graph store + storage adapter.
 - `applyReflectedConsolidationPlan` is idempotent — `persistPlan`
   deduplicates on `operationId` and `deprecateRecords` no-ops on
@@ -526,4 +526,4 @@ editor. Tool calls appear in the chat like any other MCP tool.
   model, lifecycle, and transport surfaces that the memory primitives
   plug into.
 - [`docs/tutorials/03-advanced-usage.md`](../../docs/tutorials/03-advanced-usage.md#reflection-and-write-back)
-  — end-to-end walkthrough of `reflect()` + `reflectWithPlan()`.
+  — end-to-end walkthrough of `reflect()` + `consolidate()`.

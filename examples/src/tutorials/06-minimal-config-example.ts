@@ -8,7 +8,7 @@ async function main() {
 	console.log("Backend:", store.raw.getBackend());
 
 	// Search works out of the box with lexical fallback (no API keys).
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-123",
 		query: "hello world",
 		limit: 5,

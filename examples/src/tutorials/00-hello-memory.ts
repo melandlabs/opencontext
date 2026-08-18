@@ -25,7 +25,7 @@ async function main() {
 	console.log("✅ Memory stored!");
 
 	// Search for what we just stored
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-42",
 		query: "What does the user prefer?",
 		limit: 5,

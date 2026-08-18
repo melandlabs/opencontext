@@ -88,7 +88,7 @@ describe("Memory Store End-to-End", () => {
 		]);
 
 		// Search with a semantically similar query
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId,
 			query: "What theme does the user like?",
 			limit: 5,
@@ -134,7 +134,7 @@ describe("Memory Store End-to-End", () => {
 		]);
 
 		// Search with keyword match
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId,
 			query: "pizza cheese",
 			limit: 5,
@@ -160,7 +160,7 @@ describe("Memory Store End-to-End", () => {
 			dbPath: join(scratchDir, "empty-test.db"),
 		});
 
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId: "non-existent-user-12345",
 			query: "anything",
 			limit: 5,

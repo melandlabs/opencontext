@@ -146,6 +146,98 @@ export interface UnifiedMemorySearchOutput {
 	reasoning?: UnifiedMemoryReasoningInfo;
 }
 
+// ─── Unified `store.search()` public surface ──────────────────────────────────
+//
+// The read-side search input/output plumbing is preserved as the
+// underlying contract for cross-source retrieval, date filtering, RRF
+// merge, and reasoning strategies. The top-level `store.search(input)`
+// verb is built on top of it.
+// compatibility with internal callers; the new types are additive.
+
+/**
+ * Cross-source retrieval surface for the unified search. Mirrors
+ * `UnifiedMemorySearchSource` but is exposed under a more discoverable
+ * name.
+ */
+export type SearchSource = UnifiedMemorySearchSource;
+
+/**
+ * Per-tier evidence bucket consulted by `reflect`-style synthesis.
+ * Includes the `summary` tier that the read-only sources do not surface.
+ */
+export type SearchTier = "summary" | "raw" | "insight" | "knowledge";
+
+export interface SearchInput {
+	userId: string;
+	query: string;
+
+	/** Cross-source retrieval surface (defaults to all three sources). */
+	sources?: ReadonlyArray<SearchSource>;
+
+	/**
+	 * Per-tier subset — when omitted, defaults to all four tiers.
+	 * Forwarded to the gather step so the read pipeline can scope the
+	 * evidence. Most callers pass nothing; `synthesize` callers can
+	 * narrow to `["raw"]` or `["summary", "raw"]` for cheaper synthesis.
+	 */
+	tiers?: ReadonlyArray<SearchTier>;
+
+	/**
+	 * Opt-in LLM synthesis. When `true`, runs `reasoning.complete` after
+	 * gathering evidence and returns `answer` in the output. When
+	 * omitted / `false`, no LLM call is made (matches today's
+	 * `searchUnifiedMemory`). The `responseSchema` form lets the LLM
+	 * return JSON; the SDK extracts `{ answer: string }` from the
+	 * payload and surfaces the rest via warnings.
+	 */
+	synthesize?: boolean | { responseSchema?: Record<string, unknown> };
+
+	limit?: number;
+	threshold?: number;
+	botIds?: string[];
+	documentIds?: string[];
+	dateFrom?: string;
+	dateTo?: string;
+	asOf?: string;
+	peerFilter?: ReadonlyArray<Peer>;
+	authToken?: string;
+	factTypes?: FactType[];
+	mergeStrategy?: UnifiedMemoryMergeStrategy;
+	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
+	/**
+	 * Backward-compat pass-through for callers that previously passed
+	 * `responseSchema` at the top level. When set, it overrides
+	 * `synthesize.responseSchema`.
+	 */
+	responseSchema?: Record<string, unknown>;
+	/**
+	 * Backward-compat pass-through for callers that previously passed
+	 * `includeArchivedInsights` to the read-only search.
+	 */
+	includeArchivedInsights?: boolean;
+}
+
+export interface SearchEvidence {
+	id: string;
+	source: SearchSource | SearchTier;
+	snippet: string;
+	score: number;
+	timestamp?: number;
+}
+
+export interface SearchOutput {
+	query: string;
+	sources: ReadonlyArray<SearchSource>;
+	results: UnifiedMemorySearchResult[];
+	/** Same hits as `results`, with the source labelled for synthesis callers. */
+	evidence: SearchEvidence[];
+	count: number;
+	warnings: UnifiedMemorySearchWarning[];
+	reasoning?: UnifiedMemoryReasoningInfo;
+	/** Only present when `synthesize` was truthy. */
+	answer?: string;
+}
+
 const DEFAULT_LIMIT = 10;
 const DEFAULT_THRESHOLD = 0.7;
 const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge"];

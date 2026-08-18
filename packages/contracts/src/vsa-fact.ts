@@ -167,10 +167,7 @@ export interface VsaFactStorage {
 // ─────────────────────────────────────────────────────────────────────────
 
 /** Validate a vector argument and return its plain `number[]` copy. */
-export function vsaNormalizeVector(
-	value: number[] | Float32Array | undefined,
-	field: string,
-): number[] {
+export function vsaNormalizeVector(value: number[] | Float32Array | undefined, field: string): number[] {
 	if (value === undefined || value === null) {
 		throw new Error(`VSA: ${field} is required`);
 	}

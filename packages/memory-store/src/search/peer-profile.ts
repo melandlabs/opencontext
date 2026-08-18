@@ -2,14 +2,14 @@
  * Peer-centric profile + relationship facade.
  *
  * A higher-level pattern over `UnifiedSearch` that turns the underlying
- * `reflect()` and `searchUnifiedMemory()` primitives into two
- * question-shaped entry points a chat assistant can answer on demand:
+ * `search()` primitives into two question-shaped entry points a chat
+ * assistant can answer on demand:
  *
  *   - `getProfile(peer)`     — synthesises a peer profile from the
  *     raw message tier (and any other tier the host enables).
  *   - `getRelationships(peer)` — discovers other peers co-mentioned
  *     with the target, confirms each via a pair-scoped
- *     `searchUnifiedMemory` call, and ranks by co-mention count.
+ *     `search()` call, and ranks by co-mention count.
  *
  * The facade is purely additive: it composes existing primitives and
  * never modifies `UnifiedSearch`. It assumes the host has already
@@ -44,7 +44,7 @@ export interface PeerPosting {
 }
 
 export interface PeerProfileDeps {
-	/** Underlying unified-search facade (provides `reflect` + `searchUnifiedMemory`). */
+	/** Underlying unified-search facade (provides `search`; legacy `searchUnifiedMemory` is a deprecated alias). */
 	search: UnifiedSearch;
 	/** Workspace / tenant namespace used for all underlying searches. */
 	userId: string;
@@ -64,7 +64,7 @@ export interface PeerProfileDeps {
 	 * Enumerate every peer→peer co-mention edge observed in the
 	 * corpus. The facade uses these to discover relationship
 	 * candidates before confirming each one via
-	 * `searchUnifiedMemory`. May return an async iterable for
+	 * `search()`. May return an async iterable for
 	 * large corpora.
 	 */
 	listPeerMentions?: () => Promise<ReadonlyArray<PeerPosting>> | ReadonlyArray<PeerPosting>;
@@ -101,7 +101,7 @@ export interface PeerRelationship {
 }
 
 export interface PeerProfileFacade {
-	/** Synthesise a profile for `peerId` via `reflect()`. */
+	/** Synthesise a profile for `peerId` via `search({ synthesize: true })`. */
 	getProfile(peerId: string): Promise<PeerProfile>;
 	/** Discover and rank relationships `peerId` has with other peers. */
 	getRelationships(peerId: string): Promise<PeerRelationship[]>;
@@ -211,19 +211,21 @@ export function createPeerProfile(deps: PeerProfileDeps): PeerProfileFacade {
 				throw new Error(`peer_profile: unknown peerId "${peerId}"`);
 			}
 
-			const out = await search.reflect({
+			const out = await search.search({
 				userId,
 				query: buildProfilePrompt(peer.id),
 				peerFilter: [peer],
 				tiers: ["raw"],
 				limit: DEFAULT_PROFILE_LIMIT,
 				threshold: deps.profileThreshold ?? DEFAULT_PROFILE_THRESHOLD,
-				responseSchema: { answer: "string", confidence: "number" },
+				synthesize: {
+					responseSchema: { answer: "string", confidence: "number" },
+				},
 			});
 
 			return {
 				peer,
-				answer: out.answer,
+				answer: out.answer ?? "",
 				evidenceIds: out.evidence.map((item) => item.id),
 				warnings: out.warnings.map((warning) => warning.code),
 			};
@@ -247,7 +249,7 @@ export function createPeerProfile(deps: PeerProfileDeps): PeerProfileFacade {
 				const other = resolvePeerFromMap(otherId, known, resolvePeer);
 				if (!other) continue;
 
-				const confirmation = await search.searchUnifiedMemory({
+				const confirmation = await search.search({
 					userId,
 					query: buildRelationshipPrompt(peer.id, other.id),
 					peerFilter: [peer, other],
@@ -259,7 +261,7 @@ export function createPeerProfile(deps: PeerProfileDeps): PeerProfileFacade {
 
 				// `info.evidenceIds` are co-mention posting IDs from `listPeerMentions`
 				// (a corpus scan), which live in a different ID space than the live
-				// `searchUnifiedMemory` hits below — filtering across the two never
+				// `search()` hits below — filtering across the two never
 				// matched. The confirmation search returns the resolvable memory
 				// evidence, so use those IDs directly as the relationship evidence.
 				const evidenceIds = confirmation.results.map((hit) => hit.id);

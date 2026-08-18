@@ -112,7 +112,7 @@ await messages.storeMessages([
 
 // Unified search fans out to memory + insights + knowledge. Sources you
 // haven't wired up just emit a warning — fine for a single-backend deploy.
-const hits = await store.searchUnifiedMemory({
+const hits = await store.search({
 	userId: "u-42",
 	query: "What does the user prefer?",
 	limit: 5,

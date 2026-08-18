@@ -94,7 +94,7 @@ async function main() {
 
 	// Get customer history
 	async function getCustomerHistory(customerEmail: string) {
-		const history = await store.searchUnifiedMemory({
+		const history = await store.search({
 			userId: customerEmail,
 			query: "customer interactions history",
 			limit: 50,
@@ -128,7 +128,7 @@ async function main() {
 
 	// Detect repeat issue
 	async function checkRepeatIssue(customerEmail: string, issueCategory: string) {
-		const pastIssues = await store.searchUnifiedMemory({
+		const pastIssues = await store.search({
 			userId: customerEmail,
 			query: `issues related to ${issueCategory}`,
 			metadata: {
@@ -176,7 +176,7 @@ async function main() {
 	await checkRepeatIssue("customer-alice@example.com", "login");
 
 	// Cross-platform verification
-	const allInteractions = await store.searchUnifiedMemory({
+	const allInteractions = await store.search({
 		userId: "customer-alice@example.com",
 		query: "all customer communications",
 		sources: ["memory"],
@@ -278,7 +278,7 @@ async function main() {
 	await importCustomerData(existingCustomers);
 
 	// Verify import
-	const importedCustomers = await store.searchUnifiedMemory({
+	const importedCustomers = await store.search({
 		query: "imported customer data",
 		metadata: {
 			type: "profile",

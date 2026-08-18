@@ -1,12 +1,8 @@
 {
 	"name": "@melandlabs/sqlite",
-	"version": "0.4.0",
+	"version": "0.5.0",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -28,9 +24,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · sqlite module",
-	"keywords": [
-		"opencontext"
-	],
+	"keywords": ["opencontext"],
 	"dependencies": {
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",

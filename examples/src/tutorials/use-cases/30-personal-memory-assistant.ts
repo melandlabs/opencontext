@@ -63,7 +63,7 @@ async function main() {
 	console.log("✅ Stored 1 note");
 
 	// Semantic search - project notes
-	const projectNotes = await store.searchUnifiedMemory({
+	const projectNotes = await store.search({
 		userId: "user-123",
 		query: "What project ideas have I had?",
 		limit: 10,
@@ -77,7 +77,7 @@ async function main() {
 	}
 
 	// Search preferences by metadata type
-	const preferences = await store.searchUnifiedMemory({
+	const preferences = await store.search({
 		userId: "user-123",
 		query: "user preferences",
 		metadata: {
@@ -117,7 +117,7 @@ async function main() {
 	console.log("\n✅ Updated with new thinking");
 
 	// Query: What was I thinking before the update?
-	const beforeUpdate = await store.searchUnifiedMemory({
+	const beforeUpdate = await store.search({
 		userId: "user-123",
 		query: "knowledge graph project",
 		asOf: noteTimestamp + 3600000, // 1 hour after original note
@@ -129,7 +129,7 @@ async function main() {
 	}
 
 	// Query: What's my current thinking?
-	const currentThinking = await store.searchUnifiedMemory({
+	const currentThinking = await store.search({
 		userId: "user-123",
 		query: "knowledge graph project",
 	});
@@ -162,7 +162,7 @@ async function main() {
 	console.log("\n✅ Added correction");
 
 	// Latest understanding
-	const latestUnderstanding = await store.searchUnifiedMemory({
+	const latestUnderstanding = await store.search({
 		userId: "user-123",
 		query: "what are my principles for knowledge management",
 	});
@@ -208,7 +208,7 @@ async function main() {
 	console.log(`\n✅ Imported ${importBatch.length} existing notes`);
 
 	// Verify import
-	const importedNotes = await store.searchUnifiedMemory({
+	const importedNotes = await store.search({
 		userId: "user-123",
 		query: "imported notes",
 		metadata: {

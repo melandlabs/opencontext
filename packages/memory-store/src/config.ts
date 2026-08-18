@@ -109,10 +109,11 @@ export interface UnifiedSearchInsightsResult {
 
 export interface UnifiedSearchReasoningDeps {
 	/**
-	 * LLM single-turn synthesis callback. Wired into `UnifiedSearch.reflect`
-	 * so a host that wants profile / synthesis responses only has to drop in
-	 * one callable. When omitted, reflect() returns the gathered evidence
-	 * with a `reflect_llm_not_configured` warning instead of throwing.
+	 * LLM single-turn synthesis callback. Wired into
+	 * `search({ synthesize: true })` so a host that wants synthesis
+	 * responses only has to drop in one callable. When omitted, the
+	 * synthesis path returns the gathered evidence with a
+	 * `synthesize_llm_not_configured` warning instead of throwing.
 	 */
 	complete?: (prompt: string) => Promise<string>;
 	/** Default merge strategy used by `searchUnifiedMemory` when the caller does not specify one. @default "rrf" */
@@ -243,7 +244,7 @@ export interface UnifiedSearchDeps {
 	reranker?: import("./search/reranker").Reranker;
 	/**
 	 * Optional logger. When set (e.g. via `MemoryStoreConfig.logger`),
-	 * `reflect` / `reflectWithPlan` log through it instead of `console`.
+	 * `reflect` / `consolidate` log through it instead of `console`.
 	 * Falls back to `console` when omitted.
 	 */
 	logger?: Pick<Console, "log" | "warn" | "error">;
@@ -273,13 +274,13 @@ export interface MemoryStoreConfig {
 	unified?: UnifiedSearchDeps;
 	/**
 	 * Optional write-back graph store. When set, `createMemoryStore` wires
-	 * it into `store.graphStore` and forwards it to `reflectWithPlan`. Hosts
+	 * it into `store.graphStore` and forwards it to `consolidate`. Hosts
 	 * that prefer post-construction wiring can use `attachMemoryGraphStore`.
 	 */
 	graphStore?: import("@melandlabs/memory-consolidation").MemoryGraphStoreWithOperationHistory;
 	/**
 	 * Optional storage adapter carrying `deprecateRecords`. Forwarded into
-	 * `reflectWithPlan` for callers that want deprecation writes without
+	 * `consolidate` for callers that want deprecation writes without
 	 * attaching a full graph store.
 	 */
 	storage?: import("@melandlabs/memory-consolidation").MemoryStorageAdapterLike;

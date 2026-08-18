@@ -218,9 +218,7 @@ export class LongMemEvalEvaluator {
 			await mkdir(this.checkpointDir, { recursive: true });
 			const path = this.getCheckpointPath(questionId);
 			await writeFile(path, JSON.stringify(prediction, null, 2), "utf-8");
-		} catch (error) {
-			console.error(`Failed to save checkpoint: ${error}`);
-		}
+		} catch (_error) {}
 	}
 
 	/**
@@ -228,11 +226,7 @@ export class LongMemEvalEvaluator {
 	 */
 	async loadEntry(entry: LongMemEvalEntry): Promise<void> {
 		const messages = buildSessionMessages(entry);
-		const inserted = await ingestMessages(messages, this.baseUrl, `lme_${entry.question_id}`);
-
-		console.log(
-			`[LongMemEval] Ingested ${inserted} session messages for question ${entry.question_id} → ${this.baseUrl}`,
-		);
+		const _inserted = await ingestMessages(messages, this.baseUrl, `lme_${entry.question_id}`);
 	}
 
 	/**
@@ -242,7 +236,6 @@ export class LongMemEvalEvaluator {
 		// Check for checkpoint (resume support) - skip if error or incorrect
 		const checkpoint = await this.loadCheckpoint(entry.question_id);
 		if (checkpoint?.response && checkpoint.correct && !checkpoint.response.startsWith("Error:")) {
-			console.log(`[LongMemEval] Resuming from checkpoint for question ${entry.question_id}`);
 			return checkpoint;
 		}
 
@@ -256,15 +249,10 @@ export class LongMemEvalEvaluator {
 			let isCorrect = false;
 			try {
 				isCorrect = (await evaluateLLMJudge(entry.question, answerStr, response)) === 1;
-				console.log(
-					`[Q] ${isCorrect ? "✓" : "✗"} Q: "${entry.question.substring(0, 60)}..." GT: "${answerStr}"`,
-				);
 				if (!isCorrect) {
-					console.log(`    Agent response: "${response.substring(0, 300)}..."`);
 				}
 			} catch (judgeError) {
-				const errMsg = judgeError instanceof Error ? judgeError.message : String(judgeError);
-				console.log(`[Q] ✗ Judge failed: ${errMsg.substring(0, 100)}`);
+				const _errMsg = judgeError instanceof Error ? judgeError.message : String(judgeError);
 			}
 
 			// Calculate additional metrics
@@ -294,7 +282,6 @@ export class LongMemEvalEvaluator {
 			return pred;
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
-			console.error(`Error evaluating question: ${errorMessage}`);
 
 			const pred: Prediction = {
 				question: entry.question,

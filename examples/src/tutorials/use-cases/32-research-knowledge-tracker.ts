@@ -88,7 +88,7 @@ async function main() {
 	console.log("✅ Connected related research (state space models)");
 
 	// Semantic search for efficiency findings
-	const efficiencyFindings = await store.searchUnifiedMemory({
+	const efficiencyFindings = await store.search({
 		userId: "researcher-001",
 		query: "approaches to improve transformer efficiency for long sequences",
 		limit: 20,
@@ -103,7 +103,7 @@ async function main() {
 	}
 
 	// Time-travel: What did we know 3 months in?
-	const knowledgeBeforeSparse = await store.searchUnifiedMemory({
+	const knowledgeBeforeSparse = await store.search({
 		userId: "researcher-001",
 		query: "transformer attention complexity limitations",
 		asOf: now + 86400000 * 90, // 3 months after initial finding
@@ -115,7 +115,7 @@ async function main() {
 	}
 
 	// Current knowledge
-	const currentKnowledge = await store.searchUnifiedMemory({
+	const currentKnowledge = await store.search({
 		userId: "researcher-001",
 		query: "transformer attention complexity solutions",
 	});
@@ -127,7 +127,7 @@ async function main() {
 
 	// Find by theme
 	async function findByTheme(theme: string) {
-		const findings = await store.searchUnifiedMemory({
+		const findings = await store.search({
 			userId: "researcher-001",
 			query: `research related to ${theme}`,
 			metadata: {
@@ -182,7 +182,7 @@ async function main() {
 
 	// Search by paper
 	async function searchByPaper(paperId: string) {
-		const findings = await store.searchUnifiedMemory({
+		const findings = await store.search({
 			userId: "researcher-001",
 			query: `findings from paper ${paperId}`,
 			limit: 20,
@@ -202,7 +202,7 @@ async function main() {
 	await searchByPaper("vaswani2017");
 
 	// Find all syntheses
-	const syntheses = await store.searchUnifiedMemory({
+	const syntheses = await store.search({
 		userId: "researcher-001",
 		query: "research syntheses and overviews",
 		metadata: {
@@ -218,7 +218,7 @@ async function main() {
 
 	// Theme evolution tracking
 	async function themeEvolution(theme: string) {
-		const allFindings = await store.searchUnifiedMemory({
+		const allFindings = await store.search({
 			userId: "researcher-001",
 			query: `research on ${theme}`,
 			limit: 100,

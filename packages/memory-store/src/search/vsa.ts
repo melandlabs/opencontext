@@ -35,14 +35,7 @@ import type {
 	VsaRecallScore,
 } from "@melandlabs/contracts";
 import { vsaAssertSameDim, vsaNormalizeVector } from "@melandlabs/contracts";
-import {
-	bind,
-	cleanup,
-	cosineSimilarity,
-	type HRRVector,
-	superpose,
-	unbind,
-} from "@melandlabs/vsa";
+import { type HRRVector, bind, cleanup, cosineSimilarity, superpose, unbind } from "@melandlabs/vsa";
 
 const DEFAULT_MAX_FACTS = 1000;
 /** Below this cosine score we surface `vsa_low_confidence`. Tuned empirically
@@ -75,9 +68,7 @@ export function createVsaRecall(storage: VsaFactStorage): VsaRecallFacade {
 			vsaAssertSameDim(roleVector, fillerVector, "storeFact");
 			const dim = input.dim ?? roleVector.length;
 			if (roleVector.length !== dim) {
-				throw new Error(
-					`storeFact: roleVector.length (${roleVector.length}) must equal dim (${dim})`,
-				);
+				throw new Error(`storeFact: roleVector.length (${roleVector.length}) must equal dim (${dim})`);
 			}
 
 			const now = Date.now();

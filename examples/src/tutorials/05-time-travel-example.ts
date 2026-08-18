@@ -21,7 +21,7 @@ async function main() {
 	console.log("Stored fact now:", messageId);
 
 	// Ask: "What did we believe on April 1st?"
-	const factsAsOfApril = await store.searchUnifiedMemory({
+	const factsAsOfApril = await store.search({
 		userId: "user-123",
 		query: "project status",
 		asOf: new Date("2024-04-01").getTime(),

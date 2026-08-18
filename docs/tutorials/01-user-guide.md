@@ -9,10 +9,10 @@ OpenContext's memory API is built around five verbs that cover every persistent 
 | Verb | Purpose | Use When | SDK Method |
 |------|---------|----------|------------|
 | `remember` | Ingest and re-ingest facts | Storing new information | `manager.storeMessages([...])` |
-| `recall` | Search, lookup, and graph traversal | Finding what's relevant | `store.searchUnifiedMemory({...})` |
+| `recall` | Search, lookup, and graph traversal | Finding what's relevant | `store.search({...})` |
 | `forget` | Soft-delete and GDPR erasure | Cleaning up old data | `manager.archiveMessages([...])` |
 | `improve` | Correction, supersession, and merge | Fixing outdated facts | `manager.storeMessages([...])` + `manager.deprecateMessages([...])` |
-| `reflect` | LLM synthesis + write-back | "What does the user like?" / "Summarise the last week" | `store.reflect(...)` / `store.reflectWithPlan(...)` |
+| `reflect` | LLM synthesis + write-back | "What does the user like?" / "Summarise the last week" | `store.search({ ...input, synthesize: true })` / `store.consolidate(...)` |
 
 `reflect` has two flavours — read-only LLM synthesis and agentic write-back
 (plan → vet → persist). See [Advanced Usage → Reflection and Write-Back](./03-advanced-usage.md#reflection-and-write-back)
@@ -88,7 +88,7 @@ import { createMemoryStore } from "@melandlabs/opencontext";
 async function main() {
   const store = await createMemoryStore();
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What are the user's preferences?",
     limit: 10,
@@ -235,7 +235,7 @@ async function main() {
   const store = await createMemoryStore();
 
   // Ask: "What did we believe on April 1st?"
-  const factsAsOfApril = await store.searchUnifiedMemory({
+  const factsAsOfApril = await store.search({
     userId: "user-123",
     query: "project status",
     asOf: new Date("2024-04-01").toISOString(),
@@ -347,7 +347,7 @@ class MemoryAwareAgent {
     }
 
     // 1. Recall relevant context
-    const context = await this.store.searchUnifiedMemory({
+    const context = await this.store.search({
       userId: this.userId,
       query,
       limit: 5,
@@ -419,7 +419,7 @@ async function qaAgent(userId: string, question: string) {
   });
 
   const store = await createMemoryStore();
-  const context = await store.searchUnifiedMemory({
+  const context = await store.search({
     userId,
     query: question,
     limit: 5,
@@ -463,7 +463,7 @@ async function summarizeAgent(userId: string, _timeframe: number) {
   });
 
   const store = await createMemoryStore();
-  const recent = await store.searchUnifiedMemory({
+  const recent = await store.search({
     userId,
     query: "recent activity and decisions",
     limit: 20,
@@ -511,7 +511,7 @@ async function main() {
   console.log("Backend:", store.raw.getBackend());
 
   // Search works out of the box with lexical fallback (no API keys).
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "hello world",
     limit: 5,
@@ -558,7 +558,7 @@ async function main() {
     },
   });
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What are my preferences?",
     limit: 5,
@@ -593,7 +593,7 @@ async function main() {
     },
   });
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What are my preferences?",
     limit: 5,
@@ -672,7 +672,7 @@ async function agentAction(userId: string, question: string) {
   const store = await createMemoryStore();
 
   // First, recall relevant context
-  const context = await store.searchUnifiedMemory({
+  const context = await store.search({
     userId,
     query: question,
     limit: 5,
@@ -790,7 +790,7 @@ import { createMemoryStore } from "@melandlabs/opencontext";
 async function main() {
   const store = await createMemoryStore();
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What are my preferences?",
     limit: 5,
