@@ -173,8 +173,7 @@ benchmark/**/final_results/
 benchmark/**/cloned_repos/
 # benchmark local daemon data (memory db, logs)
 benchmark/.opencontext-data/
-# AML public pipelines clone (nested git repo) and local eval outputs
-benchmark/AML-agent-memory-leaderboard/
+# AML local eval outputs (the AML pipeline sources are vendored in-repo)
 benchmark/aml-local/outputs/
 # benchmark local secrets (API keys used by eval harnesses)
 benchmark/**/.qwen_key_.txt
