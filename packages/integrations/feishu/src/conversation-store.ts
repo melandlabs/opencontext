@@ -6,11 +6,12 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { getOpenContextPath } from "@melandlabs/env-config";
+
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".opencontext", "data", "memory");
+	const base = getOpenContextPath("data", "memory");
 	return userId ? join(base, userId) : base;
 }
 
@@ -72,6 +73,7 @@ export function trimHistoryByCharBudget(
 	const out: RuntimeConversationMessage[] = [];
 	let used = 0;
 	for (let i = messages.length - 1; i >= 0; i--) {
+		// biome-ignore lint/style/noNonNullAssertion: guaranteed by prior check
 		const m = messages[i]!;
 		const add = charCountUnicode(m.content);
 		if (used + add > maxChars) break;
@@ -198,6 +200,7 @@ class FeishuConversationStore {
 		const picked: StoredMessage[] = [];
 		let used = 0;
 		for (let i = source.length - 1; i >= 0; i--) {
+			// biome-ignore lint/style/noNonNullAssertion: guaranteed by prior check
 			const m = source[i]!;
 			const add = charCountUnicode(m.content);
 			if (used + add > maxChars) break;
@@ -345,6 +348,7 @@ class FeishuConversationStore {
 			try {
 				if (existsSync(path)) rmSync(path);
 			} catch (e) {
+				// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 				console.warn(`[FeishuConversationStore] clear failed ${path}`, e);
 			}
 		}
@@ -359,6 +363,7 @@ class FeishuConversationStore {
 			try {
 				rmSync(join(this.sessionsDir, name));
 			} catch (e) {
+				// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 				console.warn(`[FeishuConversationStore] clear user file ${name}`, e);
 			}
 		}
@@ -437,6 +442,7 @@ class FeishuConversationStore {
 			if (!Array.isArray(parsed.messages)) return null;
 			return parsed;
 		} catch (e) {
+			// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 			console.warn(`[FeishuConversationStore] read failed ${path}`, e);
 			return null;
 		}

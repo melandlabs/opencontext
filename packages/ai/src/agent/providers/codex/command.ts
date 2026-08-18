@@ -19,6 +19,7 @@ import {
 	buildCliEnvironment,
 	shouldDetachCliProcess,
 	terminateCliProcessTree,
+	trackCliProcess,
 } from "../_internal/cli-process";
 
 export type CodexSandboxMode = "read-only" | "workspace-write" | "danger-full-access";
@@ -184,7 +185,9 @@ export function buildCodexRunCommand(options: CodexRunCommandOptions): CodexRunC
 	const providerConfig = normalizeCodexProviderConfig(options.providerConfig);
 	const mode = options.mode ?? "run";
 
-	const args = ["exec", "--json"];
+	// The host owns goal planning, persistence, pause, and recovery. Disable
+	// Codex's native Goals so one task cannot fork a second autonomous loop.
+	const args = ["exec", "--json", "--disable", "goals"];
 
 	if (providerConfig.profile) {
 		args.push("-p", providerConfig.profile);
@@ -266,6 +269,7 @@ export async function* runCodexCli(
 			detached: shouldDetachCliProcess(),
 			windowsHide: true,
 		}) as ChildProcessWithoutNullStreams;
+		trackCliProcess(proc);
 		// Codex officially reads its prompt from stdin when no positional
 		// prompt is supplied. This also avoids the Windows `cmd.exe`/npm-shim
 		// path, which truncates multiline argv values at the first newline.

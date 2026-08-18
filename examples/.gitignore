@@ -1,5 +1,5 @@
 # Generated SQLite databases from tutorial runs
-*.db
+tutorials-*.db
 
 # Temporary scratch directories created by demos
 .tmp/

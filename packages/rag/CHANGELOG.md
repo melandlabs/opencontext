@@ -1,5 +1,12 @@
 # @melandlabs/rag
 
+## 0.2.2
+
+### Patch Changes
+
+- Updated dependencies [351c6b2]
+  - @melandlabs/shared@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

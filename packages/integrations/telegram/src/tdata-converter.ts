@@ -43,6 +43,7 @@ function extractAuthKey(tdataPath: string): {
 	dcId: number;
 	authKey: Buffer;
 } {
+	// biome-ignore lint/suspicious/noConsole: platform adapter logging
 	console.log("[TdataConverter] Using pure JS implementation to extract auth key...");
 
 	try {
@@ -66,6 +67,7 @@ function extractAuthKey(tdataPath: string): {
 			throw new Error(`No auth key found for DC ${mtpData.currentDcId}`);
 		}
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log("[TdataConverter] Pure JS implementation extracted:", {
 			userId: mtpData.userId,
 			dcId: mtpData.currentDcId,
@@ -106,7 +108,9 @@ function normalizeTdataPath(inputPath: string): string {
  */
 export async function convertTdataToStringSession(tdataPath: string): Promise<string> {
 	const normalizedPath = normalizeTdataPath(tdataPath);
+	// biome-ignore lint/suspicious/noConsole: platform adapter logging
 	console.log("[TdataConverter] Starting conversion from:", tdataPath);
+	// biome-ignore lint/suspicious/noConsole: platform adapter logging
 	console.log("[TdataConverter] Normalized path:", normalizedPath);
 
 	if (!fs.existsSync(normalizedPath)) {
@@ -115,8 +119,10 @@ export async function convertTdataToStringSession(tdataPath: string): Promise<st
 
 	try {
 		// Use pure JS implementation to extract auth key
+		// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 		const { userId, dcId, authKey } = extractAuthKey(normalizedPath);
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log("[TdataConverter] Creating GramJS StringSession...");
 
 		// Create GramJS StringSession
@@ -128,10 +134,12 @@ export async function convertTdataToStringSession(tdataPath: string): Promise<st
 		session.setAuthKey(mainAuthKey);
 
 		const sessionString = session.save();
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log("[TdataConverter] Conversion successful!");
 
 		return sessionString;
 	} catch (error) {
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.error("[TdataConverter] Conversion error:", error);
 
 		if (error instanceof Error) {
@@ -221,6 +229,7 @@ export function extractAccountInfo(tdataPath: string): TdataAccountInfo | null {
 			dcId,
 		};
 	} catch (error) {
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.error("[TdataConverter] Failed to extract account info:", error);
 		return null;
 	}

@@ -175,10 +175,12 @@ export {
 } from "./providers/standalone";
 export {
 	ClaudeAgent,
+	createClaudeAgent,
 	claudeAgentPlugin,
 } from "./providers/claude";
 export {
 	CodexAgent,
+	createCodexAgent,
 	codexAgentPlugin,
 } from "./providers/codex";
 export {

@@ -7,16 +7,17 @@
  * Token trimming is handled by handleAgentRuntime (40K budget) — not here.
  */
 
-import { homedir } from "node:os";
 import { join } from "node:path";
+
 import {
 	clearChannelConversationFromAllDays,
 	loadChannelDay,
 	saveChannelMessage,
 } from "@melandlabs/ai/store";
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".opencontext", "data", "memory");
+	const base = getOpenContextPath("data", "memory");
 	return userId ? join(base, userId) : base;
 }
 
@@ -101,6 +102,7 @@ class IMessageConversationStore {
 	private clearExpiredConversations(): void {
 		const now = Date.now();
 		const expiryMs = this.EXPIRY_HOURS * 60 * 60 * 1000;
+		// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 		let changed = false;
 
 		for (const [userKey, channels] of this.cache.entries()) {

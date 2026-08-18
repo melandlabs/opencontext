@@ -205,6 +205,7 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 							cdnBaseUrl: CDN_BASE_URL,
 						});
 					} catch (err) {
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.error(`[WeixinAdapter] Image send failed (${i + 1})`, err);
 						mediaErrors.push(
 							`Image(${img.id ?? img.url}) send failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -236,6 +237,7 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 							cdnBaseUrl: CDN_BASE_URL,
 						});
 					} catch (err) {
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.error(`[WeixinAdapter] File send failed ${file.name}`, err);
 						mediaErrors.push(
 							`File(${file.name}) send failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -258,6 +260,7 @@ export class WeixinAdapter extends MessagePlatformAdapter {
 		});
 	}
 
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		throw this.createAdapterError(
 			"sendMessages",

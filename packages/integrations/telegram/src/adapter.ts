@@ -34,6 +34,7 @@ const DEBUG = process.env.DEBUG_TELEGRAM === "true";
 const maxDialogCount = 50;
 const maxMessageCount = 200;
 const DEFAULT_MAX_MESSAGE_CHUNK_COUNT = 40;
+// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 const FIRST_LANDING_MESSAGE_CHUNK_COUNT = 10;
 const TELEGRAM_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 const dialogCacheFetchLimit = 200;
@@ -140,6 +141,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			this.client = sharedClient;
 			this._isSharedClient = true;
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[Bot ${opts?.botId}] [telegram] Reusing existing connection from User Listener to avoid session conflict`,
 				);
@@ -183,6 +185,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			// Shared client already maintained by User Listener, no need to reconnect
 			if (this._isSharedClient) {
 				if (!this.client.connected) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(
 						`[Bot ${this.botId}] [telegram] Shared client disconnected, falling back to independent connection`,
 					);
@@ -212,6 +215,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				}
 			}
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Telegram connection error:`, error);
 			throw error;
 		}
@@ -223,6 +227,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	 */
 	async disconnect(): Promise<undefined> {
 		if (this._isSharedClient) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[Bot ${this.botId}] [telegram] Using shared client, skipping disconnect`);
 			return undefined;
 		}
@@ -453,6 +458,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			this.addToCache(cache, id, entity);
 			return entity;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Error fetching entity ${id}:`, error);
 			return null;
 		}
@@ -468,6 +474,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	 * @param messages - Message chain to send as reply
 	 * @param quoteOrigin - Whether to quote the original message (default: false)
 	 */
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			if (!this.client.connected) {
@@ -494,6 +501,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		});
 	}
 
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async replyMessages(event: MessageEvent, messages: Messages, quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			if (!this.client.connected) {
@@ -532,6 +540,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		const maxMessageChunkCount = chunkSize ?? DEFAULT_MAX_MESSAGE_CHUNK_COUNT;
 		// 1. Ensure client is connected
 		if (!this.client.connected) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log("[Telegram] Client not connected, connecting...");
 			await this.client.connect();
 			await delay(500);
@@ -551,10 +560,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			this.asyncIteratorState.offsetDate = since;
 
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[Bot ${this.botId}] [telegram] Batch fetch initialization complete: ${this.asyncIteratorState.dialogs.length} valid dialogs`,
 				);
 			if (this.asyncIteratorState.dialogs.length === 0) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				if (DEBUG) console.log(`[Bot ${this.botId}] No valid dialogs to process`);
 				this.asyncIteratorState.isInitialized = false;
 				this.asyncIteratorState.currentDialogIndex = 0;
@@ -574,6 +585,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			const dialog = targetDialogs[dialogIdx];
 			try {
 				if (!this.client.connected) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					if (DEBUG) console.log("[Telegram] Client not connected, connecting...");
 					await this.client.connect();
 					await delay(500);
@@ -590,6 +602,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					reverse: true,
 				});
 				if (DEBUG)
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(
 						`[Bot ${this.botId}] [telegram] Fetched ${rawMessages.length} messages in the dialog id ${dialog.id}`,
 					);
@@ -616,6 +629,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 							this.asyncIteratorState.currentDialogIndex = dialogIdx; // Continue from current dialog next time
 							this.asyncIteratorState.currentMessageIndex = msgIdx + 1; // Start from next message next time
 							if (DEBUG)
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.log(
 									`[Bot ${this.botId}] Batch full (${maxMessageChunkCount}), continue from dialog ${dialog.id} message ${msgIdx + 1}`,
 								);
@@ -632,6 +646,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				if (dialogMessageCount < MIN_MESSAGES_PER_DIALOG && rawMessages.length > 0) {
 					const neededCount = MIN_MESSAGES_PER_DIALOG - dialogMessageCount;
 					if (DEBUG)
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							`[Bot ${this.botId}] [telegram] Dialog ${dialog.id} has only ${dialogMessageCount} messages, fetching ${neededCount} more without time filter`,
 						);
@@ -656,6 +671,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 									this.asyncIteratorState.currentDialogIndex = dialogIdx;
 									this.asyncIteratorState.currentMessageIndex = rawMessages.length;
 									if (DEBUG)
+										// biome-ignore lint/suspicious/noConsole: platform adapter logging
 										console.log(
 											`[Bot ${this.botId}] Batch full (${maxMessageChunkCount}), continue from dialog ${dialog.id}`,
 										);
@@ -668,10 +684,12 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 						}
 
 						if (DEBUG)
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log(
 								`[Bot ${this.botId}] [telegram] Fetched ${additionalMessages.length} additional messages for dialog ${dialog.id}, total: ${dialogMessageCount}`,
 							);
 					} catch (error) {
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.warn(
 							`[Bot ${this.botId}] [telegram] Failed to fetch additional messages for dialog ${dialog.id}:`,
 							error,
@@ -684,6 +702,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				this.asyncIteratorState.currentDialogIndex = dialogIdx + 1; // Next time start from next dialog
 			} catch (error) {
 				// Single dialog processing failed: skip this dialog, avoid affecting overall traversal
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] Failed to process dialog ${dialog.id}:`, error);
 				this.asyncIteratorState.currentDialogIndex = dialogIdx + 1; // Skip current dialog next time
 				this.asyncIteratorState.currentMessageIndex = 0;
@@ -691,6 +710,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		}
 
 		if (DEBUG)
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(
 				`[Bot ${this.botId}] All dialogs processed, returning remaining ${extractedMessages.length} messages`,
 			);
@@ -719,6 +739,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		const extractedMessages: ExtractedMessageInfo[] = [];
 		const dialogs = await this.client.getDialogs({});
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[Bot ${this.botId}] [telegram] Fetched ${dialogs.length} dialogs`);
 
 		let dialogIndex = 0;
@@ -744,6 +765,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			});
 
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[Bot ${this.botId}] [telegram] Fetched ${messages.length} messages in the dialog id ${dialog.id}`,
 				);
@@ -771,6 +793,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		}
 
 		if (DEBUG)
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(
 				`[Bot ${this.botId}] [telegram] Fetched ${extractedMessages.length} total messages (capped at ${maxMessageCount})`,
 			);
@@ -818,6 +841,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 						return null;
 					}
 				} catch (error) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(
 						`[Bot ${this.botId}] [telegram] Failed to get user info for self-message filter:`,
 						error,
@@ -873,13 +897,14 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					if (quotedMsgList.length > 0 && quotedMsgList[0] instanceof Api.Message) {
 						quoted = await this.extractMessageInfo(quotedMsgList[0], depth + 1, maxDepth);
 					}
-				} catch (error) {}
+				} catch (_error) {}
 			}
 			const result = isEmptyMessage(quoted) ? msgInfo : { ...msgInfo, quoted };
 			// Only add attachments to non-referenced messages, as they may be added repeatedly.
 			const attachments = depth === 0 ? await this.extractAttachmentsFromMessage(message) : [];
 			return attachments.length > 0 ? { ...result, attachments } : result;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Error extracting message info:`, error);
 			return null;
 		}
@@ -907,6 +932,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			if (chat.title) return chat.title;
 			const chatId = chat.id?.toString();
 			if (chatId) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[Bot ${this.botId}] [telegram] Chat ${chatId} missing title, using ID as fallback`);
 				return `Chat ${chatId}`;
 			}
@@ -918,6 +944,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			if (chat.username) return `@${chat.username}`;
 			const channelId = chat.id?.toString();
 			if (channelId) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(
 					`[Bot ${this.botId}] [telegram] Channel ${channelId} missing title and username, using ID as fallback`,
 				);
@@ -926,6 +953,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			return "Unnamed Chat";
 		}
 		// Unknown entity type - log for debugging
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.warn(`[Bot ${this.botId}] [telegram] Unknown entity type in getChatName:`, chat?.className);
 		return "Unknown Chat";
 	}
@@ -1010,6 +1038,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 					return filename;
 				}
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[Bot ${this.botId}] [telegram] Failed to parse filename from URL`, error);
 			}
 		}
@@ -1031,6 +1060,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 		try {
 			return Buffer.from(base64String, "base64");
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Failed to decode base64 image payload`, error);
 			return null;
 		}
@@ -1049,6 +1079,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			}
 			return null;
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Failed to download media buffer`, error);
 			return null;
 		}
@@ -1087,6 +1118,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				});
 
 				if (!result.success) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(
 						`[Bot ${this.botId}] [telegram] Skipped attachment due to ${result.reason} mimeType=${mimeType} fileName=${fileName}`,
 					);
@@ -1225,8 +1257,8 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 	 */
 	private async resolveEntityToInputPeer(
 		contactId: string,
-		fallbackPeerId?: BigInteger,
-		fallbackType?: "user" | "channel",
+		_fallbackPeerId?: BigInteger,
+		_fallbackType?: "user" | "channel",
 	): Promise<Api.TypeInputPeer> {
 		try {
 			if (!this.client.connected) {
@@ -1276,6 +1308,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 
 			throw new Error(`Unsupported entity type for contactId: ${contactId}`);
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.error(`[Bot ${this.botId}] [telegram] Failed to resolve entity for ${contactId}:`, error);
 			throw new Error(
 				`Cannot resolve Telegram peer for ${contactId}. The contact may not exist or may not be accessible.`,
@@ -1308,6 +1341,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				`[Bot ${this.botId}] Telegram client.sendMessage()`,
 			);
 			if (DEBUG) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(`[Bot ${this.botId}] [telegram] Message sent successfully to ${peer}`);
 			}
 			return;
@@ -1322,6 +1356,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			try {
 				fileLike = await this.resolveTelegramFile(image);
 			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[Bot ${this.botId}] [telegram] Failed to resolve file for upload`, error);
 				throw this.toAdapterError(operation, error, {
 					fallbackCode: "invalid_request_error",
@@ -1347,6 +1382,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 			}
 
 			if (DEBUG) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(`[Bot ${this.botId}] [telegram] File sent successfully to ${peer}`);
 			}
 		}
@@ -1361,6 +1397,7 @@ export class TelegramAdapter extends MessagePlatformAdapter {
 				`[Bot ${this.botId}] Telegram client.sendMessage()`,
 			);
 			if (DEBUG) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(`[Bot ${this.botId}] [telegram] Caption message sent successfully to ${peer}`);
 			}
 		}

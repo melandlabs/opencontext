@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/integrations-imessage",
-	"version": "0.2.1",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -26,6 +26,7 @@
 	"keywords": ["opencontext"],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*",
+		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/integrations": "workspace:*",
 		"@melandlabs/integrations-channels": "workspace:*",
 		"@melandlabs/shared": "workspace:*",

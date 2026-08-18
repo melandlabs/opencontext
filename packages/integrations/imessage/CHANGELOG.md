@@ -1,5 +1,28 @@
 # @melandlabs/integrations-imessage
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/env-config@0.4.0
+  - @melandlabs/ai@0.3.1
+
+## 0.3.0
+
+### Minor Changes
+
+- 351c6b2: Add an LLM-backed query rewriter and iterative recall planner to memory-store unified search, and a reasoning-backed memory layer exported from the opencontext facade. Also make LocalStorageProvider storage root injectable with hardened key sanitization, fix API error-body parsing, re-export createClaudeAgent/createCodexAgent factories from @melandlabs/ai/agent, and add vitest suites plus runnable tutorial examples across the monorepo.
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [351c6b2]
+  - @melandlabs/integrations@0.3.0
+  - @melandlabs/ai@0.3.0
+  - @melandlabs/integrations-channels@0.3.0
+  - @melandlabs/shared@0.3.0
+
 ## 0.2.1
 
 ### Patch Changes

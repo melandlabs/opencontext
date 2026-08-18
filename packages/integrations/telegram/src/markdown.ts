@@ -739,6 +739,7 @@ function escapeHtmlAttr(text: string): string {
 	return escapeHtml(text).replace(/"/g, "&quot;");
 }
 
+// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 function buildTelegramLink(link: LinkSpan, text: string): RenderLinkResult | null {
 	const href = link.href.trim();
 	if (!href || link.start === link.end) return null;
@@ -768,6 +769,7 @@ export function markdownToTelegramHtml(markdown: string): string {
 			buildLink: buildTelegramLink,
 		});
 	} catch (err) {
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.error("[Telegram Markdown] Conversion failed, falling back to plain text:", err);
 		// Fallback: escape HTML chars so the raw markdown is at least readable
 		return escapeHtml(markdown);

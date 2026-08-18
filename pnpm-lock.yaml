@@ -111,154 +111,154 @@ importers:
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/ai
       '@melandlabs/ai-rag':
-        specifier: ^0.2.3
+        specifier: ^0.2.4
         version: link:../packages/ai/rag
       '@melandlabs/api':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/api
       '@melandlabs/audit':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/audit
       '@melandlabs/config':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/config
       '@melandlabs/contracts':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/contracts
       '@melandlabs/cron':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/cron
       '@melandlabs/db':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/db
       '@melandlabs/env-config':
-        specifier: ^0.2.0
+        specifier: ^0.4.0
         version: link:../packages/env-config
       '@melandlabs/hooks':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/hooks
       '@melandlabs/i18n':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/i18n
       '@melandlabs/indexeddb':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/indexeddb
       '@melandlabs/insights':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/insights
       '@melandlabs/integrations':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations
       '@melandlabs/integrations-asana':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/asana
       '@melandlabs/integrations-calendar':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations/calendar
       '@melandlabs/integrations-channels':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/channels
       '@melandlabs/integrations-composio':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/facebook-messenger
       '@melandlabs/integrations-feishu':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations/google-docs
       '@melandlabs/integrations-google-meet':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations/google-meet
       '@melandlabs/integrations-hubspot':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/instagram
       '@melandlabs/integrations-jira':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: link:../packages/integrations/jira
       '@melandlabs/integrations-linkedin':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/integrations/x
       '@melandlabs/loop':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../packages/loop
       '@melandlabs/mcp':
-        specifier: ^0.2.0
+        specifier: ^0.3.1
         version: link:../packages/ai/mcp
       '@melandlabs/memory-consolidation':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^0.2.7
+        specifier: ^0.3.1
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.2.6
+        specifier: ^0.4.0
         version: link:../packages/opencontext
       '@melandlabs/rag':
-        specifier: ^0.2.1
+        specifier: ^0.2.2
         version: link:../packages/rag
       '@melandlabs/rss':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/integrations/rss
       '@melandlabs/search':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/search
       '@melandlabs/security':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/security
       '@melandlabs/shared':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/shared
       '@melandlabs/sqlite':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/sqlite
       '@melandlabs/storage':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/storage
       '@melandlabs/ui-runtime':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../packages/ui-runtime
       '@melandlabs/voice-kokoro':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/voice-kokoro
       '@melandlabs/voice-whisper':
-        specifier: ^0.2.1
+        specifier: ^0.3.0
         version: link:../packages/voice-whisper
       better-sqlite3:
         specifier: ^11.7.0
@@ -284,6 +284,9 @@ importers:
       '@anthropic-ai/claude-agent-sdk':
         specifier: ^0.3.227
         version: 0.3.227(@anthropic-ai/sdk@0.109.1(zod@4.4.3))(@modelcontextprotocol/sdk@1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3))(zod@4.4.3)
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../env-config
       '@melandlabs/memory-consolidation':
         specifier: workspace:*
         version: link:memory-consolidation
@@ -321,6 +324,9 @@ importers:
 
   packages/ai/mcp:
     dependencies:
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -337,6 +343,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.20.1)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/ai/memory-consolidation:
     devDependencies:
@@ -346,6 +355,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/ai/rag:
     dependencies:
@@ -357,7 +369,7 @@ importers:
         version: 3.8.1
       '@langchain/community':
         specifier: ^1.1.1
-        version: 1.1.29(@browserbasehq/sdk@2.16.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3))(@huggingface/transformers@3.8.1)(@ibm-cloud/watsonx-ai@1.7.16)(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@mozilla/readability@0.6.0)(@opentelemetry/api@1.9.0)(better-sqlite3@11.10.0)(chromadb@3.5.0)(fast-xml-parser@4.5.7)(google-auth-library@10.9.1)(googleapis@140.0.1(encoding@0.1.13))(ibm-cloud-sdk-core@5.6.0)(ignore@7.0.5)(jsonwebtoken@9.0.3)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(pg@8.23.0)(playwright@1.62.1)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.1.29(b02f4e6be7c966d5b8c1cce099e2d1b6)
       '@langchain/core':
         specifier: ^1.1.8
         version: 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -378,7 +390,7 @@ importers:
         version: 3.10.1
       langchain:
         specifier: ^1.2.3
-        version: 1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       openai:
         specifier: ^4.85.2
         version: 4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
@@ -415,6 +427,10 @@ importers:
         version: 5.9.3
 
   packages/audit:
+    dependencies:
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../env-config
     devDependencies:
       typescript:
         specifier: ^5.6.3
@@ -430,6 +446,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
       zod:
         specifier: ^4.3.6
         version: 4.4.3
@@ -446,6 +465,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/db:
     dependencies:
@@ -465,6 +487,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/env-config:
     devDependencies:
@@ -474,12 +499,18 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/hooks:
     dependencies:
+      react:
+        specifier: '>=18.0.0'
+        version: 19.2.8
       swr:
         specifier: '>=2.0.0'
-        version: 2.5.0(react@18.3.1)
+        version: 2.5.0(react@19.2.8)
     devDependencies:
       '@melandlabs/config':
         specifier: workspace:*
@@ -487,12 +518,12 @@ importers:
       '@types/react':
         specifier: ^18.3.0
         version: 18.3.31
-      react:
-        specifier: ^18.3.0
-        version: 18.3.1
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.9
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/i18n:
     devDependencies:
@@ -502,6 +533,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/indexeddb:
     dependencies:
@@ -515,6 +549,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/insights:
     dependencies:
@@ -534,6 +571,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/integrations:
     dependencies:
@@ -566,6 +606,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/integrations/asana:
     dependencies:
@@ -641,6 +684,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -676,6 +722,9 @@ importers:
       '@larksuiteoapi/node-sdk':
         specifier: ^1.11.0
         version: 1.73.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -698,6 +747,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
     devDependencies:
       '@melandlabs/config':
         specifier: workspace:*
@@ -759,6 +811,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -835,6 +890,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -873,6 +931,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -907,6 +968,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -932,6 +996,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../../env-config
       '@melandlabs/integrations':
         specifier: workspace:*
         version: link:..
@@ -975,6 +1042,10 @@ importers:
         version: 5.9.3
 
   packages/loop:
+    dependencies:
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../env-config
     devDependencies:
       '@melandlabs/config':
         specifier: workspace:*
@@ -991,6 +1062,9 @@ importers:
       '@melandlabs/ai':
         specifier: workspace:*
         version: link:../ai
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../env-config
       '@melandlabs/indexeddb':
         specifier: workspace:*
         version: link:../indexeddb
@@ -1028,17 +1102,20 @@ importers:
 
   packages/opencontext:
     dependencies:
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.0
+        version: 1.0.47(zod@4.4.3)
       '@hono/node-server':
         specifier: ^1.13.7
         version: 1.19.17(hono@4.13.1)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.3
+        specifier: ^0.2.4
         version: link:../ai/rag
       '@melandlabs/integrations':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../integrations
       '@melandlabs/security':
-        specifier: ^0.2.0
+        specifier: ^0.3.0
         version: link:../security
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
@@ -1119,6 +1196,9 @@ importers:
       '@melandlabs/cron':
         specifier: workspace:*
         version: link:../cron
+      '@melandlabs/env-config':
+        specifier: workspace:*
+        version: link:../env-config
       '@melandlabs/indexeddb':
         specifier: workspace:*
         version: link:../indexeddb
@@ -1160,7 +1240,7 @@ importers:
     dependencies:
       '@langchain/community':
         specifier: ^1.1.1
-        version: 1.1.29(@browserbasehq/sdk@2.16.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3))(@huggingface/transformers@3.8.1)(@ibm-cloud/watsonx-ai@1.7.16)(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@mozilla/readability@0.6.0)(@opentelemetry/api@1.9.0)(better-sqlite3@11.10.0)(chromadb@3.5.0)(fast-xml-parser@4.5.7)(google-auth-library@10.9.1)(googleapis@140.0.1(encoding@0.1.13))(ibm-cloud-sdk-core@5.6.0)(ignore@7.0.5)(jsonwebtoken@9.0.3)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(pg@8.23.0)(playwright@1.62.1)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.1.29(b02f4e6be7c966d5b8c1cce099e2d1b6)
       '@langchain/core':
         specifier: ^1.1.8
         version: 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -1181,7 +1261,7 @@ importers:
         version: 3.10.1
       langchain:
         specifier: ^1.2.3
-        version: 1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
+        version: 1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       openai:
         specifier: ^4.85.2
         version: 4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3)
@@ -1213,6 +1293,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/security:
     dependencies:
@@ -1298,6 +1381,9 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/ui-runtime:
     dependencies:
@@ -1317,18 +1403,27 @@ importers:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/voice-kokoro:
     devDependencies:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
   packages/voice-whisper:
     devDependencies:
       typescript:
         specifier: ^5.6.3
         version: 5.9.3
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@26.2.0)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(yaml@2.9.0)
 
 packages:
 
@@ -1515,6 +1610,9 @@ packages:
   '@anthropic-ai/sdk@0.27.3':
     resolution: {integrity: sha512-IjLt0gd3L4jlOfilxVXTifn42FnVffMgDC04RJK1KDZpmkBWLv0XC92MVVmkxrFZNS/7l3xWgP/I3nqtX1sQHw==}
 
+  '@asamuzakjp/css-color@3.2.0':
+    resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
+
   '@babel/helper-string-parser@7.29.7':
     resolution: {integrity: sha512-Pb5ijPrZ89GDH8223L4UP8i6QApWxs04RbPQJTeWDV0/keR2E36MeKnyr6LYmUUvqRRI+Iv87SuF1W6ErINzYw==}
     engines: {node: '>=6.9.0'}
@@ -1694,6 +1792,34 @@ packages:
 
   '@cryptography/aes@0.1.1':
     resolution: {integrity: sha512-PcYz4FDGblO6tM2kSC+VzhhK62vml6k6/YAkiWtyPvrgJVfnDRoHGDtKn5UiaRRUrvUTTocBpvc2rRgTCqxjsg==}
+
+  '@csstools/color-helpers@5.1.0':
+    resolution: {integrity: sha512-S11EXWJyy0Mz5SYvRmY8nJYTFFd1LCNV+7cXyAgQtOOuzb4EsgfqDufL+9esx72/eLhsRdGZwaldu/h+E4t4BA==}
+    engines: {node: '>=18'}
+
+  '@csstools/css-calc@2.1.4':
+    resolution: {integrity: sha512-3N8oaj+0juUw/1H3YwmDDJXCgTB1gKU6Hc/bB502u9zR0q2vd786XJH9QfrKIEgFlZmhZiq6epXl4rHqhzsIgQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@csstools/css-parser-algorithms': ^3.0.5
+      '@csstools/css-tokenizer': ^3.0.4
+
+  '@csstools/css-color-parser@3.1.0':
+    resolution: {integrity: sha512-nbtKwh3a6xNVIp/VRuXV64yTKnb1IjTAEEh3irzS+HkKjAOYLTGNb9pmVNntZ8iVBHcWDA2Dof0QtPgFI1BaTA==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@csstools/css-parser-algorithms': ^3.0.5
+      '@csstools/css-tokenizer': ^3.0.4
+
+  '@csstools/css-parser-algorithms@3.0.5':
+    resolution: {integrity: sha512-DaDeUkXZKjdGhgYaHNJTV9pV7Y9B3b644jCLs9Upc3VeNGg6LWARAT6O+Q+/COo+2gg/bM5rhpMAtf70WqfBdQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@csstools/css-tokenizer': ^3.0.4
+
+  '@csstools/css-tokenizer@3.0.4':
+    resolution: {integrity: sha512-Vd/9EVDiu6PPJt9yAh6roZP6El1xHrdvIVGjyBsHR0RYwNHgL7FJPyIIW4fANJNG6FtyZfvlRPpFI4ZM/lubvw==}
+    engines: {node: '>=18'}
 
   '@earendil-works/pi-tui@0.80.3':
     resolution: {integrity: sha512-2BJI6qwRQfnM0Q7seL1+SbacU/jRRjBnN7Hu3n9BjAn7/s5FaBNnvdD1qBQYRsFTHfjqMaDsjYqanPyqwXj99w==}
@@ -3897,6 +4023,10 @@ packages:
   cssom@0.5.0:
     resolution: {integrity: sha512-iKuQcq+NdHqlAcwUY0o/HL69XQrUaQdMjmStJ8JFmUaiiQErlhrmuigkg/CU4E2J0IyUKUrMAgl36TvN67MqTw==}
 
+  cssstyle@4.6.0:
+    resolution: {integrity: sha512-2z+rWdzbbSZv6/rhtvzvqeZQHrBaqgogqt85sqFNbabZOuFbCVFb8kPeEtZjiKkbrm395irpNKiYeFeLiQnFPg==}
+    engines: {node: '>=18'}
+
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
 
@@ -3910,6 +4040,10 @@ packages:
   data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
+
+  data-urls@5.0.0:
+    resolution: {integrity: sha512-ZYP5VBHshaDAiVZxjbRVcFJpc+4xGgT0bK3vzy1HLN8jTO975HEbuYzZJcHoQEY5K1a0z8YayJkyVETa08eNTg==}
+    engines: {node: '>=18'}
 
   date-fns@4.4.0:
     resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
@@ -3946,6 +4080,9 @@ packages:
   decamelize@1.2.0:
     resolution: {integrity: sha512-z2S+W9X73hAUUki+N+9Za2lBlun89zigOyGrsax+KUQ6wKW4ZoWpEYBkGhQjwAjjDCkWxhY0VKEhk8wzY7F5cA==}
     engines: {node: '>=0.10.0'}
+
+  decimal.js@10.6.0:
+    resolution: {integrity: sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg==}
 
   decompress-response@6.0.0:
     resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
@@ -4186,6 +4323,10 @@ packages:
 
   entities@4.5.0:
     resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
+  entities@6.0.1:
+    resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
 
   entities@7.0.1:
@@ -4623,6 +4764,10 @@ packages:
     resolution: {integrity: sha512-DeOnSPAvOndYKfw075gt8yZzQ7S2hNztw34zBTfhIzLhmBTswIBg5/y+pqu/VD5cYWm5goAFTusDmUEmKZ0PEQ==}
     engines: {node: ^22.22.2 || ^24.15.0 || >=26.0.0}
 
+  html-encoding-sniffer@4.0.0:
+    resolution: {integrity: sha512-Y22oTqIU4uuPgEemfz7NDJz6OeKf12Lsu+QC+s3BVpda64lTiMYCyGwg5ki4vFxkMwQdeZDl2adZoqUgdFuTgQ==}
+    engines: {node: '>=18'}
+
   html-escaper@3.0.3:
     resolution: {integrity: sha512-RuMffC89BOWQoY0WKGpIhn5gX3iI54O6nRA0yC124NYVtzjmFWBIiFd8M0x+ZdX0P9R4lADg1mgP8C7PxGOWuQ==}
 
@@ -4639,6 +4784,10 @@ packages:
   http-errors@2.0.1:
     resolution: {integrity: sha512-4FbRdAX+bSdmo4AUFuS0WNiPz8NgFt+r8ThgNWmlrjQjt1Q7ZR9+zTlce2859x4KSXrwIsaeTqDoKQmtP8pLmQ==}
     engines: {node: '>= 0.8'}
+
+  http-proxy-agent@7.0.2:
+    resolution: {integrity: sha512-T1gkAiYYDWYx3V5Bmyu7HcfcvL7mUrTWiM6yOfa3PIphViJ/gFPbvidQ+veqSOHci/PxBcDabeUNCzpOODJZig==}
+    engines: {node: '>= 14'}
 
   http_ece@1.2.0:
     resolution: {integrity: sha512-JrF8SSLVmcvc5NducxgyOrKXe3EsyHMgBFgSaIUGmArKe+rwr0uphRkRXvwiom3I+fpIfoItveHrfudL8/rxuA==}
@@ -4742,6 +4891,9 @@ packages:
     resolution: {integrity: sha512-VRSzKkbMm5jMDoKLbltAkFQ5Qr7VDiTFGXxYFXXowVj387GeGNOCsOH6Msy00SGZ3Fp84b1Naa1psqgcCIEP5Q==}
     engines: {node: '>=0.10.0'}
 
+  is-potential-custom-element-name@1.0.1:
+    resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
+
   is-promise@4.0.0:
     resolution: {integrity: sha512-hvpoI6korhJMnej285dSg6nu1+e6uxs7zG3BYAm5byqDsgJNWwxzM6z6iZiAgQR4TJ30JmBTOwqZUw3WlyH3AQ==}
 
@@ -4800,6 +4952,15 @@ packages:
   js-yaml@5.2.3:
     resolution: {integrity: sha512-n+mUVyUX5bVv7G/G2zyIHOhdxfuU1dY2NOFzTQUWiMUbFss8b57NFlgCCaggU78wSw5KVS9cllzeLyzyR+n5nw==}
     hasBin: true
+
+  jsdom@24.1.3:
+    resolution: {integrity: sha512-MyL55p3Ut3cXbeBEG7Hcv0mVM8pp8PBNWxRqchZnSfAiES1v1mRnMeFfaHWIPULpwsYfvO+ZmMZz5tGCnjzDUQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      canvas: ^2.11.2
+    peerDependenciesMeta:
+      canvas:
+        optional: true
 
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
@@ -4971,6 +5132,9 @@ packages:
 
   loupe@3.2.1:
     resolution: {integrity: sha512-CdzqowRJCeLU72bHvWqwRBBlLcMEtIvGrlvef74kMnV2AolS9Y8xUv1I0U/MNAWMhBlKIoyuEgoJ0t/bbwHbLQ==}
+
+  lru-cache@10.4.3:
+    resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
   lru-cache@11.5.2:
     resolution: {integrity: sha512-4pfM1Ff0x50o0tQwb5ucw/RzNyD0/YJME6IVcStalZuMWxdt3sR3huStTtxz4PUmvZfRguvDejasvQ2kifR11g==}
@@ -5162,6 +5326,9 @@ packages:
   nth-check@2.1.1:
     resolution: {integrity: sha512-lqjrjmaOoAnWfMmBPL+XNnynZh2+swxiX3WUE0s4yEHI6m+AwrK2UZOimIRl3X/4QctVqS8AiZjFqyOGrMXb/w==}
 
+  nwsapi@2.2.24:
+    resolution: {integrity: sha512-7YRhZ3jS45LwmSCT4b2sVFHt/WuovaktDU07QrtOBY2PXskss5a9jfmR9jptyumwXST+rFjrmppMY1KT/yn35A==}
+
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
@@ -5328,6 +5495,9 @@ packages:
 
   parse-srcset@1.0.2:
     resolution: {integrity: sha512-/2qh0lav6CmI15FzA3i/2Bzk2zCgQhGMkvhOhKNcBVQ1ldgpbfiNTVslmooUmWJcADi1f1kIeynbDRVzNlfR6Q==}
+
+  parse5@7.3.0:
+    resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
   parseurl@1.3.3:
     resolution: {integrity: sha512-CiyeOxFT/JZyN5m0z9PfXw4SCBJ6Sygz1Dpl0wqjlhDEGGBP1GnsUVEL0p63hoG1fcj3fHynXi9NYO4nWOL+qQ==}
@@ -5596,9 +5766,10 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  react@18.3.1:
-    resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
-    engines: {node: '>=0.10.0'}
+  react-dom@18.3.1:
+    resolution: {integrity: sha512-5m4nQKp+rZRb09LNH59GM4BxTh9251/ylbKIbpe7TpGxfJ+9kv6BLkLBXIjjspbgbnIBNqlI23tRnTWT0snUIw==}
+    peerDependencies:
+      react: ^18.3.1
 
   react@19.2.8:
     resolution: {integrity: sha512-PWaYA1L/q9u2u7xYQi+Y3L3Yfnie7XyLeaJICV1MGD6LprsBxcAqGjYyr0eY3p+QdsA+x/Irkt4Qif8D63+Sbw==}
@@ -5679,6 +5850,12 @@ packages:
     resolution: {integrity: sha512-nLTrUKm2UyiL7rlhapu/Zl45FwNgkZGaCpZbIHajDYgwlJCOzLSk+cIPAnsEqV955GjILJnKbdQC1nVPz+gAYQ==}
     engines: {node: '>= 18'}
 
+  rrweb-cssom@0.7.1:
+    resolution: {integrity: sha512-TrEMa7JGdVm0UThDJSx7ddw5nVm3UJS9o9CCIZ72B1vSyEZoziDqBYP3XIoi/12lKrJR8rE3jeFHMok2F/Mnsg==}
+
+  rrweb-cssom@0.8.0:
+    resolution: {integrity: sha512-guoltQEx+9aMf2gDZ0s62EcV8lsXR+0w8915TC3ITdn2YueuNjdAYh/levpU9nFaoChh9RUS5ZdQMrKfVEN9tw==}
+
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
@@ -5698,6 +5875,13 @@ packages:
   sanitize-html@2.17.6:
     resolution: {integrity: sha512-M4bo9tfv1yfhQZZKkc6dL07ALrGJtfvNOuhX3hU9AVPR/uPQ+nKOJBqTYc7LfMQblTW04mtSWDJWEyLvygJsLA==}
     engines: {node: '>=22.12.0'}
+
+  saxes@6.0.0:
+    resolution: {integrity: sha512-xAg7SOnEhrm5zI3puOOKyy1OMcMlIJZYNJY7xLBwSze0UjhPLnWfj2GF2EpT0jmzaJKIWKHLsaSSajf35bcYnA==}
+    engines: {node: '>=v12.22.7'}
+
+  scheduler@0.23.2:
+    resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
 
   secure-json-parse@2.7.0:
     resolution: {integrity: sha512-6aU+Rwsezw7VR8/nyvKTx8QpWH9FrcYiXXlqC4z5d5XQBDRqtbfsRjnwGyqbi3gddNtWHuEk9OANUotL26qKUw==}
@@ -5930,6 +6114,9 @@ packages:
     peerDependencies:
       vue: '>=3.2.26 < 4'
 
+  symbol-tree@3.2.4:
+    resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
+
   tailwind-merge@2.6.1:
     resolution: {integrity: sha512-Oo6tHdpZsGpkKG88HJ8RR1rg/RdnEkQEfMoEk2x1XRI3F1AxeU+ijRXpiVUF4UbLfcxxRGw6TbUINKYdWVsQTQ==}
 
@@ -6022,8 +6209,16 @@ packages:
     resolution: {integrity: sha512-aX/y5pVRkfRnfmuX+OdbSdXvPe6ieKX/G2s7e98f4poJHnqH3281gDPm/metm6E/WRamfx7WC4HUqkWHfQHprw==}
     engines: {node: '>=6'}
 
+  tough-cookie@4.1.4:
+    resolution: {integrity: sha512-Loo5UUvLD9ScZ6jh8beX1T6sO1w2/MpCRpEP7V280GKMVUQ0Jzar2U3UJPsrdbziLEMMhu3Ujnq//rhiFuIeag==}
+    engines: {node: '>=6'}
+
   tr46@0.0.3:
     resolution: {integrity: sha512-N3WMsuqV66lT30CrXNbEjx4GEwlow3v6rr4mCcv6prnfwhS01rkgyFdjPNBYd9br7LpXV1+Emh01fHnq2Gdgrw==}
+
+  tr46@5.1.1:
+    resolution: {integrity: sha512-hdF5ZgjTqgAntKkklYw0R03MG2x/bSzTtkxmIRw/sTNV8YXsCJ1tfLAX23lhxhHJlEf3CRCOCGGWw3vI3GaSPw==}
+    engines: {node: '>=18'}
 
   tree-kill@1.2.2:
     resolution: {integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==}
@@ -6316,6 +6511,10 @@ packages:
       typescript:
         optional: true
 
+  w3c-xmlserializer@5.0.0:
+    resolution: {integrity: sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA==}
+    engines: {node: '>=18'}
+
   web-push@3.6.7:
     resolution: {integrity: sha512-OpiIUe8cuGjrj3mMBFWY+e4MMIkW3SVT+7vEIjvD9kejGUypv8GPDf84JdPWskK8zMRIJ6xYGm+Kxr8YkPyA0A==}
     engines: {node: '>= 16'}
@@ -6335,12 +6534,29 @@ packages:
   webidl-conversions@3.0.1:
     resolution: {integrity: sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ==}
 
+  webidl-conversions@7.0.0:
+    resolution: {integrity: sha512-VwddBukDzu71offAQR975unBIGqfKZpM+8ZX6ySk8nYhVoo5CYaZyzt3YBvYtRtO+aoGlqxPg/B87NGVZ/fu6g==}
+    engines: {node: '>=12'}
+
   websocket@1.0.35:
     resolution: {integrity: sha512-/REy6amwPZl44DDzvRCkaI1q1bIiQB0mEFQLUrhz3z2EK91cp3n72rAjUlrTP0zV22HJIUOVHQGPxhFRjxjt+Q==}
     engines: {node: '>=4.0.0'}
 
   whatsapp-rust-bridge@0.5.4:
     resolution: {integrity: sha512-yYO1qSs0Fe7tGtnxOFHomocUD6IZtoAgmA4oDFyGIRZ67D3QZk3w7swA6XXFXNQngiyrg2k7tul6IrM3eUFh7A==}
+
+  whatwg-encoding@3.1.1:
+    resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
+    engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+
+  whatwg-mimetype@4.0.0:
+    resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
+    engines: {node: '>=18'}
+
+  whatwg-url@14.2.0:
+    resolution: {integrity: sha512-De72GdQZzNTUBBChsXueQUnPKDkg/5A5zp7pFDuQAj5UFoENpiACU0wlCvzpAGnTkj++ihpKwKyYewn/XNUbKw==}
+    engines: {node: '>=18'}
 
   whatwg-url@5.0.0:
     resolution: {integrity: sha512-saE57nupxk6v3HY35+jzBwYa0rKSy0XR8JSxZPwgLr7ys0IBzhGviA1/TUGJLmSVqs8pb9AnvICXEuOHLprYTw==}
@@ -6409,6 +6625,13 @@ packages:
   xdg-portable@7.3.0:
     resolution: {integrity: sha512-sqMMuL1rc0FmMBOzCpd0yuy9trqF2yTTVe+E9ogwCSWQCdDEtQUwrZPT6AxqtsFGRNxycgncbP/xmOOSPw5ZUw==}
     engines: {node: '>= 6.0'}
+
+  xml-name-validator@5.0.0:
+    resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
+    engines: {node: '>=18'}
+
+  xmlchars@2.2.0:
+    resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
 
   xtend@4.0.2:
     resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
@@ -6646,6 +6869,15 @@ snapshots:
       node-fetch: 2.7.0(encoding@0.1.13)
     transitivePeerDependencies:
       - encoding
+
+  '@asamuzakjp/css-color@3.2.0':
+    dependencies:
+      '@csstools/css-calc': 2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-color-parser': 3.1.0(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-parser-algorithms': 3.0.5(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-tokenizer': 3.0.4
+      lru-cache: 10.4.3
+    optional: true
 
   '@babel/helper-string-parser@7.29.7': {}
 
@@ -6912,6 +7144,31 @@ snapshots:
       sisteransi: 1.0.5
 
   '@cryptography/aes@0.1.1': {}
+
+  '@csstools/color-helpers@5.1.0':
+    optional: true
+
+  '@csstools/css-calc@2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)':
+    dependencies:
+      '@csstools/css-parser-algorithms': 3.0.5(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-tokenizer': 3.0.4
+    optional: true
+
+  '@csstools/css-color-parser@3.1.0(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)':
+    dependencies:
+      '@csstools/color-helpers': 5.1.0
+      '@csstools/css-calc': 2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-parser-algorithms': 3.0.5(@csstools/css-tokenizer@3.0.4)
+      '@csstools/css-tokenizer': 3.0.4
+    optional: true
+
+  '@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4)':
+    dependencies:
+      '@csstools/css-tokenizer': 3.0.4
+    optional: true
+
+  '@csstools/css-tokenizer@3.0.4':
+    optional: true
 
   '@earendil-works/pi-tui@0.80.3':
     dependencies:
@@ -7376,7 +7633,7 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/community@1.1.29(@browserbasehq/sdk@2.16.0(encoding@0.1.13))(@browserbasehq/stagehand@1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3))(@huggingface/transformers@3.8.1)(@ibm-cloud/watsonx-ai@1.7.16)(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@mozilla/readability@0.6.0)(@opentelemetry/api@1.9.0)(better-sqlite3@11.10.0)(chromadb@3.5.0)(fast-xml-parser@4.5.7)(google-auth-library@10.9.1)(googleapis@140.0.1(encoding@0.1.13))(ibm-cloud-sdk-core@5.6.0)(ignore@7.0.5)(jsonwebtoken@9.0.3)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(pg@8.23.0)(playwright@1.62.1)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+  '@langchain/community@1.1.29(b02f4e6be7c966d5b8c1cce099e2d1b6)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3)
       '@ibm-cloud/watsonx-ai': 1.7.16
@@ -7402,6 +7659,7 @@ snapshots:
       google-auth-library: 10.9.1
       googleapis: 140.0.1(encoding@0.1.13)
       ignore: 7.0.5
+      jsdom: 24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       jsonwebtoken: 9.0.3
       pg: 8.23.0
       playwright: 1.62.1
@@ -7433,7 +7691,7 @@ snapshots:
     dependencies:
       '@langchain/core': 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
 
-  '@langchain/langgraph-sdk@1.9.28(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))':
+  '@langchain/langgraph-sdk@1.9.28(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))':
     dependencies:
       '@langchain/core': 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@langchain/protocol': 0.0.18
@@ -7442,14 +7700,15 @@ snapshots:
       p-retry: 7.1.1
     optionalDependencies:
       react: 19.2.8
+      react-dom: 18.3.1(react@19.2.8)
       svelte: 5.56.8
       vue: 3.5.41(typescript@5.9.3)
 
-  '@langchain/langgraph@1.4.9(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(zod@4.4.3)':
+  '@langchain/langgraph@1.4.9(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(zod@4.4.3)':
     dependencies:
       '@langchain/core': 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))
-      '@langchain/langgraph-sdk': 1.9.28(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))
+      '@langchain/langgraph-sdk': 1.9.28(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))
       '@langchain/protocol': 0.0.18
       '@standard-schema/spec': 1.1.0
       zod: 4.4.3
@@ -8507,6 +8766,12 @@ snapshots:
 
   cssom@0.5.0: {}
 
+  cssstyle@4.6.0:
+    dependencies:
+      '@asamuzakjp/css-color': 3.2.0
+      rrweb-cssom: 0.8.0
+    optional: true
+
   csstype@3.2.3: {}
 
   curve25519-js@0.0.4: {}
@@ -8517,6 +8782,12 @@ snapshots:
       type: 2.7.3
 
   data-uri-to-buffer@4.0.1: {}
+
+  data-urls@5.0.0:
+    dependencies:
+      whatwg-mimetype: 4.0.0
+      whatwg-url: 14.2.0
+    optional: true
 
   date-fns@4.4.0: {}
 
@@ -8535,6 +8806,9 @@ snapshots:
       ms: 2.1.3
 
   decamelize@1.2.0: {}
+
+  decimal.js@10.6.0:
+    optional: true
 
   decompress-response@6.0.0:
     dependencies:
@@ -8681,6 +8955,9 @@ snapshots:
   entities@2.2.0: {}
 
   entities@4.5.0: {}
+
+  entities@6.0.1:
+    optional: true
 
   entities@7.0.1: {}
 
@@ -9278,6 +9555,11 @@ snapshots:
     dependencies:
       lru-cache: 11.5.2
 
+  html-encoding-sniffer@4.0.0:
+    dependencies:
+      whatwg-encoding: 3.1.1
+    optional: true
+
   html-escaper@3.0.3: {}
 
   htmlparser2@10.1.0:
@@ -9308,6 +9590,14 @@ snapshots:
       setprototypeof: 1.2.0
       statuses: 2.0.2
       toidentifier: 1.0.1
+
+  http-proxy-agent@7.0.2:
+    dependencies:
+      agent-base: 7.1.4
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+    optional: true
 
   http_ece@1.2.0: {}
 
@@ -9351,6 +9641,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
+      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
@@ -9400,6 +9691,9 @@ snapshots:
 
   is-plain-object@5.0.0: {}
 
+  is-potential-custom-element-name@1.0.1:
+    optional: true
+
   is-promise@4.0.0: {}
 
   is-reference@3.0.3:
@@ -9432,7 +9726,8 @@ snapshots:
     dependencies:
       base64-js: 1.5.1
 
-  js-tokens@4.0.0: {}
+  js-tokens@4.0.0:
+    optional: true
 
   js-yaml@3.15.1:
     dependencies:
@@ -9446,6 +9741,35 @@ snapshots:
   js-yaml@5.2.3:
     dependencies:
       argparse: 2.0.1
+
+  jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10):
+    dependencies:
+      cssstyle: 4.6.0
+      data-urls: 5.0.0
+      decimal.js: 10.6.0
+      form-data: 4.0.6
+      html-encoding-sniffer: 4.0.0
+      http-proxy-agent: 7.0.2
+      https-proxy-agent: 7.0.6
+      is-potential-custom-element-name: 1.0.1
+      nwsapi: 2.2.24
+      parse5: 7.3.0
+      rrweb-cssom: 0.7.1
+      saxes: 6.0.0
+      symbol-tree: 3.2.4
+      tough-cookie: 4.1.4
+      w3c-xmlserializer: 5.0.0
+      webidl-conversions: 7.0.0
+      whatwg-encoding: 3.1.1
+      whatwg-mimetype: 4.0.0
+      whatwg-url: 14.2.0
+      ws: 8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      xml-name-validator: 5.0.0
+    transitivePeerDependencies:
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+    optional: true
 
   json-bigint@1.0.0:
     dependencies:
@@ -9517,10 +9841,10 @@ snapshots:
 
   kysely@0.29.2: {}
 
-  langchain@1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
+  langchain@1.5.5(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)):
     dependencies:
       '@langchain/core': 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
-      '@langchain/langgraph': 1.4.9(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(zod@4.4.3)
+      '@langchain/langgraph': 1.4.9(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))(react-dom@18.3.1(react@19.2.8))(react@19.2.8)(svelte@5.56.8)(vue@3.5.41(typescript@5.9.3))(zod@4.4.3)
       '@langchain/langgraph-checkpoint': 1.1.3(@langchain/core@1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)))
       langsmith: 0.8.9(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       zod: 4.4.3
@@ -9609,8 +9933,12 @@ snapshots:
   loose-envify@1.4.0:
     dependencies:
       js-tokens: 4.0.0
+    optional: true
 
   loupe@3.2.1: {}
+
+  lru-cache@10.4.3:
+    optional: true
 
   lru-cache@11.5.2: {}
 
@@ -9777,6 +10105,9 @@ snapshots:
   nth-check@2.1.1:
     dependencies:
       boolbase: 1.0.0
+
+  nwsapi@2.2.24:
+    optional: true
 
   object-assign@4.1.1: {}
 
@@ -9971,6 +10302,11 @@ snapshots:
   pako@2.2.0: {}
 
   parse-srcset@1.0.2: {}
+
+  parse5@7.3.0:
+    dependencies:
+      entities: 6.0.1
+    optional: true
 
   parseurl@1.3.3: {}
 
@@ -10221,9 +10557,12 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react@18.3.1:
+  react-dom@18.3.1(react@19.2.8):
     dependencies:
       loose-envify: 1.4.0
+      react: 19.2.8
+      scheduler: 0.23.2
+    optional: true
 
   react@19.2.8: {}
 
@@ -10268,6 +10607,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
+  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
   retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
@@ -10329,6 +10669,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  rrweb-cssom@0.7.1:
+    optional: true
+
+  rrweb-cssom@0.8.0:
+    optional: true
+
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
@@ -10350,6 +10696,16 @@ snapshots:
       launder: 1.7.1
       parse-srcset: 1.0.2
       postcss: 8.5.26
+
+  saxes@6.0.0:
+    dependencies:
+      xmlchars: 2.2.0
+    optional: true
+
+  scheduler@0.23.2:
+    dependencies:
+      loose-envify: 1.4.0
+    optional: true
 
   secure-json-parse@2.7.0: {}
 
@@ -10621,12 +10977,6 @@ snapshots:
     transitivePeerDependencies:
       - '@typescript-eslint/types'
 
-  swr@2.5.0(react@18.3.1):
-    dependencies:
-      dequal: 2.0.3
-      react: 18.3.1
-      use-sync-external-store: 1.6.0(react@18.3.1)
-
   swr@2.5.0(react@19.2.8):
     dependencies:
       dequal: 2.0.3
@@ -10638,6 +10988,9 @@ snapshots:
   swrv@1.2.0(vue@3.5.41(typescript@5.9.3)):
     dependencies:
       vue: 3.5.41(typescript@5.9.3)
+
+  symbol-tree@3.2.4:
+    optional: true
 
   tailwind-merge@2.6.1: {}
 
@@ -10763,7 +11116,20 @@ snapshots:
       universalify: 0.2.0
       url-parse: 1.5.10
 
+  tough-cookie@4.1.4:
+    dependencies:
+      psl: 1.15.0
+      punycode: 2.3.1
+      universalify: 0.2.0
+      url-parse: 1.5.10
+    optional: true
+
   tr46@0.0.3: {}
+
+  tr46@5.1.1:
+    dependencies:
+      punycode: 2.3.1
+    optional: true
 
   tree-kill@1.2.2: {}
 
@@ -10885,10 +11251,6 @@ snapshots:
 
   urlsafe-base64@1.0.0: {}
 
-  use-sync-external-store@1.6.0(react@18.3.1):
-    dependencies:
-      react: 18.3.1
-
   use-sync-external-store@1.6.0(react@19.2.8):
     dependencies:
       react: 19.2.8
@@ -10965,6 +11327,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 26.2.0
+      jsdom: 24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - jiti
       - less
@@ -11004,6 +11367,7 @@ snapshots:
     optionalDependencies:
       '@opentelemetry/api': 1.9.0
       '@types/node': 26.2.0
+      jsdom: 24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
     transitivePeerDependencies:
       - msw
 
@@ -11016,6 +11380,11 @@ snapshots:
       '@vue/shared': 3.5.41
     optionalDependencies:
       typescript: 5.9.3
+
+  w3c-xmlserializer@5.0.0:
+    dependencies:
+      xml-name-validator: 5.0.0
+    optional: true
 
   web-push@3.6.7:
     dependencies:
@@ -11035,6 +11404,9 @@ snapshots:
 
   webidl-conversions@3.0.1: {}
 
+  webidl-conversions@7.0.0:
+    optional: true
+
   websocket@1.0.35:
     dependencies:
       bufferutil: 4.1.0
@@ -11047,6 +11419,20 @@ snapshots:
       - supports-color
 
   whatsapp-rust-bridge@0.5.4: {}
+
+  whatwg-encoding@3.1.1:
+    dependencies:
+      iconv-lite: 0.6.3
+    optional: true
+
+  whatwg-mimetype@4.0.0:
+    optional: true
+
+  whatwg-url@14.2.0:
+    dependencies:
+      tr46: 5.1.1
+      webidl-conversions: 7.0.0
+    optional: true
 
   whatwg-url@5.0.0:
     dependencies:
@@ -11105,6 +11491,12 @@ snapshots:
   xdg-portable@7.3.0:
     dependencies:
       os-paths: 4.4.0
+
+  xml-name-validator@5.0.0:
+    optional: true
+
+  xmlchars@2.2.0:
+    optional: true
 
   xtend@4.0.2: {}
 

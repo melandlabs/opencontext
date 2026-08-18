@@ -33,9 +33,10 @@
  * log so the user can set `OPENCONTEXT_LOOP_CLI` to fix it.
  */
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 /**
  * The runtime home for Loop-owned assets in the packaged desktop app.
@@ -43,7 +44,7 @@ import { fileURLToPath } from "node:url";
  * shipped app has a stable, predictable shim location that doesn't
  * depend on the .app bundle's internal layout.
  */
-const PACKAGED_RUNTIME_DIR = join(homedir(), ".opencontext", "runtime");
+const PACKAGED_RUNTIME_DIR = getOpenContextPath("runtime");
 
 /**
  * Filename we expect. The shim itself spawns `tsx` and forwards to

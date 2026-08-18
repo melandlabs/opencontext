@@ -31,6 +31,7 @@
 		}
 	},
 	"dependencies": {
+		"@melandlabs/env-config": "^0.4.0",
 		"@melandlabs/opencontext": "^0.2.6"
 	},
 	"peerDependencies": {

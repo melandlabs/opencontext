@@ -211,6 +211,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		try {
 			await upsertRawMessagesToChroma(messages as never);
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 			console.warn("[memory-store/http] chroma upsert failed:", error);
 		}
 
@@ -225,6 +226,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 						manager.upsertVectorForMessage(message.messageId, message.embedding);
 					}
 				}
+				// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 				console.log(
 					"[memory-store/http] Updated sqlite-vec vector table for",
 					messagesWithEmbeddings.length,
@@ -232,6 +234,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 				);
 			}
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 			console.warn("[memory-store/http] sqlite-vec vector update failed:", error);
 		}
 

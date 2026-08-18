@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/voice-kokoro",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -25,11 +25,14 @@
 	"keywords": ["opencontext"],
 	"dependencies": {},
 	"devDependencies": {
-		"typescript": "^5.6.3"
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
 	},
 	"scripts": {
 		"build": "tsup",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	}
 }

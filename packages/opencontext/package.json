@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.2.6",
+	"version": "0.4.0",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -20,10 +20,11 @@
 		"directory": "packages/opencontext"
 	},
 	"dependencies": {
+		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@hono/node-server": "^1.13.7",
-		"@melandlabs/ai-rag": "^0.2.3",
-		"@melandlabs/integrations": "^0.2.0",
-		"@melandlabs/security": "^0.2.0",
+		"@melandlabs/ai-rag": "^0.2.4",
+		"@melandlabs/integrations": "^0.3.0",
+		"@melandlabs/security": "^0.3.0",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",
 		"agentkeepalive": "^4.6.0",
@@ -52,6 +53,7 @@
 		"@melandlabs/audit": "workspace:*",
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/cron": "workspace:*",
+		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
 		"@melandlabs/loop": "workspace:*",
 		"@melandlabs/memory-store": "workspace:*",
@@ -72,6 +74,7 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "vitest run",
+		"test:integration": "vitest run --config vitest.integration.config.ts",
 		"test:watch": "vitest"
 	},
 	"exports": {

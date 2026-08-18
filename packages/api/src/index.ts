@@ -26,11 +26,12 @@ async function fetchApi<T>(url: string, options?: RequestInit): Promise<T> {
 
 	if (!response.ok) {
 		let error = "Request failed";
+		const text = await response.text();
 		try {
-			const errorData = await response.json();
+			const errorData = JSON.parse(text);
 			error = errorData.error || errorData.message || error;
 		} catch {
-			error = (await response.text()) || "Unknown error";
+			error = text || "Unknown error";
 		}
 		throw new ApiError(error, response.status);
 	}

@@ -155,6 +155,7 @@ async function apiFetch(params: {
 			throw new Error(`Weixin iLink HTTP ${res.status}: ${rawText.slice(0, 500)}`);
 		}
 		if (process.env.DEBUG_WEIXIN === "true") {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[Weixin iLink] ${params.endpoint} response: ${rawText.slice(0, 300)}`);
 		}
 		return rawText;

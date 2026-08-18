@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/insights",
-	"version": "0.2.0",
+	"version": "0.3.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -32,12 +32,15 @@
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
-		"typescript": "^5.6.3"
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
 	},
 	"scripts": {
 		"build": "tsup",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	}
 }

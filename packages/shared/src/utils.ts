@@ -211,8 +211,10 @@ export function extractMalformedToolCalls(text: string): Array<{ toolName: strin
 	// Match complete tool call blocks using matchAll
 	const matches = text.matchAll(MALFORMED_TOOL_CALL_REGEX);
 	for (const match of matches) {
+		const rawName = (match[1] as string) || "";
+		const toolName = rawName.replace(/^["']|["']$/g, "") || "unknown";
 		results.push({
-			toolName: (match[2] as string) || "unknown",
+			toolName,
 			fullMatch: match[0],
 		});
 	}

@@ -316,6 +316,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				"Content-Type": "application/json; charset=utf-8",
 			},
 		});
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const json = (await resp.json().catch(() => null)) as any;
 
 		if (!resp.ok || (typeof json?.code === "number" && json.code !== 0)) {
@@ -383,6 +384,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		}
 
 		if (DEBUG) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[FeishuAdapter] Uploaded image ${imagePath} -> ${json.data.image_key}`);
 		}
 		return json.data.image_key;
@@ -393,6 +395,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	 */
 	private async sendImageMessage(receiveId: string, imageKey: string, rootId?: string): Promise<void> {
 		const client = this.getClient();
+		// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 		const response = await (client.im.v1.message.create as any)({
 			params: { receive_id_type: detectReceiveIdType(receiveId) },
 			data: {
@@ -405,6 +408,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		assertFeishuMessageCreateSucceeded(response, "sendImageMessage", "image");
 
 		if (DEBUG) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(`[FeishuAdapter] Sent image to ${receiveId}`);
 		}
 	}
@@ -442,6 +446,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 		for (const payload of payloads) {
 			try {
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const response = await (client.im.v1.message.create as any)({
 					params: { receive_id_type: detectReceiveIdType(receiveId) },
 					data: {
@@ -453,12 +458,14 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				});
 				assertFeishuMessageCreateSucceeded(response, "sendTextPayload", payload.msg_type);
 				if (DEBUG) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.log(`[FeishuAdapter] Sent text to ${receiveId} as ${payload.msg_type}`);
 				}
 				return;
 			} catch (err) {
 				lastError = err;
 				if (DEBUG) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn(`[FeishuAdapter] Text payload failed, trying next: ${err}`);
 				}
 			}
@@ -498,6 +505,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 	 * Feishu uses chat_id as conversation identifier (both private and group chats have chat_id)
 	 * detectReceiveIdType dynamically selects receive_id_type based on ID prefix (ou_ -> open_id, oc_ -> chat_id).
 	 */
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			const { texts, images } = this.separateMessages(messages);
@@ -514,6 +522,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			for (const image of images) {
 				const imagePath = image.path;
 				if (!imagePath) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn("[FeishuAdapter] Image has no local path, skipping:", image.url);
 					continue;
 				}
@@ -522,6 +531,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					const imageKey = await this.uploadImage(imagePath);
 					await this.sendImageMessage(id, imageKey);
 				} catch (err) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error("[FeishuAdapter] Failed to send image:", err);
 					// Continue sending other images even if one fails
 				}
@@ -531,11 +541,9 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
-			const chatId =
-				event.sourcePlatformObject?.event?.message?.chat_id ?? event.sourcePlatformObject?.message?.chat_id;
-			const messageId =
-				event.sourcePlatformObject?.event?.message?.message_id ??
-				event.sourcePlatformObject?.message?.message_id;
+			const raw = event.sourcePlatformObject as any;
+			const chatId = raw?.event?.message?.chat_id ?? raw?.message?.chat_id;
+			const messageId = raw?.event?.message?.message_id ?? raw?.message?.message_id;
 			if (!chatId) {
 				await this.sendMessages(event.targetType, (event.sender as Friend).id as string, messages);
 				return;
@@ -560,6 +568,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			for (const image of images) {
 				const imagePath = image.path;
 				if (!imagePath) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.warn("[FeishuAdapter] Reply image has no local path, skipping:", image.url);
 					continue;
 				}
@@ -568,6 +577,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					const imageKey = await this.uploadImage(imagePath);
 					await this.sendImageMessage(chatId, imageKey, messageId);
 				} catch (err) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error("[FeishuAdapter] Failed to send reply image:", err);
 					lastError = err;
 					// Continue sending other images even if one fails
@@ -603,12 +613,18 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		while (true) {
 			try {
 				const resp = await this.feishuGet<{
-					data?: { items?: any[]; has_more?: boolean; page_token?: string };
+					data?: {
+						// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
+						items?: any[];
+						has_more?: boolean;
+						page_token?: string;
+					};
 				}>("/im/v1/chats", {
 					page_size: 50,
 					page_token: pageToken,
 				});
 
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const items: any[] = Array.isArray(resp?.data?.items) ? (resp.data?.items as any[]) : [];
 
 				if (items.length === 0) {
@@ -639,6 +655,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				}
 				pageToken = nextToken;
 			} catch (err) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(
 					"[FeishuAdapter] Failed to get conversation list (/im/v1/chats), will fall back to contact table:",
 					err,
@@ -647,6 +664,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			}
 		}
 
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[FeishuAdapter] Retrieved ${chats.length} conversations via /im/v1/chats`);
 
 		return chats;
@@ -667,6 +685,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			this.botOpenIdMemo = raw && raw.length > 0 ? raw : null;
 			return this.botOpenIdMemo;
 		} catch (err) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn("[FeishuAdapter] bot/v3/info failed:", err);
 			this.botOpenIdMemo = null;
 			return null;
@@ -722,6 +741,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		};
 
 		try {
+			// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 			const resp = await this.feishuGet<any>(`/im/v1/messages/${encodeURIComponent(mid)}`);
 			const content =
 				(typeof resp?.data?.items?.[0]?.body?.content === "string" && resp.data.items[0].body.content) ||
@@ -775,11 +795,13 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		// eslint-disable-next-line no-constant-condition
 		while (true) {
 			if (page >= maxPages) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[FeishuAdapter] fetchChatMessagesSince hit maxPages=${maxPages} chatId=${chatId}`);
 				break;
 			}
 			page++;
 			try {
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const resp: any = await (client as any).im.v1.message.list({
 					params: {
 						container_id_type: "chat",
@@ -791,6 +813,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				});
 
 				const data = resp?.data;
+				// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 				const items: any[] = Array.isArray(data?.items) ? data.items : [];
 
 				if (items.length === 0) {
@@ -838,6 +861,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 						quoteIdSet.add(item.root_id.trim());
 					}
 					if (DEBUG) {
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						console.log(
 							"[FeishuAdapter][DEBUG_PARSE] history chat_id=%s message_id=%s quote_ids=%s parsed_preview=%s",
 							chatId,
@@ -847,6 +871,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 						);
 					}
 
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const senderInfo: any =
 						item.sender ?? item.sender_id ?? item.sender_id?.open_id ?? item.sender_id?.user_id ?? {};
 					const senderId: string = senderInfo.open_id ?? senderInfo.user_id ?? senderInfo.id ?? "unknown";
@@ -885,6 +910,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 				}
 				pageToken = nextToken;
 			} catch (err) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.error(`[FeishuAdapter] fetchChatMessagesSince failed chatId=${chatId}:`, err);
 				break;
 			}
@@ -893,6 +919,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 		allMessages.sort((a, b) => a.timestamp - b.timestamp);
 
 		if (DEBUG) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(
 				`[FeishuAdapter] fetchChatMessagesSince chatId=${chatId} sinceSec=${sinceSec} count=${allMessages.length}`,
 			);
@@ -911,6 +938,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			return typeof name === "string" && name.trim().length > 0 ? name : null;
 		} catch (err) {
 			if (DEBUG) {
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(`[FeishuAdapter] Failed to get conversation details chatId=${chatId}`, err);
 			}
 			return null;
@@ -948,6 +976,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			// eslint-disable-next-line no-constant-condition
 			while (true) {
 				try {
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const resp: any = await (client as any).im.v1.message.list({
 						params: {
 							container_id_type: "chat",
@@ -960,6 +989,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					});
 
 					const data = resp?.data;
+					// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 					const items: any[] = Array.isArray(data?.items) ? data.items : [];
 
 					if (items.length === 0) {
@@ -1003,6 +1033,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 						const text = parsed.text || "[Image message]";
 						if (!parsed.text && imageKeys.length === 0) continue;
 						if (DEBUG) {
+							// biome-ignore lint/suspicious/noConsole: platform adapter logging
 							console.log(
 								"[FeishuAdapter][DEBUG_PARSE] list chat_id=%s message_id=%s quote_ids=%s parsed_preview=%s",
 								chatId,
@@ -1012,6 +1043,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 							);
 						}
 
+						// biome-ignore lint/suspicious/noExplicitAny: platform-specific opaque type
 						const senderInfo: any =
 							item.sender ?? item.sender_id ?? item.sender_id?.open_id ?? item.sender_id?.user_id ?? {};
 						const senderId: string = senderInfo.open_id ?? senderInfo.user_id ?? senderInfo.id ?? "unknown";
@@ -1067,6 +1099,7 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 					}
 					pageToken = nextToken;
 				} catch (err) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error(
 						`[FeishuAdapter] Failed to fetch historical messages for conversation ${chatId}:`,
 						err,
@@ -1076,12 +1109,14 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 			}
 
 			if (DEBUG)
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.log(
 					`[FeishuAdapter] Collected ${fetchedCount} messages for summary from conversation ${chatId}`,
 				);
 		}
 
 		if (DEBUG)
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.log(
 				`[FeishuAdapter] [Bot ${this.botId}] Collected ${allMessages.length} Feishu messages for scheduled Insight`,
 			);

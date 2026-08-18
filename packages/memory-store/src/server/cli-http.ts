@@ -73,6 +73,7 @@ function parseArgs(argv: string[]): HttpArgs {
 }
 
 function printHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.log(`opencontext-memory-http — standalone memory-store HTTP daemon.
 
 Usage:
@@ -83,6 +84,7 @@ Server:
   --host <host>                   Host to bind (default: 127.0.0.1, env: MEMORY_HTTP_HOST)
 `);
 	printUnifiedHelp();
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.log(`
 Examples:
   # Minimal — same as before, all three *not_configured warnings remain
@@ -113,9 +115,11 @@ async function main(): Promise<void> {
 		host: args.host,
 		unified,
 	});
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.log(`[memory-store/http] listening at ${url}`);
 
 	const shutdown = async (signal: NodeJS.Signals) => {
+		// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 		console.log(`[memory-store/http] ${signal} received, shutting down…`);
 		await stop();
 		process.exit(0);
@@ -125,6 +129,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error) => {
+	// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 	console.error("[memory-store/http] fatal:", error);
 	process.exit(1);
 });

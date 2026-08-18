@@ -10,9 +10,15 @@
 import type { UnifiedSearchDeps } from "../config";
 import { isRawMessageChromaEnabled, searchRawMessagesWithChroma } from "../storage/chroma-memory-index";
 import { isRawMessageStorageAvailable } from "../storage/raw-message-store";
+import type {
+	IterativeRecallCandidate,
+	IterativeRecallSearchRequest,
+	IterativeRecallSearchResult,
+} from "./iterative-recall";
 import {
 	type UnifiedMemoryMergeStrategy,
 	type UnifiedMemoryRankedList,
+	type UnifiedMemoryReasoningStrategy,
 	type UnifiedMemorySearchInput,
 	type UnifiedMemorySearchOutput,
 	type UnifiedMemorySearchResult,
@@ -23,6 +29,7 @@ import {
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
+	normalizeUnifiedMemoryReasoningStrategy,
 	normalizeUnifiedMemorySearchSources,
 	toKnowledgeResult,
 	toMemoryResult,
@@ -31,6 +38,7 @@ import {
 export type {
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
+	UnifiedMemoryReasoningStrategy,
 	UnifiedMemorySearchInput,
 	UnifiedMemorySearchOutput,
 	UnifiedMemorySearchResult,
@@ -45,6 +53,7 @@ export {
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
+	normalizeUnifiedMemoryReasoningStrategy,
 	normalizeUnifiedMemorySearchSources,
 	toKnowledgeResult,
 	toMemoryResult,
@@ -63,6 +72,281 @@ function deriveLexicalKeywords(query: string): string[] {
 		.slice(0, 16);
 }
 
+function parseDateBoundary(value: string, role: "from" | "to"): number | undefined {
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+
+	// Date-only strings must be parsed in UTC to avoid timezone drift.
+	// Date.parse("2024-05-15") treats the value as local midnight, which can
+	// shift the boundary by the host offset.
+	const dateOnlyMatch = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+	if (dateOnlyMatch) {
+		const year = Number.parseInt(dateOnlyMatch[1], 10);
+		const month = Number.parseInt(dateOnlyMatch[2], 10) - 1;
+		const day = Number.parseInt(dateOnlyMatch[3], 10);
+		if (role === "from") {
+			return Date.UTC(year, month, day);
+		}
+		// Inclusive end of the day.
+		return Date.UTC(year, month, day + 1) - 1;
+	}
+
+	const parsed = Date.parse(trimmed);
+	if (Number.isNaN(parsed)) {
+		return undefined;
+	}
+	return parsed;
+}
+
+function getCandidateTimestamp(metadata: Record<string, unknown>): number | undefined {
+	for (const key of ["timestamp", "createdAt", "time"]) {
+		const value = metadata[key];
+		if (typeof value === "number") {
+			return value;
+		}
+		if (typeof value === "string") {
+			const parsed = Date.parse(value);
+			if (!Number.isNaN(parsed)) {
+				return parsed;
+			}
+		}
+	}
+	return undefined;
+}
+
+function filterByDateRange<T extends { metadata: Record<string, unknown> }>(
+	items: T[],
+	dateFrom?: string,
+	dateTo?: string,
+): T[] {
+	if (!dateFrom && !dateTo) {
+		return items;
+	}
+
+	const fromMs = dateFrom ? parseDateBoundary(dateFrom, "from") : undefined;
+	const toMs = dateTo ? parseDateBoundary(dateTo, "to") : undefined;
+	if (fromMs === undefined && toMs === undefined) {
+		return items;
+	}
+
+	return items.filter((item) => {
+		const ts = getCandidateTimestamp(item.metadata);
+		if (ts === undefined) {
+			return true;
+		}
+		if (fromMs !== undefined && ts < fromMs) {
+			return false;
+		}
+		if (toMs !== undefined && ts > toMs) {
+			return false;
+		}
+		return true;
+	});
+}
+
+async function embedQueryVariant(
+	embedQuery: NonNullable<UnifiedSearchDeps["embedQuery"]>,
+	input: UnifiedMemorySearchInput,
+	query: string,
+): Promise<number[]> {
+	return embedQuery({
+		userId: input.userId,
+		query,
+		authToken: input.authToken,
+	});
+}
+
+async function runSemanticSearchForEmbedding(
+	deps: UnifiedSearchDeps,
+	input: UnifiedMemorySearchInput,
+	queryEmbedding: number[],
+	limit: number,
+	threshold: number,
+	logger: Pick<Console, "log" | "warn">,
+): Promise<UnifiedMemorySearchResult[]> {
+	const filters = input.botIds && input.botIds.length > 0 ? input.botIds.map((botId) => ({ botId })) : [{}];
+	let semantic: UnifiedMemorySearchResult[] = [];
+
+	if (isRawMessageChromaEnabled()) {
+		try {
+			semantic = (
+				await Promise.all(
+					filters.map((filter) => {
+						const botId = "botId" in filter ? filter.botId : undefined;
+						return searchRawMessagesWithChroma({
+							userId: input.userId,
+							queryEmbedding,
+							limit,
+							threshold,
+							botId,
+						});
+					}),
+				)
+			)
+				.flat()
+				.map(toMemoryResult);
+			logger.log?.("[memory-store] Raw message semantic search completed", {
+				backend: "chroma",
+				dimensions: queryEmbedding.length,
+				count: semantic.length,
+			});
+		} catch (error) {
+			logger.warn?.(
+				"[memory-store] Chroma raw message search failed; falling back to database search:",
+				error,
+			);
+		}
+	} else if (typeof deps.searchRawMessagesAnn === "function") {
+		const searchRawMessagesAnn = deps.searchRawMessagesAnn;
+		semantic = (
+			await Promise.all(
+				filters.map((filter) =>
+					searchRawMessagesAnn({
+						userId: input.userId,
+						queryEmbedding,
+						limit,
+						threshold,
+						botId: "botId" in filter ? filter.botId : undefined,
+					}),
+				),
+			)
+		)
+			.flat()
+			.filter(isRawMemorySemanticResult)
+			.map(toMemoryResult);
+	}
+
+	if (semantic.length === 0) {
+		try {
+			const { getRawMessageManager } = await import("../storage/raw-message-store");
+			const manager = await getRawMessageManager();
+			if (typeof manager.searchMessagesSemantically === "function") {
+				const results = await manager.searchMessagesSemantically({
+					userId: input.userId,
+					queryEmbedding,
+					limit,
+					threshold,
+				});
+				semantic = (
+					results as Array<{
+						id: string;
+						content: string;
+						similarity: number;
+						metadata?: Record<string, unknown>;
+					}>
+				).map((r) => ({
+					type: "memory" as const,
+					id: r.id,
+					content: r.content,
+					similarity: r.similarity,
+					metadata: r.metadata ?? {},
+				}));
+			}
+		} catch (error) {
+			logger.warn?.("[memory-store] SQLite semantic search failed:", error);
+		}
+	}
+
+	return semantic;
+}
+
+/**
+ * Merge several ranked lists of `id`-keyed hits into a single list where each
+ * id appears at most once, keeping the entry with the highest `similarity`.
+ * Generic over the hit shape; both `UnifiedMemorySearchResult` and
+ * `IterativeRecallCandidate` qualify without a wrapper.
+ */
+function mergeByMaxScore<T extends { id: string; similarity: number }>(lists: T[][]): T[] {
+	const best = new Map<string, T>();
+	for (const list of lists) {
+		for (const hit of list) {
+			const existing = best.get(hit.id);
+			if (!existing || hit.similarity > existing.similarity) {
+				best.set(hit.id, hit);
+			}
+		}
+	}
+	return Array.from(best.values()).sort((a, b) => b.similarity - a.similarity);
+}
+
+function toIterativeRecallCandidate(hit: UnifiedMemorySearchResult): IterativeRecallCandidate {
+	return {
+		id: hit.id,
+		content: hit.content,
+		similarity: hit.similarity,
+		metadata: hit.metadata,
+	};
+}
+
+async function runLexicalSearchForKeywords(
+	deps: UnifiedSearchDeps,
+	input: UnifiedMemorySearchInput,
+	keywords: string[],
+	limit: number,
+	logger: Pick<Console, "warn">,
+): Promise<UnifiedMemorySearchResult[]> {
+	if (keywords.length === 0) {
+		return [];
+	}
+
+	if (typeof deps.searchRawMessagesLexical === "function") {
+		try {
+			const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+			const searchRawMessagesLexical = deps.searchRawMessagesLexical;
+			return (
+				await Promise.all(
+					filters.map((botId) =>
+						searchRawMessagesLexical({
+							userId: input.userId,
+							keywords,
+							limit: Math.ceil(limit / filters.length),
+							botId,
+						}),
+					),
+				)
+			)
+				.flat()
+				.filter(isRawMemorySemanticResult)
+				.map((hit) => ({
+					...toMemoryResult(hit),
+					metadata: { ...hit.metadata, scoring: "bm25" },
+				}));
+		} catch (error) {
+			logger.warn?.("[memory-store] lexical memory search failed:", error);
+		}
+	}
+
+	try {
+		const { lexicalSearchRawMessages } = await import("../storage/sqlite-raw-message-store");
+		const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+		return (
+			await Promise.all(
+				filters.map((botId) =>
+					lexicalSearchRawMessages({
+						userId: input.userId,
+						keywords,
+						limit: Math.ceil(limit / filters.length),
+						botId,
+					}),
+				),
+			)
+		)
+			.flat()
+			.filter(Boolean)
+			.map((r) =>
+				toMemoryResult(
+					r as { id: string; content: string; similarity: number; metadata: Record<string, unknown> },
+				),
+			);
+	} catch (error) {
+		logger.warn?.("[memory-store] SQLite lexical search failed:", error);
+	}
+
+	return [];
+}
+
 /**
  * Sub-query output for the memory source. Each retrieval channel is exposed
  * separately so the outer merge (similarity or RRF) can combine them without
@@ -76,12 +360,21 @@ interface MemorySubQueries {
 export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch {
 	const logger = (deps as { logger?: Console }).logger ?? console;
 
+	function resolveReasoningStrategy(input: UnifiedMemorySearchInput): UnifiedMemoryReasoningStrategy {
+		const requested = normalizeUnifiedMemoryReasoningStrategy(input.reasoningStrategy);
+		if (requested !== "none") {
+			return requested;
+		}
+		return normalizeUnifiedMemoryReasoningStrategy(deps.reasoning?.defaultStrategy, "none");
+	}
+
 	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
 		const query = input.query.trim();
 		const sources = normalizeUnifiedMemorySearchSources(input.sources);
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
 		const threshold = clampUnifiedMemorySearchThreshold(input.threshold);
 		const mergeStrategy = normalizeUnifiedMemoryMergeStrategy(input.mergeStrategy);
+		const reasoningStrategy = resolveReasoningStrategy(input);
 		const warnings: UnifiedMemorySearchWarning[] = [];
 
 		if (!query) {
@@ -95,10 +388,22 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		}
 
 		let memorySubs: MemorySubQueries | undefined;
+		const reasoningInfo: UnifiedMemorySearchOutput["reasoning"] = { strategy: reasoningStrategy };
+		if (input.dateFrom || input.dateTo) {
+			reasoningInfo.dateRange = { from: input.dateFrom, to: input.dateTo };
+		}
+
 		if (sources.includes("memory")) {
 			if (isRawMessageStorageAvailable()) {
 				try {
-					memorySubs = await runMemorySource(input, limit, threshold, warnings);
+					memorySubs = await runMemorySource(
+						input,
+						limit,
+						threshold,
+						warnings,
+						reasoningStrategy,
+						reasoningInfo,
+					);
 				} catch (error) {
 					logger.warn?.("[memory-store] memory source failed:", error);
 					warnings.push({
@@ -187,13 +492,17 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			strategy: mergeStrategy,
 		});
 
-		return {
+		const output: UnifiedMemorySearchOutput = {
 			query: input.query,
 			sources,
 			results: merged,
 			count: merged.length,
 			warnings,
 		};
+		if (reasoningInfo && (reasoningInfo.strategy !== "none" || reasoningInfo.dateRange !== undefined)) {
+			output.reasoning = reasoningInfo;
+		}
+		return output;
 	}
 
 	async function runMemorySource(
@@ -201,7 +510,103 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		limit: number,
 		threshold: number,
 		warnings: UnifiedMemorySearchWarning[],
+		reasoningStrategy: UnifiedMemoryReasoningStrategy = "none",
+		reasoningInfo?: UnifiedMemorySearchOutput["reasoning"],
 	): Promise<MemorySubQueries> {
+		if (reasoningStrategy === "iterative" && !deps.reasoning?.iterativePlanner) {
+			warnings.push({
+				source: "memory",
+				code: "memory_iterative_planner_not_configured",
+				message:
+					"Iterative reasoning requested but no iterativePlanner is configured; falling back to default search.",
+			});
+			if (reasoningInfo) reasoningInfo.degraded = true;
+		}
+		if (reasoningStrategy === "rewrite" && !deps.reasoning?.queryRewriter) {
+			warnings.push({
+				source: "memory",
+				code: "memory_query_rewrite_not_configured",
+				message:
+					"Rewrite reasoning requested but no queryRewriter is configured; falling back to default search.",
+			});
+			if (reasoningInfo) reasoningInfo.degraded = true;
+		}
+
+		// Iterative reasoning bypasses the one-shot semantic/lexical path and lets
+		// a planner model drive its own searches. The planner's executor runs a
+		// hybrid search: lexical from the provided keywords plus semantic search
+		// from an embedding of those keywords, so the planner benefits from both
+		// exact matching and dense retrieval.
+		if (reasoningStrategy === "iterative" && deps.reasoning?.iterativePlanner) {
+			const planner = deps.reasoning.iterativePlanner;
+			const result = await planner.plan({
+				query: input.query,
+				dateFrom: input.dateFrom,
+				dateTo: input.dateTo,
+				executor: {
+					search: async (request: IterativeRecallSearchRequest): Promise<IterativeRecallSearchResult> => {
+						const keywords =
+							request.keywords.length > 0 ? request.keywords : deriveLexicalKeywords(input.query);
+						const lexicalHits = await runLexicalSearchForKeywords(deps, input, keywords, limit, logger);
+
+						let semanticHits: UnifiedMemorySearchResult[] = [];
+						if (typeof deps.embedQuery === "function") {
+							try {
+								const semanticQuery = keywords.join(" ");
+								const queryEmbedding = await embedQueryVariant(deps.embedQuery, input, semanticQuery);
+								semanticHits = await runSemanticSearchForEmbedding(
+									deps,
+									input,
+									queryEmbedding,
+									limit,
+									threshold,
+									logger,
+								);
+							} catch (error) {
+								logger.warn?.(
+									"[memory-store] Iterative semantic search failed; using lexical results only:",
+									error,
+								);
+							}
+						}
+
+						const candidates = filterByDateRange(
+							mergeByMaxScore([
+								lexicalHits.map(toIterativeRecallCandidate),
+								semanticHits.map(toIterativeRecallCandidate),
+							]),
+							request.dateFrom,
+							request.dateTo,
+						);
+
+						return { candidates };
+					},
+				},
+			});
+
+			if (reasoningInfo) {
+				reasoningInfo.iterations = result.stats.iterations;
+				reasoningInfo.evidenceCount = result.evidence.length;
+				// The planner catches its own LLM errors and reports degraded
+				// state via lastDegraded(); mirror the rewriter pattern so
+				// callers see a single, consistent degraded marker regardless
+				// of which reasoning provider they wired up.
+				if (planner.lastDegraded?.()) {
+					reasoningInfo.degraded = true;
+				}
+			}
+
+			const semantic = result.evidence.map((candidate) => ({
+				type: "memory" as const,
+				id: candidate.id,
+				content: candidate.content,
+				similarity: candidate.similarity,
+				metadata: { ...candidate.metadata, reasoning: "iterative" },
+			}));
+
+			return { semantic, lexical: [] };
+		}
+
 		// When no embedding is configured, use default lexical search as fallback
 		if (typeof deps.embedQuery !== "function") {
 			warnings.push({
@@ -210,130 +615,65 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				message: "Semantic search not configured, using keyword search as fallback",
 			});
 
-			// Use lexical search from SQLite as default fallback
-			const { lexicalSearchRawMessages } = await import("../storage/sqlite-raw-message-store");
 			const keywords = deriveLexicalKeywords(input.query);
-
-			let lexical: UnifiedMemorySearchResult[] = [];
-			if (keywords.length > 0) {
-				try {
-					const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
-					const results = await Promise.all(
-						filters.map((botId) =>
-							lexicalSearchRawMessages({
-								userId: input.userId,
-								keywords,
-								limit: Math.ceil(limit / filters.length),
-								botId,
-							}),
-						),
-					);
-					lexical = (
-						results.flat() as Array<{
-							id: string;
-							content: string;
-							similarity: number;
-							metadata: Record<string, unknown>;
-						}>
-					)
-						.filter(Boolean)
-						.map(toMemoryResult);
-				} catch (error) {
-					logger.warn?.("[memory-store] Default lexical search failed:", error);
-				}
-			}
-
+			const lexical = filterByDateRange(
+				await runLexicalSearchForKeywords(deps, input, keywords, limit, logger),
+				input.dateFrom,
+				input.dateTo,
+			);
 			return { semantic: [], lexical };
 		}
 
-		const queryEmbedding = await deps.embedQuery({
-			userId: input.userId,
-			query: input.query,
-			authToken: input.authToken,
-		});
-
-		const filters = input.botIds && input.botIds.length > 0 ? input.botIds.map((botId) => ({ botId })) : [{}];
-
 		let semantic: UnifiedMemorySearchResult[] = [];
-		if (isRawMessageChromaEnabled()) {
+
+		// At this point embedQuery is guaranteed to be a function because the
+		// non-function case returns early above. Capture it in a local constant so
+		// the narrowing is preserved inside the map() callbacks below.
+		const embedQuery = deps.embedQuery;
+
+		// Rewrite strategy: embed multiple query variants and keep the best score
+		// per memory.
+		if (reasoningStrategy === "rewrite" && deps.reasoning?.queryRewriter) {
 			try {
-				semantic = (
-					await Promise.all(
-						filters.map((filter) => {
-							const botId = "botId" in filter ? filter.botId : undefined;
-							return searchRawMessagesWithChroma({
-								userId: input.userId,
-								queryEmbedding,
-								limit,
-								threshold,
-								botId,
-							});
-						}),
-					)
-				)
-					.flat()
-					.map(toMemoryResult);
-				logger.log?.("[memory-store] Raw message semantic search completed", {
-					backend: "chroma",
-					dimensions: queryEmbedding.length,
-					count: semantic.length,
+				const variants = await deps.reasoning.queryRewriter.rewrite({
+					query: input.query,
+					userId: input.userId,
+					authToken: input.authToken,
 				});
-			} catch (error) {
-				logger.warn?.(
-					"[memory-store] Chroma raw message search failed; falling back to database search:",
-					error,
+				if (reasoningInfo) {
+					reasoningInfo.rewrittenQueries = variants;
+					// The rewriter catches its own LLM errors and degrades to
+					// `[original]` silently, so we ask it whether the last call
+					// fell back instead of relying on a thrown error.
+					if (deps.reasoning.queryRewriter.lastDegraded?.()) {
+						reasoningInfo.degraded = true;
+					}
+				}
+
+				const embeddings = await Promise.all(
+					variants.map((variant) => embedQueryVariant(embedQuery, input, variant)),
 				);
-				// fall through to ANN below
-			}
-		} else if (typeof deps.searchRawMessagesAnn === "function") {
-			semantic = (
-				await Promise.all(
-					filters.map((filter) =>
-						deps.searchRawMessagesAnn!({
-							userId: input.userId,
-							queryEmbedding,
-							limit,
-							threshold,
-							botId: "botId" in filter ? filter.botId : undefined,
-						}),
+				const lists = await Promise.all(
+					embeddings.map((embedding) =>
+						runSemanticSearchForEmbedding(deps, input, embedding, limit, threshold, logger),
 					),
-				)
-			)
-				.flat()
-				.filter(isRawMemorySemanticResult)
-				.map(toMemoryResult);
+				);
+				semantic = mergeByMaxScore(lists);
+			} catch (error) {
+				logger.warn?.("[memory-store] Query rewriting failed; falling back to original query:", error);
+				warnings.push({
+					source: "memory",
+					code: "memory_query_rewrite_failed",
+					message: `Query rewriting failed: ${(error as Error).message ?? "Unknown error"}. Using original query.`,
+				});
+				if (reasoningInfo) reasoningInfo.degraded = true;
+			}
 		}
 
-		// Fallback: try SQLite's searchMessagesSemantically for stored embeddings
+		// Default path, also used as fallback when rewrite fails before producing hits.
 		if (semantic.length === 0) {
-			try {
-				const { getRawMessageManager } = await import("../storage/raw-message-store");
-				const manager = await getRawMessageManager();
-				if (typeof manager.searchMessagesSemantically === "function") {
-					const results = await manager.searchMessagesSemantically({
-						userId: input.userId,
-						queryEmbedding,
-						limit,
-						threshold,
-					});
-					semantic = (
-						results as Array<{
-							id: string;
-							content: string;
-							similarity: number;
-							metadata?: Record<string, unknown>;
-						}>
-					).map((r) => ({
-						type: "memory" as const,
-						id: r.id,
-						content: r.content,
-						similarity: r.similarity,
-						metadata: r.metadata ?? {},
-					}));
-				}
-			} catch (error) {
-				logger.warn?.("[memory-store] SQLite semantic search failed:", error);
-			}
+			const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
+			semantic = await runSemanticSearchForEmbedding(deps, input, queryEmbedding, limit, threshold, logger);
 		}
 
 		// Optional lexical (BM25) sub-query. Runs in parallel with the semantic
@@ -342,15 +682,16 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		// caller asked for RRF (then we surface a warning + fallback to
 		// similarity-equivalent single-list RRF).
 		let lexical: UnifiedMemorySearchResult[] = [];
-		if (typeof deps.searchRawMessagesLexical === "function") {
-			const keywords = deriveLexicalKeywords(input.query);
-			if (keywords.length > 0) {
+		const keywords = deriveLexicalKeywords(input.query);
+		if (keywords.length > 0) {
+			if (typeof deps.searchRawMessagesLexical === "function") {
 				try {
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+					const searchRawMessagesLexical = deps.searchRawMessagesLexical;
 					lexical = (
 						await Promise.all(
 							lexFilters.map((botId) =>
-								deps.searchRawMessagesLexical!({
+								searchRawMessagesLexical({
 									userId: input.userId,
 									keywords,
 									limit,
@@ -373,17 +714,20 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						message: (error as Error).message ?? "memory_lexical_search_failed",
 					});
 				}
+			} else if (input.mergeStrategy === "rrf") {
+				warnings.push({
+					source: "memory",
+					code: "memory_lexical_search_not_configured",
+					message:
+						"RRF merge requested but lexical search is not configured; falling back to semantic-only RRF.",
+				});
 			}
-		} else if (input.mergeStrategy === "rrf") {
-			warnings.push({
-				source: "memory",
-				code: "memory_lexical_search_not_configured",
-				message:
-					"RRF merge requested but lexical search is not configured; falling back to semantic-only RRF.",
-			});
 		}
 
-		return { semantic, lexical };
+		return {
+			semantic: filterByDateRange(semantic, input.dateFrom, input.dateTo),
+			lexical: filterByDateRange(lexical, input.dateFrom, input.dateTo),
+		};
 	}
 
 	async function searchRawMemorySemantically(
@@ -391,7 +735,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 	): Promise<UnifiedMemorySearchResult[]> {
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
 		const threshold = clampUnifiedMemorySearchThreshold(input.threshold);
-		const sub = await runMemorySource(input, limit, threshold, []);
+		const reasoningStrategy = resolveReasoningStrategy(input);
+		const sub = await runMemorySource(input, limit, threshold, [], reasoningStrategy);
 		return mergeAcrossSources({
 			memorySubs: sub,
 			insightHits: [],

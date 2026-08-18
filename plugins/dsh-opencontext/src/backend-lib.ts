@@ -13,10 +13,9 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import { Buffer } from "node:buffer";
 
+import { getOpenContextPath } from "@melandlabs/env-config";
 import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/opencontext";
 
 import type {
@@ -558,8 +557,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 					undefined,
 				);
 			}
-			const dbPath =
-				process.env.MEMORY_STORE_DB_PATH ?? join(homedir(), ".opencontext", "memory", "store.db");
+			const dbPath = process.env.MEMORY_STORE_DB_PATH ?? getOpenContextPath("memory", "store.db");
 			return { ok: true, mode: "lib", details: `db=${dbPath}` };
 		} catch (error) {
 			return {

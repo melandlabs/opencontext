@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/config",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"type": "module",
 	"files": ["dist", "src/tsup-preset.mjs", "README.md", "LICENSE"],
 	"publishConfig": {

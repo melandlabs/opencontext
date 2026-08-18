@@ -7,17 +7,18 @@
  * Token trimming is handled by handleAgentRuntime (40K budget) — not here.
  */
 
-import { homedir } from "node:os";
 import { join } from "node:path";
+
 import {
 	clearAllChannelForUser,
 	clearChannelConversationFromAllDays,
 	loadChannelDay,
 	saveChannelMessage,
 } from "@melandlabs/ai/store";
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".opencontext", "data", "memory");
+	const base = getOpenContextPath("data", "memory");
 	return userId ? join(base, userId) : base;
 }
 
@@ -81,6 +82,7 @@ class QQBotConversationStore {
 		this.cache.get(userKey)?.get(accountId)?.push(message);
 		saveChannelMessage(this.memoryDir, PLATFORM, userKey, accountId, message);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(
 			`[QQBotConversationStore] Added ${role} message for sender ${senderId}, account ${accountId}`,
 		);
@@ -94,6 +96,7 @@ class QQBotConversationStore {
 		this.loadedPairs.delete(pk);
 		clearChannelConversationFromAllDays(this.memoryDir, PLATFORM, userKey, accountId);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[QQBotConversationStore] Cleared conversation for sender ${senderId}, account ${accountId}`);
 	}
 
@@ -108,6 +111,7 @@ class QQBotConversationStore {
 		this.cache.delete(userKey);
 		clearAllChannelForUser(this.memoryDir, PLATFORM, userKey);
 
+		// biome-ignore lint/suspicious/noConsole: conversation store debug logging
 		console.log(`[QQBotConversationStore] Cleared all conversations for sender ${senderId}`);
 	}
 

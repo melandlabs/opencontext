@@ -4,3 +4,4 @@
 // callers that want the more thorough window.__TAURI__ runtime check.
 export * from "./client-constants";
 export * from "./tauri-paths";
+export * from "./app-paths";

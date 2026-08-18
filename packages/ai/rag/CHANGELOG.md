@@ -1,5 +1,12 @@
 # @melandlabs/ai-rag
 
+## 0.2.4
+
+### Patch Changes
+
+- Updated dependencies [351c6b2]
+  - @melandlabs/shared@0.3.0
+
 ## 0.2.3
 
 ### Patch Changes

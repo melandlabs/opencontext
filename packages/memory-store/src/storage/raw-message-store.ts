@@ -60,7 +60,7 @@ export interface RawMessageStore {
 	close(): Promise<void>;
 }
 
-function resolveBackend(env: MemoryStoreEnv | undefined): RawMessageStorageBackend {
+function resolveBackend(_env: MemoryStoreEnv | undefined): RawMessageStorageBackend {
 	const explicit = process.env.OPENCONTEXT_MEMORY_STORE_BACKEND?.trim().toLowerCase();
 	if (explicit === "postgres") return "postgres";
 	// Any other value — including the default "sqlite", an unknown value,

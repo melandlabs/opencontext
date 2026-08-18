@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/env-config",
-	"version": "0.2.0",
+	"version": "0.4.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -13,7 +13,8 @@
 		".": "./dist/index.js",
 		"./client-constants": "./dist/client-constants.js",
 		"./client-mode": "./dist/client-mode.js",
-		"./tauri-paths": "./dist/tauri-paths.js"
+		"./tauri-paths": "./dist/tauri-paths.js",
+		"./app-paths": "./dist/app-paths.js"
 	},
 	"repository": {
 		"type": "git",
@@ -29,12 +30,14 @@
 	"keywords": ["opencontext", "env", "config", "tauri"],
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
-		"typescript": "^5.6.3"
+		"typescript": "^5.6.3",
+		"vitest": "^2.1.0"
 	},
 	"scripts": {
 		"build": "tsup",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
-		"lint:fix": "biome check --write ."
+		"lint:fix": "biome check --write .",
+		"test": "vitest run"
 	}
 }

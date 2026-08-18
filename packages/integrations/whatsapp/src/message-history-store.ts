@@ -39,8 +39,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+
+import { getOpenContextPath } from "@melandlabs/env-config";
 import { proto } from "@whiskeysockets/baileys";
 import type { WAMessage, WASocket } from "@whiskeysockets/baileys";
 
@@ -64,7 +65,7 @@ export type PersistedChatInfo = {
 };
 
 function defaultBaseDir(): string {
-	return join(homedir(), ".opencontext", "data", "whatsapp-history");
+	return getOpenContextPath("data", "whatsapp-history");
 }
 
 function sanitizeForFilename(value: string): string {
@@ -163,6 +164,7 @@ class WhatsAppMessageHistoryStore {
 		try {
 			rmSync(dir, { recursive: true, force: true });
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn(`[WhatsAppMessageHistoryStore] Failed to purge ${dir}:`, error);
 		}
 	}
@@ -371,11 +373,13 @@ class WhatsAppMessageHistoryStore {
 			this.consecutiveFlushFailures = 0;
 		} catch (error) {
 			this.consecutiveFlushFailures++;
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn("[WhatsAppMessageHistoryStore] Failed to flush:", error);
 			if (this.consecutiveFlushFailures >= MAX_CONSECUTIVE_FLUSH_FAILURES) {
 				// Persistent disk problem (full disk, permissions) — stop retrying
 				// every 2s forever. In-memory data stays available; persistence for
 				// the pending set is abandoned.
+				// biome-ignore lint/suspicious/noConsole: platform adapter logging
 				console.warn(
 					`[WhatsAppMessageHistoryStore] Giving up on flushing ${this.dirtyJids.size} chat(s) after ${this.consecutiveFlushFailures} consecutive failures`,
 				);
@@ -445,6 +449,7 @@ class WhatsAppMessageHistoryStore {
 			this.messages.set(jid, existing);
 			this.messageIds.set(jid, ids);
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn(`[WhatsAppMessageHistoryStore] Failed to hydrate ${jid}:`, error);
 		}
 	}
@@ -477,6 +482,7 @@ class WhatsAppMessageHistoryStore {
 				}
 			}
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			console.warn("[WhatsAppMessageHistoryStore] Failed to hydrate chats:", error);
 		}
 	}

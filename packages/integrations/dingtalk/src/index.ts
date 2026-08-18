@@ -80,6 +80,7 @@ function isImageMessage(message: Message): message is Image {
 	return typeof message === "object" && message !== null && "url" in message && !("name" in message);
 }
 
+// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 function messagesToMarkdown(messages: Messages): string {
 	const parts: string[] = [];
 	for (const m of messages) {
@@ -218,6 +219,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			body: JSON.stringify(body),
 		});
 		const raw = await resp.text();
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log(`[DingTalkAdapter] postRobotMessage msgKey=${msgKey} target=${id} status=${resp.status}`);
 		let parsed: DingTalkRobotResponse | null = null;
 		try {
@@ -268,6 +270,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 		const uploadUrl = `https://oapi.dingtalk.com/media/upload?access_token=${encodeURIComponent(token)}&type=${encodeURIComponent(fileType)}`;
 		const resp = await fetch(uploadUrl, { method: "POST", body: formData });
 		const raw = await resp.text();
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		console.log(`[DingTalkAdapter] uploadMedia type=${fileType} file=${fileName} status=${resp.status}`);
 		let parsed: { errcode?: number; media_id?: string; errmsg?: string } = {};
 		try {
@@ -293,6 +296,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 		if (!parsed.media_id) {
 			throw new Error(`[DingTalkAdapter] Upload media failed: missing media_id ${raw.slice(0, 300)}`);
 		}
+		// biome-ignore lint/suspicious/noConsole: platform adapter logging
 		if (DEBUG) console.log(`[DingTalkAdapter] Upload ${fileType} successful media_id=${parsed.media_id}`);
 		return parsed.media_id;
 	}
@@ -300,6 +304,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 	/**
 	 * chatId: Private chat is the other party's userId (staffId/openId, etc. string); Group chat is group:{openConversationId}
 	 */
+	// biome-ignore lint/correctness/noUnusedVariables: intentional unused variable
 	async sendMessages(target: MessageTarget, id: string, messages: Messages): Promise<void> {
 		await this.runWithAdapterError("sendMessages", async () => {
 			const textParts: string[] = [];
@@ -352,6 +357,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 							continue;
 						} catch (urlSendError) {
 							if (DEBUG) {
+								// biome-ignore lint/suspicious/noConsole: platform adapter logging
 								console.warn(
 									"[DingTalkAdapter] Direct image URL send failed, fallback to upload media_id",
 									urlSendError,
@@ -376,6 +382,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						});
 					} catch {
 						// Fallback to file attachment
+						// biome-ignore lint/suspicious/noConsole: platform adapter logging
 						if (DEBUG) console.log("[DingTalkAdapter] sampleImageMsg failed, degrade to sampleFile");
 						await this.postRobotMessage(id, "sampleFile", {
 							mediaId,
@@ -384,6 +391,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						});
 					}
 				} catch (error) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error("[DingTalkAdapter] Image send failed", error);
 					mediaErrors.push(
 						`Image(${image.id ?? image.url}) send failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -408,6 +416,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						duration: durationSec,
 					});
 				} catch (error) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error("[DingTalkAdapter] Voice send failed", error);
 					mediaErrors.push(
 						`Voice(${voice.id ?? voice.url}) send failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -426,6 +435,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 						fileType: fileName.split(".").pop() || "bin",
 					});
 				} catch (error) {
+					// biome-ignore lint/suspicious/noConsole: platform adapter logging
 					console.error("[DingTalkAdapter] File send failed", error);
 					mediaErrors.push(
 						`File(${file.name}) send failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -436,6 +446,7 @@ export class DingTalkAdapter extends MessagePlatformAdapter {
 			if (mediaErrors.length > 0) {
 				throw new Error(`[DingTalkAdapter] Media send failed: ${mediaErrors.join(" | ")}`);
 			}
+			// biome-ignore lint/suspicious/noConsole: platform adapter logging
 			if (DEBUG) console.log(`[DingTalkAdapter] Sent to chatId=${id}`);
 		});
 	}

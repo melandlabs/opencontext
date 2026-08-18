@@ -51,6 +51,7 @@ import {
 } from "@melandlabs/ai-rag/embedding-provider";
 import { AUDIT_LOG_PATH, readAuditLogs } from "@melandlabs/audit";
 import { INTEGRATION_IDS, isIntegrationId } from "@melandlabs/contracts";
+import { APP_DIR_NAME } from "@melandlabs/env-config";
 import { listLoopCliCandidates, readPreferences, resolveLoopCli } from "@melandlabs/loop";
 import {
 	closeRawMessageStore,
@@ -428,7 +429,7 @@ function checkHomeWritable(homeDir: string): CheckResult {
 }
 
 function checkSubdir(homeDir: string, leaf: string): CheckResult {
-	const target = join(homeDir, ".opencontext", leaf);
+	const target = join(homeDir, APP_DIR_NAME, leaf);
 	if (!existsSync(target)) {
 		return {
 			section: "filesystem",
@@ -815,7 +816,7 @@ export function checkAudit(ctx: DoctorContext): Promise<CheckResult[]> {
 }
 
 function checkAuditParent(homeDir: string): CheckResult {
-	const target = join(homeDir, ".opencontext", "logs");
+	const target = join(homeDir, APP_DIR_NAME, "logs");
 	if (!existsSync(target)) {
 		// The audit logger creates this on first write, so an unwritable
 		// parent is a *fail* (writes will silently no-op) but a missing

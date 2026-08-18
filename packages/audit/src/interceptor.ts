@@ -22,7 +22,9 @@ let projectRoot = "";
 function isNonProjectPath(filePath: string): boolean {
 	try {
 		const { resolve } = require("node:path") as typeof import("node:path");
-		const { homedir } = require("node:os") as typeof import("node:os");
+		const { getOpenContextDir } = require("@melandlabs/env-config/app-paths") as {
+			getOpenContextDir: () => string;
+		};
 		const resolved = resolve(String(filePath));
 		if (resolved.includes("node_modules") || resolved.includes(".next")) {
 			return false;
@@ -31,7 +33,7 @@ function isNonProjectPath(filePath: string): boolean {
 			return false;
 		}
 		// Skip ~/.opencontext app data directory
-		const opencontextDir = resolve(homedir(), ".opencontext");
+		const opencontextDir = getOpenContextDir();
 		if (resolved.startsWith(opencontextDir)) {
 			return false;
 		}
@@ -159,6 +161,7 @@ export function installAuditInterceptors() {
 			return origSpawnSync.apply(cp, [command, spawnArgs, ...rest]);
 		};
 	} catch (e) {
+		// biome-ignore lint/suspicious/noConsole: error logging
 		console.error("[Audit] Error:", e);
 	}
 }

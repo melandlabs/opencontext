@@ -7,8 +7,8 @@
 
 import fsSync from "node:fs";
 import fs from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
+
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 const MCP_CONFIG_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -70,7 +70,7 @@ export function getMcpConfigPath(): string {
 	if (process.env.OPENCONTEXT_MCP_CONFIG_PATH) {
 		return process.env.OPENCONTEXT_MCP_CONFIG_PATH;
 	}
-	return path.join(os.homedir(), ".opencontext", "mcp.json");
+	return getOpenContextPath("mcp.json");
 }
 
 /**

@@ -156,6 +156,12 @@ examples/data/
 # lockfiles that conflict with the just-bumped manifest specifiers.
 examples/pnpm-lock.yaml
 
+# Generated SQLite databases from tutorial runs
+tutorials-*.db
+
+# Temporary scratch directories created by demos
+.tmp/
+
 # benchmark runs — Python venvs, caches, and regenerable run artifacts
 .venv*/
 __pycache__/

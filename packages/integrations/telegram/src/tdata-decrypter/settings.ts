@@ -110,7 +110,7 @@ export enum SettingsBlocks {
  * Read settings block value based on block ID
  */
 export function readSettingsBlock(
-	version: number,
+	_version: number,
 	buffer: Buffer,
 	offset: number,
 	blockId: SettingsBlocks,

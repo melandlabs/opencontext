@@ -254,6 +254,7 @@ OpenContext 既不是记忆库,也不是向量数据库。它是一个运行时�
 - [`docs/tutorials/02-developer-guide.md`](./docs/tutorials/02-developer-guide.md) — 将 OpenContext 集成到你的应用
 - [`docs/tutorials/03-advanced-usage.md`](./docs/tutorials/03-advanced-usage.md) — 生产模式与高级功能
 - [`docs/tutorials/04-best-practices.md`](./docs/tutorials/04-best-practices.md) — 最佳实践和常见陷阱
+- [`docs/tutorials/use-cases/README.md`](./docs/tutorials/use-cases/README.md) — 真实场景用例：个人记忆助手、客服 agent、研究追踪
 
 ### 架构与设计
 
