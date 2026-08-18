@@ -18,7 +18,6 @@
  */
 
 import { createRequire } from "node:module";
-import { runIfMain } from "../_helpers.ts";
 import {
 	AUDIT_LOG_PATH,
 	clearAuditLogs,
@@ -26,6 +25,7 @@ import {
 	logFileRead,
 	readAuditLogs,
 } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 // The audit logger uses dynamic require() for Node built-ins so it can load in
 // Edge Runtimes. Provide a global require when running this ESM tutorial.

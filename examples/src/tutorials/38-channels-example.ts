@@ -16,7 +16,6 @@
  *   node --experimental-strip-types src/tutorials/38-channels-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import {
 	createPlatformAdapterError,
 	isPlatformAdapterError,
@@ -24,6 +23,7 @@ import {
 	makePlatformErrorEnvelope,
 	toPlatformAdapterError,
 } from "@melandlabs/integrations-channels";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

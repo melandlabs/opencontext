@@ -21,16 +21,16 @@
  *   node --experimental-strip-types src/tutorials/32-insights-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import {
+	type InsightBase,
+	type InsightFilter,
 	calculateBaseScore,
 	classifyFocusInsight,
 	filterInsights,
 	insightMatchesFilter,
 	sortInsightsByEventRank,
-	type InsightBase,
-	type InsightFilter,
 } from "@melandlabs/insights";
+import { runIfMain } from "../_helpers.ts";
 
 function makeInsight(overrides: Partial<InsightBase> & { id: string; title: string }): InsightBase {
 	const now = Date.now();

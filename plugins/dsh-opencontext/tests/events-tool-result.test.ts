@@ -2,7 +2,7 @@
  * Tests for tool/result event listener
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { registerToolResultListener } from "../src/events-tool-result.js";
 import { makeFakeBackend } from "./_helpers.js";
 
@@ -123,7 +123,7 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload, next);
+			await handler?.(payload, next);
 
 			expect(nextCalled).toHaveBeenCalled();
 		});
@@ -164,7 +164,7 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload, next);
+			await handler?.(payload, next);
 
 			expect(captureSource).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -212,13 +212,13 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload, next);
+			await handler?.(payload, next);
 
 			// Verify capture was called
 			expect(captureSource).toHaveBeenCalled();
 			const call = captureSource.mock.calls[0];
 			expect(call).toBeDefined();
-			const content = call![0].content;
+			const content = call?.[0].content;
 			// The password key should be sanitized to [REDACTED]
 			expect(content).toContain("[REDACTED]");
 			// The secret value should not appear in the captured content
@@ -262,7 +262,7 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload, next);
+			await handler?.(payload, next);
 
 			expect(captureSource).not.toHaveBeenCalled();
 		});
@@ -303,11 +303,11 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload, next);
+			await handler?.(payload, next);
 
 			const call = captureSource.mock.calls[0];
 			expect(call).toBeDefined();
-			const content = call![0].content;
+			const content = call?.[0].content;
 			expect(content).toContain("Status: ERROR");
 			expect(content).toContain("Tool failed");
 		});
@@ -348,7 +348,7 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			const result = await handler!(payload, next);
+			const result = await handler?.(payload, next);
 
 			// Should still return the downstream result
 			expect(result).toEqual({ result: "success" });

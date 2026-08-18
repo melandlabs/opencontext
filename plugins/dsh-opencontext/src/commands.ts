@@ -2,10 +2,10 @@
  * commands — register the `/oc` command (currently exposes `/oc doctor`).
  */
 
-import { classifyBackendError, constants } from "./errors.js";
 import { getOpenContextPath } from "@melandlabs/env-config";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { constants, classifyBackendError } from "./errors.js";
 
 interface CommandService {
 	register(definition: {

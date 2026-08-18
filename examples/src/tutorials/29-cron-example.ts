@@ -16,8 +16,8 @@
  *   node --experimental-strip-types src/tutorials/29-cron-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import { computeNextRun, isJobDue, validateCronExpression } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

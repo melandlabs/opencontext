@@ -13,13 +13,13 @@
  *   node --experimental-strip-types src/tutorials/37-memory-consolidation-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import {
+	type MemoryEvidenceRecord,
 	buildMemoryConsolidationPlan,
 	buildMemoryEvidenceClusters,
 	buildMemoryRelationCandidates,
-	type MemoryEvidenceRecord,
 } from "@melandlabs/memory-consolidation";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

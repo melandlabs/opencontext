@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @melandlabs/opencontext *before* importing the lib backend. The
 // mocks must be declared with `vi.hoisted` so they're available when
@@ -70,7 +70,7 @@ beforeEach(() => {
 
 afterEach(() => {
 	rmSync(dbDir, { recursive: true, force: true });
-	delete process.env.MEMORY_STORE_DB_PATH;
+	process.env.MEMORY_STORE_DB_PATH = undefined;
 });
 
 describe("createLibBackend", () => {

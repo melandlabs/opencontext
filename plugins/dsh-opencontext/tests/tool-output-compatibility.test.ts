@@ -5,11 +5,11 @@
  * JSON Schema subset and "lossless JSON" requirements.
  */
 
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { registerTools } from "../src/tools.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerInsightsTools } from "../src/tools-insights.js";
 import { registerKnowledgeTools } from "../src/tools-knowledge.js";
 import { registerSummaryTools } from "../src/tools-summary.js";
+import { registerTools } from "../src/tools.js";
 import { makeConfig, makeFakeBackend } from "./_helpers.js";
 
 describe("DSH tool output compatibility", () => {
@@ -72,7 +72,7 @@ describe("DSH tool output compatibility", () => {
 		});
 
 		it("output.schema must be valid JSON Schema", () => {
-			const validKeywords = new Set([
+			const _validKeywords = new Set([
 				"type",
 				"oneOf",
 				"properties",

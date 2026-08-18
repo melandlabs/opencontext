@@ -1,4 +1,4 @@
-import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
+import { LocalTransformersEmbeddingProvider, createMemoryStore } from "@melandlabs/opencontext";
 
 async function main() {
 	const embedder = new LocalTransformersEmbeddingProvider({

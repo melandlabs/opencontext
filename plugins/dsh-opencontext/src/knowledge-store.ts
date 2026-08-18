@@ -19,10 +19,10 @@
  * return.
  */
 
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { Buffer } from "node:buffer";
 
 import { getOpenContextPath } from "@melandlabs/env-config";
 import Database from "better-sqlite3";
@@ -136,31 +136,33 @@ export class LibKnowledgeStore {
 		this.deleteDocumentVectors(documentId, dim);
 
 		const now = Date.now();
-		this.db!.prepare(
-			`INSERT INTO documents
+		this.db
+			?.prepare(
+				`INSERT INTO documents
 			 (id, scopeId, userId, filename, mimeType, uploadedAt, chunkCount, metadata)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		).run(
-			documentId,
-			input.scopeId,
-			input.userId,
-			input.filename,
-			input.mimeType,
-			now,
-			chunks.length,
-			JSON.stringify(input.metadata ?? {}),
-		);
+			)
+			.run(
+				documentId,
+				input.scopeId,
+				input.userId,
+				input.filename,
+				input.mimeType,
+				now,
+				chunks.length,
+				JSON.stringify(input.metadata ?? {}),
+			);
 
-		const insertChunk = this.db!.prepare(
+		const insertChunk = this.db?.prepare(
 			`INSERT INTO chunks
 			 (id, documentId, chunkIndex, content, metadata)
 			 VALUES (?, ?, ?, ?, ?)`,
 		);
-		const insertVec = this.db!.prepare(
+		const insertVec = this.db?.prepare(
 			`INSERT INTO ${this.vecTableName(dim)} (embedding, chunk_id) VALUES (?, ?)`,
 		);
 
-		const insertAll = this.db!.transaction((items: Array<{ chunk: TextChunk; embedding: number[] }>) => {
+		const insertAll = this.db?.transaction((items: Array<{ chunk: TextChunk; embedding: number[] }>) => {
 			for (const { chunk, embedding } of items) {
 				const chunkId = `${documentId}_chunk_${chunk.index}`;
 				insertChunk.run(chunkId, documentId, chunk.index, chunk.content, JSON.stringify({}));
@@ -211,9 +213,11 @@ export class LibKnowledgeStore {
 
 		let vecRows: Array<{ chunk_id: string; distance: number }> = [];
 		try {
-			vecRows = this.db!.prepare(
-				`SELECT chunk_id, distance FROM ${vecTable} WHERE embedding MATCH ? ORDER BY distance LIMIT ?`,
-			).all(queryBytes, limit) as Array<{ chunk_id: string; distance: number }>;
+			vecRows = this.db
+				?.prepare(
+					`SELECT chunk_id, distance FROM ${vecTable} WHERE embedding MATCH ? ORDER BY distance LIMIT ?`,
+				)
+				.all(queryBytes, limit) as Array<{ chunk_id: string; distance: number }>;
 		} catch {
 			return { chunks: [] };
 		}
@@ -224,13 +228,15 @@ export class LibKnowledgeStore {
 
 		const chunkIds = vecRows.map((r) => r.chunk_id);
 		const placeholders = chunkIds.map(() => "?").join(",");
-		const rows = this.db!.prepare(
-			`SELECT c.id, c.documentId, c.chunkIndex, c.content, d.filename, c.metadata
+		const rows = this.db
+			?.prepare(
+				`SELECT c.id, c.documentId, c.chunkIndex, c.content, d.filename, c.metadata
 				 FROM chunks c
 				 JOIN documents d ON d.id = c.documentId
 				 WHERE c.id IN (${placeholders})
 				   AND d.scopeId = ? AND d.userId = ?`,
-		).all(...chunkIds, input.scopeId, input.userId) as Array<{
+			)
+			.all(...chunkIds, input.scopeId, input.userId) as Array<{
 			id: string;
 			documentId: string;
 			chunkIndex: number;
@@ -266,13 +272,15 @@ export class LibKnowledgeStore {
 	async listDocuments(input: ListDocumentsInput): Promise<{ documents: KnowledgeDocument[] }> {
 		this.ensureDb();
 
-		const rows = this.db!.prepare(
-			`SELECT id, filename, mimeType, uploadedAt, chunkCount, metadata
+		const rows = this.db
+			?.prepare(
+				`SELECT id, filename, mimeType, uploadedAt, chunkCount, metadata
 				 FROM documents
 				 WHERE scopeId = ? AND userId = ?
 				 ORDER BY uploadedAt DESC
 				 LIMIT ?`,
-		).all(input.scopeId, input.userId, input.limit) as Array<{
+			)
+			.all(input.scopeId, input.userId, input.limit) as Array<{
 			id: string;
 			filename: string;
 			mimeType: string;

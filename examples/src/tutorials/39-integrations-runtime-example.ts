@@ -14,12 +14,12 @@
  *   node --experimental-strip-types src/tutorials/39-integrations-runtime-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import {
 	getPlatformDisplayInfo,
 	inferTaskIntegrationRequirementsFromText,
 	isIntegrationPlatformConnectable,
 } from "@melandlabs/integrations-runtime";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

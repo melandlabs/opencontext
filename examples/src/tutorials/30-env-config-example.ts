@@ -19,8 +19,8 @@
  *   node --experimental-strip-types src/tutorials/30-env-config-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import { APP_DIR_NAME, DEFAULT_AI_MODEL, isServerMode, isTauriMode } from "@melandlabs/env-config";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

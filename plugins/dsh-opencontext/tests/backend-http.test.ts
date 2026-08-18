@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createHttpBackend } from "../src/backend-http.js";
 import { makeConfig } from "./_helpers.js";
 

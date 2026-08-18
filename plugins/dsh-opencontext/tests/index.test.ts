@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock the backends before importing the entry.
 vi.mock("../src/backend.js", async () => {
@@ -9,8 +9,8 @@ vi.mock("../src/backend.js", async () => {
 	};
 });
 
-import { apply, name, inject, ConfigSchema } from "../src/index.js";
 import { createBackend } from "../src/backend.js";
+import { ConfigSchema, apply, inject, name } from "../src/index.js";
 import { makeConfig, makeFakeBackend } from "./_helpers.js";
 
 const mockCreateBackend = vi.mocked(createBackend);
@@ -39,10 +39,10 @@ describe("plugin entry", () => {
 	it("apply() registers tools, listeners, skill, and command", async () => {
 		const backend = makeFakeBackend();
 		mockCreateBackend.mockReturnValue(backend);
-		const registered: string[] = [];
+		const _registered: string[] = [];
 		const listeners: Array<{ event: string }> = [];
 		const ctx = {
-			tools: { register: vi.fn((t: unknown) => () => undefined) },
+			tools: { register: vi.fn((_t: unknown) => () => undefined) },
 			on: vi.fn((event: string) => {
 				listeners.push({ event });
 				return () => undefined;

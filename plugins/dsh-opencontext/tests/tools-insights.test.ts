@@ -2,7 +2,7 @@
  * Tests for insights tools
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeInsightsTools, registerInsightsTools } from "../src/tools-insights.js";
 import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
@@ -13,8 +13,8 @@ describe("insights tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			expect(tools).toHaveLength(2);
-			expect(tools[0]!.name).toBe("oc_insights_search");
-			expect(tools[1]!.name).toBe("oc_insight_capture");
+			expect(tools[0]?.name).toBe("oc_insights_search");
+			expect(tools[1]?.name).toBe("oc_insight_capture");
 		});
 
 		it("oc_insights_search should have correct structure", () => {

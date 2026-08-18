@@ -7,10 +7,10 @@
  * 3. Consolidate related memories
  */
 
-import { containsSecret } from "./secrets.js";
-import { classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { classifyBackendError } from "./errors.js";
+import { containsSecret } from "./secrets.js";
 
 interface DshTurnPayload {
 	messages?: Array<{ role?: string; content?: unknown }>;
@@ -82,7 +82,7 @@ function generateSimpleSummary(payload: DshTurnPayload): string {
 	}
 
 	if (assistantMsg) {
-		parts.push(`Response provided`);
+		parts.push("Response provided");
 	}
 
 	return parts.length > 0 ? parts.join("\n") : "Empty turn";

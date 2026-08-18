@@ -2,7 +2,7 @@
  * Tests for summary tools
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeSummaryTools, registerSummaryTools } from "../src/tools-summary.js";
 import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
@@ -13,9 +13,9 @@ describe("summary tools", () => {
 			const config = { scopeId: "test", timeoutMs: 4000 };
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			expect(tools).toHaveLength(3);
-			expect(tools[0]!.name).toBe("oc_session_summary");
-			expect(tools[1]!.name).toBe("oc_task_outcome");
-			expect(tools[2]!.name).toBe("oc_recent_summaries");
+			expect(tools[0]?.name).toBe("oc_session_summary");
+			expect(tools[1]?.name).toBe("oc_task_outcome");
+			expect(tools[2]?.name).toBe("oc_recent_summaries");
 		});
 
 		it("oc_session_summary should have correct structure", () => {
@@ -200,8 +200,8 @@ describe("summary tools", () => {
 			assertToolOk(result);
 			const items = (result.data as unknown as { items: Array<{ sourceType: string }> }).items;
 			expect(items).toHaveLength(2); // Only session-summary and task-outcome
-			expect(items[0]!.sourceType).toBe("session-summary");
-			expect(items[1]!.sourceType).toBe("task-outcome");
+			expect(items[0]?.sourceType).toBe("session-summary");
+			expect(items[1]?.sourceType).toBe("task-outcome");
 		});
 
 		it("should filter by sourceTypes when provided", async () => {
@@ -219,7 +219,7 @@ describe("summary tools", () => {
 			assertToolOk(result);
 			const items = (result.data as unknown as { items: Array<{ sourceType: string }> }).items;
 			expect(items).toHaveLength(1);
-			expect(items[0]!.sourceType).toBe("session-summary");
+			expect(items[0]?.sourceType).toBe("session-summary");
 		});
 	});
 });

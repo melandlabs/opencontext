@@ -16,8 +16,8 @@
  *   node --experimental-strip-types src/tutorials/35-db-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import { batchInsert, generateDummyPassword, generateHashedPassword } from "@melandlabs/db";
+import { runIfMain } from "../_helpers.ts";
 
 interface UserRow {
 	id: number;

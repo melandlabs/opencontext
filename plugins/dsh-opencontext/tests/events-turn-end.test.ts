@@ -2,7 +2,7 @@
  * Tests for turn/end event listener
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { registerTurnEndListener } from "../src/events-turn-end.js";
 import { makeFakeBackend } from "./_helpers.js";
 
@@ -92,7 +92,7 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			const result = await handler!(payload);
+			const _result = await handler?.(payload);
 
 			expect(remember).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -137,7 +137,7 @@ describe("events-turn-end", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler!(payload);
+			await handler?.(payload);
 
 			expect(remember).not.toHaveBeenCalled();
 		});
@@ -179,7 +179,7 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			await handler!(payload);
+			await handler?.(payload);
 
 			expect(captureSource).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -223,7 +223,7 @@ describe("events-turn-end", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			const result = await handler!(payload);
+			const result = await handler?.(payload);
 
 			expect(ctx.logger.warn).toHaveBeenCalled();
 			expect((result as unknown as { errors: unknown[] }).errors).toHaveLength(1);
@@ -268,11 +268,11 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			await handler!(payload);
+			await handler?.(payload);
 
 			const call = remember.mock.calls[0];
 			expect(call).toBeDefined();
-			const summaryArg = call![0];
+			const summaryArg = call?.[0];
 			expect(summaryArg.content).toContain("User:");
 			expect(summaryArg.content).toContain("Tools used:");
 		});

@@ -15,9 +15,9 @@
  *   node --experimental-strip-types src/tutorials/31-storage-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import { LocalStorageProvider } from "@melandlabs/storage";
 import { MemoryStorageProvider } from "@melandlabs/storage/memory";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----

@@ -1,7 +1,7 @@
 import {
+	LocalTransformersEmbeddingProvider,
 	createMemoryStore,
 	getRawMessageManager,
-	LocalTransformersEmbeddingProvider,
 } from "@melandlabs/opencontext";
 
 async function main() {

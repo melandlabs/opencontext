@@ -2,7 +2,7 @@
  * Tests for knowledge/RAG tools
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeKnowledgeTools, registerKnowledgeTools } from "../src/tools-knowledge.js";
 import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
@@ -16,9 +16,9 @@ describe("knowledge tools", () => {
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
 			);
 			expect(tools).toHaveLength(3);
-			expect(tools[0]!.name).toBe("oc_knowledge_search");
-			expect(tools[1]!.name).toBe("oc_document_upload");
-			expect(tools[2]!.name).toBe("oc_document_list");
+			expect(tools[0]?.name).toBe("oc_knowledge_search");
+			expect(tools[1]?.name).toBe("oc_document_upload");
+			expect(tools[2]?.name).toBe("oc_document_list");
 		});
 
 		it("oc_knowledge_search should have correct structure", () => {

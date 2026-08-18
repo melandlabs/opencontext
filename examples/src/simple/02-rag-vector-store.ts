@@ -16,9 +16,9 @@
  * `drizzle-orm/sqlite-core` so the write path can actually run.
  */
 
-import Database from "better-sqlite3";
 import * as path from "node:path";
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core";
+import Database from "better-sqlite3";
+import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
 /** Embeddings are 1536-dimensional (OpenAI text-embedding-3-small). */

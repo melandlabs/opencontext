@@ -13,7 +13,6 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
-import { Buffer } from "node:buffer";
 
 import { getOpenContextPath } from "@melandlabs/env-config";
 import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/opencontext";
@@ -21,6 +20,8 @@ import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/
 import type {
 	BackendCallOptions,
 	CaptureInput,
+	CaptureInsightInput,
+	ListDocumentsInput,
 	ListInput,
 	MemoryItem,
 	OpenContextBackend,
@@ -28,14 +29,12 @@ import type {
 	ReviseInput,
 	SearchHit,
 	SearchInput,
-	UploadDocumentInput,
-	SearchKnowledgeInput,
-	ListDocumentsInput,
 	SearchInsightsInput,
-	CaptureInsightInput,
+	SearchKnowledgeInput,
+	UploadDocumentInput,
 } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
-import { LibKnowledgeStore, KnowledgeUnavailableError } from "./knowledge-store.js";
+import { LibKnowledgeStore } from "./knowledge-store.js";
 
 interface RawManager {
 	storeMessages(messages: unknown[]): Promise<number[]>;

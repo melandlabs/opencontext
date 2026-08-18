@@ -5,10 +5,10 @@
  * and knowledge bases. These tools expose document search and upload.
  */
 
-import { containsSecret } from "./secrets.js";
-import { toolError, toolOk, type ToolResult, classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { type ToolResult, classifyBackendError, toolError, toolOk } from "./errors.js";
+import { containsSecret } from "./secrets.js";
 
 export type ToolContext = {
 	signal?: AbortSignal;

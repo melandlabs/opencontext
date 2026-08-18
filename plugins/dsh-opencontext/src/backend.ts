@@ -8,9 +8,9 @@
  * never need to know which one is active.
  */
 
+import { type HttpBackend, createHttpBackend } from "./backend-http.js";
+import { type LibBackend, createLibBackend } from "./backend-lib.js";
 import type { ResolvedConfig } from "./config.js";
-import { createLibBackend, type LibBackend } from "./backend-lib.js";
-import { createHttpBackend, type HttpBackend } from "./backend-http.js";
 import { isHttpMode } from "./config.js";
 
 export interface SearchInput {

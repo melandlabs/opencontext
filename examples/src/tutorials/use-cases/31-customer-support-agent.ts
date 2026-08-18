@@ -141,9 +141,9 @@ async function main() {
 		const resolvedIssues = pastIssues.results.filter((r) => r.metadata?.status === "resolved");
 
 		if (resolvedIssues.length > 0) {
-			console.log(`\n⚠️  REPEAT ISSUE DETECTED`);
+			console.log("\n⚠️  REPEAT ISSUE DETECTED");
 			console.log(`   Customer has had ${resolvedIssues.length} ${issueCategory} issue(s) before`);
-			console.log(`   Most recent resolution:`);
+			console.log("   Most recent resolution:");
 			console.log(`   - ${resolvedIssues[0].content}`);
 			return true;
 		}

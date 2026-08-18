@@ -19,15 +19,15 @@
  */
 
 import { mkdtempSync, rmSync } from "node:fs";
-import { runIfMain } from "../_helpers.ts";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	type RawMessage,
 	SQLiteRawMessageManager,
 	bufferToFloatArray,
 	floatArrayToBuffer,
-	type RawMessage,
 } from "@melandlabs/sqlite";
+import { runIfMain } from "../_helpers.ts";
 
 function makeMessage(overrides: Partial<RawMessage> & { messageId: string; content: string }): RawMessage {
 	const now = Math.floor(Date.now() / 1000);
