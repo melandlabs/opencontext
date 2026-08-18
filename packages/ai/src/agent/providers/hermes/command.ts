@@ -10,6 +10,7 @@ export interface HermesProviderConfig {
 	hermesPath?: string;
 	profile?: string;
 	timeoutMs?: number;
+	env?: Record<string, string>;
 }
 
 export interface HermesAcpCommand {
@@ -20,6 +21,15 @@ export interface HermesAcpCommand {
 export function normalizeHermesProviderConfig(
 	value: Record<string, unknown> | undefined,
 ): HermesProviderConfig {
+	const env =
+		value?.env && typeof value.env === "object" && !Array.isArray(value.env)
+			? Object.fromEntries(
+					Object.entries(value.env as Record<string, unknown>).filter(
+						(entry): entry is [string, string] => typeof entry[1] === "string",
+					),
+				)
+			: undefined;
+
 	return {
 		hermesPath:
 			typeof value?.hermesPath === "string" && value.hermesPath.trim() ? value.hermesPath.trim() : undefined,
@@ -28,6 +38,7 @@ export function normalizeHermesProviderConfig(
 			typeof value?.timeoutMs === "number" && Number.isInteger(value.timeoutMs) && value.timeoutMs > 0
 				? value.timeoutMs
 				: undefined,
+		env,
 	};
 }
 

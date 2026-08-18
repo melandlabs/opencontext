@@ -7,6 +7,8 @@
 
 import type { AgentConfig, IAgent } from "./types";
 
+import { APP_DIR_NAME } from "@melandlabs/env-config/client-constants";
+
 // ============================================================================
 // Inlined constants (previously from lib/config/constants)
 // ============================================================================
@@ -15,7 +17,7 @@ import type { AgentConfig, IAgent } from "./types";
 export const DEFAULT_AGENT_MODEL = "claude-sonnet-4.6";
 
 /** Default work directory path (relative to home) */
-export const DEFAULT_WORK_DIR = "~/.opencontext";
+export const DEFAULT_WORK_DIR = `~/${APP_DIR_NAME}`;
 
 // ============================================================================
 // Minimal inlined types (from provider-core)

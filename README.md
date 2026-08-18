@@ -264,6 +264,7 @@ in [`docs/architecture.md`](./docs/architecture.md).
 - [`docs/tutorials/02-developer-guide.md`](./docs/tutorials/02-developer-guide.md) — Integrate OpenContext into your app
 - [`docs/tutorials/03-advanced-usage.md`](./docs/tutorials/03-advanced-usage.md) — Production patterns and advanced features
 - [`docs/tutorials/04-best-practices.md`](./docs/tutorials/04-best-practices.md) — Tips and common pitfalls
+- [`docs/tutorials/use-cases/README.md`](./docs/tutorials/use-cases/README.md) — Real-world use cases: personal assistant, support agent, research tracker
 
 ### Architecture & Design
 

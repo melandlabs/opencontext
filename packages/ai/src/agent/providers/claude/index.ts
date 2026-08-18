@@ -13,8 +13,9 @@
  */
 
 import { mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
 import { isAbsolute, join } from "node:path";
+
+import { getOpenContextDir } from "@melandlabs/env-config";
 
 import {
 	type AgentConfig,
@@ -361,7 +362,7 @@ export class ClaudeAgent extends BaseAgent {
 	}
 
 	private async resolveAndPrepareWorkDir(options?: AgentOptions) {
-		const rawWorkDir = options?.cwd || this.config.workDir || join(homedir(), ".opencontext");
+		const rawWorkDir = options?.cwd || this.config.workDir || getOpenContextDir();
 		const resolved = isAbsolute(rawWorkDir) ? rawWorkDir : join(process.cwd(), rawWorkDir);
 		await mkdir(resolved, { recursive: true });
 		return resolved;

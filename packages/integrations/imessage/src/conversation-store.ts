@@ -7,16 +7,17 @@
  * Token trimming is handled by handleAgentRuntime (40K budget) — not here.
  */
 
-import { homedir } from "node:os";
 import { join } from "node:path";
+
 import {
 	clearChannelConversationFromAllDays,
 	loadChannelDay,
 	saveChannelMessage,
 } from "@melandlabs/ai/store";
+import { getOpenContextPath } from "@melandlabs/env-config";
 
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".opencontext", "data", "memory");
+	const base = getOpenContextPath("data", "memory");
 	return userId ? join(base, userId) : base;
 }
 

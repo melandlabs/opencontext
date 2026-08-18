@@ -20,6 +20,10 @@ const HERMES_ACP_RUNTIME: AcpRuntimeDefinition = {
 	buildCommand: buildHermesAcpCommand,
 	normalizeProviderConfig: normalizeHermesProviderConfig,
 	supportsSetModel: true,
+	formatModelId: (model, providerConfig) => {
+		const provider = normalizeHermesProviderConfig(providerConfig).env?.HERMES_INFERENCE_PROVIDER;
+		return provider && !model.startsWith(`${provider}:`) ? `${provider}:${model}` : model;
+	},
 };
 
 export class HermesAgent extends AcpAgent {

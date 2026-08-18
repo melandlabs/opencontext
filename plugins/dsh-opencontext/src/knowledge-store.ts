@@ -21,10 +21,10 @@
 
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { Buffer } from "node:buffer";
 
+import { getOpenContextPath } from "@melandlabs/env-config";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 
@@ -82,7 +82,6 @@ interface TextChunkLike {
 	index?: number;
 }
 
-const KNOWLEDGE_DIR_NAME = ".opencontext";
 const KNOWLEDGE_DB_NAME = "dsh-knowledge.db";
 const DEFAULT_VEC_DIMENSION = 384; // Xenova/all-MiniLM-L6-v2
 
@@ -101,7 +100,7 @@ export class LibKnowledgeStore {
 	private closed = false;
 
 	constructor(options?: KnowledgeStoreOptions) {
-		this.dbPath = options?.dbPath ?? join(homedir(), KNOWLEDGE_DIR_NAME, KNOWLEDGE_DB_NAME);
+		this.dbPath = options?.dbPath ?? getOpenContextPath(KNOWLEDGE_DB_NAME);
 		if (options && "provider" in options) {
 			this.provider = options.provider ?? null;
 			this.autoProviderDisabled = options.provider === null;

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/env-config",
-	"version": "0.3.0",
+	"version": "0.4.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -13,7 +13,8 @@
 		".": "./dist/index.js",
 		"./client-constants": "./dist/client-constants.js",
 		"./client-mode": "./dist/client-mode.js",
-		"./tauri-paths": "./dist/tauri-paths.js"
+		"./tauri-paths": "./dist/tauri-paths.js",
+		"./app-paths": "./dist/app-paths.js"
 	},
 	"repository": {
 		"type": "git",

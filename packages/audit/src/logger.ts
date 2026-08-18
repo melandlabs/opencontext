@@ -9,10 +9,11 @@
  */
 
 function getLogPaths() {
-	const { homedir } = require("node:os") as typeof import("node:os");
-	const { join } = require("node:path") as typeof import("node:path");
-	const dir = join(homedir(), ".opencontext", "logs");
-	const file = join(dir, "audit.jsonl");
+	const { getOpenContextPath } = require("@melandlabs/env-config/app-paths") as {
+		getOpenContextPath: (...segments: string[]) => string;
+	};
+	const dir = getOpenContextPath("logs");
+	const file = getOpenContextPath("logs", "audit.jsonl");
 	return { dir, file };
 }
 

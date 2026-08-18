@@ -12,15 +12,13 @@
  */
 
 import { mkdirSync } from "node:fs";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
+import { getOpenContextPath } from "@melandlabs/env-config";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite";
 import type { MemoryStoreEnv } from "../config";
 import { isRawMessageChromaEnabled } from "./chroma-memory-index";
 
 let manager: SQLiteRawMessageManager | null = null;
-
-const DEFAULT_SQLITE_PATH = join(homedir(), ".opencontext", "memory", "store.db");
 
 /**
  * Resolve the SQLite DB file path from env vars. Exposed so other storage
@@ -29,7 +27,7 @@ const DEFAULT_SQLITE_PATH = join(homedir(), ".opencontext", "memory", "store.db"
 export function resolveSQLiteRawMessageDbPath(dbPath?: string): string {
 	if (dbPath && dbPath.length > 0) return dbPath;
 	const fromEnv = process.env.MEMORY_STORE_DB_PATH?.trim();
-	return fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_SQLITE_PATH;
+	return fromEnv && fromEnv.length > 0 ? fromEnv : getOpenContextPath("memory", "store.db");
 }
 
 /**

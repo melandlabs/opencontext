@@ -39,8 +39,9 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+
+import { getOpenContextPath } from "@melandlabs/env-config";
 import { proto } from "@whiskeysockets/baileys";
 import type { WAMessage, WASocket } from "@whiskeysockets/baileys";
 
@@ -64,7 +65,7 @@ export type PersistedChatInfo = {
 };
 
 function defaultBaseDir(): string {
-	return join(homedir(), ".opencontext", "data", "whatsapp-history");
+	return getOpenContextPath("data", "whatsapp-history");
 }
 
 function sanitizeForFilename(value: string): string {

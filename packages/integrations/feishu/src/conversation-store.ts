@@ -6,11 +6,12 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
 
+import { getOpenContextPath } from "@melandlabs/env-config";
+
 function getAppMemoryDir(userId?: string): string {
-	const base = join(homedir(), ".opencontext", "data", "memory");
+	const base = getOpenContextPath("data", "memory");
 	return userId ? join(base, userId) : base;
 }
 

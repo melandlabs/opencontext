@@ -19,6 +19,14 @@
 // avoid a duplicate-type conflict on this facade.
 export * from "@melandlabs/contracts";
 
+// ─── 1b. App data directory paths (~/.opencontext or OPENCONTEXT_HOME) ────
+export {
+	OPENCONTEXT_HOME_ENV,
+	getOpenContextDir,
+	getOpenContextPath,
+	ensureOpenContextDir,
+} from "@melandlabs/env-config";
+
 // ─── 2. Memory store: the four-verb memory API + unified search ───────────
 export {
 	createMemoryStore,

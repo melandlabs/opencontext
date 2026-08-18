@@ -6,6 +6,7 @@ export default defineConfig({
 		"client-constants": "src/client-constants.ts",
 		"client-mode": "src/client-mode.ts",
 		"tauri-paths": "src/tauri-paths.ts",
+		"app-paths": "src/app-paths.ts",
 	},
 	format: ["esm"],
 	dts: true,

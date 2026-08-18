@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/audit",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -23,7 +23,9 @@
 	"license": "Apache-2.0",
 	"description": "OpenContext · audit module",
 	"keywords": ["opencontext"],
-	"dependencies": {},
+	"dependencies": {
+		"@melandlabs/env-config": "workspace:*"
+	},
 	"devDependencies": {
 		"typescript": "^5.6.3"
 	},

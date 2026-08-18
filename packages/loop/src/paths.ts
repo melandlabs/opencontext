@@ -18,10 +18,11 @@
  */
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
-export const LOOP_HOME = join(homedir(), ".opencontext", "loop");
+import { getOpenContextPath } from "@melandlabs/env-config";
+
+export const LOOP_HOME = getOpenContextPath("loop");
 
 export const LOOP_PATHS = {
 	home: LOOP_HOME,
