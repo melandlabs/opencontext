@@ -161,3 +161,30 @@ tutorials-*.db
 
 # Temporary scratch directories created by demos
 .tmp/
+
+# benchmark runs — Python venvs, caches, and regenerable run artifacts
+.venv*/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+benchmark/**/outputs/
+benchmark/**/results/
+benchmark/**/final_results/
+benchmark/**/cloned_repos/
+# benchmark local daemon data (memory db, logs)
+benchmark/.opencontext-data/
+# AML local eval outputs (the AML pipeline sources are vendored in-repo)
+benchmark/aml-local/outputs/
+# benchmark local secrets (API keys used by eval harnesses)
+benchmark/**/.qwen_key_.txt
+# benchmark run artifacts (checkpoints, per-run score files, egg-info)
+benchmark/**/checkpoints/
+benchmark/**/results*.json
+benchmark/**/*.egg-info/
+# benchmark datasets and reference binaries (large, re-downloadable — see each benchmark's README)
+benchmark/locomo/dataset/
+benchmark/longmemeval/dataset/
+benchmark/clbench-official/CL-bench-*.jsonl
+benchmark/beam/dataset/*.parquet
+benchmark/beam/dataset/beam_1m.json
+benchmark/beam/dataset/beam_10m.json

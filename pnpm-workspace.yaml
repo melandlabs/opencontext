@@ -5,3 +5,4 @@ packages:
   - 'packages/integrations/*'
   - 'services/*'
   - 'examples'
+  - 'benchmark/*'
