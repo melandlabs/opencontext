@@ -95,30 +95,35 @@ export default async function demoOkf() {
 	await runSection("demo: @melandlabs/okf (v0.2 round-trip)", async () => {
 		const { check, skip } = makeCheckWithSkip("demo/okf");
 
-		// Resolve OKF exports dynamically. The CI smoke test installs the
-		// published `@melandlabs/opencontext` from npm, which only gains
-		// `okfToRawMessage` / `startOkf` / etc. after this PR merges and
-		// a new version is released. Treat the missing-export case as an
-		// expected skip rather than a hard failure — the same package
-		// still works locally against the workspace build.
-		let okfExports: {
-			okfToRawMessage: typeof import("@melandlabs/opencontext").okfToRawMessage;
-			parseOkf: typeof import("@melandlabs/opencontext").parseOkf;
-			rawMessageToOkf: typeof import("@melandlabs/opencontext").rawMessageToOkf;
-			readOkfPackage: typeof import("@melandlabs/opencontext").readOkfPackage;
-			slugify: typeof import("@melandlabs/opencontext").slugify;
-			startOkf: typeof import("@melandlabs/opencontext").startOkf;
-			stringifyOkf: typeof import("@melandlabs/opencontext").stringifyOkf;
-			writeOkfPackage: typeof import("@melandlabs/opencontext").writeOkfPackage;
-		};
-		try {
-			okfExports = await import("@melandlabs/opencontext");
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
+		// Resolve OKF exports dynamically. The CI smoke test installs
+		// the published `@melandlabs/opencontext` from npm, which only
+		// gains `okfToRawMessage` / `startOkf` / etc. after this PR is
+		// merged and a new version is released. Treat the missing-export
+		// case as an expected skip rather than a hard failure — the same
+		// package still works locally against the workspace build.
+		//
+		// Static `import { okfToRawMessage } from "@melandlabs/opencontext"`
+		// throws `SyntaxError: ... does not provide an export named ...`
+		// at module load. Dynamic `await import(...)` does not throw —
+		// missing symbols surface as `undefined` on the namespace. We
+		// test each one with `typeof === "function"` and skip the demo
+		// if any required binding is absent.
+		const REQUIRED = [
+			"okfToRawMessage",
+			"parseOkf",
+			"rawMessageToOkf",
+			"readOkfPackage",
+			"slugify",
+			"startOkf",
+			"stringifyOkf",
+			"writeOkfPackage",
+		] as const;
+		const okfExports = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
+		const missing = REQUIRED.filter((name) => typeof okfExports[name] !== "function");
+		if (missing.length > 0) {
 			skip(
 				"okf facade exports",
-				"@melandlabs/opencontext is published without the OKF re-exports yet",
-				message,
+				`@melandlabs/opencontext is published without the OKF re-exports yet — missing: ${missing.join(", ")}`,
 			);
 			return;
 		}
@@ -131,7 +136,16 @@ export default async function demoOkf() {
 			startOkf,
 			stringifyOkf,
 			writeOkfPackage,
-		} = okfExports;
+		} = okfExports as {
+			okfToRawMessage: typeof import("@melandlabs/opencontext").okfToRawMessage;
+			parseOkf: typeof import("@melandlabs/opencontext").parseOkf;
+			rawMessageToOkf: typeof import("@melandlabs/opencontext").rawMessageToOkf;
+			readOkfPackage: typeof import("@melandlabs/opencontext").readOkfPackage;
+			slugify: typeof import("@melandlabs/opencontext").slugify;
+			startOkf: typeof import("@melandlabs/opencontext").startOkf;
+			stringifyOkf: typeof import("@melandlabs/opencontext").stringifyOkf;
+			writeOkfPackage: typeof import("@melandlabs/opencontext").writeOkfPackage;
+		};
 
 		const slugFromTypeAndBody = (type: string, body: string): string =>
 			slugify(`${type}-${body.trim().split(/\r?\n/, 1)[0] ?? type}`);

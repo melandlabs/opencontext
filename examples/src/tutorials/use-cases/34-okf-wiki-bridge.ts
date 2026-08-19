@@ -107,26 +107,27 @@ export default async function demoOkfWikiBridge() {
 	await runSection("use-case: OKF wiki → opencontext bridge", async () => {
 		const { check, skip } = makeCheckWithSkip("use-case/okf-bridge");
 
-		// Resolve OKF exports dynamically — see top-of-file note.
-		let okfExports: {
-			OkfPackageManifest: typeof import("@melandlabs/opencontext").OkfPackageManifest;
+		// Resolve OKF exports dynamically — see top-of-file note. Static
+		// `import { startOkf } from "@melandlabs/opencontext"` throws at
+		// module load when the published facade predates the OKF
+		// re-exports; dynamic `await import(...)` instead exposes missing
+		// names as `undefined` on the namespace, so we test each required
+		// binding and skip the demo if any are absent.
+		const REQUIRED = ["readOkfPackage", "startOkf", "writeOkfPackage"] as const;
+		const okfExports = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
+		const missing = REQUIRED.filter((name) => typeof okfExports[name] !== "function");
+		if (missing.length > 0) {
+			skip(
+				"okf facade exports",
+				`@melandlabs/opencontext is published without the OKF re-exports yet — missing: ${missing.join(", ")}`,
+			);
+			return;
+		}
+		const { readOkfPackage, startOkf, writeOkfPackage } = okfExports as {
 			readOkfPackage: typeof import("@melandlabs/opencontext").readOkfPackage;
 			startOkf: typeof import("@melandlabs/opencontext").startOkf;
 			writeOkfPackage: typeof import("@melandlabs/opencontext").writeOkfPackage;
 		};
-		try {
-			okfExports = await import("@melandlabs/opencontext");
-		} catch (err) {
-			const message = err instanceof Error ? err.message : String(err);
-			skip(
-				"okf facade exports",
-				"@melandlabs/opencontext is published without the OKF re-exports yet",
-				message,
-			);
-			return;
-		}
-		const { OkfPackageManifest, readOkfPackage, startOkf, writeOkfPackage } = okfExports;
-		void OkfPackageManifest; // kept typed for the user; flow uses it implicitly via writeOkfPackage's return.
 
 		await withTmp("okf-bridge", async (scratch) => {
 			// Point the default SQLite backend at a scratch file so we
