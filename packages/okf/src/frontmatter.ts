@@ -21,7 +21,7 @@
  * when re-emitting it.
  */
 
-import { OkfFrontMatterSchema, type OkfFrontMatter } from "@melandlabs/contracts";
+import { type OkfFrontMatter, OkfFrontMatterSchema } from "@melandlabs/contracts";
 import { parseDocument, stringify as yamlStringify } from "yaml";
 import { OkfError, type OkfIssue } from "./errors.js";
 

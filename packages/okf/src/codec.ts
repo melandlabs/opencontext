@@ -30,17 +30,11 @@
  *   body markdown links → metadata.okfLinks[]
  */
 
-import type { FactType, OkfFrontMatter, OkfDocument } from "@melandlabs/contracts";
+import type { FactType, OkfDocument, OkfFrontMatter } from "@melandlabs/contracts";
 import { isFactType } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { OkfError, type OkfIssue, type OkfIssueCode } from "./errors.js";
-import {
-	parseOkf,
-	parseOkfFrontMatter,
-	validateOkfFrontMatter,
-	stringifyOkf,
-	type ParsedOkfDocument,
-} from "./frontmatter.js";
+import { type ParsedOkfDocument, parseOkf, validateOkfFrontMatter } from "./frontmatter.js";
 
 /**
  * Field keys we recognise on the front-matter. Everything else is

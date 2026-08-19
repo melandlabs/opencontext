@@ -1,8 +1,8 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readOkfPackage, writeOkfPackage } from "./package.js";
 
 let tmpDir: string;

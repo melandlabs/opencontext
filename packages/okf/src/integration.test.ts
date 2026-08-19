@@ -12,14 +12,14 @@
  * The test cleans up after itself.
  */
 
-import { mkdir, mkdtemp, readFile, rm, writeFile, stat } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { createRawMessageStore } from "@melandlabs/memory-store";
 import { closeRawMessageStore } from "@melandlabs/memory-store";
-import { readOkfPackage, writeOkfPackage } from "./package.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startOkf } from "./cli.js";
+import { readOkfPackage, writeOkfPackage } from "./package.js";
 
 let tmpDir: string;
 const originalDbPath = process.env.MEMORY_STORE_DB_PATH;
@@ -38,7 +38,7 @@ afterEach(async () => {
 	// Restore env first so the close below doesn't accidentally reopen
 	// the just-deleted scratch file.
 	if (originalDbPath === undefined) {
-		delete process.env.MEMORY_STORE_DB_PATH;
+		process.env.MEMORY_STORE_DB_PATH = undefined;
 	} else {
 		process.env.MEMORY_STORE_DB_PATH = originalDbPath;
 	}

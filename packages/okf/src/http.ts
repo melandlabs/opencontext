@@ -21,15 +21,10 @@
  * so the memory-store doesn't need to know about `@melandlabs/okf`.
  */
 
-import { Hono } from "hono";
 import type { OkfDocument } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import {
-	okfToRawMessage,
-	rawMessageToOkf,
-	isBlockingOkfIssue,
-	filterRawMessagesByOkfType,
-} from "./codec.js";
+import type { Hono } from "hono";
+import { filterRawMessagesByOkfType, isBlockingOkfIssue, okfToRawMessage, rawMessageToOkf } from "./codec.js";
 
 interface RawMessageStoreLike {
 	getManager(): Promise<RawMessageManagerLike>;

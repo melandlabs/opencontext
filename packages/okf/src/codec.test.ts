@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest";
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { describe, expect, it } from "vitest";
 import {
+	OKF_BLOCKING_ISSUE_CODES,
 	extractMarkdownLinks,
 	factTypeToOkfType,
 	filterRawMessagesByOkfType,
 	isBlockingOkfIssue,
-	OKF_BLOCKING_ISSUE_CODES,
 	okfToRawMessage,
 	okfTypeToFactType,
 	rawMessageToOkf,
@@ -522,13 +522,7 @@ describe("OKF_BLOCKING_ISSUE_CODES / isBlockingOkfIssue", () => {
 	});
 	it("matches the exported blocking set", () => {
 		expect(OKF_BLOCKING_ISSUE_CODES).toEqual(
-			new Set([
-				"missing_type",
-				"missing_generated_at",
-				"invalid_yaml",
-				"invalid_frontmatter",
-				"empty_body",
-			]),
+			new Set(["missing_type", "missing_generated_at", "invalid_yaml", "invalid_frontmatter", "empty_body"]),
 		);
 	});
 });
@@ -569,11 +563,7 @@ describe("filterRawMessagesByOkfType", () => {
 
 	it("returns all rows when types is empty / absent", () => {
 		expect(filterRawMessagesByOkfType(rows, null).map((r) => r.messageId)).toEqual(["a", "b", "c"]);
-		expect(filterRawMessagesByOkfType(rows, undefined).map((r) => r.messageId)).toEqual([
-			"a",
-			"b",
-			"c",
-		]);
+		expect(filterRawMessagesByOkfType(rows, undefined).map((r) => r.messageId)).toEqual(["a", "b", "c"]);
 		expect(filterRawMessagesByOkfType(rows, []).map((r) => r.messageId)).toEqual(["a", "b", "c"]);
 	});
 

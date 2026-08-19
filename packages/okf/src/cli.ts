@@ -20,17 +20,12 @@
  */
 
 import { readFile, stat } from "node:fs/promises";
-import { createRawMessageStore } from "@melandlabs/memory-store";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import {
-	okfToRawMessage,
-	rawMessageToOkf,
-	filterRawMessagesByOkfType,
-	isBlockingOkfIssue,
-} from "./codec.js";
+import { createRawMessageStore } from "@melandlabs/memory-store";
+import { filterRawMessagesByOkfType, isBlockingOkfIssue, okfToRawMessage } from "./codec.js";
 import type { OkfIssue } from "./errors.js";
-import { parseOkf, parseOkfFrontMatter, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
-import { readOkfPackage, writeOkfPackage } from "./package.js";
+import { parseOkf, validateOkfFrontMatter } from "./frontmatter.js";
+import { type WriteOkfPackageResult, readOkfPackage, writeOkfPackage } from "./package.js";
 
 // ─── Local types ──────────────────────────────────────────────────────
 
@@ -685,7 +680,7 @@ async function runEmit(args: OkfEmitOptions, runOptions: OkfRunOptions): Promise
 	const { sink } = runOptions;
 	const log = (msg: string) => console.warn(`[opencontext/okf] ${msg}`);
 	const store = createRawMessageStore({});
-	let result;
+	let result: WriteOkfPackageResult;
 	try {
 		const manager = await store.getManager();
 		const query: Record<string, unknown> = {

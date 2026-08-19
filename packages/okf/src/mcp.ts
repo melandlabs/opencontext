@@ -11,16 +11,11 @@
  * doesn't need to know about `@melandlabs/okf`.
  */
 
-import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z, type ZodRawShape } from "zod";
 import type { OkfDocument } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import {
-	okfToRawMessage,
-	rawMessageToOkf,
-	isBlockingOkfIssue,
-	filterRawMessagesByOkfType,
-} from "./codec.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { type ZodRawShape, z } from "zod";
+import { filterRawMessagesByOkfType, isBlockingOkfIssue, okfToRawMessage, rawMessageToOkf } from "./codec.js";
 
 interface RawMessageStoreLike {
 	getManager(): Promise<RawMessageManagerLike>;

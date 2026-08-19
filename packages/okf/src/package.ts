@@ -22,13 +22,19 @@
  * `overwrite: true`).
  */
 
-import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import type { Stats } from "node:fs";
+import { mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, join, relative, sep } from "node:path";
-import { OkfPackageManifestSchema, type OkfDocument, type OkfPackageManifest } from "@melandlabs/contracts";
+import {
+	type OkfDocument,
+	type OkfFrontMatter,
+	type OkfPackageManifest,
+	OkfPackageManifestSchema,
+} from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import { OkfError, type OkfIssue } from "./errors.js";
-import { parseOkf, parseOkfFrontMatter, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
 import { rawMessageToOkf } from "./codec.js";
+import { OkfError, type OkfIssue } from "./errors.js";
+import { parseOkf, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
 
 export interface ReadOkfPackageOptions {
 	/** Glob of files to include. Default: `**\/*.md`. */
@@ -90,7 +96,7 @@ export async function readOkfPackage(
 	await walk(root, root, recursive, async (filePath, relPath) => {
 		if (extname(filePath).toLowerCase() !== ".md") return;
 		const [text, mtimeMs] = await Promise.all([readFile(filePath, "utf8"), safeMtime(filePath)]);
-		let frontMatter;
+		let frontMatter: OkfFrontMatter;
 		let body: string;
 		try {
 			const parsed = parseOkf(text);
@@ -182,7 +188,7 @@ async function tryReadManifest(root: string): Promise<{ manifest?: OkfPackageMan
 	}
 }
 
-function frontMatterResource(fm: ReturnType<typeof parseOkfFrontMatter>): string | undefined {
+function frontMatterResource(fm: OkfFrontMatter): string | undefined {
 	// Fall back to the OKF `resource` field if the emitter added one.
 	return (fm as Record<string, unknown>).resource as string | undefined;
 }
@@ -347,7 +353,7 @@ async function walk(
 	for (const entry of entries) {
 		if (entry === "manifest.json" || entry === "node_modules" || entry.startsWith(".")) continue;
 		const fullPath = join(dir, entry);
-		let s;
+		let s: Stats;
 		try {
 			s = await stat(fullPath);
 		} catch {

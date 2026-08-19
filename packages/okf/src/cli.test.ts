@@ -1,8 +1,8 @@
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { parseOkfArgs, startOkf, printOkfHelp } from "./cli.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { parseOkfArgs, printOkfHelp, startOkf } from "./cli.js";
 
 let tmpDir: string;
 

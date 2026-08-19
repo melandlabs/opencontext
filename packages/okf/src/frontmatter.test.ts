@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseOkf, parseOkfFrontMatter, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
 import { OkfError } from "./errors.js";
+import { parseOkf, parseOkfFrontMatter, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
 
 describe("parseOkf", () => {
 	it("parses a well-formed document with front-matter + body", () => {
