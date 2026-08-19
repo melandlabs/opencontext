@@ -39,6 +39,10 @@ import demoLocalEmbedding from "./simple/14-local-embedding.ts";
 import demoHttpServer from "./simple/15-http-server.ts";
 import demoMcpServer from "./simple/16-mcp-server.ts";
 import demoAiAgent from "./simple/17-ai-agent.ts";
+import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 import demoVsa from "./simple/19-vsa.ts";
 import { startHttpServer } from "@melandlabs/memory-store/http";
 import { withTmp } from "./_helpers.ts";
@@ -191,6 +195,17 @@ async function runAll(label: string, sections: Array<[string, () => Promise<void
 
 async function main() {
 	console.log(`[examples] ${demos.length} demo section(s) against the @melandlabs/* packages`);
+
+	// Several tutorials rely on the default `~/.opencontext/{memory,logs}` paths.
+	// On a clean CI runner (or any host with a brand-new $HOME) the parent
+	// directory does not exist, which makes better-sqlite3 throw "Cannot
+	// open database because the directory does not exist". Pre-create both
+	// so demos that don't pass an explicit dbPath still run.
+	const home = process.env.HOME || homedir();
+	await Promise.all([
+		mkdir(join(home, ".opencontext", "memory"), { recursive: true }),
+		mkdir(join(home, ".opencontext", "logs"), { recursive: true }),
+	]);
 
 	await runAll("DEMOS — runnable documentation (real API calls)", demos);
 
