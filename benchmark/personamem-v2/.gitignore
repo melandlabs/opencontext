@@ -1,0 +1,13 @@
+# Benchmark results
+results.json
+results/
+
+# Downloaded dataset (HuggingFace CSV + chat histories under dataset/data/)
+dataset/benchmark.csv
+dataset/data/
+
+# Evaluation checkpoints (resume cache)
+checkpoints/
+
+# Local benchmark memory DB (MEMORY_STORE_DB_PATH)
+.data/

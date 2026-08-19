@@ -1,5 +1,6 @@
 {
-	"name": "@openloomi/benchmark-beam",
+	"name": "@melandlabs/benchmark-beam",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "tsx src/index.ts",

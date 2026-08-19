@@ -2,12 +2,12 @@
  * BEAM Benchmark CLI
  *
  * Run via:
- *   pnpm --filter @openloomi/benchmark-beam benchmark -- \
+ *   pnpm --filter @melandlabs/benchmark-beam benchmark -- \
  *     --dataset dataset/beam_1m.json \
  *     --output results/beam_1m_$(date +%Y%m%d_%H%M%S).json
  *
  * Or, to demo the Alloomi claim subset:
- *   pnpm --filter @openloomi/benchmark-beam benchmark -- \
+ *   pnpm --filter @melandlabs/benchmark-beam benchmark -- \
  *     --dataset dataset/beam_1m.json \
  *     --type ku,pf,cr,mr --conversations 5
  */
@@ -125,7 +125,7 @@ function printHelp(): void {
 	console.log(`BEAM Benchmark CLI
 
 Usage:
-  pnpm --filter @openloomi/benchmark-beam benchmark -- \\
+  pnpm --filter @melandlabs/benchmark-beam benchmark -- \\
     --dataset <path.json> [options]
 
 Required:

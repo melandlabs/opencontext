@@ -188,3 +188,4 @@ benchmark/clbench-official/CL-bench-*.jsonl
 benchmark/beam/dataset/*.parquet
 benchmark/beam/dataset/beam_1m.json
 benchmark/beam/dataset/beam_10m.json
+benchmark/scriptmem/dataset/raw/
