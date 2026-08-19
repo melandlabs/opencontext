@@ -2,6 +2,12 @@ export type MemoryTier = "short" | "mid" | "long";
 
 export type MemorySummaryTier = "L1" | "L2" | "L3";
 
+// `FactType` / `isFactType` are the single source of truth defined in
+// `@melandlabs/contracts` (a shared leaf package) and re-exported here so
+// `@melandlabs/ai/memory` consumers keep importing them from this path.
+import { type FactType, isFactType } from "@melandlabs/contracts";
+export { type FactType, isFactType };
+
 export type MemoryDimensionValue = string | number | boolean;
 
 export type MemoryDimensions = Record<string, MemoryDimensionValue | undefined>;
@@ -28,6 +34,13 @@ export interface MemoryRecord {
 	archivedAt?: number;
 	dimensions?: MemoryDimensions;
 	metadata?: Record<string, unknown>;
+	/**
+	 * Optional fact-type classification produced by the atomic-fact chunker.
+	 * Lets retrieval narrow to "world" (objective), "experience"
+	 * (first-person recollection), or "mental_model" (preferences /
+	 * patterns) without re-classifying at query time.
+	 */
+	factType?: FactType;
 	/**
 	 * Unix timestamp (ms) at which this record was deprecated (soft-hidden
 	 * because it has been superseded by a higher-tier summary). When set, the
@@ -149,6 +162,12 @@ export interface MemorySearchQuery {
 	tiers?: MemoryTier[];
 	dimensions?: MemoryDimensions;
 	/**
+	 * Optional fact-type filter; only records matching one of these
+	 * classifications are returned. Records missing `factType` are excluded
+	 * when this filter is non-empty (parity with `tiers`).
+	 */
+	factTypes?: FactType[];
+	/**
 	 * When false (default), records with `deprecatedAt` set are excluded.
 	 * Set true to include deprecated records (useful for audits / chain
 	 * traversal back to the canonical summary).
@@ -181,6 +200,7 @@ export interface MemorySemanticRecallQuery {
 	startTime?: number;
 	endTime?: number;
 	includeDeprecated?: boolean;
+	factTypes?: FactType[];
 }
 
 export interface MemorySemanticRecallHit {

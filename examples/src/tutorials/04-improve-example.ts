@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const manager = await getRawMessageManager();
@@ -44,7 +45,5 @@ async function main() {
 	console.log(`Deprecated ${changed} old fact(s)`);
 }
 
-main().catch((error) => {
-	console.error("Improve failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("improve-example", main, import.meta.url);

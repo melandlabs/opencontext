@@ -37,7 +37,7 @@ function safeTruncate(text: string, maxBytes: number): { text: string; truncated
 		if ((byte & 0xc0) !== 0x80) break;
 		end -= 1;
 	}
-	return { text: buf.toString("utf8", 0, end) + " …", truncated: true };
+	return { text: `${buf.toString("utf8", 0, end)} …`, truncated: true };
 }
 
 function formatHit(hit: SearchHit, index: number): string {
@@ -52,7 +52,7 @@ export function formatPreparedContext(hits: SearchHit[], maxBytes: number): Prep
 		return { status: "empty", content: null, contentBytes: 0 };
 	}
 	const header = `${UNTRUSTED_HEADER}\n\n<opencontext_evidence hits="${hits.length}">\n`;
-	const footer = `\n</opencontext_evidence>`;
+	const footer = "\n</opencontext_evidence>";
 	const body = hits.map(formatHit).join("\n\n");
 	const candidate = `${header}${body}${footer}`;
 	if (Buffer.byteLength(candidate, "utf8") <= maxBytes) {

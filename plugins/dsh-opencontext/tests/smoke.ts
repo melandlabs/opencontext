@@ -28,7 +28,7 @@ const { apply, name, inject, ConfigSchema } = plugin as {
 	name: string;
 	inject: string[];
 	apply: (ctx: unknown, config: unknown) => void;
-	ConfigSchema: { (value: unknown): unknown };
+	ConfigSchema: (value: unknown) => unknown;
 };
 
 const registeredTools: Array<{ name: string; execute: (args: unknown, ctx: unknown) => Promise<unknown> }> =
@@ -100,7 +100,7 @@ const fail = (label: string, error: unknown): void => {
 };
 
 try {
-	process.stdout.write(`# dsh-opencontext smoke test\n`);
+	process.stdout.write("# dsh-opencontext smoke test\n");
 	process.stdout.write(`# db: ${process.env.MEMORY_STORE_DB_PATH}\n\n`);
 
 	// 1. Plugin shape
@@ -143,7 +143,7 @@ try {
 			throw new Error(`missing tool: ${t}`);
 		}
 	}
-	process.stdout.write(`✔ all 8 oc_* tools registered\n`);
+	process.stdout.write("✔ all 8 oc_* tools registered\n");
 
 	// 4. Skill
 	if (registeredSkills[0]?.name !== "opencontext") {
@@ -213,7 +213,7 @@ try {
 	if (getResult.value?.items[0]?.content !== "remember the project name is dsh-opencontext") {
 		throw new Error(`oc_memory_get: wrong content: ${JSON.stringify(getResult.value)}`);
 	}
-	process.stdout.write(`✔ oc_memory_get retrieved the entry — content round-trips\n`);
+	process.stdout.write("✔ oc_memory_get retrieved the entry — content round-trips\n");
 
 	// 8. oc_memory_list
 	const list = registeredTools.find((t) => t.name === "oc_memory_list");
@@ -273,14 +273,14 @@ try {
 		session: { header: { id: "smoke-session", cwd: "/tmp" } },
 	};
 	// First listener is recall; the second is capture. Run them in order.
-	let nextDecision = {
+	const nextDecision = {
 		kind: "enter",
 		messages: [
 			{ role: "user", content: [{ type: "text", text: "what was the dsh-opencontext project name?" }] },
 		],
 	};
 	const downstreamNext = async () => nextDecision;
-	const recallResult = (await preStepListeners[0]!(userPayload, downstreamNext)) as {
+	const recallResult = (await preStepListeners[0]?.(userPayload, downstreamNext)) as {
 		kind: string;
 		messages: Array<{ meta?: { kind?: string } }>;
 	};
@@ -288,11 +288,11 @@ try {
 	const messages = recallResult.messages;
 	const recallMessage = messages.find((m) => m.meta?.kind === "recall");
 	if (!recallMessage) throw new Error("recall listener did not append an evidence message");
-	process.stdout.write(`✔ recall listener appended an <opencontext_evidence> message to the turn\n`);
+	process.stdout.write("✔ recall listener appended an <opencontext_evidence> message to the turn\n");
 
 	// Capture listener should run after, fire-and-forget (with flushOnCapture it awaits)
-	await preStepListeners[1]!(userPayload, downstreamNext);
-	process.stdout.write(`✔ capture listener ran\n`);
+	await preStepListeners[1]?.(userPayload, downstreamNext);
+	process.stdout.write("✔ capture listener ran\n");
 
 	// 13. Revise
 	const revise = registeredTools.find((t) => t.name === "oc_memory_revise");
@@ -311,7 +311,7 @@ try {
 	// 14. Retire
 	const retire = registeredTools.find((t) => t.name === "oc_memory_retire");
 	if (!retire) throw new Error("oc_memory_retire missing");
-	const ret = (await retire.execute({ id: rev.value!.newId, reason: "smoke test cleanup" }, {})) as {
+	const ret = (await retire.execute({ id: rev.value?.newId, reason: "smoke test cleanup" }, {})) as {
 		ok: boolean;
 		value?: { ok: boolean };
 	};
@@ -330,7 +330,7 @@ try {
 	);
 
 	// 16. Tear down via the effect setupFn we registered
-	process.stdout.write(`\n✔ all smoke checks passed\n`);
+	process.stdout.write("\n✔ all smoke checks passed\n");
 } catch (error) {
 	fail("smoke", error);
 }

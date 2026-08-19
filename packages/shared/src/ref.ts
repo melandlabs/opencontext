@@ -15,7 +15,7 @@ export type ContentSegment =
  * Parse text with [[ref:type:label]] into paragraph array, used to render inline badges
  * Use local regex inside function to avoid state issues caused by global g flag
  */
-export function parseContentWithRefs(content: string): ContentSegment[] {
+export function parseContentWithRefs(content: string | null | undefined): ContentSegment[] {
 	if (!content || typeof content !== "string") return [{ type: "text", value: content ?? "" }];
 	const segments: ContentSegment[] = [];
 	let lastIndex = 0;

@@ -9,6 +9,8 @@
  */
 
 import Database from "better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 import * as sqliteVec from "sqlite-vec";
 
 export interface VectorSearchResult {
@@ -27,32 +29,43 @@ export interface DocumentChunk {
 	metadata?: Record<string, unknown>;
 }
 
+// Loose column type — the host package owns the actual column data type
+// (text/varchar/integer/etc.) and we don't want to lock it down here.
+type LooseColumn = SQLiteColumn;
+
+// Loose table type — the host package owns the table config and inferred
+// row types. We accept any `SQLiteTable` here so this package stays generic
+// across different schema definitions.
+type LooseTable = SQLiteTable;
+
 export interface SchemaModule {
-	ragChunks: {
-		id: unknown;
-		documentId: unknown;
-		userId: unknown;
-		content: unknown;
-		embedding: unknown;
-		metadata: unknown;
-		chunkIndex: unknown;
+	ragChunks: LooseTable & {
+		id: LooseColumn;
+		documentId: LooseColumn;
+		userId: LooseColumn;
+		content: LooseColumn;
+		embedding: LooseColumn;
+		metadata: LooseColumn;
+		chunkIndex: LooseColumn;
 	};
-	ragDocuments: {
-		id: unknown;
-		documentId: unknown;
-		userId: unknown;
-		fileName: unknown;
+	ragDocuments: LooseTable & {
+		id: LooseColumn;
+		documentId: LooseColumn;
+		userId: LooseColumn;
+		fileName: LooseColumn;
 	};
 	InsertRAGChunk: Record<string, unknown>;
 	InsertRAGDocument: Record<string, unknown>;
 }
+
+type DrizzleDb = BetterSQLite3Database<Record<string, unknown>>;
 
 /**
  * SQLite Vector Store class.
  */
 export class SQLiteVecStore {
 	private db: Database.Database;
-	private drizzleDb: any; // Drizzle instance
+	private drizzleDb: DrizzleDb | null = null; // Drizzle instance
 	private vecTableName: string;
 	private initialized = false;
 	// Hold onto the host's schema module so async write paths can insert
@@ -69,20 +82,12 @@ export class SQLiteVecStore {
 
 		// Enable WAL mode
 		this.db.pragma("journal_mode = WAL");
-
-		// Load sqlite-vec extension
-		try {
-			(sqliteVec as any).load(this.db);
-			console.log("✅ sqlite-vec extension loaded");
-		} catch (error) {
-			console.error("❌ Failed to load sqlite-vec:", error);
-			throw error;
-		}
+		// sqlite-vec exposes a `load` function on the default export.
+		sqliteVec.load(this.db);
 
 		// Stash the schema module for later methods (similaritySearch,
 		// deleteDocument, etc.) so we don't have to fish it out of `this`.
 		this.schemaModule = schemaModule;
-		(this as any)._schemaModule = schemaModule;
 
 		// Kick off the lazy Drizzle init; keep the Promise so write paths
 		// can `await` it. The constructor itself stays synchronous, which
@@ -98,7 +103,7 @@ export class SQLiteVecStore {
 
 	private async initDrizzle(schemaModule: SchemaModule): Promise<void> {
 		const { drizzle } = await import("drizzle-orm/better-sqlite3");
-		this.drizzleDb = drizzle(this.db, { schema: schemaModule as any });
+		this.drizzleDb = drizzle(this.db, { schema: schemaModule as never });
 	}
 
 	/**
@@ -118,83 +123,69 @@ export class SQLiteVecStore {
 	 * Initialize vector table (using sqlite-vec's vec0 virtual table).
 	 */
 	private initVectorTable() {
-		try {
-			// Check if table already exists
-			const existingTable = this.db
-				.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
-				.get(this.vecTableName);
+		// Check if table already exists
+		const existingTable = this.db
+			.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?")
+			.get(this.vecTableName);
 
-			if (!existingTable) {
-				console.log(`📝 Creating vector table: ${this.vecTableName}`);
-
-				// Create vec0 virtual table
-				// Embedding vector dimension is 1536 (OpenAI text-embedding-3-small dimension)
-				this.db.exec(`
+		if (!existingTable) {
+			// Create vec0 virtual table
+			// Embedding vector dimension is 1536 (OpenAI text-embedding-3-small dimension)
+			this.db.exec(`
           CREATE VIRTUAL TABLE IF NOT EXISTS ${this.vecTableName}
           USING vec0(
             embedding float[1536],
             chunk_id TEXT PRIMARY KEY
           )
         `);
-
-				console.log(`✅ Vector table created: ${this.vecTableName}`);
-			} else {
-				console.log(`✅ Vector table already exists: ${this.vecTableName}`);
-			}
-
-			this.initialized = true;
-		} catch (error) {
-			console.error("❌ Failed to initialize vector table:", error);
-			throw error;
+		} else {
 		}
+
+		this.initialized = true;
 	}
 
 	/**
 	 * Add document chunk to vector store.
 	 */
 	async addChunk(chunk: DocumentChunk): Promise<void> {
-		try {
-			// Wait for the lazy Drizzle init kicked off by the constructor
-			// before we touch `this.drizzleDb`.
-			await this.ensureDrizzle();
-
-			// 1. First insert into rag_chunks table.
-			// Resolve the table from the host's schema module — using `{}`
-			// here crashes with `Cannot read properties of undefined
-			// (reading 'insert')` once Drizzle actually inspects the target.
-			const chunkData: Record<string, unknown> = {
-				id: chunk.id,
-				documentId: chunk.documentId,
-				userId: "local", // Fixed user ID for local mode
-				chunkIndex: 0, // Can be obtained from metadata
-				content: chunk.content,
-				embedding: JSON.stringify(chunk.embedding),
-				metadata: chunk.metadata ? JSON.stringify(chunk.metadata) : null,
-			};
-
-			await this.drizzleDb
-				.insert(this.schemaModule.ragChunks as any)
-				.values(chunkData)
-				.onConflictDoNothing();
-
-			// 2. Insert vector into vec0 table.
-			// vec0 virtual tables don't support `ON CONFLICT … DO UPDATE`
-			// (sqlite-vec only ships a subset of upsert), so for re-writes
-			// we delete any existing row for the same chunk_id first and
-			// then insert afresh. On first insert the DELETE matches zero
-			// rows, so this is a no-op write path.
-			this.db.prepare(`DELETE FROM ${this.vecTableName} WHERE chunk_id = ?`).run(chunk.id);
-			const vecStmt = this.db.prepare(`INSERT INTO ${this.vecTableName} (embedding, chunk_id) VALUES (?, ?)`);
-
-			// Convert embedding array to the format required by sqlite-vec
-			const embeddingBytes = this.floatArrayToBytes(chunk.embedding);
-			vecStmt.run(embeddingBytes, chunk.id);
-
-			console.log(`✅ Added chunk ${chunk.id} to vector store`);
-		} catch (error) {
-			console.error(`❌ Failed to add chunk ${chunk.id}:`, error);
-			throw error;
+		// Wait for the lazy Drizzle init kicked off by the constructor
+		// before we touch `this.drizzleDb`.
+		await this.ensureDrizzle();
+		if (!this.drizzleDb) {
+			throw new Error("Drizzle initialization did not complete");
 		}
+
+		// 1. First insert into rag_chunks table.
+		// Resolve the table from the host's schema module — using `{}`
+		// here crashes with `Cannot read properties of undefined
+		// (reading 'insert')` once Drizzle actually inspects the target.
+		const chunkData: Record<string, unknown> = {
+			id: chunk.id,
+			documentId: chunk.documentId,
+			userId: "local", // Fixed user ID for local mode
+			chunkIndex: 0, // Can be obtained from metadata
+			content: chunk.content,
+			embedding: JSON.stringify(chunk.embedding),
+			metadata: chunk.metadata ? JSON.stringify(chunk.metadata) : null,
+		};
+
+		await this.drizzleDb
+			.insert(this.schemaModule.ragChunks as never)
+			.values(chunkData)
+			.onConflictDoNothing();
+
+		// 2. Insert vector into vec0 table.
+		// vec0 virtual tables don't support `ON CONFLICT … DO UPDATE`
+		// (sqlite-vec only ships a subset of upsert), so for re-writes
+		// we delete any existing row for the same chunk_id first and
+		// then insert afresh. On first insert the DELETE matches zero
+		// rows, so this is a no-op write path.
+		this.db.prepare(`DELETE FROM ${this.vecTableName} WHERE chunk_id = ?`).run(chunk.id);
+		const vecStmt = this.db.prepare(`INSERT INTO ${this.vecTableName} (embedding, chunk_id) VALUES (?, ?)`);
+
+		// Convert embedding array to the format required by sqlite-vec
+		const embeddingBytes = this.floatArrayToBytes(chunk.embedding);
+		vecStmt.run(embeddingBytes, chunk.id);
 	}
 
 	/**
@@ -220,19 +211,18 @@ export class SQLiteVecStore {
 	async similaritySearch(
 		queryEmbedding: number[],
 		limit = 10,
-		userId?: string,
+		_userId?: string,
 	): Promise<VectorSearchResult[]> {
-		try {
-			if (!this.initialized) {
-				throw new Error("Vector store not initialized");
-			}
+		if (!this.initialized) {
+			throw new Error("Vector store not initialized");
+		}
 
-			// Convert query vector to byte array
-			const queryBytes = this.floatArrayToBytes(queryEmbedding);
+		// Convert query vector to byte array
+		const queryBytes = this.floatArrayToBytes(queryEmbedding);
 
-			// Perform vector search
-			// Use KNN search algorithm
-			const sql = `
+		// Perform vector search
+		// Use KNN search algorithm
+		const sql = `
         SELECT
           chunk_id,
           distance
@@ -242,94 +232,84 @@ export class SQLiteVecStore {
         LIMIT ?
       `;
 
-			const results = this.db.prepare(sql).all(queryBytes, limit) as Array<{
-				chunk_id: string;
-				distance: number;
-			}>;
+		const results = this.db.prepare(sql).all(queryBytes, limit) as Array<{
+			chunk_id: string;
+			distance: number;
+		}>;
 
-			// Get full chunk information
-			const chunkIds = results.map((r) => r.chunk_id);
+		// Get full chunk information
+		const chunkIds = results.map((r) => r.chunk_id);
 
-			// Dynamic import of schema-dependent types at call time
-			const { eq } = await import("drizzle-orm");
-			const schemaModule = (this as any)._schemaModule;
-			if (!schemaModule || chunkIds.length === 0) {
-				return results.map((result) => ({
-					id: result.chunk_id,
-					content: "",
-					score: 1 - result.distance,
-					documentId: "",
-					metadata: undefined,
-				}));
-			}
-
-			const chunks = await this.drizzleDb
-				.select()
-				.from(schemaModule.ragChunks)
-				.where(eq(schemaModule.ragChunks.id as any, chunkIds[0]));
-
-			// Merge results
-			const finalResults: VectorSearchResult[] = results.map((result) => {
-				const chunk = chunks.find((c: any) => c.id === result.chunk_id);
-				return {
-					id: result.chunk_id,
-					content: chunk?.content || "",
-					score: 1 - result.distance, // Convert distance to similarity score
-					documentId: chunk?.documentId || "",
-					metadata: chunk?.metadata ? JSON.parse(chunk.metadata as string) : undefined,
-				};
-			});
-
-			return finalResults;
-		} catch (error) {
-			console.error("❌ Vector search failed:", error);
-			throw error;
+		// Dynamic import of schema-dependent types at call time
+		const { eq } = await import("drizzle-orm");
+		if (!this.drizzleDb || chunkIds.length === 0) {
+			return results.map((result) => ({
+				id: result.chunk_id,
+				content: "",
+				score: 1 - result.distance,
+				documentId: "",
+				metadata: undefined,
+			}));
 		}
+
+		const chunks = await this.drizzleDb
+			.select()
+			.from(this.schemaModule.ragChunks)
+			.where(eq(this.schemaModule.ragChunks.id as never, chunkIds[0]));
+
+		// Merge results
+		type ChunkRow = { id: string; content?: string; documentId?: string; metadata?: string };
+		const finalResults: VectorSearchResult[] = results.map((result) => {
+			const chunk = (chunks as ChunkRow[]).find((c) => c.id === result.chunk_id);
+			return {
+				id: result.chunk_id,
+				content: chunk?.content || "",
+				score: 1 - result.distance, // Convert distance to similarity score
+				documentId: chunk?.documentId || "",
+				metadata: chunk?.metadata ? JSON.parse(chunk.metadata) : undefined,
+			};
+		});
+
+		return finalResults;
 	}
 
 	/**
 	 * Delete a document and all its chunks.
 	 */
 	async deleteDocument(documentId: string): Promise<void> {
-		try {
-			const schemaModule = (this as any)._schemaModule;
+		if (!this.drizzleDb) return;
 
-			// 1. Get all chunk IDs for the document
-			if (schemaModule) {
-				const { eq } = await import("drizzle-orm");
-				const chunks = await this.drizzleDb
-					.select({ id: (schemaModule.ragChunks as any).id })
-					.from(schemaModule.ragChunks)
-					.where(eq((schemaModule.ragChunks as any).documentId, documentId));
+		// 1. Get all chunk IDs for the document
+		{
+			const { eq } = await import("drizzle-orm");
+			const chunks = await this.drizzleDb
+				.select({ id: this.schemaModule.ragChunks.id as never })
+				.from(this.schemaModule.ragChunks)
+				.where(eq(this.schemaModule.ragChunks.documentId as never, documentId));
 
-				// 2. Delete from vector table
-				const deleteVecStmt = this.db.prepare(`
+			// 2. Delete from vector table
+			const deleteVecStmt = this.db.prepare(`
           DELETE FROM ${this.vecTableName} WHERE chunk_id = ?
         `);
 
-				const deleteVec = this.db.transaction((chunkIds: string[]) => {
-					for (const chunkId of chunkIds) {
-						deleteVecStmt.run(chunkId);
-					}
-				});
+			const deleteVec = this.db.transaction((chunkIds: string[]) => {
+				for (const chunkId of chunkIds) {
+					deleteVecStmt.run(chunkId);
+				}
+			});
 
-				await deleteVec(chunks.map((c: any) => c.id));
+			type ChunkIdRow = { id: string };
+			await deleteVec(chunks.map((c: ChunkIdRow) => c.id));
 
-				// 3. Delete from rag_chunks table
-				await this.drizzleDb
-					.delete(schemaModule.ragChunks)
-					.where(eq((schemaModule.ragChunks as any).documentId, documentId));
+			// 3. Delete from rag_chunks table
+			await this.drizzleDb
+				.delete(this.schemaModule.ragChunks)
+				.where(eq(this.schemaModule.ragChunks.documentId as never, documentId));
 
-				// 4. Delete from rag_documents table
-				await this.drizzleDb
-					.delete(schemaModule.ragDocuments)
-					.where(eq((schemaModule.ragDocuments as any).id, documentId));
-			}
-
-			console.log(`✅ Deleted document ${documentId} and its chunks`);
-		} catch (error) {
-			console.error(`❌ Failed to delete document ${documentId}:`, error);
-			throw error;
+			// 4. Delete from rag_documents table
+			await this.drizzleDb
+				.delete(this.schemaModule.ragDocuments)
+				.where(eq(this.schemaModule.ragDocuments.id as never, documentId));
 		}
 	}
 
@@ -338,16 +318,14 @@ export class SQLiteVecStore {
 	 */
 	async getDocumentCount(): Promise<number> {
 		try {
-			const schemaModule = (this as any)._schemaModule;
-			if (!schemaModule) return 0;
+			if (!this.drizzleDb) return 0;
 
 			const result = await this.drizzleDb
-				.select({ count: (schemaModule.ragDocuments as any).id })
-				.from(schemaModule.ragDocuments);
+				.select({ count: this.schemaModule.ragDocuments.id as never })
+				.from(this.schemaModule.ragDocuments);
 
 			return result.length;
-		} catch (error) {
-			console.error("❌ Failed to get document count:", error);
+		} catch (_error) {
 			return 0;
 		}
 	}
@@ -357,16 +335,14 @@ export class SQLiteVecStore {
 	 */
 	async getChunkCount(): Promise<number> {
 		try {
-			const schemaModule = (this as any)._schemaModule;
-			if (!schemaModule) return 0;
+			if (!this.drizzleDb) return 0;
 
 			const result = await this.drizzleDb
-				.select({ count: (schemaModule.ragChunks as any).id })
-				.from(schemaModule.ragChunks);
+				.select({ count: this.schemaModule.ragChunks.id as never })
+				.from(this.schemaModule.ragChunks);
 
 			return result.length;
-		} catch (error) {
-			console.error("❌ Failed to get chunk count:", error);
+		} catch (_error) {
 			return 0;
 		}
 	}
@@ -375,26 +351,17 @@ export class SQLiteVecStore {
 	 * Clear all vector data.
 	 */
 	async clear(): Promise<void> {
-		try {
-			const schemaModule = (this as any)._schemaModule;
+		// Delete vector table
+		this.db.exec(`DROP TABLE IF EXISTS ${this.vecTableName}`);
 
-			// Delete vector table
-			this.db.exec(`DROP TABLE IF EXISTS ${this.vecTableName}`);
-
-			// Delete RAG tables
-			if (schemaModule) {
-				await this.drizzleDb.delete(schemaModule.ragChunks);
-				await this.drizzleDb.delete(schemaModule.ragDocuments);
-			}
-
-			// Re-initialize
-			this.initVectorTable();
-
-			console.log("✅ Cleared all vector data");
-		} catch (error) {
-			console.error("❌ Failed to clear vector data:", error);
-			throw error;
+		// Delete RAG tables
+		if (this.drizzleDb) {
+			await this.drizzleDb.delete(this.schemaModule.ragChunks);
+			await this.drizzleDb.delete(this.schemaModule.ragDocuments);
 		}
+
+		// Re-initialize
+		this.initVectorTable();
 	}
 
 	/**
@@ -403,10 +370,7 @@ export class SQLiteVecStore {
 	close(): void {
 		try {
 			this.db.close();
-			console.log("✅ Vector store connection closed");
-		} catch (error) {
-			console.error("❌ Failed to close connection:", error);
-		}
+		} catch (_error) {}
 	}
 
 	/**

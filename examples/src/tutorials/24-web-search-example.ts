@@ -1,4 +1,5 @@
 import { needsRealTimeInfo, search } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// Classify if a query needs real-time info
@@ -18,7 +19,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Web search failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("web-search", main, import.meta.url);

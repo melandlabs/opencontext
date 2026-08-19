@@ -28,7 +28,7 @@ const DEFAULT_OPTIONS: Required<ChunkOptions> = {
  */
 export function chunkText(text: string, options: ChunkOptions = {}): TextChunk[] {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
-	const chunks: TextChunk[] = [];
+	const _chunks: TextChunk[] = [];
 
 	const cleanText = text.trim();
 

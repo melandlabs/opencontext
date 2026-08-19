@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const manager = await getRawMessageManager();
@@ -26,7 +27,5 @@ async function main() {
 	console.log(`Archived ${changed} fact(s)`);
 }
 
-main().catch((error) => {
-	console.error("Forget failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("forget-example", main, import.meta.url);

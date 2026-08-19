@@ -1,4 +1,5 @@
 import { isTrustedStorageUrl, validateUrlForSSRF } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// validateUrlForSSRF rejects plain HTTP, loopback and private IPs by default.
@@ -17,7 +18,5 @@ async function main() {
 	console.log("Trusted storage URL:", trusted);
 }
 
-main().catch((error) => {
-	console.error("URL validation failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("url-validation", main, import.meta.url);

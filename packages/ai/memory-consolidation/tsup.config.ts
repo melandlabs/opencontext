@@ -14,6 +14,7 @@ export default defineConfig({
 		governance: "src/governance.ts",
 		persistence: "src/persistence.ts",
 		pipeline: "src/pipeline.ts",
+		"reflect-planner": "src/reflect-planner.ts",
 		"relation-graph": "src/relation-graph.ts",
 		retrieval: "src/retrieval.ts",
 		revision: "src/revision.ts",

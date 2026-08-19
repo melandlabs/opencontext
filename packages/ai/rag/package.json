@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/ai-rag",
-	"version": "0.2.4",
+	"version": "0.2.6",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -40,6 +40,7 @@
 		"@langchain/community": "^1.1.1",
 		"@langchain/core": "^1.1.8",
 		"@langchain/textsplitters": "^1.0.1",
+		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"better-sqlite3": "^11.7.0",
 		"chromadb": "^3.4.3",

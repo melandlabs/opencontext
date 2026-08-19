@@ -135,7 +135,7 @@ When a customer contacts support, instantly recall their history:
 
 ```typescript
 async function getCustomerHistory(customerEmail: string) {
-  const history = await store.searchUnifiedMemory({
+  const history = await store.search({
     userId: customerEmail,
     query: "customer interactions history",
     limit: 50,
@@ -176,7 +176,7 @@ Use temporal queries to find if this issue happened before:
 ```typescript
 async function checkRepeatIssue(customerEmail: string, issueCategory: string) {
   // Search for past issues in the same category
-  const pastIssues = await store.searchUnifiedMemory({
+  const pastIssues = await store.search({
     userId: customerEmail,
     query: `issues related to ${issueCategory}`,
     metadata: {
@@ -250,7 +250,7 @@ await messages.storeMessages([
 ]);
 
 // Search across all platforms
-const allInteractions = await store.searchUnifiedMemory({
+const allInteractions = await store.search({
   userId: "customer-alice@example.com",
   query: "all customer communications",
   sources: ["memory"],
@@ -410,7 +410,7 @@ node --experimental-strip-types src/tutorials/use-cases/31-customer-support-agen
 ### Searching by Customer Tier
 
 ```typescript
-const enterpriseCustomers = await store.searchUnifiedMemory({
+const enterpriseCustomers = await store.search({
   query: "enterprise customers",
   metadata: { tier: "enterprise" },
   limit: 100,
@@ -420,7 +420,7 @@ const enterpriseCustomers = await store.searchUnifiedMemory({
 ### Finding Unresolved Tickets
 
 ```typescript
-const openTickets = await store.searchUnifiedMemory({
+const openTickets = await store.search({
   query: "unresolved support tickets",
   metadata: {
     type: "ticket",
@@ -434,7 +434,7 @@ const openTickets = await store.searchUnifiedMemory({
 
 ```typescript
 // What issues did this customer have last month?
-const lastMonthIssues = await store.searchUnifiedMemory({
+const lastMonthIssues = await store.search({
   userId: customerEmail,
   query: "customer issues",
   asOf: thirtyDaysAgo,

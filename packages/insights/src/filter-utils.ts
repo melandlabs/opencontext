@@ -86,13 +86,15 @@ function collectKeywordFields(insight: InsightBase, fields: string[]) {
 					}
 				}
 				break;
-			case "sources":
-				if (Array.isArray((insight as any).sources)) {
-					for (const source of (insight as any).sources) {
+			case "sources": {
+				const sources = (insight as { sources?: unknown }).sources;
+				if (Array.isArray(sources)) {
+					for (const source of sources) {
 						collected.push(JSON.stringify(source));
 					}
 				}
 				break;
+			}
 			case "groups":
 				for (const group of insight.groups ?? []) {
 					collected.push(group);
@@ -227,7 +229,7 @@ function hasTasks(insight: InsightBase, buckets: string[]) {
 				if ((insight.waitingForOthers?.length ?? 0) > 0) return true;
 				break;
 			case "nextActions":
-				if (((insight as any).nextActions?.length ?? 0) > 0) return true;
+				if ((insight.nextActions?.length ?? 0) > 0) return true;
 				break;
 			default:
 				break;
@@ -436,9 +438,9 @@ function getInsightKey<T extends InsightBase>(insight: T): string | number {
 function unionInsights<T extends InsightBase>(a: T[], b: T[]): T[] {
 	const keyMap = new Map<string | number, T>();
 	// Add elements from array 'a' first
-	a.forEach((item) => keyMap.set(getInsightKey(item), item));
+	for (const item of a) keyMap.set(getInsightKey(item), item);
 	// Add elements from array 'b' (duplicates will be overwritten to achieve deduplication)
-	b.forEach((item) => keyMap.set(getInsightKey(item), item));
+	for (const item of b) keyMap.set(getInsightKey(item), item);
 	// Convert map values back to an array and return
 	return Array.from(keyMap.values());
 }
@@ -506,7 +508,7 @@ function evaluateFilterExpr<T extends InsightBase>(
 			// OR → Union
 			return unionInsights(leftResults, rightResults);
 		default:
-			throw new Error(`Unsupported logical operator: ${(expr as any).op}`);
+			throw new Error("Unsupported logical operator in filter expression");
 	}
 }
 
@@ -525,21 +527,52 @@ export function filterInsights<T extends InsightBase>(
 	return evaluateFilterExpr(insights, filter, context);
 }
 
-export function toInsightFilterResponse(record: Record<string, any>): InsightFilterResponse {
+function asString(value: unknown, fallback = ""): string {
+	return typeof value === "string" ? value : fallback;
+}
+
+function asNullableString(value: unknown): string | null {
+	if (value === null || value === undefined) return null;
+	return typeof value === "string" ? value : null;
+}
+
+function asNumber(value: unknown, fallback = 0): number {
+	return typeof value === "number" ? value : fallback;
+}
+
+function asBoolean(value: unknown, fallback = false): boolean {
+	return typeof value === "boolean" ? value : fallback;
+}
+
+function asIsoString(value: unknown): string {
+	if (value && typeof value === "object" && "toISOString" in value) {
+		const candidate = (value as { toISOString?: unknown }).toISOString;
+		if (typeof candidate === "function") {
+			return candidate.call(value);
+		}
+	}
+	if (typeof value === "string") return value;
+	return new Date(0).toISOString();
+}
+
+export function toInsightFilterResponse(record: Record<string, unknown>): InsightFilterResponse {
+	const sourceValue = record.source;
+	const source: InsightFilterResponse["source"] = sourceValue === "system" ? "system" : "user";
+
 	return {
-		id: record.id,
-		userId: record.userId,
-		label: record.label,
-		slug: record.slug,
-		description: record.description ?? null,
-		color: record.color ?? null,
-		icon: record.icon ?? null,
-		sortOrder: record.sortOrder,
-		isPinned: record.isPinned,
-		isArchived: record.isArchived,
-		source: (record.source as InsightFilterResponse["source"]) ?? "user",
-		definition: record.definition,
-		createdAt: record.createdAt?.toISOString?.() ?? new Date(0).toISOString(),
-		updatedAt: record.updatedAt?.toISOString?.() ?? new Date(0).toISOString(),
+		id: asString(record.id),
+		userId: asString(record.userId),
+		label: asString(record.label),
+		slug: asString(record.slug),
+		description: asNullableString(record.description),
+		color: asNullableString(record.color),
+		icon: asNullableString(record.icon),
+		sortOrder: asNumber(record.sortOrder),
+		isPinned: asBoolean(record.isPinned),
+		isArchived: asBoolean(record.isArchived),
+		source,
+		definition: (record.definition ?? { conditions: [], match: "all" }) as InsightFilter,
+		createdAt: asIsoString(record.createdAt),
+		updatedAt: asIsoString(record.updatedAt),
 	};
 }

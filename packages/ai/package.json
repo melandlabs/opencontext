@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/ai",
-	"version": "0.3.1",
+	"version": "0.5.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -47,6 +47,7 @@
 		"@ai-sdk/anthropic": "4.0.0-beta.67",
 		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@anthropic-ai/claude-agent-sdk": "^0.3.227",
+		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/memory-consolidation": "workspace:*",
 		"@melandlabs/shared": "workspace:*",

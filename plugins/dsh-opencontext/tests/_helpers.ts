@@ -8,7 +8,7 @@
 
 import { expect, vi } from "vitest";
 
-import type { OpenContextBackend, SearchHit, MemoryItem } from "../src/backend.js";
+import type { MemoryItem, OpenContextBackend, SearchHit } from "../src/backend.js";
 import type { ResolvedConfig } from "../src/config.js";
 import type { ToolError, ToolOk, ToolResult } from "../src/errors.js";
 

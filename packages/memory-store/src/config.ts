@@ -30,6 +30,8 @@
  * warning — fine for a standalone memory daemon.
  */
 
+import type { FactType } from "@melandlabs/contracts";
+import type { Peer } from "@melandlabs/contracts/peer";
 import type { RawMessage } from "./contracts";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
@@ -106,12 +108,31 @@ export interface UnifiedSearchInsightsResult {
 }
 
 export interface UnifiedSearchReasoningDeps {
+	/**
+	 * LLM single-turn synthesis callback. Wired into
+	 * `search({ synthesize: true })` so a host that wants synthesis
+	 * responses only has to drop in one callable. When omitted, the
+	 * synthesis path returns the gathered evidence with a
+	 * `synthesize_llm_not_configured` warning instead of throwing.
+	 */
+	complete?: (prompt: string) => Promise<string>;
+	/** Default merge strategy used by `searchUnifiedMemory` when the caller does not specify one. @default "rrf" */
+	defaultMergeStrategy?: import("./search/utilities").UnifiedMemoryMergeStrategy;
 	/** Optional query rewriter. When present, "rewrite" strategy is available. */
 	queryRewriter?: QueryRewriter;
 	/** Optional iterative recall planner. When present, "iterative" strategy is available. */
 	iterativePlanner?: IterativeRecallPlanner;
 	/** Default reasoning strategy when callers do not specify one. @default "none" */
 	defaultStrategy?: import("./search/utilities").UnifiedMemoryReasoningStrategy;
+}
+
+export interface MemorySummaryHit {
+	summaryId: string;
+	summaryText: string;
+	summaryTier?: "L1" | "L2" | "L3";
+	keywords?: string[];
+	startTimestamp?: number;
+	endTimestamp?: number;
 }
 
 export interface UnifiedSearchDeps {
@@ -129,6 +150,10 @@ export interface UnifiedSearchDeps {
 		limit: number;
 		threshold: number;
 		botId?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
+		/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
+		factTypes?: FactType[];
 	}) => Promise<
 		Array<{
 			id: string;
@@ -143,6 +168,8 @@ export interface UnifiedSearchDeps {
 		query: string;
 		options: { limit: number; threshold: number; documentIds?: string[] };
 		authToken?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
 	}) => Promise<UnifiedSearchKnowledgeResult[]>;
 	/** Semantic search over extracted insights. */
 	searchInsights?: (input: {
@@ -153,6 +180,8 @@ export interface UnifiedSearchDeps {
 		botIds?: string[];
 		includeArchived?: boolean;
 		authToken?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
 	}) => Promise<UnifiedSearchInsightsResult[]>;
 	/**
 	 * Optional BM25 (lexical) sub-query for the memory source. Mirrors the
@@ -165,6 +194,10 @@ export interface UnifiedSearchDeps {
 		keywords: string[];
 		limit: number;
 		botId?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
+		/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
+		factTypes?: FactType[];
 	}) => Promise<
 		Array<{
 			id: string;
@@ -173,8 +206,48 @@ export interface UnifiedSearchDeps {
 			metadata: Record<string, unknown>;
 		}>
 	>;
+	/**
+	 * Optional summary-tier search. When wired in, `reflect()` consults the
+	 * summary tier alongside raw messages and emits a
+	 * `reflect_summaries_unavailable` warning if the call fails.
+	 */
+	searchSummaries?: (input: {
+		userId: string;
+		query: string;
+		keywords: string[];
+		limit: number;
+		threshold: number;
+		dateFrom?: string;
+		dateTo?: string;
+		authToken?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
+	}) => Promise<MemorySummaryHit[]>;
+	/**
+	 * Optional host-side check that validates whether a `peerFilter` peer is
+	 * actually reachable from this `userId`. Used by
+	 * `resolveScopePeer` to drop out-of-scope peers with a warning
+	 * rather than broadening the search. May be omitted for hosts that
+	 * have no peer-permission model.
+	 */
+	peerScopeCheck?: (input: {
+		userId: string;
+		peers: ReadonlyArray<import("@melandlabs/contracts/peer").Peer>;
+	}) => Promise<boolean> | boolean;
 	/** Optional reasoning providers. */
 	reasoning?: UnifiedSearchReasoningDeps;
+	/**
+	 * Optional reranker applied after per-source merge and before the
+	 * final limit. Defaults to an identity pass-through so the merge order
+	 * is preserved.
+	 */
+	reranker?: import("./search/reranker").Reranker;
+	/**
+	 * Optional logger. When set (e.g. via `MemoryStoreConfig.logger`),
+	 * `reflect` / `consolidate` log through it instead of `console`.
+	 * Falls back to `console` when omitted.
+	 */
+	logger?: Pick<Console, "log" | "warn" | "error">;
 }
 
 export interface MemoryStoreConfig {
@@ -199,6 +272,18 @@ export interface MemoryStoreConfig {
 	vector?: MemoryStoreVectorConfig;
 	/** Optional cross-source search providers. */
 	unified?: UnifiedSearchDeps;
+	/**
+	 * Optional write-back graph store. When set, `createMemoryStore` wires
+	 * it into `store.graphStore` and forwards it to `consolidate`. Hosts
+	 * that prefer post-construction wiring can use `attachMemoryGraphStore`.
+	 */
+	graphStore?: import("@melandlabs/memory-consolidation").MemoryGraphStoreWithOperationHistory;
+	/**
+	 * Optional storage adapter carrying `deprecateRecords`. Forwarded into
+	 * `consolidate` for callers that want deprecation writes without
+	 * attaching a full graph store.
+	 */
+	storage?: import("@melandlabs/memory-consolidation").MemoryStorageAdapterLike;
 	/** Optional logger. Defaults to console. */
 	logger?: Pick<Console, "log" | "warn" | "error">;
 }

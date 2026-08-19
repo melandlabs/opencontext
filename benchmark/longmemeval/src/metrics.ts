@@ -157,7 +157,7 @@ export async function evaluateLLMJudge(
 		.replace("{gold_answer}", goldAnswer)
 		.replace("{generated_answer}", generatedAnswer);
 
-	let lastError: Error | undefined;
+	let _lastError: Error | undefined;
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
@@ -184,16 +184,13 @@ export async function evaluateLLMJudge(
 
 			return score;
 		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
-			console.log(`[Judge] Attempt ${attempt}/${maxRetries} failed: ${lastError.message.substring(0, 80)}`);
+			_lastError = error instanceof Error ? error : new Error(String(error));
 			if (attempt < maxRetries) {
 				// Wait before retry (exponential backoff)
 				await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
 			}
 		}
 	}
-
-	console.error(`[Judge] All ${maxRetries} attempts failed. Last error: ${lastError?.message}`);
 	return 0;
 }
 

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { formatPreparedContext, deriveQuery } from "../src/prepared-context.js";
+import { describe, expect, it } from "vitest";
+import { deriveQuery, formatPreparedContext } from "../src/prepared-context.js";
 import { makeSearchHit } from "./_helpers.js";
 
 describe("formatPreparedContext", () => {
@@ -26,7 +26,7 @@ describe("formatPreparedContext", () => {
 
 	it("truncates when the body exceeds the byte budget", () => {
 		const longHits = Array.from({ length: 50 }, (_, i) =>
-			makeSearchHit({ id: `h${i}`, content: `x`.repeat(200) }),
+			makeSearchHit({ id: `h${i}`, content: "x".repeat(200) }),
 		);
 		const out = formatPreparedContext(longHits, 1024) as ReturnType<typeof formatPreparedContext> & {
 			truncated?: boolean;

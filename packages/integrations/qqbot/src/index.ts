@@ -181,7 +181,14 @@ export class QQBotAdapter extends MessagePlatformAdapter {
 	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
 			this.assertTextOnlyMessages("replyMessages", messages);
-			const raw = event.sourcePlatformObject as any;
+			const raw = event.sourcePlatformObject as
+				| {
+						group_openid?: string;
+						openid?: string;
+						id?: string;
+						message_id?: string;
+				  }
+				| undefined;
 			const targetId = (raw?.group_openid ?? raw?.openid ?? (event.sender as Friend)?.id) as
 				| string
 				| undefined;

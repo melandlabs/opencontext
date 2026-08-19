@@ -56,14 +56,6 @@ export class UniversalEmbeddings {
 	 * Call embeddings API (OpenAI-compatible).
 	 */
 	private async callEmbeddingAPI(texts: string[]): Promise<number[][]> {
-		console.log("[RAG] Calling embeddings API:", {
-			baseURL: this.baseURL,
-			model: this.modelName,
-			textCount: texts.length,
-			hasApiKey: !!this.apiKey,
-			hasUserAuthToken: !!this.userAuthToken,
-		});
-
 		const headers: Record<string, string> = {
 			"Content-Type": "application/json",
 		};
@@ -100,9 +92,10 @@ export class UniversalEmbeddings {
 			throw new Error("Invalid response format from embeddings API. Expected data.data array.");
 		}
 
-		const sortedData = data.data.sort((a: any, b: any) => a.index - b.index);
+		type EmbeddingItem = { index: number; embedding: number[] };
+		const sortedData = (data.data as EmbeddingItem[]).sort((a, b) => a.index - b.index);
 
-		return sortedData.map((item: any) => {
+		return sortedData.map((item) => {
 			if (!item.embedding || !Array.isArray(item.embedding)) {
 				throw new Error("Invalid embedding format in response");
 			}

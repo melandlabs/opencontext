@@ -1,5 +1,53 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [f31460c]
+- Updated dependencies [aaf039a]
+- Updated dependencies [e9cb443]
+  - @melandlabs/ai@0.5.0
+  - @melandlabs/memory-consolidation@0.5.0
+  - @melandlabs/indexeddb@0.5.0
+  - @melandlabs/sqlite@0.5.0
+  - @melandlabs/memory-store@1.0.0
+  - @melandlabs/contracts@0.5.0
+  - @melandlabs/vsa@0.3.0
+  - @melandlabs/integrations-dingtalk@0.3.3
+  - @melandlabs/integrations-gmail@0.3.3
+  - @melandlabs/integrations-imessage@0.3.3
+  - @melandlabs/integrations-qqbot@0.3.3
+  - @melandlabs/integrations-telegram@0.3.3
+  - @melandlabs/integrations-weixin@0.3.3
+  - @melandlabs/integrations-whatsapp@0.3.3
+  - @melandlabs/ai-rag@0.2.6
+  - @melandlabs/integrations-runtime@0.3.2
+
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [f31460c]
+- Updated dependencies [aaf039a]
+- Updated dependencies
+  - @melandlabs/ai@0.4.0
+  - @melandlabs/memory-consolidation@0.4.0
+  - @melandlabs/indexeddb@0.4.0
+  - @melandlabs/sqlite@0.4.0
+  - @melandlabs/memory-store@1.0.0
+  - @melandlabs/contracts@0.4.0
+  - @melandlabs/opencontext@0.5.0
+  - @melandlabs/integrations-dingtalk@0.3.2
+  - @melandlabs/integrations-gmail@0.3.2
+  - @melandlabs/integrations-imessage@0.3.2
+  - @melandlabs/integrations-qqbot@0.3.2
+  - @melandlabs/integrations-telegram@0.3.2
+  - @melandlabs/integrations-weixin@0.3.2
+  - @melandlabs/integrations-whatsapp@0.3.2
+  - @melandlabs/ai-rag@0.2.5
+  - @melandlabs/integrations-runtime@0.3.1
+
 ## 0.3.1
 
 ### Patch Changes

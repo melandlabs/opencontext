@@ -5,7 +5,7 @@ import { useEffect, useRef } from "react";
  * @param eventName - The name of the custom event to listen for
  * @param handler - The event handler function
  */
-export function useCustomEvent<T = any>(eventName: string, handler: (detail: T) => void) {
+export function useCustomEvent<T = unknown>(eventName: string, handler: (detail: T) => void) {
 	const handlerRef = useRef(handler);
 
 	// Update ref on every render to ensure always using latest handler

@@ -17,9 +17,7 @@ declare module "@deepseek-ai/cordis" {
 }
 
 declare module "@deepseek-ai/schemastery" {
-	type Schema<T = unknown> = {
-		(value: unknown): T;
-	};
+	type Schema<T = unknown> = (value: unknown) => T;
 	interface Builder {
 		object(shape: Record<string, unknown>): Schema;
 		string(): { default(value: string): unknown; required(): unknown };

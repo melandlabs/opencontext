@@ -39,6 +39,36 @@ import demoLocalEmbedding from "./simple/14-local-embedding.ts";
 import demoHttpServer from "./simple/15-http-server.ts";
 import demoMcpServer from "./simple/16-mcp-server.ts";
 import demoAiAgent from "./simple/17-ai-agent.ts";
+import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
+import demoVsa from "./simple/19-vsa.ts";
+import { startHttpServer } from "@melandlabs/memory-store/http";
+import { withTmp } from "./_helpers.ts";
+import demoHelloMemory from "./tutorials/00-hello-memory.ts";
+import demoRememberExample from "./tutorials/01-remember-example.ts";
+import demoRecallExample from "./tutorials/02-recall-example.ts";
+import demoForgetExample from "./tutorials/03-forget-example.ts";
+import demoImproveExample from "./tutorials/04-improve-example.ts";
+import demoTimeTravelExample from "./tutorials/05-time-travel-example.ts";
+import demoMinimalConfig from "./tutorials/06-minimal-config-example.ts";
+import demoLocalEmbeddingsExample from "./tutorials/07-local-embeddings-example.ts";
+import demoLocalEmbeddingsFullSetup from "./tutorials/08-local-embeddings-full-setup.ts";
+import demoHttpClientExample from "./tutorials/09-http-client-example.ts";
+import demoReasoningMemoryExample from "./tutorials/10-reasoning-memory-example.ts";
+import demoLoopExample from "./tutorials/11-loop-example.ts";
+import demoIntegrationIdsExample from "./tutorials/12-integration-ids-example.ts";
+import demoBatchExample from "./tutorials/13-batch-example.ts";
+import demoMemoryService from "./tutorials/17-memory-service.ts";
+import demoRememberEverythingExample from "./tutorials/18-remember-everything-example.ts";
+import demoWarningHandlingExample from "./tutorials/19-warning-handling-example.ts";
+import demoMetadataExample from "./tutorials/20-metadata-example.ts";
+import demoScheduledTasksExample from "./tutorials/21-scheduled-tasks-example.ts";
+import demoTokenEncryptionExample from "./tutorials/22-token-encryption-example.ts";
+import demoUrlValidationExample from "./tutorials/23-url-validation-example.ts";
+import demoWebSearchExample from "./tutorials/24-web-search-example.ts";
+import demoAuditLoggingExample from "./tutorials/25-audit-logging-example.ts";
 import demoClaudeAgent from "./tutorials/26-claude-agent-example.ts";
 import demoCodexAgent from "./tutorials/27-codex-agent-example.ts";
 import demoAudit from "./tutorials/28-audit-example.ts";
@@ -54,9 +84,35 @@ import demoMemoryConsolidation from "./tutorials/37-memory-consolidation-example
 import demoChannels from "./tutorials/38-channels-example.ts";
 import demoIntegrationsRuntime from "./tutorials/39-integrations-runtime-example.ts";
 import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
+import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
+import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
+import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
+	["demo: opencontext — hello memory", demoHelloMemory],
+	["demo: opencontext — remember (storeMessages)", demoRememberExample],
+	["demo: opencontext — recall (search)", demoRecallExample],
+	["demo: opencontext — forget (archiveMessages)", demoForgetExample],
+	["demo: opencontext — improve (deprecateMessages)", demoImproveExample],
+	["demo: opencontext — time-travel (asOf search)", demoTimeTravelExample],
+	["demo: opencontext — minimal config (sqlite-vec backend)", demoMinimalConfig],
+	["demo: opencontext — local embeddings (Transformers + messages)", demoLocalEmbeddingsExample],
+	["demo: opencontext — local embeddings full setup", demoLocalEmbeddingsFullSetup],
+	["demo: opencontext — HTTP client (boots an in-process memory daemon first)", runHttpClientWithServer],
+	["demo: opencontext — reasoning memory (LLM-backed)", demoReasoningMemoryExample],
+	["demo: opencontext — Loop preferences", demoLoopExample],
+	["demo: opencontext — integration ids", demoIntegrationIdsExample],
+	["demo: opencontext — batch storeMessages", demoBatchExample],
+	["demo: opencontext — memory service", demoMemoryService],
+	["demo: opencontext — remember everything", demoRememberEverythingExample],
+	["demo: opencontext — warning handling", demoWarningHandlingExample],
+	["demo: opencontext — metadata", demoMetadataExample],
+	["demo: opencontext — scheduled tasks (cron)", demoScheduledTasksExample],
+	["demo: opencontext — token encryption", demoTokenEncryptionExample],
+	["demo: opencontext — URL validation (SSRF)", demoUrlValidationExample],
+	["demo: opencontext — web search (Brave)", demoWebSearchExample],
+	["demo: opencontext — audit logging", demoAuditLoggingExample],
 	["demo: rag — chunking", demoRagChunk],
 	["demo: rag — SQLiteVecStore", demoRagVectorStore],
 	["demo: memory-store", demoMemoryStore],
@@ -89,7 +145,41 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: ai-rag — local Transformers embedding", demoLocalEmbedding],
 	["demo: memory-store — fully-wired HTTP daemon (all 3 unified deps)", demoHttpServer],
 	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
+	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
+	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
+	["demo: use-case — customer support agent", demoCustomerSupportAgent],
+	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],
 ];
+
+/**
+ * The 09 HTTP-client demo expects a memory server already running at
+ * MEMORY_URL. Boot one on a random high port inside a scratch dir, point
+ * the demo at it via MEMORY_URL, then tear it down — even on failure.
+ */
+async function runHttpClientWithServer() {
+	await withTmp("http-client", async (dir) => {
+		const previousDbPath = process.env.MEMORY_STORE_DB_PATH;
+		process.env.MEMORY_STORE_DB_PATH = `${dir}/store.db`;
+		const previousUrl = process.env.MEMORY_URL;
+
+		const port = 30_000 + Math.floor(Math.random() * 10_000);
+		const started = await startHttpServer({ port, host: "127.0.0.1" });
+		process.env.MEMORY_URL = started.url;
+		console.log(`[INFO] demo/http-client: daemon listening at ${started.url}`);
+
+		try {
+			await demoHttpClientExample();
+		} finally {
+			await started.stop();
+			// biome-ignore lint/performance/noDelete: `delete` is the only way to unset an env var; assigning `undefined` stores the string "undefined".
+			if (previousUrl === undefined) delete process.env.MEMORY_URL;
+			else process.env.MEMORY_URL = previousUrl;
+			// biome-ignore lint/performance/noDelete: same rationale as above.
+			if (previousDbPath === undefined) delete process.env.MEMORY_STORE_DB_PATH;
+			else process.env.MEMORY_STORE_DB_PATH = previousDbPath;
+		}
+	});
+}
 
 async function runAll(label: string, sections: Array<[string, () => Promise<void>]>) {
 	console.log(`\n${"═".repeat(64)}\n${label}\n${"═".repeat(64)}`);
@@ -105,6 +195,17 @@ async function runAll(label: string, sections: Array<[string, () => Promise<void
 
 async function main() {
 	console.log(`[examples] ${demos.length} demo section(s) against the @melandlabs/* packages`);
+
+	// Several tutorials rely on the default `~/.opencontext/{memory,logs}` paths.
+	// On a clean CI runner (or any host with a brand-new $HOME) the parent
+	// directory does not exist, which makes better-sqlite3 throw "Cannot
+	// open database because the directory does not exist". Pre-create both
+	// so demos that don't pass an explicit dbPath still run.
+	const home = process.env.HOME || homedir();
+	await Promise.all([
+		mkdir(join(home, ".opencontext", "memory"), { recursive: true }),
+		mkdir(join(home, ".opencontext", "logs"), { recursive: true }),
+	]);
 
 	await runAll("DEMOS — runnable documentation (real API calls)", demos);
 

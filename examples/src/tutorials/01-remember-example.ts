@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const messages = await getRawMessageManager();
@@ -28,7 +29,5 @@ async function main() {
 	console.log("✅ Fact stored");
 }
 
-main().catch((error) => {
-	console.error("Failed to store fact:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("remember-example", main, import.meta.url);

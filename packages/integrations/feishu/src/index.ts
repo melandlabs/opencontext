@@ -541,7 +541,12 @@ export class FeishuAdapter extends MessagePlatformAdapter {
 
 	async replyMessages(event: MessageEvent, messages: Messages, _quoteOrigin = false): Promise<void> {
 		await this.runWithAdapterError("replyMessages", async () => {
-			const raw = event.sourcePlatformObject as any;
+			const raw = event.sourcePlatformObject as
+				| {
+						event?: { message?: { chat_id?: string; message_id?: string } };
+						message?: { chat_id?: string; message_id?: string };
+				  }
+				| undefined;
 			const chatId = raw?.event?.message?.chat_id ?? raw?.message?.chat_id;
 			const messageId = raw?.event?.message?.message_id ?? raw?.message?.message_id;
 			if (!chatId) {

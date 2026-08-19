@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 interface IncomingMessage {
 	id: string;
@@ -38,7 +39,5 @@ async function main() {
 	await handleIncomingMessage(exampleMessage);
 }
 
-main().catch((error) => {
-	console.error("Remember-everything example failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("remember-everything", main, import.meta.url);

@@ -75,7 +75,7 @@ async function callLocalModel(isNativeModel: boolean, options: ModelCallOptions)
 		execute: async ({ writer: dataStream }) => {
 			const result = streamText({
 				model,
-				messages: options.messages as any,
+				messages: options.messages as unknown as Parameters<typeof streamText>[0]["messages"],
 				system: options.system,
 			});
 

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/memory-consolidation",
-	"version": "0.3.0",
+	"version": "0.5.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -21,6 +21,7 @@
 		"./governance": "./dist/governance.js",
 		"./persistence": "./dist/persistence.js",
 		"./pipeline": "./dist/pipeline.js",
+		"./reflect-planner": "./dist/reflect-planner.js",
 		"./relation-graph": "./dist/relation-graph.js",
 		"./retrieval": "./dist/retrieval.js",
 		"./revision": "./dist/revision.js",

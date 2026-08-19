@@ -104,7 +104,7 @@ await messages.storeMessages([
 
 // 统一搜索会向 memory + insights + knowledge 三个来源扇出。
 // 未配置的来源只会发一条 warning —— 单后端部署完全没问题。
-const hits = await store.searchUnifiedMemory({
+const hits = await store.search({
 	userId: "u-42",
 	query: "What does the user prefer?",
 	limit: 5,

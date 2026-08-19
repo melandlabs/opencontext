@@ -21,19 +21,19 @@
  *   14. Hook cleanup: `ctx.effect(() => () => backend.dispose?.())`.
  */
 
-import { loadPeer } from "./peers.js";
-import { ConfigSchema, resolveConfig, type ResolvedConfig } from "./config.js";
-import { createBackend, type OpenContextBackend } from "./backend.js";
-import { registerTools } from "./tools.js";
-import { registerRecall } from "./recall.js";
+import { type OpenContextBackend, createBackend } from "./backend.js";
 import { registerCapture } from "./capture.js";
-import { registerSkill } from "./skill.js";
 import { registerCommand } from "./commands.js";
+import { ConfigSchema, type ResolvedConfig, resolveConfig } from "./config.js";
+import { registerToolResultListener } from "./events-tool-result.js";
+import { registerTurnEndListener } from "./events-turn-end.js";
+import { loadPeer } from "./peers.js";
+import { registerRecall } from "./recall.js";
+import { registerSkill } from "./skill.js";
 import { registerInsightsTools } from "./tools-insights.js";
 import { registerKnowledgeTools } from "./tools-knowledge.js";
 import { registerSummaryTools } from "./tools-summary.js";
-import { registerTurnEndListener } from "./events-turn-end.js";
-import { registerToolResultListener } from "./events-tool-result.js";
+import { registerTools } from "./tools.js";
 
 export const name = "dsh-opencontext";
 

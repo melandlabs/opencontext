@@ -155,7 +155,6 @@ export class BrowserFileSystem implements PlatformFileSystem {
 				if ((error as Error).name === "AbortError") {
 					return;
 				}
-				console.error("[BrowserFileSystem] saving file failed:", error);
 			}
 		}
 

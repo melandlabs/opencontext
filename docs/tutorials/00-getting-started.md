@@ -101,7 +101,7 @@ async function main() {
   console.log("✅ Memory stored!");
 
   // Search for what we just stored
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-42",
     query: "What does the user prefer?",
     limit: 5,
@@ -166,7 +166,7 @@ async function main() {
   }]);
 
   // Semantic search
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-42",
     query: "What theme does the user like?",
     limit: 5,
@@ -275,7 +275,7 @@ See Codex's MCP server configuration documentation.
 
 You now have access to four memory tools:
 - `memory.health` - Check if OpenContext is running
-- `memory.searchUnified` - Search memory with a query
+- `memory.search` - Search memory with a query (set `synthesize: true` for LLM-synthesized answers)
 - `memory.writeRawMessage` - Store new messages
 - `memory.getRawMessage` - Retrieve a specific message
 

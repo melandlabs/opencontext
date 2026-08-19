@@ -12,9 +12,6 @@
  * compatible server.
  */
 
-import { constants, classifyBackendError, type ErrorCode } from "./errors.js";
-import { redactSecrets } from "./secrets.js";
-import type { ResolvedConfig } from "./config.js";
 import type {
 	BackendCallOptions,
 	CaptureInput,
@@ -27,6 +24,9 @@ import type {
 	SearchHit,
 	SearchInput,
 } from "./backend.js";
+import type { ResolvedConfig } from "./config.js";
+import { constants, type ErrorCode, classifyBackendError } from "./errors.js";
+import { redactSecrets } from "./secrets.js";
 
 export interface HttpBackend extends OpenContextBackend {
 	readonly mode: "http";

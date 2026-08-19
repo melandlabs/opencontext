@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/sqlite",
-	"version": "0.3.0",
+	"version": "0.5.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -26,6 +26,7 @@
 	"description": "OpenContext · sqlite module",
 	"keywords": ["opencontext"],
 	"dependencies": {
+		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
 		"better-sqlite3": "^11.10.0",
 		"sqlite-vec": "^0.1.9"

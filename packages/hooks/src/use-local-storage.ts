@@ -49,8 +49,7 @@ export function useLocalStorage<T>(
 				setStoredValue(parsedValue);
 				valueRef.current = parsedValue;
 			}
-		} catch (error) {
-			console.warn(`Error reading localStorage key "${key}":`, error);
+		} catch (_error) {
 		} finally {
 			isMounted.current = true;
 		}
@@ -107,8 +106,7 @@ export function useLocalStorage<T>(
 				requestAnimationFrame(() => {
 					isUpdating.current = false;
 				});
-			} catch (error) {
-				console.warn(`Error setting localStorage key "${key}":`, error);
+			} catch (_error) {
 				isUpdating.current = false;
 			}
 		},
@@ -130,8 +128,7 @@ export function useLocalStorage<T>(
 			requestAnimationFrame(() => {
 				isUpdating.current = false;
 			});
-		} catch (error) {
-			console.warn(`Error removing localStorage key "${key}":`, error);
+		} catch (_error) {
 			isUpdating.current = false;
 		}
 	}, [key, initialValue]);

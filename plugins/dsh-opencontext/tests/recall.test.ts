@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerRecall } from "../src/recall.js";
 import { makeConfig, makeFakeBackend, makeSearchHit } from "./_helpers.js";
 

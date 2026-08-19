@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -94,7 +95,7 @@ async function main() {
 
 	// Get customer history
 	async function getCustomerHistory(customerEmail: string) {
-		const history = await store.searchUnifiedMemory({
+		const history = await store.search({
 			userId: customerEmail,
 			query: "customer interactions history",
 			limit: 50,
@@ -128,7 +129,7 @@ async function main() {
 
 	// Detect repeat issue
 	async function checkRepeatIssue(customerEmail: string, issueCategory: string) {
-		const pastIssues = await store.searchUnifiedMemory({
+		const pastIssues = await store.search({
 			userId: customerEmail,
 			query: `issues related to ${issueCategory}`,
 			metadata: {
@@ -141,9 +142,9 @@ async function main() {
 		const resolvedIssues = pastIssues.results.filter((r) => r.metadata?.status === "resolved");
 
 		if (resolvedIssues.length > 0) {
-			console.log(`\n⚠️  REPEAT ISSUE DETECTED`);
+			console.log("\n⚠️  REPEAT ISSUE DETECTED");
 			console.log(`   Customer has had ${resolvedIssues.length} ${issueCategory} issue(s) before`);
-			console.log(`   Most recent resolution:`);
+			console.log("   Most recent resolution:");
 			console.log(`   - ${resolvedIssues[0].content}`);
 			return true;
 		}
@@ -176,7 +177,7 @@ async function main() {
 	await checkRepeatIssue("customer-alice@example.com", "login");
 
 	// Cross-platform verification
-	const allInteractions = await store.searchUnifiedMemory({
+	const allInteractions = await store.search({
 		userId: "customer-alice@example.com",
 		query: "all customer communications",
 		sources: ["memory"],
@@ -278,7 +279,7 @@ async function main() {
 	await importCustomerData(existingCustomers);
 
 	// Verify import
-	const importedCustomers = await store.searchUnifiedMemory({
+	const importedCustomers = await store.search({
 		query: "imported customer data",
 		metadata: {
 			type: "profile",
@@ -290,7 +291,5 @@ async function main() {
 	console.log(`\n📊 Import verification: ${importedCustomers.count} imported customer profiles`);
 }
 
-main().catch((error) => {
-	console.error("Customer Support Agent failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("customer-support-agent", main, import.meta.url);

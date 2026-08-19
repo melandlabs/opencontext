@@ -397,9 +397,11 @@ export function buildMemoryRelationCandidates(
 			.slice(0, maxRecordsPerKey);
 
 		for (let leftIndex = 0; leftIndex < bucket.length; leftIndex += 1) {
+			const left = bucket[leftIndex];
+			if (!left) continue;
 			for (let rightIndex = leftIndex + 1; rightIndex < bucket.length; rightIndex += 1) {
-				const left = bucket[leftIndex]!;
-				const right = bucket[rightIndex]!;
+				const right = bucket[rightIndex];
+				if (!right) continue;
 				const pairId = stablePairId(left.id, right.id);
 				const existing = candidateKeysByPair.get(pairId) ?? new Set<string>();
 				existing.add(key);

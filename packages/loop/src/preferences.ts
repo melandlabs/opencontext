@@ -203,8 +203,6 @@ export function writePreferences(patch: Partial<LoopPreferences>): LoopPreferenc
 	ensureParent(LOOP_PATHS.config);
 	try {
 		writeFileSync(LOOP_PATHS.config, JSON.stringify(next, null, 2));
-	} catch (e) {
-		console.warn("[loop.preferences] write failed:", e);
-	}
+	} catch (_e) {}
 	return next;
 }

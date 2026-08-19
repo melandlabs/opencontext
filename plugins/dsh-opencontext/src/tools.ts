@@ -6,12 +6,12 @@
  * the host can render forms and validate calls.
  */
 
-import { containsSecret } from "./secrets.js";
-import { constants } from "./errors.js";
-import { classifyBackendError, toolError, toolOk, type ToolResult } from "./errors.js";
-import { formatPreparedContext } from "./prepared-context.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { constants } from "./errors.js";
+import { type ToolResult, classifyBackendError, toolError, toolOk } from "./errors.js";
+import { formatPreparedContext } from "./prepared-context.js";
+import { containsSecret } from "./secrets.js";
 
 export type ToolContext = {
 	signal?: AbortSignal;

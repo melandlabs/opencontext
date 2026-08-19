@@ -35,8 +35,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 					processedHtml =
 						processedHtml.slice(0, matchIndex) + inlineCss + processedHtml.slice(matchIndex + fullTag.length);
 				}
-			} catch (err) {
-				console.error(`[WebsitePreview] Failed to fetch remote CSS ${cssPath}:`, err);
+			} catch (_err) {
 				// Remove the tag when fetch fails - keeping external CSS links
 				// causes CSP violations. For Google Fonts, this also serves as
 				// a fallback to system fonts.
@@ -47,7 +46,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 
 			try {
 				let cssContent = "";
-				const isTauri = !!(globalThis as any).__TAURI__;
+				const isTauri = !!(globalThis as { __TAURI__?: unknown }).__TAURI__;
 
 				if (isTauri) {
 					const { readTextFile } = await import("@tauri-apps/plugin-fs");
@@ -72,9 +71,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 					processedHtml =
 						processedHtml.slice(0, matchIndex) + inlineCss + processedHtml.slice(matchIndex + fullTag.length);
 				}
-			} catch (err) {
-				console.error(`[WebsitePreview] Failed to inline CSS ${relativeCssPath}:`, err);
-			}
+			} catch (_err) {}
 		}
 	}
 
@@ -133,8 +130,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 						processedHtml.slice(0, matchIndex) + inlineJs + processedHtml.slice(matchIndex + fullTag.length);
 				}
 				// If content-type isn't JavaScript and not a known CDN, keep original tag so iframe can try to load it
-			} catch (err) {
-				console.error(`[WebsitePreview] Failed to fetch remote JS ${jsPath}:`, err);
+			} catch (_err) {
 				// Network/CORS error - keep original tag so iframe can try to load it
 			}
 		} else {
@@ -142,7 +138,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 
 			try {
 				let jsContent = "";
-				const isTauri = !!(globalThis as any).__TAURI__;
+				const isTauri = !!(globalThis as { __TAURI__?: unknown }).__TAURI__;
 
 				if (isTauri) {
 					const { readTextFile } = await import("@tauri-apps/plugin-fs");
@@ -170,9 +166,7 @@ export async function inlineResources(html: string, fileDir: string, taskId?: st
 					processedHtml =
 						processedHtml.slice(0, matchIndex) + inlineJs + processedHtml.slice(matchIndex + fullTag.length);
 				}
-			} catch (err) {
-				console.error(`[WebsitePreview] Failed to inline JS ${relativeJsPath}:`, err);
-			}
+			} catch (_err) {}
 		}
 	}
 

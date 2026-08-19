@@ -67,8 +67,7 @@ export async function search(query: string, type: SearchType = "web", count = 10
 	});
 
 	if (!response.ok) {
-		const errorText = await response.text();
-		console.error(`[Brave ${type}] API error:`, response.status, errorText);
+		const _errorText = await response.text();
 		throw new Error(`Brave Search API error: ${response.status}`);
 	}
 

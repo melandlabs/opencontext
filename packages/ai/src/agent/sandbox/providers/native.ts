@@ -6,6 +6,7 @@
  */
 
 import { spawn } from "node:child_process";
+import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { extname } from "node:path";
 
 import type { SandboxExecOptions, SandboxExecResult, ScriptOptions } from "../types";
@@ -48,8 +49,7 @@ export class NativeProvider extends BaseSandboxProvider {
 		const workDir = cwd || process.cwd();
 
 		return new Promise((resolve) => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const proc: any = spawn(command, args, {
+			const proc: ChildProcessWithoutNullStreams = spawn(command, args, {
 				cwd: workDir,
 				env: { ...process.env, ...env },
 			});

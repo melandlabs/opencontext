@@ -89,3 +89,38 @@ export function rawMessageToMemoryRecord(message: RawMessage): MemoryRecord {
 		embeddingContentHash: message.embeddingContentHash,
 	} as unknown as MemoryRecord;
 }
+
+// ───────────────────────────────────────────────────────────────────────────
+// Vector Symbolic Architecture (VSA) — independent verb, not unified-search.
+//
+// VSA facts are (role, filler) bindings stored as Float32 vectors, recalled
+// by `unbind(role) → cleanup(vocabulary)`. They live in their own storage
+// layer (see `@melandlabs/sqlite/sqlite-vsa-store`) and are never surfaced
+// through `search()` because the recall semantics are different
+// (single best-match, not top-K nearest neighbours).
+//
+// Vocabulary ownership: the caller owns the (label → vector) mapping for
+// both roles and fillers. The store only persists the vectors used at
+// store time so the role used at recall time exactly matches the one bound
+// at store time, even if the caller later changes their role registry.
+//
+// The shapes live in `@melandlabs/contracts/vsa-fact` so both
+// `@melandlabs/sqlite` (the storage impl) and `@melandlabs/memory-store`
+// (the SDK wrapper) can share them without creating a runtime cycle.
+// ───────────────────────────────────────────────────────────────────────────
+
+export type {
+	VsaFact,
+	VsaFactSummary,
+	StoreVsaFactInput,
+	StoreVsaFactOutput,
+	VsaVocabularyEntry,
+	VsaRecallInput,
+	VsaRecallOutput,
+	VsaRecallScore,
+	VsaListInput,
+	VsaForgetInput,
+	VsaForgetOutput,
+	VsaFactStorage,
+} from "@melandlabs/contracts";
+export { vsaNormalizeVector, vsaAssertSameDim } from "@melandlabs/contracts";

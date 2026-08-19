@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-export const RAW_MESSAGES_SCHEMA_VERSION = 3;
+export const RAW_MESSAGES_SCHEMA_VERSION = 4;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -134,5 +134,47 @@ export function initializeRawMessageSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_raw_messages_source_episode_id
       ON raw_messages(source_episode_id)
       WHERE source_episode_id IS NOT NULL;
+  `);
+
+	// --- v4: factType classification ---
+	// `fact_type` mirrors `MemoryRecord.factType` from `@melandlabs/ai`'s
+	// `memory/contracts`: "world" / "experience" / "mental_model". Stored
+	// verbatim so retrieval can filter by classification without
+	// re-classifying at query time.
+	addColumnIfMissing(db, "raw_messages", "fact_type", "TEXT");
+	db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_raw_messages_fact_type
+      ON raw_messages(user_id, fact_type)
+      WHERE fact_type IS NOT NULL;
+  `);
+
+	// --- VSA: (role, filler) bindings for `store.vsa*` verbs ---
+	// Separate table from `raw_messages` because VSA recall semantics
+	// differ from embedding-based search: a single best-match via cleanup,
+	// not top-K nearest neighbours. Vectors are persisted as Float32 BLOBs
+	// so the role vector used at recall time exactly matches the one bound
+	// at store time, even if the caller later changes their role registry.
+	db.exec(`
+    CREATE TABLE IF NOT EXISTS vsa_facts (
+      fact_id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      scope_tag TEXT NOT NULL DEFAULT 'default',
+      bot_id TEXT,
+      role_label TEXT NOT NULL,
+      filler_label TEXT NOT NULL,
+      role_vector BLOB NOT NULL,
+      filler_vector BLOB NOT NULL,
+      dim INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      deprecated_at INTEGER,
+      deprecation_reason TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_vsa_facts_user_scope_active
+      ON vsa_facts(user_id, scope_tag, deprecated_at)
+      WHERE deprecated_at IS NULL;
+    CREATE INDEX IF NOT EXISTS idx_vsa_facts_user_bot_active
+      ON vsa_facts(user_id, bot_id, deprecated_at)
+      WHERE deprecated_at IS NULL;
   `);
 }

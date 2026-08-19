@@ -144,9 +144,7 @@ export function migrate(): MigratedMarker | null {
 				try {
 					copyFileSync(src.signals, target);
 					signalsCopied = countLines(src.signals);
-				} catch (e) {
-					console.warn("[loop.migrate] failed to copy signals:", e);
-				}
+				} catch (_e) {}
 			}
 		}
 		if (existsSync(src.decisions)) {
@@ -155,9 +153,7 @@ export function migrate(): MigratedMarker | null {
 				try {
 					copyFileSync(src.decisions, target);
 					decisionsCopied = countDecisionLines(src.decisions);
-				} catch (e) {
-					console.warn("[loop.migrate] failed to copy decisions:", e);
-				}
+				} catch (_e) {}
 			}
 		}
 	}
@@ -172,12 +168,7 @@ export function migrate(): MigratedMarker | null {
 	};
 	try {
 		writeFileSync(LOOP_PATHS.migrated, JSON.stringify(marker, null, 2));
-		console.log(
-			`[loop.migrate] copied ${signalsCopied} signals + ${decisionsCopied} decisions from ${sources.length} legacy source(s)`,
-		);
-	} catch (e) {
-		console.warn("[loop.migrate] failed to write marker:", e);
-	}
+	} catch (_e) {}
 	return marker;
 }
 

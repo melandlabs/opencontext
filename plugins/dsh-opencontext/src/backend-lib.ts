@@ -2,7 +2,7 @@
  * LibBackend — in-process implementation of OpenContextBackend.
  *
  * Calls `@melandlabs/opencontext` directly:
- *   - `createUnifiedSearch().searchUnifiedMemory` for search
+ *   - `createUnifiedSearch().search` for search
  *   - `getRawMessageManager().storeMessages` / `queryMessages` /
  *     `getMessageById` / `deprecateMessages` for memory CRUD
  *
@@ -13,7 +13,6 @@
  */
 
 import { createHash, randomUUID } from "node:crypto";
-import { Buffer } from "node:buffer";
 
 import { getOpenContextPath } from "@melandlabs/env-config";
 import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/opencontext";
@@ -21,6 +20,8 @@ import { getRawMessageManager, isRawMessageStorageAvailable } from "@melandlabs/
 import type {
 	BackendCallOptions,
 	CaptureInput,
+	CaptureInsightInput,
+	ListDocumentsInput,
 	ListInput,
 	MemoryItem,
 	OpenContextBackend,
@@ -28,14 +29,12 @@ import type {
 	ReviseInput,
 	SearchHit,
 	SearchInput,
-	UploadDocumentInput,
-	SearchKnowledgeInput,
-	ListDocumentsInput,
 	SearchInsightsInput,
-	CaptureInsightInput,
+	SearchKnowledgeInput,
+	UploadDocumentInput,
 } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
-import { LibKnowledgeStore, KnowledgeUnavailableError } from "./knowledge-store.js";
+import { LibKnowledgeStore } from "./knowledge-store.js";
 
 interface RawManager {
 	storeMessages(messages: unknown[]): Promise<number[]>;
@@ -49,7 +48,7 @@ interface RawManager {
 }
 
 interface UnifiedSearchLike {
-	searchUnifiedMemory(input: {
+	search(input: {
 		userId: string;
 		query: string;
 		limit?: number;
@@ -64,19 +63,6 @@ interface UnifiedSearchLike {
 		}>;
 		warnings: Array<{ source: string; code: string; message: string }>;
 	}>;
-	searchRawMemorySemantically?(input: {
-		userId: string;
-		query: string;
-		limit?: number;
-		threshold?: number;
-	}): Promise<
-		Array<{
-			id: string;
-			content: string;
-			similarity: number;
-			metadata: Record<string, unknown>;
-		}>
-	>;
 }
 
 let _createUnifiedSearch: ((deps?: unknown) => UnifiedSearchLike) | null = null;
@@ -211,7 +197,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 		if (search) {
 			try {
 				const result = await withTimeout(
-					search.searchUnifiedMemory({ userId, query, limit, threshold }),
+					search.search({ userId, query, limit, threshold }),
 					opts?.timeoutMs ?? config.timeoutMs,
 					opts?.signal,
 				);
@@ -547,7 +533,7 @@ export function createLibBackend(config: ResolvedConfig): LibBackend {
 			const userId = resolveUser();
 			if (search) {
 				await withTimeout(
-					search.searchUnifiedMemory({
+					search.search({
 						userId,
 						query: "__health__",
 						limit: 1,

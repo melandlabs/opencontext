@@ -75,7 +75,8 @@ export class KeyManager {
 		const cacheKey = `${accountId}:${version}`;
 
 		if (this.keyCache.has(cacheKey)) {
-			return this.keyCache.get(cacheKey)!;
+			const cached = this.keyCache.get(cacheKey);
+			if (cached) return cached;
 		}
 
 		const masterKey = this.getMasterKey();

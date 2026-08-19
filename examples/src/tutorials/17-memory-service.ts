@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 let store: Awaited<ReturnType<typeof createMemoryStore>>;
 
@@ -26,7 +27,7 @@ export async function rememberFact(userId: string, content: string) {
 }
 
 export async function recallFacts(userId: string, query: string, limit = 10) {
-	return store.searchUnifiedMemory({ userId, query, limit });
+	return store.search({ userId, query, limit });
 }
 
 async function main() {
@@ -41,4 +42,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("memory-service", main, import.meta.url);

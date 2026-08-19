@@ -17,8 +17,8 @@
  */
 
 import process from "node:process";
+import { type WebSearchResult, needsRealTimeInfo, search } from "@melandlabs/opencontext";
 import { runIfMain } from "../_helpers.ts";
-import { needsRealTimeInfo, search, type WebSearchResult } from "@melandlabs/opencontext";
 
 async function main() {
 	// ---- Static surface checks ----
@@ -41,7 +41,7 @@ async function main() {
 	for (const { text, expected } of queries) {
 		const result = needsRealTimeInfo(text);
 		const ok = result === expected;
-		console.log(`- "${text}" -> ${result} ${ok ? "✓" : "✗ (expected " + expected + ")"}`);
+		console.log(`- "${text}" -> ${result} ${ok ? "✓" : `✗ (expected ${expected})`}`);
 		if (!ok) {
 			mismatches += 1;
 		}
@@ -74,4 +74,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Search tutorial", main);
+runIfMain("Search tutorial", main, import.meta.url);
