@@ -32,6 +32,7 @@
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { createRawMessageStore } from "@melandlabs/memory-store";
+import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
 
@@ -386,6 +387,7 @@ Commands:
   mcp     Start the MCP server on stdio (default)
   http    Start the HTTP server
   doctor  Run health checks against the local install
+  okf     OKF v0.2 (Open Knowledge Format) importer / exporter
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -397,7 +399,9 @@ Examples:
   opencontext http --port 8080
   opencontext doctor
   opencontext doctor --json
-  opencontext doctor --section memory-store`);
+  opencontext doctor --section memory-store
+  opencontext okf ingest ./my-wiki --user=alice --json
+  opencontext okf emit --user=alice --output=./export-2026-08-19`);
 }
 
 function printHttpHelp(): void {
@@ -544,6 +548,16 @@ async function main(): Promise<void> {
 	if (head === "doctor" || head === "DOCTOR") {
 		await runDoctor(parseDoctorArgs(argv.slice(1)));
 		return;
+	}
+
+	if (head === "okf" || head === "OKF") {
+		const okfArgs = parseOkfArgs(argv.slice(1));
+		if (okfArgs.action === "help") {
+			printOkfHelp();
+			process.exit(0);
+		}
+		const result = await startOkf(okfArgs, { packageVersion: "@melandlabs/opencontext" });
+		process.exit(result.exit);
 	}
 
 	if (head === "--help" || head === "-h") {

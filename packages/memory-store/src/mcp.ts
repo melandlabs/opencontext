@@ -22,6 +22,7 @@
  */
 
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { registerOkfTools } from "@melandlabs/okf/mcp";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -592,6 +593,11 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			}
 		},
 	);
+
+	// OKF v0.2 importer / exporter tools. They reuse the same McpServer
+	// so `memory.okfImport` and `memory.okfExport` are available alongside
+	// the rest of the memory-store tools without extra wiring.
+	registerOkfTools(server, rawStore);
 
 	const transport = new StdioServerTransport();
 	await server.connect(transport);

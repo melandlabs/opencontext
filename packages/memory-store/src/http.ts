@@ -47,6 +47,7 @@
 
 import { serve } from "@hono/node-server";
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { registerOkfRoutes } from "@melandlabs/okf/http";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { Hono } from "hono";
 import type { UnifiedSearchDeps } from "./config";
@@ -435,6 +436,13 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			return c.json({ error: (error as Error).message ?? "vsa.forget failed" }, 400);
 		}
 	});
+
+	// OKF v0.2 importer / exporter routes. They reuse the same Hono app
+	// so a host running `opencontext http` exposes `/v1/okf/import` and
+	// `/v1/okf/export` without extra wiring. Failures inside the OKF
+	// codec (missing fields, schema drift, store conflict) are surfaced
+	// via the same `issues[]` envelope the CLI uses.
+	registerOkfRoutes(app, rawStore);
 
 	const server = serve({ fetch: app.fetch, port, hostname: host });
 

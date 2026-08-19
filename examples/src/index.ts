@@ -44,6 +44,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 
 import demoVsa from "./simple/19-vsa.ts";
+import demoOkf from "./simple/20-okf.ts";
 import { startHttpServer } from "@melandlabs/memory-store/http";
 import { withTmp } from "./_helpers.ts";
 import demoHelloMemory from "./tutorials/00-hello-memory.ts";
@@ -89,6 +90,7 @@ import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memor
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
 import demoPeerRelationshipExplorer from "./tutorials/use-cases/33-peer-relationship-explorer.ts";
+import demoOkfWikiBridge from "./tutorials/use-cases/34-okf-wiki-bridge.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -152,10 +154,12 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: memory-store — fully-wired HTTP daemon (all 3 unified deps)", demoHttpServer],
 	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
 	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
+	["demo: okf — OKF v0.2 (Open Knowledge Format) importer / exporter", demoOkf],
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],
 	["demo: use-case — peer relationship explorer (research-lab collaboration)", demoPeerRelationshipExplorer],
+	["demo: use-case — OKF wiki ↔ opencontext bridge (external openwiki / Obsidian)", demoOkfWikiBridge],
 ];
 
 /**
