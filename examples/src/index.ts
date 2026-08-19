@@ -84,9 +84,11 @@ import demoMemoryConsolidation from "./tutorials/37-memory-consolidation-example
 import demoChannels from "./tutorials/38-channels-example.ts";
 import demoIntegrationsRuntime from "./tutorials/39-integrations-runtime-example.ts";
 import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
+import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
+import demoPeerRelationshipExplorer from "./tutorials/use-cases/33-peer-relationship-explorer.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -122,6 +124,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: ai — CodexAgent (OpenAI Codex CLI provider)", demoCodexAgent],
 	["demo: contracts", demoContracts],
 	["demo: contracts — direct package tutorial", demoContractsTutorial],
+	[
+		"demo: memory-store — peer-profile facade (createPeerProfile + getProfile/getRelationships)",
+		demoPeerProfile,
+	],
 	["demo: loop — preferences", demoLoop],
 	["demo: env-config", demoEnvConfig],
 	["demo: env-config — direct package tutorial", demoEnvConfigTutorial],
@@ -149,6 +155,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],
+	["demo: use-case — peer relationship explorer (research-lab collaboration)", demoPeerRelationshipExplorer],
 ];
 
 /**
