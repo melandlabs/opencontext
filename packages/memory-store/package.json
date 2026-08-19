@@ -50,6 +50,7 @@
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/env-config": "workspace:*",
 		"@melandlabs/memory-consolidation": "workspace:*",
+		"@melandlabs/okf": "workspace:*",
 		"@melandlabs/rag": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"@melandlabs/sqlite": "workspace:*",
