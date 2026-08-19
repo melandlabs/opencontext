@@ -69,5 +69,11 @@ export default defineConfig({
 		// `Dynamic require of "crypto" is not supported` at runtime. Keep it
 		// external so Node's resolver loads the real CJS package.
 		"fernet",
+		// `yaml` is a transitive dependency of `@melandlabs/okf` (the OKF
+		// v0.2 codec). It references Node's `process` global via a CJS-style
+		// internal require, so bundling it into the facade triggers the same
+		// `Dynamic require of "process" is not supported` failure as `fernet`.
+		// Keep it external for the same reason.
+		"yaml",
 	],
 });
