@@ -25,12 +25,17 @@
  *
  * The demo runs against a fresh sqlite file (no network, no embeddings,
  * no API keys).
+ *
+ * The OKF symbols are loaded dynamically from `@melandlabs/opencontext`
+ * so this use-case gracefully skips when the published facade version
+ * pre-dates the OKF integration (the smoke test in CI installs the
+ * published npm versions, which only gain `startOkf` / `writeOkfPackage`
+ * / `readOkfPackage` after this PR merges and a new release ships).
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { closeRawMessageStore, createRawMessageStore } from "@melandlabs/memory-store";
-import { type OkfPackageManifest, readOkfPackage, startOkf, writeOkfPackage } from "@melandlabs/opencontext";
 import { info, makeCheckWithSkip, runIfMain, runSection, withTmp } from "../../_helpers.ts";
 
 interface WikiDoc {
@@ -101,6 +106,27 @@ async function stageWiki(root: string): Promise<void> {
 export default async function demoOkfWikiBridge() {
 	await runSection("use-case: OKF wiki → opencontext bridge", async () => {
 		const { check, skip } = makeCheckWithSkip("use-case/okf-bridge");
+
+		// Resolve OKF exports dynamically — see top-of-file note.
+		let okfExports: {
+			OkfPackageManifest: typeof import("@melandlabs/opencontext").OkfPackageManifest;
+			readOkfPackage: typeof import("@melandlabs/opencontext").readOkfPackage;
+			startOkf: typeof import("@melandlabs/opencontext").startOkf;
+			writeOkfPackage: typeof import("@melandlabs/opencontext").writeOkfPackage;
+		};
+		try {
+			okfExports = await import("@melandlabs/opencontext");
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			skip(
+				"okf facade exports",
+				"@melandlabs/opencontext is published without the OKF re-exports yet",
+				message,
+			);
+			return;
+		}
+		const { OkfPackageManifest, readOkfPackage, startOkf, writeOkfPackage } = okfExports;
+		void OkfPackageManifest; // kept typed for the user; flow uses it implicitly via writeOkfPackage's return.
 
 		await withTmp("okf-bridge", async (scratch) => {
 			// Point the default SQLite backend at a scratch file so we
@@ -241,6 +267,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 		await demoOkfWikiBridge();
 	});
 }
-
-// Re-export types so the runner can check the manifest stays typed.
-export type { OkfPackageManifest };
