@@ -32,9 +32,9 @@
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { createRawMessageStore } from "@melandlabs/memory-store";
+import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
-import { parseOkfArgs, startOkf, printOkfHelp } from "@melandlabs/okf";
 
 // Shape that satisfies the `unified` field of `MemoryStoreConfig` (which
 // is what `startHttpServer` accepts). Kept local to this bin so we don't
