@@ -11,5 +11,12 @@ export default defineConfig({
 		environment: "node",
 		hookTimeout: 20000,
 		testTimeout: 20000,
+		// The CodexAgent tests spawn a fake `codex` CLI (literally
+		// `process.execPath` running a tiny node script) and immediately
+		// `stdin.end()` the prompt. On macOS runners the child occasionally
+		// isn't ready to read yet, which surfaces as `Failed to write Codex
+		// prompt to stdin: write EPIPE` and trips the whole `pnpm -r test`
+		// job. Retry once on darwin so a transient race doesn't block CI.
+		retry: process.platform === "darwin" ? 1 : 0,
 	},
 });
