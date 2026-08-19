@@ -51,4 +51,4 @@ export async function loadPeer<T>(specifier: string): Promise<T> {
 	return (await import(href)) as T;
 }
 
-export { ResolvedConfig };
+export type { ResolvedConfig };

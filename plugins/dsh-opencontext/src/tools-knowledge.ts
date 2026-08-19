@@ -5,10 +5,10 @@
  * and knowledge bases. These tools expose document search and upload.
  */
 
-import { containsSecret } from "./secrets.js";
-import { toolError, toolOk, type ToolResult, classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { type ToolResult, classifyBackendError, toolError, toolOk } from "./errors.js";
+import { containsSecret } from "./secrets.js";
 
 export type ToolContext = {
 	signal?: AbortSignal;
@@ -127,7 +127,7 @@ function createKnowledgeSearchTool(backend: OpenContextBackend, config: Resolved
 				}
 
 				// Call backend
-				const result = await (backend as any).searchKnowledge?.(
+				const result = await backend.searchKnowledge?.(
 					{
 						query,
 						documentIds,
@@ -202,7 +202,7 @@ function createDocumentUploadTool(backend: OpenContextBackend, config: ResolvedC
 
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
-				const result = await (backend as any).uploadDocument?.(
+				const result = await backend.uploadDocument?.(
 					{
 						content,
 						filename,
@@ -247,7 +247,7 @@ function createDocumentListTool(backend: OpenContextBackend, config: ResolvedCon
 			runTool(async () => {
 				const { scopeId, userId } = asScopeConfig(ctx, config);
 
-				const result = await (backend as any).listDocuments?.(
+				const result = await backend.listDocuments?.(
 					{
 						limit: coerceLimit(args.limit, 50, 200),
 						scopeId,

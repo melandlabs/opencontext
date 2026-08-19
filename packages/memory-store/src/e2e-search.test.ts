@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
-import type { RawMessage } from "@melandlabs/indexeddb/storage";
+import type { RawMessage } from "@melandlabs/indexeddb";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 import { createMemoryStore } from "./index";
 import { createRawMessageStore } from "./storage/raw-message-store";
@@ -88,7 +88,7 @@ describe("Memory Store End-to-End", () => {
 		]);
 
 		// Search with a semantically similar query
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId,
 			query: "What theme does the user like?",
 			limit: 5,
@@ -134,7 +134,7 @@ describe("Memory Store End-to-End", () => {
 		]);
 
 		// Search with keyword match
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId,
 			query: "pizza cheese",
 			limit: 5,
@@ -160,7 +160,7 @@ describe("Memory Store End-to-End", () => {
 			dbPath: join(scratchDir, "empty-test.db"),
 		});
 
-		const results = await store.searchUnifiedMemory({
+		const results = await store.search({
 			userId: "non-existent-user-12345",
 			query: "anything",
 			limit: 5,

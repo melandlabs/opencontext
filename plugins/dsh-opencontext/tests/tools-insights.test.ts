@@ -2,7 +2,7 @@
  * Tests for insights tools
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { makeInsightsTools, registerInsightsTools } from "../src/tools-insights.js";
 import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
 
@@ -11,16 +11,16 @@ describe("insights tools", () => {
 		it("should create 2 insight tools", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			expect(tools).toHaveLength(2);
-			expect(tools[0]!.name).toBe("oc_insights_search");
-			expect(tools[1]!.name).toBe("oc_insight_capture");
+			expect(tools[0]?.name).toBe("oc_insights_search");
+			expect(tools[1]?.name).toBe("oc_insight_capture");
 		});
 
 		it("oc_insights_search should have correct structure", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
 			expect(searchTool.name).toBe("oc_insights_search");
@@ -34,7 +34,7 @@ describe("insights tools", () => {
 		it("oc_insight_capture should have correct structure", () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 
 			expect(captureTool.name).toBe("oc_insight_capture");
@@ -55,7 +55,11 @@ describe("insights tools", () => {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
 
-			const disposer = registerInsightsTools(ctx as any, { backend, config }, defineTool);
+			const disposer = registerInsightsTools(
+				ctx as unknown as Parameters<typeof registerInsightsTools>[0],
+				{ backend, config },
+				defineTool,
+			);
 
 			expect(ctx.tools.register).toHaveBeenCalledTimes(2);
 			expect(typeof disposer).toBe("function");
@@ -74,7 +78,11 @@ describe("insights tools", () => {
 				},
 			};
 
-			const disposer = registerInsightsTools(ctx as any, { backend, config }, defineTool);
+			const disposer = registerInsightsTools(
+				ctx as unknown as Parameters<typeof registerInsightsTools>[0],
+				{ backend, config },
+				defineTool,
+			);
 			disposer();
 
 			expect(disposers[0]).toHaveBeenCalled();
@@ -86,7 +94,7 @@ describe("insights tools", () => {
 		it("should return error when query is missing", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({}, {});
@@ -98,14 +106,14 @@ describe("insights tools", () => {
 		it("should return fallback when backend does not support insights", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
 			const result = await searchTool.execute({ query: "test" }, {});
 
 			assertToolOk(result);
 			expect(result.data).toHaveProperty("insights");
-			expect((result.data as any).insights).toEqual([]);
+			expect((result.data as unknown as { insights: unknown[] }).insights).toEqual([]);
 		});
 	});
 
@@ -113,7 +121,7 @@ describe("insights tools", () => {
 		it("should return error when content is missing", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 
 			const result = await captureTool.execute({}, {});
@@ -125,7 +133,7 @@ describe("insights tools", () => {
 		it("should validate insight categories", async () => {
 			const backend = makeFakeBackend();
 			const config = { scopeId: "test", timeoutMs: 4000 };
-			const tools = makeInsightsTools(backend, config as any);
+			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 
 			const result = await captureTool.execute({ content: "test", category: "invalid" }, {});

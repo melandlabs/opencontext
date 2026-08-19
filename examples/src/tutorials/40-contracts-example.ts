@@ -12,8 +12,8 @@
  *   node --experimental-strip-types src/tutorials/40-contracts-example.ts
  */
 
-import { runIfMain } from "../_helpers.ts";
 import { INTEGRATION_IDS, USER_TYPES, isIntegrationId, isUserType } from "@melandlabs/contracts";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// ---- Static surface checks ----
@@ -69,4 +69,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Contracts tutorial", main);
+runIfMain("Contracts tutorial", main, import.meta.url);

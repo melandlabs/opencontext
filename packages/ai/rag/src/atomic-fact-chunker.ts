@@ -20,6 +20,12 @@
 
 import { type ChunkOptions, chunkText } from "./chunking";
 
+// `FactType` / `isFactType` are the single source of truth defined in
+// `@melandlabs/contracts` (a shared leaf package); re-exported here so the
+// `ai-rag` public API stays stable without mirroring the union locally.
+import { type FactType, isFactType } from "@melandlabs/contracts";
+export { type FactType, isFactType };
+
 export interface AtomicFactChunk {
 	/** Single atomic fact, normalized for embedding. */
 	text: string;
@@ -27,6 +33,12 @@ export interface AtomicFactChunk {
 	sourceText: string;
 	/** Confidence score in [0, 1]. */
 	confidence: number;
+	/**
+	 * Optional fact-type classification: "world" (objective), "experience"
+	 * (first-person), or "mental_model" (preferences / patterns). Lets
+	 * downstream retrieval narrow to one class without re-classifying.
+	 */
+	factType?: FactType;
 	/** Optional metadata forwarded to the downstream vector store. */
 	metadata?: Record<string, unknown>;
 }
@@ -36,7 +48,14 @@ export interface AtomicFactProvider {
 	 * Decompose text into atomic facts. The provider is responsible for any
 	 * sentence segmentation; the chunker treats `text` as opaque input.
 	 */
-	decompose(text: string): Promise<Array<{ fact: string; confidence: number; sourceText?: string }>>;
+	decompose(text: string): Promise<
+		Array<{
+			fact: string;
+			confidence: number;
+			sourceText?: string;
+			factType?: FactType;
+		}>
+	>;
 }
 
 export interface AtomicFactChunkerConfig {
@@ -74,7 +93,7 @@ function isValidAtomicFact(
 }
 
 function normalizeFact(
-	raw: { fact: string; confidence: number; sourceText?: string },
+	raw: { fact: string; confidence: number; sourceText?: string; factType?: FactType },
 	minConfidence: number,
 	defaultSource: string,
 ): AtomicFactChunk | null {
@@ -83,7 +102,9 @@ function normalizeFact(
 	const confidence = clamp01(raw.confidence);
 	if (confidence < minConfidence) return null;
 	const sourceText = raw.sourceText?.trim() || defaultSource;
-	return { text: fact, sourceText, confidence };
+	const factType = raw.factType;
+	if (factType !== undefined && !isFactType(factType)) return null;
+	return { text: fact, sourceText, confidence, factType };
 }
 
 /**
@@ -108,6 +129,7 @@ export async function chunkAtomicFacts(
 		fact: string;
 		confidence: number;
 		sourceText?: string;
+		factType?: FactType;
 	}>;
 	try {
 		rawFacts = await config.provider.decompose(trimmed);

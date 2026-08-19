@@ -42,8 +42,7 @@ export function useLocalSync<T>(key: string, initialValue: T): [T, (value: T | (
 					requestAnimationFrame(() => {
 						isUpdating.current = false;
 					});
-				} catch (error) {
-					console.warn(`Error setting localStorage key "${key}":`, error);
+				} catch (_error) {
 					isUpdating.current = false;
 				}
 			}

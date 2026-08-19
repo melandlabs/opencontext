@@ -8,10 +8,10 @@
  * capture is fire-and-forget — the turn is not blocked.
  */
 
-import { classifyBackendError } from "./errors.js";
-import { containsSecret } from "./secrets.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { classifyBackendError } from "./errors.js";
+import { containsSecret } from "./secrets.js";
 
 interface DshPayload {
 	messages?: Array<{ role?: string; content?: unknown }>;

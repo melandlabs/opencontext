@@ -76,7 +76,6 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
 			creditCost,
 		};
 	} catch (error) {
-		console.error("Error generating embedding:", error);
 		throw new Error(
 			`Failed to generate embedding: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
@@ -132,7 +131,6 @@ export async function generateEmbeddings(texts: string[]): Promise<{
 			totalCreditCost,
 		};
 	} catch (error) {
-		console.error("Error generating embeddings:", error);
 		throw new Error(
 			`Failed to generate embeddings: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);

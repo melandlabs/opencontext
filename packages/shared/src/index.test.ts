@@ -67,18 +67,24 @@ describe("getMostRecentUserMessage", () => {
 			{ role: "user", content: "first" },
 			{ role: "assistant", content: "reply" },
 			{ role: "user", content: "last" },
-		] as any;
-		expect((getMostRecentUserMessage(messages) as any)?.content).toBe("last");
+		] as unknown as Parameters<typeof getMostRecentUserMessage>[0];
+		const last = getMostRecentUserMessage(messages) as unknown as { content?: string } | undefined;
+		expect(last?.content).toBe("last");
 	});
 
 	it("returns undefined when there are no user messages", () => {
-		expect(getMostRecentUserMessage([{ role: "assistant", content: "hi" }] as any)).toBeUndefined();
+		const messages = [{ role: "assistant", content: "hi" }] as unknown as Parameters<
+			typeof getMostRecentUserMessage
+		>[0];
+		expect(getMostRecentUserMessage(messages)).toBeUndefined();
 	});
 });
 
 describe("getTrailingMessageId", () => {
 	it("returns the id of the last message", () => {
-		const messages = [{ id: "a" }, { id: "b" }] as any;
+		const messages = [{ id: "a" }, { id: "b" }] as unknown as Parameters<
+			typeof getTrailingMessageId
+		>[0]["messages"];
 		expect(getTrailingMessageId({ messages })).toBe("b");
 	});
 
@@ -105,7 +111,7 @@ describe("getTextFromMessage", () => {
 				{ type: "text", text: "Hello " },
 				{ type: "text", text: "world" },
 			],
-		} as any;
+		} as unknown as Parameters<typeof getTextFromMessage>[0];
 		expect(getTextFromMessage(message)).toBe("Hello world");
 	});
 
@@ -113,7 +119,7 @@ describe("getTextFromMessage", () => {
 		const message = {
 			role: "assistant",
 			parts: [{ type: "text", text: "text" }, { type: "tool-invocation" }],
-		} as any;
+		} as unknown as Parameters<typeof getTextFromMessage>[0];
 		expect(getTextFromMessage(message)).toBe("text");
 	});
 });
@@ -309,6 +315,28 @@ describe("MemoCache", () => {
 		vi.useRealTimers();
 	});
 
+	it("refreshes TTL when ttlMs is provided on get (sliding expiration)", () => {
+		vi.useFakeTimers();
+		const cache = new MemoCache<string>();
+		cache.set("key", "value", 1000);
+
+		// Without ttlMs: read does not extend lifetime.
+		vi.advanceTimersByTime(900);
+		expect(cache.get("key")).toBe("value");
+
+		// With ttlMs: extend expiresAt to now + 1000 (= 1900 from start).
+		expect(cache.get("key", 1000)).toBe("value");
+
+		// Past original 1000 but within refreshed window: still alive.
+		vi.advanceTimersByTime(800); // wall time = 1700, expiresAt = 1900
+		expect(cache.get("key")).toBe("value");
+
+		// Beyond refreshed window: expired.
+		vi.advanceTimersByTime(400); // wall time = 2100, expiresAt = 1900
+		expect(cache.get("key")).toBeUndefined();
+		vi.useRealTimers();
+	});
+
 	it("invalidates and clears entries", () => {
 		const cache = new MemoCache<number>();
 		cache.set("a", 1);
@@ -374,7 +402,7 @@ describe("inline reference helpers", () => {
 
 	it("handles empty or non-string content", () => {
 		expect(parseContentWithRefs("")).toEqual([{ type: "text", value: "" }]);
-		expect(parseContentWithRefs(null as any)).toEqual([{ type: "text", value: "" }]);
+		expect(parseContentWithRefs(null)).toEqual([{ type: "text", value: "" }]);
 	});
 
 	it("finds the ref marker before the cursor", () => {

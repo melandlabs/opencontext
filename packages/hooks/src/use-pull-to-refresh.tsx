@@ -56,8 +56,7 @@ export function usePullToRefresh({
 		reset();
 		try {
 			await onRefresh();
-		} catch (error) {
-			console.error("[usePullToRefresh] Refresh error:", error);
+		} catch (_error) {
 		} finally {
 			setIsRefreshing(false);
 		}

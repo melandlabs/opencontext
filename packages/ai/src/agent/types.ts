@@ -572,7 +572,7 @@ export interface AgentOptions {
 	/** Session ID for continuing conversations */
 	sessionId?: string;
 	/** User session for authentication and context (used for business tools) */
-	session?: any; // Session from next-auth
+	session?: unknown; // Session from next-auth
 	/** Cloud auth token for embeddings API (needed in native mode) */
 	authToken?: string;
 	/** Conversation history */

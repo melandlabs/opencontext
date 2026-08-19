@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -21,7 +22,7 @@ async function main() {
 	console.log("Stored fact now:", messageId);
 
 	// Ask: "What did we believe on April 1st?"
-	const factsAsOfApril = await store.searchUnifiedMemory({
+	const factsAsOfApril = await store.search({
 		userId: "user-123",
 		query: "project status",
 		asOf: new Date("2024-04-01").getTime(),
@@ -33,7 +34,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Time-travel query failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("time-travel-example", main, import.meta.url);

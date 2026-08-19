@@ -1,4 +1,5 @@
-import { createMemoryStore, LocalTransformersEmbeddingProvider } from "@melandlabs/opencontext";
+import { LocalTransformersEmbeddingProvider, createMemoryStore } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const embedder = new LocalTransformersEmbeddingProvider({
@@ -14,7 +15,7 @@ async function main() {
 		},
 	});
 
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-123",
 		query: "What are my preferences?",
 		limit: 5,
@@ -26,4 +27,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("local-embeddings-full-setup", main, import.meta.url);

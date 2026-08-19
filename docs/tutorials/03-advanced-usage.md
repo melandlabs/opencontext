@@ -39,7 +39,7 @@ async function main() {
     },
   });
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "What did we decide about the architecture?",
     sources: ["memory", "insights", "knowledge"],
@@ -65,6 +65,185 @@ main().catch((error) => {
   process.exit(1);
 });
 ```
+
+## Reflection and Write-Back
+
+The four-verb memory API (`remember`, `recall`, `forget`, `improve`) covers the day-to-day operations of an agent: write a fact, recall it, archive it, supersede it. This section covers the **fifth** operation — `reflect` — which gathers evidence and either synthesises an answer or, in write-back mode, asks the LLM to vet a consolidation plan and persists the result.
+
+There are two flavours, sharing the same evidence pipeline:
+
+| Method | Writes? | Purpose |
+|---|---|---|
+| `store.search({ ...input, synthesize: true })` | **No** | Read-only LLM synthesis over unified evidence |
+| `store.consolidate(input)` | **Yes** | Agentic gather → plan → vet → persist loop |
+
+Both methods are also exposed over HTTP and MCP:
+
+| Transport | Read-only | Write-back |
+|---|---|---|
+| SDK | `store.search({ ...input, synthesize: true })` | `store.consolidate(input)` |
+| HTTP | `POST /v1/search` (set `synthesize: true`) | `POST /v1/consolidate:apply` |
+| MCP | `memory.search` (set `synthesize: true`) | `memory.consolidate` |
+
+### Read-only `search({ synthesize: true })`
+
+`store.search({ ...input, synthesize: true })` fans a single query out across **four tiers**:
+
+1. **Raw messages** — `searchRawMessagesAnn` (semantic) + `searchRawMessagesLexical` (BM25)
+2. **Summaries** — `searchSummaries` (L1/L2/L3)
+3. **Insights** — `searchInsights`
+4. **Knowledge** — `searchKnowledge` (uploaded RAG docs)
+
+…then asks the configured LLM (`unified.reasoning.complete`) to produce a single synthesised answer with bracket-cited evidence. No writes.
+
+```ts
+import { createMemoryStore } from "@melandlabs/opencontext";
+
+const store = await createMemoryStore({
+	unified: {
+		embedQuery: async ({ query }) => myEmbedder.embed(query),
+		searchSummaries: mySummariesBackend,
+		searchInsights: myInsightsBackend,
+		searchKnowledge: myKnowledgeBackend,
+		reasoning: {
+			complete: async (prompt) => myLlm.complete(prompt),
+		},
+	},
+});
+
+const out = await store.search({
+	userId: "u-42",
+	query: "what does the user like to do on weekends?",
+	tiers: ["summary", "raw", "insight", "knowledge"],
+	limit: 20,
+	threshold: 0.7,
+	synthesize: true,
+});
+
+console.log(out.answer); // LLM synthesis, bracket-cites [1], [2], …
+console.log(out.evidence); // the underlying evidence items
+console.log(out.warnings); // structured warnings, never throws
+```
+
+**Behaviour under failure**:
+
+- No LLM configured → returns the gathered evidence with a `reflect_llm_not_configured` warning instead of throwing.
+- LLM throws → evidence is preserved, a `reflect_llm_failed` warning is added, `out.answer` falls back to the raw evidence text.
+- Tier provider absent → the tier is skipped silently.
+- Empty `query` → short-circuits with `{ evidence: [], warnings: [] }`.
+
+### Agentic write-back `consolidate()`
+
+`consolidate()` is the additive write counterpart. The loop is:
+
+```
+    ┌──────────────┐    ┌─────────────────┐    ┌────────────┐
+    │ gather (4tier)│ →  │ build plan (rule)│ →  │ vet w/ LLM │ (optional)
+    └──────────────┘    └─────────────────┘    └────────────┘
+                                                       ↓
+                            ┌─────────────────┐    ┌──────────────┐
+                            │ deprecateRecords │ ←  │ persistPlan  │ (graph store)
+                            │  storage adapter │    └──────────────┘
+                            └─────────────────┘
+```
+
+1. **Gather** — same evidence pipeline as `search({ synthesize: true })`.
+2. **Build plan** — `buildMemoryConsolidationPlan(records, thresholds)` produces a `MemoryConsolidationPlan` with `preserve` / `decay` / `deprecate` entries. Rule-based; no LLM invention.
+3. **Vet (optional)** — when `reasoning.complete` is configured, the LLM is asked to approve or veto each entry. It may only mark entries as `approve` / `veto` with a reason; it cannot add new operations.
+4. **Persist** — `graphStore.persistPlan(translate(plan))` writes the graph updates; `storage.deprecateRecords(...)` soft-deprecates the records replaced by `deprecate` entries.
+
+```ts
+import { createMemoryStore, attachMemoryGraphStore } from "@melandlabs/opencontext";
+
+// 1. Wire the graph store (opt-in).
+attachMemoryGraphStore(store, {
+	storage: myIndexedDbStorage,
+	ownerScope: { userId: "u-42" },
+});
+
+// 2. Inspect the plan first (dry-run).
+const dry = await store.consolidate({
+	userId: "u-42",
+	query: "summarise the last week",
+	ownerScope: { userId: "u-42" },
+	tiers: ["raw", "summary"],
+	dryRun: true,
+});
+console.log(dry.plan); // MemoryConsolidationPlan
+console.log(dry.applied); // false
+
+// 3. Apply for real.
+const result = await store.consolidate({
+	userId: "u-42",
+	query: "summarise the last week",
+	ownerScope: { userId: "u-42" },
+	tiers: ["raw", "summary"],
+	dryRun: false,
+});
+console.log(result.applied); // true
+console.log(result.persistenceResult); // { applied, skipped, conflicts }
+console.log(result.deprecationCounts); // [{ supersededBySummaryId, count }]
+```
+
+#### Failure modes
+
+Each failure mode emits a typed warning and falls back deterministically:
+
+| Code | Triggered when | Behaviour |
+|---|---|---|
+| `reflect_apply_llm_skipped` | No `reasoning.complete` configured | The rule-based plan runs without vet. |
+| `reflect_apply_llm_vet_failed` | LLM threw or returned invalid JSON | All entries marked `approve` (no-op plan). |
+| `reflect_apply_graph_store_not_configured` | No graph store attached | `deprecateRecords` still runs against the storage adapter. |
+| `reflect_apply_dry_run` | `dryRun: true` | Nothing is written; `applied: false`. |
+| `reflect_apply_no_writes` | Plan has no actionable entries | `applied: false`, returns the plan for inspection. |
+
+#### Replay / A/B testing
+
+The `plan` field accepts a pre-built `MemoryConsolidationPlan`. Skips the plan-builder step so the same input can be replayed against different LLM configurations:
+
+```ts
+const dry1 = await store.consolidate({
+	/* … */
+	dryRun: true,
+});
+// dry1.plan is a MemoryConsolidationPlan
+
+const replayed = await store.consolidate({
+	/* same inputs */
+	plan: dry1.plan,
+});
+```
+
+### FactType classification
+
+Atomic facts are classified as one of three kinds, declared in `@melandlabs/ai/memory/contracts`:
+
+```ts
+type FactType = "world" | "experience" | "mental_model";
+```
+
+| Kind | Meaning |
+|---|---|
+| `world` | Facts about the world (e.g. "water boils at 100 °C"). |
+| `experience` | First-person events ("I went hiking last weekend"). |
+| `mental_model` | Generalised patterns ("the user prefers outdoors on weekends"). |
+
+The classifier runs at LLM extraction time; the result rides along the `RawMessage.factType?` field and surfaces on `MemoryRecord.factType`. The read-side filter `MemorySearchQuery.factTypes` lets a caller narrow a search to one or more kinds:
+
+```ts
+await store.search({
+	userId: "u-42",
+	query: "what did I do last weekend?",
+	sources: ["memory"], // restrict to memory source — insights/knowledge don't carry factType
+	factTypes: ["experience"],
+});
+```
+
+Schema migration: IndexedDB `DB_VERSION` 3 → 4, SQLite `RAW_MESSAGES_SCHEMA_VERSION` 3 → 4. Both are idempotent and tolerate v3 rows whose `factType` is undefined.
+
+### End-to-end example
+
+The same surface is also covered by the demos at [`examples/src/simple/15-http-server.ts`](../../examples/src/simple/15-http-server.ts) (HTTP) and [`examples/src/simple/16-mcp-server.ts`](../../examples/src/simple/16-mcp-server.ts) (MCP). A dedicated runnable companion for the reflect / write-back loop is on the roadmap and will be re-added once `@melandlabs/memory-store@0.4.0` ships to npm.
 
 ## Reasoning-Backed Memory Retrieval
 
@@ -107,7 +286,7 @@ async function main() {
   });
 
   // ...store messages, then search with a reasoning strategy...
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-42",
     query: "What does the user enjoy doing on weekends?",
     reasoningStrategy: "rewrite", // or "iterative"
@@ -176,10 +355,10 @@ const store = await createMemoryStore({
 });
 
 // Inherits "iterative" from the store config.
-const results = await store.searchUnifiedMemory({ userId: "u-1", query: "..." });
+const results = await store.search({ userId: "u-1", query: "..." });
 
 // Per-call value still wins.
-const adHoc = await store.searchUnifiedMemory({
+const adHoc = await store.search({
   userId: "u-1",
   query: "...",
   reasoningStrategy: "rewrite",
@@ -196,7 +375,7 @@ In addition to the single-point `asOf` snapshot, you can pass an inclusive `date
 > Note: `dateFrom` / `dateTo` only filter the `memory` source. `insights` and `knowledge` results are not affected by this range, and memory candidates without a recognised timestamp are retained.
 
 ```typescript
-const results = await store.searchUnifiedMemory({
+const results = await store.search({
   userId: "user-42",
   query: "What outdoor activities did I mention last summer?",
   reasoningStrategy: "iterative",
@@ -215,6 +394,109 @@ console.log("Reasoning metadata:", results.reasoning);
 - `asOf` asks "what was true at this exact instant?" — a temporal snapshot over facts with validity windows.
 - `dateFrom` / `dateTo` ask "which memories were recorded inside this calendar window?" — an interval filter over message timestamps.
 
+## Vector Symbolic Architecture (VSA) Recall
+
+`store.search()` returns the top-K nearest neighbours by cosine similarity. That's the right tool when the answer is "what's close to X?". Sometimes the right tool is "given a closed vocabulary, which entry matches X?". That's what VSA is for: it stores (role, filler) bindings as holographic reduced representations (HRR), and at recall time it superposes every stored binding, unbinds by the requested role, and picks the best-match vocabulary entry by cosine cleanup.
+
+The two surfaces are intentionally separate — VSA recall is a single best-match, not a ranked list. Folding both into one result shape would require a confusing union type and a fake `similarity` field that doesn't mean the same thing across sources.
+
+### When to use VSA
+
+VSA shines when:
+
+- You have a **closed, labelled answer space** (a vocabulary). E.g. `mood ∈ { "happy", "neutral", "tired" }`.
+- The question can be phrased as a **role lookup** ("what is the user's mood?").
+- You want **millisecond-scale recall** over a few thousand facts.
+- The role→filler relation is dense — you have many examples of "for this user, on a question like this, the answer is Y".
+
+Reach for semantic search instead when:
+
+- The answer space is open-ended (long-form text, document retrieval).
+- You need multiple candidates ranked by similarity.
+- The vocabulary is too large for cleanup to discriminate (rule of thumb: D ≥ √N where N is the vocabulary size).
+
+### The four verbs
+
+`createMemoryStore()` always returns a `store.vsa` facade backed by the same SQLite database as the raw-message store. The four verbs are:
+
+| Verb | Purpose |
+| --- | --- |
+| `vsaStoreFact` | Persist a `(role, filler)` binding as a HRR pair. Idempotent on `factId`. |
+| `vsaRecall` | Re-superpose all stored facts for the user/scope, unbind by the requested role, cleanup against a vocabulary, return the best-match label. |
+| `vsaListFacts` | Read-side projection of stored facts (no vectors). Useful for diagnostics and audit. |
+| `vsaForget` | Soft-delete by id. Idempotent. |
+
+### End-to-end example
+
+```typescript
+import { createMemoryStore } from "@melandlabs/memory-store";
+import { randomHRRVector } from "@melandlabs/vsa";
+
+const DIM = 128;
+
+function toVector(seed: number): number[] {
+  const v = randomHRRVector(DIM, seed);
+  return Array.from(v.data);
+}
+
+async function main() {
+  const store = await createMemoryStore();
+
+  const vocabulary = [
+    { label: "happy",   vector: toVector(1) },
+    { label: "neutral", vector: toVector(2) },
+    { label: "tired",   vector: toVector(3) },
+  ];
+
+  const roleVector = toVector(100);
+  const fillerVector = vocabulary[0].vector;
+
+  // Persist three (role, filler) bindings. Each call returns a unique
+  // factId; the superposed memory vector grows by one term per fact.
+  for (let i = 0; i < 3; i += 1) {
+    await store.vsa.storeFact({
+      userId: "user-123",
+      scopeTag: "demo",
+      roleLabel: "user:mood",
+      roleVector,
+      fillerLabel: "happy",
+      fillerVector,
+      dim: DIM,
+    });
+  }
+
+  // Recall — given the same role vector, the superposed memory vector
+  // should decode to the most-bound filler.
+  const recall = await store.vsa.recall({
+    userId: "user-123",
+    scopeTag: "demo",
+    roleLabel: "user:mood",
+    roleVector,
+    vocabulary,
+  });
+
+  console.log(recall.fillerLabel); // → "happy"
+  console.log(recall.allScores);  // → [{ label: "happy", score: 0.7 }, ...]
+}
+```
+
+### HTTP / MCP exposure
+
+The same verbs are exposed over HTTP and MCP for any host that doesn't want to wire `createMemoryStore` directly:
+
+- `POST /v1/vsa/store` — `vsaStoreFact`
+- `POST /v1/vsa/recall` — `vsaRecall`
+- `POST /v1/vsa/list` — `vsaListFacts`
+- `POST /v1/vsa/forget` — `vsaForget`
+
+And the MCP tool names are `memory.vsaStore`, `memory.vsaRecall`, `memory.vsaList`, `memory.vsaForget`.
+
+### Capacity notes
+
+HRR superpositions tolerate noise gracefully but degrade as you approach √D stored facts (rule of thumb from Plate, 1995). For `D = 128` that's roughly 11 facts before crosstalk dominates a single best-match cleanup. For dense recall (thousands of facts) use `D = 512` or `D = 1024`. The facade accepts whatever dimension you store; mismatches between facts with different `dim` values are surfaced as `vsa_dim_mismatch` warnings and dropped before superposition.
+
+> Runnable example: `examples/src/simple/19-vsa.ts`
+
 ## Temporal (Time-Travel) Queries
 
 Every fact has `valid_from` and `valid_until`, enabling queries as of a specific time. Pass an ISO-8601 string to `asOf`:
@@ -230,7 +512,7 @@ async function main() {
   // What did we believe about the project last month?
   const lastMonth = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const results = await store.searchUnifiedMemory({
+  const results = await store.search({
     userId: "user-123",
     query: "project status and timeline",
     asOf: lastMonth,  // Query as of this ISO-8601 timestamp
@@ -872,7 +1154,7 @@ async function trackedRemember(userId: string, content: string) {
 async function trackedRecall(userId: string, query: string) {
   const store = await createMemoryStore();
   metrics.memoryRecalls++;
-  const results = await store.searchUnifiedMemory({ userId, query, limit: 5 });
+  const results = await store.search({ userId, query, limit: 5 });
   await store.raw.close();
   return results;
 }

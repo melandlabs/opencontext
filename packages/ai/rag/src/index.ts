@@ -22,6 +22,8 @@ export {
 	type AtomicFactChunk,
 	type AtomicFactProvider,
 	type AtomicFactChunkerConfig,
+	type FactType,
+	isFactType,
 } from "./atomic-fact-chunker";
 
 export {

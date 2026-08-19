@@ -1,4 +1,5 @@
 import { TokenEncryption } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// TokenEncryption reads ENCRYPTION_KEY from the environment.
@@ -20,7 +21,5 @@ async function main() {
 	console.log("Round-trip OK:", decrypted === original);
 }
 
-main().catch((error) => {
-	console.error("Token encryption failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("token-encryption", main, import.meta.url);

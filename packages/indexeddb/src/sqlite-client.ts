@@ -357,7 +357,7 @@ export async function sqliteRunRawMessageEmbeddingDreamForUser(
 }
 
 export async function sqliteSearchRawMessagesSemanticallyForUser(
-	userId: string,
+	_userId: string,
 	options: Omit<RawMessageSemanticSearchInput, "userId">,
 ) {
 	const query = options.query.trim();

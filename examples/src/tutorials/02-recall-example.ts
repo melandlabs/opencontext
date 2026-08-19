@@ -1,9 +1,10 @@
 import { createMemoryStore } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
 
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-123",
 		query: "What are the user's preferences?",
 		limit: 10,
@@ -25,7 +26,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Search failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("recall-example", main, import.meta.url);

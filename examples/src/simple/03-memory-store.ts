@@ -43,7 +43,7 @@ export default async function demoMemoryStore() {
 			check("sqlite backend reports itself available", available === true, String(available));
 
 			// The actual recall call an agent makes.
-			const res = await store.searchUnifiedMemory({
+			const res = await store.search({
 				userId: "demo-user",
 				query: "what did we decide about the retrieval pipeline?",
 				limit: 5,
@@ -80,9 +80,9 @@ export default async function demoMemoryStore() {
 			// `createUnifiedSearch` is the same search surface without the
 			// rest of the store — handy when you only need recall.
 			const search = createUnifiedSearch({});
-			const direct = await search.searchUnifiedMemory({ userId: "demo-user", query: "ping", limit: 1 });
+			const direct = await search.search({ userId: "demo-user", query: "ping", limit: 1 });
 			info("demo/memory", `createUnifiedSearch standalone returned count=${direct.count}`);
-			check("createUnifiedSearch exposes the same searchUnifiedMemory contract", direct.query === "ping");
+			check("createUnifiedSearch exposes the same search contract", direct.query === "ping");
 			check("its results are an array too", Array.isArray(direct.results));
 		});
 	});

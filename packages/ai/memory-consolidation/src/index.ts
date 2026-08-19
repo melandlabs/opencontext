@@ -11,6 +11,7 @@ export * from "./governance";
 export * from "./plan";
 export * from "./persistence";
 export * from "./pipeline";
+export * from "./reflect-planner";
 export * from "./relation-graph";
 export * from "./retrieval";
 export * from "./revision";

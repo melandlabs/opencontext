@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/memory-store",
-	"version": "0.3.1",
+	"version": "1.0.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"main": "./dist/index.js",
@@ -47,10 +47,13 @@
 		"@hono/node-server": "^1.13.7",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"@melandlabs/ai": "workspace:*",
+		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/env-config": "workspace:*",
+		"@melandlabs/memory-consolidation": "workspace:*",
 		"@melandlabs/rag": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
 		"@melandlabs/sqlite": "workspace:*",
+		"@melandlabs/vsa": "workspace:*",
 		"hono": "^4.6.14",
 		"zod": "^4.3.6"
 	},

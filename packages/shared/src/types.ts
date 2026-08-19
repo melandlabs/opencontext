@@ -167,7 +167,7 @@ export type CustomUIDataTypes = {
 		insightId?: string;
 		insight?: {
 			id: string;
-			[key: string]: any;
+			[key: string]: unknown;
 		};
 	};
 	calendarConflictDetected: {
@@ -348,7 +348,7 @@ export type CustomUIDataTypes = {
 			description: string;
 			source: string;
 			sourceUrl?: string;
-			details?: any;
+			details?: unknown;
 		}>;
 	};
 	workflowEventXRay: {
@@ -361,7 +361,7 @@ export type CustomUIDataTypes = {
 			description: string;
 			source: string;
 			sourceUrl?: string;
-			details?: any;
+			details?: unknown;
 			author?: {
 				name: string;
 				avatar?: string;

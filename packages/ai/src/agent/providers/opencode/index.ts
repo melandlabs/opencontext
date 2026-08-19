@@ -2,7 +2,7 @@
  * OpenCode agent — {@link BaseAgent} implementation that drives the
  * OpenCode CLI's `run --format json` subcommand over stdio.
  *
- * Image attachments are materialised as files in `.openloomi-inputs/`
+ * Image attachments are materialised as files in `.opencontext-inputs/`
  * inside the resolved workdir before the CLI is spawned (OpenCode takes
  * files via `--file`, not stdin).
  */

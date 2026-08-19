@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/contracts",
-	"version": "0.3.0",
+	"version": "0.5.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -17,7 +17,10 @@
 		"./episode": "./dist/episode.js",
 		"./decision": "./dist/decision.js",
 		"./errors": "./dist/errors.js",
-		"./schemas": "./dist/schemas.js"
+		"./peer": "./dist/peer.js",
+		"./schemas": "./dist/schemas.js",
+		"./fact-type": "./dist/fact-type.js",
+		"./vsa-fact": "./dist/vsa-fact.js"
 	},
 	"repository": {
 		"type": "git",

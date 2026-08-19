@@ -5,10 +5,10 @@
  * creating a searchable log of all tool interactions.
  */
 
-import { containsSecret } from "./secrets.js";
-import { classifyBackendError } from "./errors.js";
 import type { OpenContextBackend } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { classifyBackendError } from "./errors.js";
+import { containsSecret } from "./secrets.js";
 
 interface DshToolResultPayload {
 	tool?: string;
@@ -77,7 +77,7 @@ function formatToolResult(result: unknown): string {
 
 		// Truncate large objects
 		if (json.length > 1000) {
-			return json.slice(0, 1000) + "...";
+			return `${json.slice(0, 1000)}...`;
 		}
 		return json;
 	}
@@ -118,7 +118,7 @@ export function registerToolResultListener(
 			if (p.result !== undefined) {
 				const resultStr = JSON.stringify(p.result);
 				if (containsSecret(resultStr)) {
-					ctx.logger.debug?.(`[dsh-opencontext] skipping tool result with potential secret in output`);
+					ctx.logger.debug?.("[dsh-opencontext] skipping tool result with potential secret in output");
 					return downstream;
 				}
 			}
@@ -155,7 +155,7 @@ export function registerToolResultListener(
 
 			// Check for secrets in final content
 			if (containsSecret(content)) {
-				ctx.logger.debug?.(`[dsh-opencontext] skipping tool result with potential secret`);
+				ctx.logger.debug?.("[dsh-opencontext] skipping tool result with potential secret");
 				return downstream;
 			}
 

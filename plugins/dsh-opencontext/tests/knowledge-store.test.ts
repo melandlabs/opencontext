@@ -5,12 +5,12 @@
  * so the tests do not need to download ONNX weights.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { LibKnowledgeStore, KnowledgeUnavailableError } from "../src/knowledge-store.js";
+import { KnowledgeUnavailableError, LibKnowledgeStore } from "../src/knowledge-store.js";
 
 function makeFakeProvider(dim = 384) {
 	// Identical unit vectors make every query match every chunk with score 1.
@@ -74,8 +74,8 @@ describe("LibKnowledgeStore", () => {
 		const { documents } = await store.listDocuments({ limit: 10, scopeId: "scope-1", userId: "user-1" });
 
 		expect(documents).toHaveLength(1);
-		expect(documents[0]!.filename).toBe("one.txt");
-		expect(documents[0]!.chunks).toBeGreaterThan(0);
+		expect(documents[0]?.filename).toBe("one.txt");
+		expect(documents[0]?.chunks).toBeGreaterThan(0);
 	});
 
 	it("searches knowledge by query", async () => {
@@ -98,7 +98,7 @@ describe("LibKnowledgeStore", () => {
 		});
 
 		expect(chunks.length).toBeGreaterThan(0);
-		expect(chunks[0]!.content.toLowerCase()).toContain("fox");
+		expect(chunks[0]?.content.toLowerCase()).toContain("fox");
 	});
 
 	it("isolates documents by scope/user", async () => {

@@ -23,6 +23,22 @@ type FeatureExtractionPipeline = (
 	},
 ) => Promise<unknown>;
 
+// Transformers.js' public types don't cover tokenizer config mutation or
+// every device/dtype union member, so we model the pieces we touch as an
+// explicit `unknown`-friendly shape and avoid `any` casts downstream.
+type ExtractorWithTokenizer = {
+	tokenizer?: { model_max_length?: number };
+};
+
+type TransformersModule = {
+	env: { cacheDir: string; remoteHost: string };
+	pipeline: (
+		task: "feature-extraction",
+		model: string,
+		options: Record<string, unknown>,
+	) => Promise<FeatureExtractionPipeline>;
+};
+
 export interface LocalTransformersEmbeddingProviderOptions {
 	modelName?: string;
 	batchSize?: number;
@@ -104,7 +120,7 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 	private async embedBatch(texts: string[]): Promise<number[][]> {
 		const extractor = await this.getExtractor();
 
-		const output = await (extractor as any)(texts, {
+		const output = await extractor(texts, {
 			pooling: this.pooling,
 			normalize: this.normalize,
 		});
@@ -120,14 +136,7 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 	}
 
 	private async createExtractor(): Promise<FeatureExtractionPipeline> {
-		const transformers = (await import("@huggingface/transformers")) as {
-			env: { cacheDir: string; remoteHost: string };
-			pipeline: (
-				task: "feature-extraction",
-				model: string,
-				options: Record<string, unknown>,
-			) => Promise<FeatureExtractionPipeline>;
-		};
+		const transformers = (await import("@huggingface/transformers")) as TransformersModule;
 
 		if (this.cacheDir) {
 			transformers.env.cacheDir = this.cacheDir;
@@ -138,32 +147,41 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 
 		const extractor = await transformers.pipeline("feature-extraction", this.modelName, {
 			cache_dir: this.cacheDir,
-			device: this.device as any,
-			dtype: this.dtype as any,
+			device: this.device,
+			dtype: this.dtype,
 			local_files_only: this.localFilesOnly,
 		});
 
 		// Transformers.js feature-extraction always enables truncation, but relies
 		// on tokenizer.model_max_length. Some ONNX exports advertise a tokenizer
 		// limit larger than the model position embeddings, so clamp it explicitly.
-		if ((extractor as any).tokenizer && this.maxTokens > 0) {
-			(extractor as any).tokenizer.model_max_length = this.maxTokens;
+		const extractorWithTokenizer = extractor as unknown as ExtractorWithTokenizer;
+		if (extractorWithTokenizer.tokenizer && this.maxTokens > 0) {
+			extractorWithTokenizer.tokenizer.model_max_length = this.maxTokens;
 		}
 
 		return extractor;
 	}
 }
 
-function tensorToEmbeddings(output: any, expectedCount: number): number[][] {
-	const nested = typeof output?.tolist === "function" ? output.tolist() : null;
+function tensorToEmbeddings(output: unknown, expectedCount: number): number[][] {
+	const tensorLike = output as
+		| {
+				tolist?: () => unknown;
+				data?: ArrayLike<number>;
+				dims?: number[];
+		  }
+		| null
+		| undefined;
+	const nested = typeof tensorLike?.tolist === "function" ? tensorLike.tolist() : null;
 
 	if (Array.isArray(nested)) {
 		return normalizeEmbeddingShape(nested, expectedCount);
 	}
 
-	if (output?.data && Array.isArray(output?.dims)) {
-		const data = Array.from(output.data as ArrayLike<number>);
-		const dims = output.dims as number[];
+	if (tensorLike?.data && Array.isArray(tensorLike?.dims)) {
+		const data = Array.from(tensorLike.data);
+		const dims = tensorLike.dims;
 
 		if (dims.length === 2) {
 			const [rows, columns] = dims;

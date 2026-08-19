@@ -11,10 +11,10 @@
  *   5. If anything fails, log a warning and pass through `next()`.
  */
 
-import { classifyBackendError } from "./errors.js";
-import { formatPreparedContext, deriveQuery } from "./prepared-context.js";
-import type { OpenContextBackend } from "./backend.js";
+import type { OpenContextBackend, SearchHit } from "./backend.js";
 import type { ResolvedConfig } from "./config.js";
+import { classifyBackendError } from "./errors.js";
+import { deriveQuery, formatPreparedContext } from "./prepared-context.js";
 
 interface DshPayload {
 	messages?: unknown[];
@@ -48,7 +48,7 @@ export function registerRecall(
 			const sessionId = p.session?.header?.id ?? "session-unknown";
 			const scopeId = config.scopeId && config.scopeId.length > 0 ? config.scopeId : `local:${cwd}`;
 
-			let hits;
+			let hits: SearchHit[] | undefined;
 			try {
 				hits = await backend.search(
 					{

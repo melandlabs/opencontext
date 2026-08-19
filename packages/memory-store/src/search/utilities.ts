@@ -6,6 +6,9 @@
  * storage/search implementations.
  */
 
+import type { FactType } from "@melandlabs/contracts";
+import type { Peer } from "@melandlabs/contracts/peer";
+
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
 
 export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative";
@@ -84,11 +87,27 @@ export interface UnifiedMemorySearchInput {
 	 */
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
 	/**
+	 * Optional additive scope-narrowing filter expressed as structured
+	 * peers. Coexists with `userId`/`botIds`. When supplied, the host's
+	 * `UnifiedSearchDeps.peerScopeCheck` is consulted; peers that fall
+	 * outside `userId` are dropped with a `peer_filter_outside_user_scope`
+	 * warning rather than broadening the scope.
+	 */
+	peerFilter?: ReadonlyArray<Peer>;
+	/**
 	 * Optional reasoning strategy. `"rewrite"` rewrites the query before
 	 * embedding; `"iterative"` runs an LLM planner that searches, notes
 	 * evidence, and searches again. Defaults to `"none"`.
 	 */
 	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
+	/**
+	 * Optional `FactType` read-side filter. When supplied, the memory
+	 * source narrows candidates to rows whose `factType` is in this set.
+	 * Only affects the `memory` source; `insights` and `knowledge` are
+	 * not filtered by this. Empty array is treated as "no filter" so
+	 * callers can pass `searchInput.factTypes ?? []` without surprises.
+	 */
+	factTypes?: FactType[];
 }
 
 export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
@@ -99,7 +118,9 @@ export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
  * flattening them into a single similarity score first.
  */
 export interface UnifiedMemoryRankedList {
-	name: "memory-bm25" | "memory-semantic" | "insights" | "knowledge";
+	/** Label for the source list (e.g. a tier or channel). Free-form; the
+	 * RRF fusion only reads `hits`, so `name` is purely diagnostic. */
+	name: string;
 	hits: UnifiedMemorySearchResult[];
 }
 
@@ -123,6 +144,98 @@ export interface UnifiedMemorySearchOutput {
 	 * `dateFrom` / `dateTo` filter was applied to the memory source.
 	 */
 	reasoning?: UnifiedMemoryReasoningInfo;
+}
+
+// ─── Unified `store.search()` public surface ──────────────────────────────────
+//
+// The read-side search input/output plumbing is preserved as the
+// underlying contract for cross-source retrieval, date filtering, RRF
+// merge, and reasoning strategies. The top-level `store.search(input)`
+// verb is built on top of it.
+// compatibility with internal callers; the new types are additive.
+
+/**
+ * Cross-source retrieval surface for the unified search. Mirrors
+ * `UnifiedMemorySearchSource` but is exposed under a more discoverable
+ * name.
+ */
+export type SearchSource = UnifiedMemorySearchSource;
+
+/**
+ * Per-tier evidence bucket consulted by `reflect`-style synthesis.
+ * Includes the `summary` tier that the read-only sources do not surface.
+ */
+export type SearchTier = "summary" | "raw" | "insight" | "knowledge";
+
+export interface SearchInput {
+	userId: string;
+	query: string;
+
+	/** Cross-source retrieval surface (defaults to all three sources). */
+	sources?: ReadonlyArray<SearchSource>;
+
+	/**
+	 * Per-tier subset — when omitted, defaults to all four tiers.
+	 * Forwarded to the gather step so the read pipeline can scope the
+	 * evidence. Most callers pass nothing; `synthesize` callers can
+	 * narrow to `["raw"]` or `["summary", "raw"]` for cheaper synthesis.
+	 */
+	tiers?: ReadonlyArray<SearchTier>;
+
+	/**
+	 * Opt-in LLM synthesis. When `true`, runs `reasoning.complete` after
+	 * gathering evidence and returns `answer` in the output. When
+	 * omitted / `false`, no LLM call is made (matches today's
+	 * `searchUnifiedMemory`). The `responseSchema` form lets the LLM
+	 * return JSON; the SDK extracts `{ answer: string }` from the
+	 * payload and surfaces the rest via warnings.
+	 */
+	synthesize?: boolean | { responseSchema?: Record<string, unknown> };
+
+	limit?: number;
+	threshold?: number;
+	botIds?: string[];
+	documentIds?: string[];
+	dateFrom?: string;
+	dateTo?: string;
+	asOf?: string;
+	peerFilter?: ReadonlyArray<Peer>;
+	authToken?: string;
+	factTypes?: FactType[];
+	mergeStrategy?: UnifiedMemoryMergeStrategy;
+	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
+	/**
+	 * Backward-compat pass-through for callers that previously passed
+	 * `responseSchema` at the top level. When set, it overrides
+	 * `synthesize.responseSchema`.
+	 */
+	responseSchema?: Record<string, unknown>;
+	/**
+	 * Backward-compat pass-through for callers that previously passed
+	 * `includeArchivedInsights` to the read-only search.
+	 */
+	includeArchivedInsights?: boolean;
+}
+
+export interface SearchEvidence {
+	id: string;
+	source: SearchSource | SearchTier;
+	snippet: string;
+	score: number;
+	timestamp?: number;
+}
+
+export interface SearchOutput {
+	query: string;
+	sources: ReadonlyArray<SearchSource>;
+	results: UnifiedMemorySearchResult[];
+	/** Same hits as `results`, with the source labelled for synthesis callers. */
+	evidence: SearchEvidence[];
+	count: number;
+	warnings: UnifiedMemorySearchWarning[];
+	reasoning?: UnifiedMemoryReasoningInfo;
+	/** Only present when `synthesize` was truthy. */
+	answer?: string;
 }
 
 const DEFAULT_LIMIT = 10;
@@ -309,4 +422,79 @@ export function isRawMemorySemanticResult(result: unknown): result is {
 		Boolean(item.metadata) &&
 		typeof item.metadata === "object"
 	);
+}
+
+export interface ResolvedPeerScope {
+	/** Peers to apply to the underlying retrieval (never wider than userId). */
+	peers: ReadonlyArray<Peer>;
+	/** Warnings to surface when the input was over-broad or empty. */
+	warnings: UnifiedMemorySearchWarning[];
+}
+
+/**
+ * Resolve a `peerFilter` against the active `userId`. The returned
+ * `peers` is always a strict narrowing — never broader than `userId`.
+ *
+ *   - Empty input → `{ peers: [], warnings: [] }` (legacy behaviour).
+ *   - All peers pass the host's `peerScopeCheck` → return as-is.
+ *   - Any peer fails `peerScopeCheck` → emit a `peer_filter_outside_user_scope`
+ *     warning and drop the offending peers. If every peer is dropped, the
+ *     search falls back to the unfiltered `userId` scope (with warning).
+ */
+export async function resolveScopePeer(input: {
+	userId: string;
+	peerFilter: ReadonlyArray<Peer> | undefined;
+	scopeCheck?: (input: { userId: string; peers: ReadonlyArray<Peer> }) => Promise<boolean> | boolean;
+}): Promise<ResolvedPeerScope> {
+	const peers = input.peerFilter ?? [];
+	if (peers.length === 0) {
+		return { peers: [], warnings: [] };
+	}
+	if (typeof input.scopeCheck !== "function") {
+		// No host-side check wired up: trust the caller's filter.
+		return { peers, warnings: [] };
+	}
+
+	const retained: Peer[] = [];
+	const dropped: Peer[] = [];
+	for (const peer of peers) {
+		const ok = await input.scopeCheck({ userId: input.userId, peers: [peer] });
+		if (ok) {
+			retained.push(peer);
+		} else {
+			dropped.push(peer);
+		}
+	}
+
+	if (dropped.length === 0) {
+		return { peers, warnings: [] };
+	}
+
+	if (retained.length === 0) {
+		return {
+			peers: [],
+			warnings: [
+				{
+					source: "memory",
+					code: "peer_filter_outside_user_scope",
+					message: `${dropped
+						.map((peer) => `${peer.kind}:${peer.id}`)
+						.join(",")} ignored; falling back to userId scope`,
+				},
+			],
+		};
+	}
+
+	return {
+		peers: retained,
+		warnings: [
+			{
+				source: "memory",
+				code: "peer_filter_outside_user_scope",
+				message: `${dropped
+					.map((peer) => `${peer.kind}:${peer.id}`)
+					.join(",")} ignored because they fall outside userId ${input.userId}`,
+			},
+		],
+	};
 }

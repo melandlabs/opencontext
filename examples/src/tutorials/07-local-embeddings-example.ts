@@ -1,8 +1,9 @@
 import {
+	LocalTransformersEmbeddingProvider,
 	createMemoryStore,
 	getRawMessageManager,
-	LocalTransformersEmbeddingProvider,
 } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const embeddingProvider = new LocalTransformersEmbeddingProvider({
@@ -39,7 +40,7 @@ async function main() {
 	]);
 
 	// Semantic search
-	const results = await store.searchUnifiedMemory({
+	const results = await store.search({
 		userId: "user-42",
 		query: "What theme does the user like?",
 		limit: 5,
@@ -55,4 +56,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("local-embeddings", main, import.meta.url);

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock @melandlabs/opencontext *before* importing the lib backend. The
 // mocks must be declared with `vi.hoisted` so they're available when
@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
 	})),
 	deprecateMessages: vi.fn(async () => 1),
 	getStats: vi.fn(async () => ({ totalMessages: 0 })),
-	searchUnifiedMemory: vi.fn(async () => ({ results: [], warnings: [] })),
+	search: vi.fn(async () => ({ results: [], warnings: [], evidence: [] })),
 	isRawMessageStorageAvailable: vi.fn(() => true),
 	getRawMessageManager: vi.fn(async () => ({})),
 	createUnifiedSearch: vi.fn(() => ({})),
@@ -39,7 +39,7 @@ const {
 	getMessageById,
 	deprecateMessages,
 	getStats,
-	searchUnifiedMemory,
+	search,
 	isRawMessageStorageAvailable,
 	getRawMessageManager,
 	createUnifiedSearch,
@@ -54,7 +54,7 @@ beforeEach(() => {
 	queryMessages.mockClear();
 	getMessageById.mockClear();
 	deprecateMessages.mockClear();
-	searchUnifiedMemory.mockClear();
+	search.mockClear();
 	getRawMessageManager.mockClear();
 	createUnifiedSearch.mockClear();
 	// Wire the manager-shaped object to the live mocks so the backend can use it.
@@ -65,17 +65,17 @@ beforeEach(() => {
 		deprecateMessages,
 		getStats,
 	});
-	createUnifiedSearch.mockImplementation(() => ({ searchUnifiedMemory }));
+	createUnifiedSearch.mockImplementation(() => ({ search }));
 });
 
 afterEach(() => {
 	rmSync(dbDir, { recursive: true, force: true });
-	delete process.env.MEMORY_STORE_DB_PATH;
+	process.env.MEMORY_STORE_DB_PATH = undefined;
 });
 
 describe("createLibBackend", () => {
-	it("search maps to searchUnifiedMemory with userId, limit, threshold", async () => {
-		searchUnifiedMemory.mockResolvedValueOnce({
+	it("search maps to store.search with userId, limit, threshold", async () => {
+		search.mockResolvedValueOnce({
 			results: [
 				{
 					id: "h1",
@@ -96,7 +96,7 @@ describe("createLibBackend", () => {
 		expect(hits[0]?.id).toBe("h1");
 		expect(hits[0]?.score).toBeCloseTo(0.91);
 		expect(hits[0]?.timestamp).toBe(42);
-		expect(searchUnifiedMemory).toHaveBeenCalledWith(
+		expect(search).toHaveBeenCalledWith(
 			expect.objectContaining({
 				query: "hello world",
 				limit: 3,
@@ -107,7 +107,7 @@ describe("createLibBackend", () => {
 	});
 
 	it("search falls back to lexical queryMessages when unified search throws", async () => {
-		searchUnifiedMemory.mockRejectedValueOnce(new Error("no embed provider"));
+		search.mockRejectedValueOnce(new Error("no embed provider"));
 		queryMessages.mockResolvedValueOnce([
 			{
 				messageId: "h1",
@@ -214,7 +214,7 @@ describe("createLibBackend", () => {
 	});
 
 	it("seeded hits round-trip through formatPreparedContext", async () => {
-		searchUnifiedMemory.mockResolvedValueOnce({
+		search.mockResolvedValueOnce({
 			results: [
 				{
 					id: "h1",
@@ -230,6 +230,7 @@ describe("createLibBackend", () => {
 				},
 			],
 			warnings: [],
+			evidence: [],
 		} as never);
 		const backend = createLibBackend(makeConfig());
 		const hits = await backend.search({ query: "alpha" });

@@ -1,6 +1,6 @@
 {
 	"name": "dsh-opencontext",
-	"version": "0.2.15",
+	"version": "0.3.0",
 	"description": "DeepSeek Harness plugin that wires DSH agents to OpenContext for durable memory + retrieval-augmented context.",
 	"type": "module",
 	"main": "./lib/index.js",
@@ -32,7 +32,7 @@
 	},
 	"dependencies": {
 		"@melandlabs/env-config": "^0.4.0",
-		"@melandlabs/opencontext": "^0.2.6"
+		"@melandlabs/opencontext": "^0.4.1"
 	},
 	"peerDependencies": {
 		"@deepseek-ai/cordis": "^4.0.1",

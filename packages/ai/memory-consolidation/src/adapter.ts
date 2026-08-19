@@ -76,7 +76,7 @@ export interface BuildMemoryRelationPipelineDiagnosticsInput<TRecord = MemoryCon
 	getCandidateKeys?(
 		record: MemoryEvidenceRecord,
 		context: {
-			sourceRecord: TRecord;
+			sourceRecord: TRecord | undefined;
 			sourceIndex: number;
 		},
 	): Iterable<string | undefined | false | null>;
@@ -446,7 +446,7 @@ export function buildMemoryRelationPipelineDiagnostics<TRecord>(
 			return [
 				record.id,
 				{
-					sourceRecord: input.records[sourceIndex]!,
+					sourceRecord: sourceIndex >= 0 ? input.records[sourceIndex] : undefined,
 					sourceIndex,
 				},
 			];

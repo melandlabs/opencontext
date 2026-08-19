@@ -1,5 +1,7 @@
 # Generated SQLite databases from tutorial runs
 tutorials-*.db
+tutorials-*.db-shm
+tutorials-*.db-wal
 
 # Temporary scratch directories created by demos
 .tmp/

@@ -3,7 +3,7 @@
  *
  * Pure SDK-options projection for `query()` — the opencontext reference port
  * deliberately omits the host-coupled concerns that lived alongside this
- * helper in the openloomi tree (MCP server attachment, supplemental-input
+ * helper in the opencontext tree (MCP server attachment, supplemental-input
  * hooks, business-tools registry, host permission callbacks). Consumers that
  * need those can layer them on top of the {@link createClaudeQueryOptions}
  * output by mutating the returned `Options` object before passing it to

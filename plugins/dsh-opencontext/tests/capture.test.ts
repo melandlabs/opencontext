@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { registerCapture } from "../src/capture.js";
 import { makeConfig, makeFakeBackend } from "./_helpers.js";
 

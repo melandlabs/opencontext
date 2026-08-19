@@ -14,7 +14,7 @@
  * a typed `searchMessagesSemantically` extension when present.
  */
 
-import type { RawMessageStorageManager } from "@melandlabs/indexeddb/storage";
+import type { RawMessageStorageManager } from "@melandlabs/indexeddb";
 import type { MemoryStoreConfig, MemoryStoreEnv } from "../config";
 import { hasPostgresFactory, resolvePostgresFactory } from "./postgres-raw-message-factory";
 import { closeSQLiteRawMessageManager, getSQLiteRawMessageManager } from "./sqlite-raw-message-store";

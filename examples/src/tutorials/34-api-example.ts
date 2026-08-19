@@ -17,14 +17,14 @@
  *   node --experimental-strip-types src/tutorials/34-api-example.ts
  */
 
-import { createServer, type Server } from "node:http";
-import { runIfMain } from "../_helpers.ts";
+import { type Server, createServer } from "node:http";
 import { ApiError, get, post } from "@melandlabs/api";
+import { runIfMain } from "../_helpers.ts";
 
 async function startMockServer(): Promise<{ server: Server; baseUrl: string }> {
 	return new Promise((resolve) => {
 		const server = createServer((req, res) => {
-			const url = new URL(req.url ?? "/", `http://localhost`);
+			const url = new URL(req.url ?? "/", "http://localhost");
 
 			let body = "";
 			req.on("data", (chunk) => {
@@ -122,4 +122,4 @@ async function main() {
 
 export default main;
 
-runIfMain("API tutorial", main);
+runIfMain("API tutorial", main, import.meta.url);

@@ -1,4 +1,5 @@
 import { computeNextRun, validateCronExpression } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// Validate a cron expression
@@ -15,7 +16,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Scheduled task example failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("scheduled-tasks", main, import.meta.url);

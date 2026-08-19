@@ -5,7 +5,7 @@
  * This is the opencontext reference port: it wires the pure SDK helpers in
  * `./cli-locations.ts`, `./runtime-preflight.ts`, `./message-converter.ts`,
  * `./query-options.ts`, and `./process-spawner.ts` into a working `IAgent`,
- * but deliberately omits the openloomi-coupled layers (MCP server registry,
+ * but deliberately omits the opencontext-coupled layers (MCP server registry,
  * supplemental-input hooks, business-tools MCP, host permission callbacks,
  * per-session logging). Hosts that need those concerns should layer them on
  * by mutating the `Options` returned from `createClaudeQueryOptions` before

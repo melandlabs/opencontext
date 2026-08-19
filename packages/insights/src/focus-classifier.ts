@@ -115,7 +115,7 @@ export type InsightForClassification = {
 	hasMyNickname?: boolean;
 	hasActions?: boolean;
 	isUnreplied?: boolean;
-	myTasks?: Array<any> | null;
+	myTasks?: Array<Record<string, unknown>> | null;
 };
 
 /**
@@ -123,7 +123,7 @@ export type InsightForClassification = {
  * @param myTasks - Task array
  * @returns Whether there are incomplete tasks
  */
-function hasIncompleteTasks(myTasks: Array<any> | null | undefined): boolean {
+function hasIncompleteTasks(myTasks: Array<Record<string, unknown>> | null | undefined): boolean {
 	if (!myTasks || myTasks.length === 0) {
 		return false;
 	}

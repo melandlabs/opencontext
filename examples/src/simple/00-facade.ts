@@ -66,16 +66,16 @@ export default async function demoFacade() {
 		//    better-sqlite3 native binding, which may not build everywhere.
 		try {
 			const store = await createMemoryStore();
-			const res = await store.searchUnifiedMemory({
+			const res = await store.search({
 				userId: "demo-user",
 				query: "what did we decide about retrieval?",
 				limit: 5,
 			});
-			info("demo/facade", `searchUnifiedMemory fanned out to sources: ${res.sources.join(", ")}`);
+			info("demo/facade", `search fanned out to sources: ${res.sources.join(", ")}`);
 			info("demo/facade", `count=${res.count}, warnings=${res.warnings.length}`);
-			check("searchUnifiedMemory echoes the query back", res.query === "what did we decide about retrieval?");
+			check("search echoes the query back", res.query === "what did we decide about retrieval?");
 			check(
-				"searchUnifiedMemory returns a results array (empty on a fresh store)",
+				"search returns a results array (empty on a fresh store)",
 				Array.isArray(res.results) && res.results.length === res.count,
 				`${res.count} results`,
 			);
@@ -85,11 +85,7 @@ export default async function demoFacade() {
 				res.warnings.map((w) => w.code).join(", ") || "none",
 			);
 		} catch (err) {
-			skip(
-				"createMemoryStore + searchUnifiedMemory",
-				"native better-sqlite3 binding unavailable",
-				(err as Error).message,
-			);
+			skip("createMemoryStore + search", "native better-sqlite3 binding unavailable", (err as Error).message);
 		}
 	});
 }
