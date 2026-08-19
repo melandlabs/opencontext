@@ -72,4 +72,4 @@ async function main() {
 
 export default main;
 
-runIfMain("EnvConfig tutorial", main);
+runIfMain("EnvConfig tutorial", main, import.meta.url);

@@ -121,4 +121,4 @@ async function main() {
 
 export default main;
 
-runIfMain("SQLite tutorial", main);
+runIfMain("SQLite tutorial", main, import.meta.url);

@@ -1,4 +1,5 @@
 import { logCommandExec, logFileRead, readAuditLogs } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	logFileRead("/etc/passwd");
@@ -11,7 +12,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Audit logging example failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("audit-logging", main, import.meta.url);

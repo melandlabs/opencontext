@@ -122,4 +122,4 @@ async function main() {
 
 export default main;
 
-runIfMain("API tutorial", main);
+runIfMain("API tutorial", main, import.meta.url);

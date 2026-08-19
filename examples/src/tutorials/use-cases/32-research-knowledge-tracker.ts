@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -239,7 +240,5 @@ async function main() {
 	console.log("\n✅ Research tracker demonstration complete");
 }
 
-main().catch((error) => {
-	console.error("Research Knowledge Tracker failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("research-knowledge-tracker", main, import.meta.url);

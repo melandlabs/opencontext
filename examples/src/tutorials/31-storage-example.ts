@@ -91,4 +91,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Storage tutorial", main);
+runIfMain("Storage tutorial", main, import.meta.url);

@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -290,7 +291,5 @@ async function main() {
 	console.log(`\n📊 Import verification: ${importedCustomers.count} imported customer profiles`);
 }
 
-main().catch((error) => {
-	console.error("Customer Support Agent failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("customer-support-agent", main, import.meta.url);

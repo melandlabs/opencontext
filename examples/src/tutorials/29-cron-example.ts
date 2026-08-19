@@ -109,4 +109,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Cron tutorial", main);
+runIfMain("Cron tutorial", main, import.meta.url);

@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 let store: Awaited<ReturnType<typeof createMemoryStore>>;
 
@@ -41,4 +42,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("memory-service", main, import.meta.url);

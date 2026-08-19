@@ -119,15 +119,21 @@ export async function runSection(label: string, fn: PackageTest) {
  * src/tutorials/30-…-example.ts`) and imported by `index.ts`'s demo runner
  * without re-running the demo at import time.
  *
- * Call `runIfMain(label, main)` at the bottom of a tutorial file to install
- * that guard exactly once.
+ * Call `runIfMain(label, main, import.meta.url)` at the bottom of a tutorial
+ * file to install that guard exactly once. The caller must pass its own
+ * `import.meta.url` because the helper lives in a separate module and can't
+ * observe the caller's URL on its own.
  */
-export function runIfMain(label: string, main: () => Promise<unknown>): void {
+export function runIfMain(
+	label: string,
+	main: () => Promise<unknown>,
+	callerUrl: string = import.meta.url,
+): void {
 	// `process.argv[1]` is undefined when the module is evaluated from a
 	// REPL or an `node --input-type=module -e "…"` script — guard against
 	// that so importing a tutorial for its default export never throws.
 	const entry = process.argv[1];
-	if (!entry || import.meta.url !== pathToFileURL(entry).href) return;
+	if (!entry || callerUrl !== pathToFileURL(entry).href) return;
 	main().catch((error) => {
 		console.error(`${label} failed:`, error);
 		process.exit(1);

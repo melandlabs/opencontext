@@ -88,4 +88,4 @@ async function main() {
 
 export default main;
 
-runIfMain("DB tutorial", main);
+runIfMain("DB tutorial", main, import.meta.url);

@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -221,7 +222,5 @@ async function main() {
 	console.log(`\n📋 Imported notes verified: ${importedNotes.count} notes found`);
 }
 
-main().catch((error) => {
-	console.error("Personal Memory Assistant failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("personal-memory-assistant", main, import.meta.url);

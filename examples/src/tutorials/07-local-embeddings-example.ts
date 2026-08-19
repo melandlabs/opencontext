@@ -3,6 +3,7 @@ import {
 	createMemoryStore,
 	getRawMessageManager,
 } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const embeddingProvider = new LocalTransformersEmbeddingProvider({
@@ -55,4 +56,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("local-embeddings", main, import.meta.url);

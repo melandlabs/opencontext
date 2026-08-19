@@ -93,4 +93,4 @@ async function main() {
 
 export default main;
 
-runIfMain("ClaudeAgent tutorial", main);
+runIfMain("ClaudeAgent tutorial", main, import.meta.url);

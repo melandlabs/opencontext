@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const messages = await getRawMessageManager();
@@ -26,4 +27,5 @@ async function main() {
 	console.log("✅ Stored fact with metadata");
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("metadata-example", main, import.meta.url);

@@ -181,4 +181,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Insights tutorial", main);
+runIfMain("Insights tutorial", main, import.meta.url);

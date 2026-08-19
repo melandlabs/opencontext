@@ -25,6 +25,7 @@ import {
 	createMemoryStore,
 	getRawMessageManager,
 } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -134,7 +135,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch((error) => {
-	console.error("Reasoning demo failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("reasoning-memory", main, import.meta.url);

@@ -74,4 +74,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Search tutorial", main);
+runIfMain("Search tutorial", main, import.meta.url);

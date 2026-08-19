@@ -1,4 +1,5 @@
 import { LocalTransformersEmbeddingProvider, createMemoryStore } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const embedder = new LocalTransformersEmbeddingProvider({
@@ -26,4 +27,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("local-embeddings-full-setup", main, import.meta.url);

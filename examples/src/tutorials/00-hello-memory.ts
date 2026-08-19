@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	// Create the memory store (uses SQLite by default)
@@ -36,4 +37,5 @@ async function main() {
 	console.log(`Warnings: ${results.warnings.length}`);
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("hello-memory", main, import.meta.url);

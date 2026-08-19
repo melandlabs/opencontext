@@ -105,4 +105,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Audit tutorial", main);
+runIfMain("Audit tutorial", main, import.meta.url);

@@ -80,4 +80,4 @@ async function main() {
 
 export default main;
 
-runIfMain("CodexAgent tutorial", main);
+runIfMain("CodexAgent tutorial", main, import.meta.url);

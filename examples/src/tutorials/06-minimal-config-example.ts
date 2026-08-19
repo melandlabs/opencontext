@@ -1,4 +1,5 @@
 import { createMemoryStore } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore({
@@ -18,7 +19,5 @@ async function main() {
 	await store.raw.close();
 }
 
-main().catch((error) => {
-	console.error("Config example failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("minimal-config", main, import.meta.url);

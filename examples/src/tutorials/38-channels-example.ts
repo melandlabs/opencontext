@@ -110,4 +110,4 @@ async function main() {
 
 export default main;
 
-runIfMain("Channels tutorial", main);
+runIfMain("Channels tutorial", main, import.meta.url);

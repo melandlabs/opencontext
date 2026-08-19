@@ -1,4 +1,5 @@
 import { getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const messages = await getRawMessageManager();
@@ -18,4 +19,5 @@ async function main() {
 	console.log(`Stored ${batch.length} messages in one batch`);
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("batch-example", main, import.meta.url);

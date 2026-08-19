@@ -1,4 +1,5 @@
 import { createMemoryStore } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -25,7 +26,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Search failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("recall-example", main, import.meta.url);

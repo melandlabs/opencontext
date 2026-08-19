@@ -1,4 +1,5 @@
 import { createMemoryStore, getRawMessageManager } from "@melandlabs/opencontext";
+import { runIfMain } from "../_helpers.ts";
 
 async function main() {
 	const store = await createMemoryStore();
@@ -33,7 +34,5 @@ async function main() {
 	}
 }
 
-main().catch((error) => {
-	console.error("Time-travel query failed:", error);
-	process.exit(1);
-});
+export default main;
+runIfMain("time-travel-example", main, import.meta.url);

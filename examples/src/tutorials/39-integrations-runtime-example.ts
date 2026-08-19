@@ -85,4 +85,4 @@ async function main() {
 
 export default main;
 
-runIfMain("IntegrationsRuntime tutorial", main);
+runIfMain("IntegrationsRuntime tutorial", main, import.meta.url);

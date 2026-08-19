@@ -1,7 +1,12 @@
-const MEMORY_URL = process.env.MEMORY_URL || "http://127.0.0.1:7421";
+const DEFAULT_MEMORY_URL = "http://127.0.0.1:7421";
+import { runIfMain } from "../_helpers.ts";
+
+function memoryUrl() {
+	return process.env.MEMORY_URL || DEFAULT_MEMORY_URL;
+}
 
 async function recallFacts(userId: string, query: string) {
-	const response = await fetch(`${MEMORY_URL}/v1/search`, {
+	const response = await fetch(`${memoryUrl()}/v1/search`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({ userId, query, limit: 10 }),
@@ -12,7 +17,7 @@ async function recallFacts(userId: string, query: string) {
 
 async function rememberFact(userId: string, content: string) {
 	const now = Date.now();
-	const response = await fetch(`${MEMORY_URL}/v1/raw-messages`, {
+	const response = await fetch(`${memoryUrl()}/v1/raw-messages`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
@@ -45,4 +50,5 @@ async function main() {
 	}
 }
 
-main().catch(console.error);
+export default main;
+runIfMain("http-client", main, import.meta.url);

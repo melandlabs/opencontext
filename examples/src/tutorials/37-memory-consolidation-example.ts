@@ -156,4 +156,4 @@ async function main() {
 
 export default main;
 
-runIfMain("MemoryConsolidation tutorial", main);
+runIfMain("MemoryConsolidation tutorial", main, import.meta.url);
