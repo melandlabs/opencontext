@@ -13,6 +13,8 @@ Usage:
   python retrieve.py locomo --samples conv-26
   python retrieve.py clbench --limit 2
   python retrieve.py beam --limit 1
+  python retrieve.py personamem --limit 1 --max-questions 5
+  python retrieve.py scriptmem --max-questions 5
 
 Env:
   OPENCONTEXT_URL   default http://127.0.0.1:7421
@@ -21,8 +23,11 @@ Env:
 from __future__ import annotations
 
 import argparse
+import ast
+import csv
 import json
 import os
+import re
 import sys
 import time
 import urllib.request
@@ -282,19 +287,183 @@ def run_beam(args) -> None:
     write_jsonl(OUT_DIR / "beam" / "input.jsonl", records)
 
 
+# ---------------------------------------------------------------- personamem
+
+PERSONAMEM_DIR = BENCH_ROOT / "personamem-v2" / "dataset"
+
+MEMORY_CONTEXT_PREFIX = (
+    "The following are relevant memories retrieved from the user's earlier "
+    "conversation history. Use them to personalize your response:\n\n"
+)
+
+
+def unwrap_user_query(raw: str) -> str:
+    """CSV user_query cells are Python dict reprs: {'role': 'user', 'content': '...'}."""
+    text = str(raw or "").strip()
+    if text.startswith("{"):
+        try:
+            parsed = ast.literal_eval(text)
+            if isinstance(parsed, dict):
+                return str(parsed.get("content", parsed.get("text", text)))
+        except (ValueError, SyntaxError):
+            pass
+    return text
+
+
+def parse_incorrect_answers(raw: str) -> list[str]:
+    text = str(raw or "").strip()
+    if not text:
+        return []
+    for parser in (json.loads, ast.literal_eval):
+        try:
+            parsed = parser(text)
+            if isinstance(parsed, list):
+                return [str(x) for x in parsed]
+        except (ValueError, SyntaxError):
+            continue
+    # heuristic fallback: strip brackets and split on '", "' / "', '"
+    inner = text.lstrip("[").rstrip("]")
+    return [s.strip().strip("\"'") for s in re.split(r"[\"'],?\s+[\"']", inner) if s.strip().strip("\"'")]
+
+
+def run_personamem(args) -> None:
+    csv_path = PERSONAMEM_DIR / "benchmark.csv"
+    with csv_path.open(newline="", encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+
+    # group questions by persona, preserving CSV order
+    personas: dict[str, dict] = {}
+    for row in rows:
+        pid = row["persona_id"]
+        entry = personas.setdefault(pid, {"history_link": row.get("chat_history_32k_link", ""), "questions": []})
+        entry["questions"].append(row)
+    persona_ids = list(personas.keys())
+    if args.limit:
+        persona_ids = persona_ids[: args.limit]
+
+    chunk_msgs = 20
+    records = []
+    for pid in persona_ids:
+        entry = personas[pid]
+        questions = entry["questions"]
+        if args.max_questions:
+            questions = questions[: args.max_questions]
+        if not questions:
+            continue
+        user_id = f"aml_personamem_{pid}"
+        if not args.skip_ingest:
+            history_path = PERSONAMEM_DIR / entry["history_link"]
+            chat = json.loads(history_path.read_text(encoding="utf-8"))["chat_history"]
+            msgs = []
+            for ci, start in enumerate(range(0, len(chat), chunk_msgs)):
+                slice_ = chat[start : start + chunk_msgs]
+                header = f"# Persona {pid} conversation — chunk {ci}\n# Messages {start}..{start + len(slice_) - 1} of {len(chat)}\n\n"
+                body = "\n\n".join(f"{m.get('role', '?').capitalize()}: {m.get('content', '')}" for m in slice_)
+                msgs.append({
+                    "messageId": f"{user_id}__chunk_{ci}",
+                    "platform": "benchmark", "botId": "aml-personamem",
+                    "timestamp": now_ms(), "content": header + body, "createdAt": now_ms(),
+                })
+            n = ingest(msgs, user_id)
+            print(f"[personamem] ingested {n} chunks for persona {pid}")
+        for i, q in enumerate(questions):
+            query = unwrap_user_query(q.get("user_query", ""))
+            hits = search(query, user_id)
+            memory_block = MEMORY_CONTEXT_PREFIX + "\n\n".join(h.get("content", "") for h in hits) if hits else ""
+            chat_history = [{"role": "system", "content": memory_block}] if memory_block else []
+            records.append({
+                "id": f"persona{pid}_q{i}",
+                "persona_id": pid,
+                "chat_history": chat_history,
+                "user_query": query,
+                "correct_answer": q.get("correct_answer", ""),
+                "incorrect_answers": parse_incorrect_answers(q.get("incorrect_answers", "")),
+                "preference": q.get("preference", ""),
+            })
+    write_jsonl(OUT_DIR / "personamem" / "input.jsonl", records)
+
+
+# ---------------------------------------------------------------- scriptmem
+
+SCRIPTMEM_DIR = BENCH_ROOT / "scriptmem" / "dataset" / "raw"
+SCRIPTMEM_FILES = ("angry.json", "enemy.json", "friends.json", "man_earth.json")
+
+
+def run_scriptmem(args) -> None:
+    # Upstream ScriptMem does not publish the original script text; the
+    # `conversation` field only carries a synthetic schema example. We ingest
+    # whatever sessions exist (per-sample userId isolation) so the full
+    # Add/Search -> answer -> evaluate chain is exercised end to end.
+    records = []
+    for filename in SCRIPTMEM_FILES:
+        source = filename[:-5]
+        data = json.loads((SCRIPTMEM_DIR / filename).read_text(encoding="utf-8"))
+        if args.limit:
+            data = data[: args.limit]
+        for sample_index, sample in enumerate(data):
+            sample_id = sample.get("sample_id") or f"{source}-{sample_index}"
+            user_id = f"aml_scriptmem_{source}_{sample_id}"
+            conv = sample.get("conversation") or {}
+            # the public release nests its synthetic schema example under
+            # `format_example`; real (platform-side) conversations carry
+            # top-level session_* keys — support both layouts
+            sessions_source = conv
+            if not any(k.startswith("session_") for k in conv) and isinstance(conv.get("format_example"), dict):
+                sessions_source = conv["format_example"]
+            speakers = sessions_source.get("speakers") or []
+            if not args.skip_ingest:
+                msgs = []
+                for key in sorted(sessions_source.keys()):
+                    if not key.startswith("session_") or key.endswith("_date_time"):
+                        continue
+                    turns = sessions_source.get(key) or []
+                    if not isinstance(turns, list) or not turns:
+                        continue
+                    date = sessions_source.get(f"{key}_date_time", "")
+                    body = "\n".join(
+                        f"{t.get('speaker') or 'Narration'}: {t.get('text', '')}" for t in turns
+                    )
+                    content = f"# {source} {sample_id} — {key}\n# Date: {date}\n\n{body}"
+                    msgs.append({
+                        "messageId": f"{user_id}__{key}",
+                        "platform": "benchmark", "botId": "aml-scriptmem",
+                        "timestamp": now_ms(), "content": content, "createdAt": now_ms(),
+                    })
+                if msgs:
+                    n = ingest(msgs, user_id)
+                    print(f"[scriptmem] ingested {n} sessions for {source}:{sample_id}")
+            for i, qa in enumerate(sample.get("qa", [])):
+                if args.max_questions and i >= args.max_questions:
+                    break
+                qa_id = f"{source}:{sample_id}#q{i:04d}"
+                hits = search(qa["question"], user_id)
+                records.append({
+                    "id": qa_id,
+                    "qa_id": qa_id,
+                    "dataset": source,
+                    "question": qa["question"],
+                    "qa_type": qa.get("qa_type"),
+                    "speaker_1_name": speakers[0] if len(speakers) > 0 else "speaker 1",
+                    "speaker_1_memories": "\n\n".join(h.get("content", "") for h in hits),
+                    "speaker_2_name": speakers[1] if len(speakers) > 1 else "speaker 2",
+                    "speaker_2_memories": "",
+                })
+    write_jsonl(OUT_DIR / "scriptmem" / "input.jsonl", records)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description="Ingest local datasets into OpenContext and emit AML pipeline input JSONL")
-    ap.add_argument("bench", choices=["longmemeval", "locomo", "clbench", "beam"])
+    ap.add_argument("bench", choices=["longmemeval", "locomo", "clbench", "beam", "personamem", "scriptmem"])
     ap.add_argument("--limit", type=int, default=None, help="limit number of dataset entries (conversations/samples)")
     ap.add_argument("--samples", default=None, help="comma-separated sample ids (longmemeval/locomo)")
     ap.add_argument("--dataset", default="sample_conversation.json", help="beam dataset filename under beam/dataset/")
     ap.add_argument("--skip-ingest", action="store_true", help="reuse already-ingested memories (re-retrieve only)")
-    ap.add_argument("--max-questions", type=int, default=None, help="cap questions per sample/conversation (locomo/beam)")
+    ap.add_argument("--max-questions", type=int, default=None, help="cap questions per sample/conversation (locomo/beam/personamem)")
     args = ap.parse_args()
 
     health()
     print(f"[aml-local] daemon={BASE} top_k={TOP_K} bench={args.bench}")
-    {"longmemeval": run_longmemeval, "locomo": run_locomo, "clbench": run_clbench, "beam": run_beam}[args.bench](args)
+    {"longmemeval": run_longmemeval, "locomo": run_locomo, "clbench": run_clbench, "beam": run_beam, "personamem": run_personamem, "scriptmem": run_scriptmem}[args.bench](args)
 
 
 if __name__ == "__main__":

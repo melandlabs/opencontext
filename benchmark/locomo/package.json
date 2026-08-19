@@ -1,5 +1,6 @@
 {
-	"name": "@openloomi/benchmark-locomo",
+	"name": "@melandlabs/benchmark-locomo",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "tsx src/index.ts",

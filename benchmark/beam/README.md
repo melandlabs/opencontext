@@ -1,4 +1,4 @@
-# @openloomi/benchmark-beam
+# @melandlabs/benchmark-beam
 
 BEAM (Benchmarking EffecTive Agent Memory, Tavakoli et al., ICLR 2026,
 arXiv:2510.27246) runner for the OpenContext memory system.
@@ -84,20 +84,20 @@ benchmark/beam/
 
 ```bash
 # Show help
-pnpm --filter @openloomi/benchmark-beam benchmark -- --help
+pnpm --filter @melandlabs/benchmark-beam benchmark -- --help
 
 # Smoke test (uses bundled sample, no HF download)
 python dataset/convert.py --scale sample
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json
 
 # Full 1M run (requires converted JSON — see dataset/README.md)
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/beam_1m.json \
   --output results/beam_1m_$(date +%Y%m%d_%H%M%S).json
 
 # Alloomi claim subset, 5 conversations (good for blog demo)
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/beam_1m.json \
   --type knowledge_update,preference_following,contradiction_resolution,multi_session_reasoning \
   --conversations 5
@@ -162,7 +162,7 @@ pnpm --filter @openloomi/benchmark-beam benchmark -- \
 
 ```bash
 # 1. Install deps
-pnpm --filter @openloomi/benchmark-beam install
+pnpm --filter @melandlabs/benchmark-beam install
 
 # 2. Start the OpenContext memory daemon (from repo root, after build)
 node packages/opencontext/dist/cli/opencontext.js http \
@@ -173,19 +173,19 @@ node packages/opencontext/dist/cli/opencontext.js http \
 python dataset/convert.py --scale sample
 
 # 4. Run smoke test
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json \
   --output results/sample_run.json
 # → exits 0, ingests chunk messages via POST /v1/raw-messages to the daemon
 # → results JSON contains summary.nugget_mean + summary.nugget_pass_rate
 
 # 5. Re-run with --no-resume to force fresh eval
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json \
   --no-resume --output results/sample_rerun.json
 
 # 6. Re-run with default resume; verify checkpoint hit
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json
 # → should log "[BEAM] Resuming from checkpoint for sample_001_q1"
 ```
