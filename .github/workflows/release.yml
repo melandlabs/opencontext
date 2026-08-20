@@ -57,11 +57,21 @@ jobs:
       # and pnpm sorts by the dependency graph, but pnpm 10 still launches
       # topological leaves concurrently — `packages/okf` and
       # `packages/memory-store` are both leaves (OKF imports memory-store
-      # through an optional peerDep, so pnpm does not know it must come
-      # first), and OKF's tsup reaches the DTS step before memory-store has
-      # written its `dist/index.d.ts`, failing with TS2307. `--workspace-
-      # concurrency=1` forces a serial build so each package's d.ts is on
-      # disk before any consumer starts.
+      # through `devDependencies` and `peerDependenciesMeta.optional`, so
+      # pnpm does not know it must come first), and OKF's tsup reaches the
+      # DTS step before memory-store has written its `dist/index.d.ts`,
+      # failing with TS2307 (`Cannot find module '@melandlabs/memory-store'`).
+      # `--workspace-concurrency=1` forces a serial build, but the pair is
+      # a workspace-level cycle (`memory-store` → `okf` via `dependencies`,
+      # `okf` → `memory-store` via `devDependencies`) that pnpm 10 does not
+      # break in `--topological` mode either, so `packages/memory-store`
+      # still runs before `packages/okf` and its DTS step fails on
+      # `@melandlabs/okf/http` / `@melandlabs/okf/mcp`. The first pass uses
+      # pnpm's `...` suffix to build OKF's full transitive dep closure (which
+      # puts memory-store ahead of OKF in the topological order and seeds
+      # `dist/*.d.ts` for every consumer OKF imports), and the second pass
+      # builds every package serially against the already-built OKF d.ts.
+      - run: pnpm --filter @melandlabs/okf... build
       - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
