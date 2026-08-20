@@ -145,17 +145,6 @@ function splitFlag(arg: string): [string, string] | null {
 	return [arg.slice(0, idx), arg.slice(idx + 1)];
 }
 
-const INGEST_FLAGS = new Set([
-	"--user",
-	"--bot",
-	"--platform",
-	"--dry-run",
-	"--continue-on-error",
-	"--json",
-	"--help",
-	"-h",
-]);
-
 function parseIngest(argv: string[]): OkfIngestOptions {
 	let dir: string | undefined;
 	const opts: OkfIngestOptions = {
@@ -220,21 +209,6 @@ function parseIngest(argv: string[]): OkfIngestOptions {
 	}
 	return opts;
 }
-
-const EMIT_FLAGS = new Set([
-	"--user",
-	"--bot",
-	"--platform",
-	"--since",
-	"--until",
-	"--types",
-	"--include-archived",
-	"--output",
-	"--package-name",
-	"--json",
-	"--help",
-	"-h",
-]);
 
 function parseEmit(argv: string[]): OkfEmitOptions {
 	const opts: OkfEmitOptions = {
@@ -372,6 +346,7 @@ function parseInspect(argv: string[]): OkfInspectOptions {
 // ─── Help ──────────────────────────────────────────────────────────────
 
 export function printOkfHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`opencontext okf — OKF v0.2 (Open Knowledge Format) importer / exporter.
 
 Usage:
@@ -393,6 +368,7 @@ Examples:
 }
 
 function printIngestHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`opencontext okf ingest <dir> [options]
 
   --user=<id>             Fallback userId when a doc lacks front-matter user_id (required).
@@ -409,6 +385,7 @@ Exit codes:
 }
 
 function printEmitHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`opencontext okf emit [options]
 
   --user=<id>             User to export (required).
@@ -425,6 +402,7 @@ function printEmitHelp(): void {
 }
 
 function printValidateHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`opencontext okf validate <dir> [options]
 
   --json                  Emit stable JSON envelope ({ ok, exit, results }).
@@ -432,6 +410,7 @@ function printValidateHelp(): void {
 }
 
 function printInspectHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`opencontext okf inspect <file> [options]
 
   --json                  Emit stable JSON envelope ({ frontMatter, body, inferredRawMessage }).
@@ -465,6 +444,7 @@ export interface OkfRunOptions {
 function emitJson(sink: ((line: string) => void) | undefined, payload: unknown): void {
 	const text = JSON.stringify(payload, null, 2);
 	if (sink) sink(text);
+	// biome-ignore lint/suspicious/noConsole: intentional CLI JSON envelope output
 	else console.log(text);
 }
 
@@ -658,6 +638,7 @@ function renderIngestHuman(summary: OkfIngestSummary, total: number): void {
 	lines.push(
 		`Summary: ${summary.summary.ingested} ingested, ${summary.summary.skipped} skipped, ${summary.summary.issues} issue(s)`,
 	);
+	// biome-ignore lint/suspicious/noConsole: intentional CLI human-readable summary
 	console.log(lines.join("\n"));
 }
 
@@ -813,6 +794,7 @@ function renderValidateHuman(summary: OkfValidateSummary): void {
 	lines.push("");
 	const failures = summary.results.filter((r) => !r.valid).length;
 	lines.push(`Summary: ${passedResultCount(summary.results)} passed, ${failures} failed`);
+	// biome-ignore lint/suspicious/noConsole: intentional CLI human-readable summary
 	console.log(lines.join("\n"));
 }
 
@@ -854,6 +836,7 @@ async function runInspect(args: OkfInspectOptions, runOptions: OkfRunOptions): P
 		if (args.json) {
 			emitJson(sink, output);
 		} else {
+			// biome-ignore lint/suspicious/noConsole: intentional CLI error output
 			console.error(`[opencontext/okf] ${message}`);
 		}
 		return { ok: false, exit: 1 };
@@ -954,6 +937,7 @@ function renderInspectHuman(summary: OkfInspectSummary): void {
 			lines.push(`  - ${issue.code}: ${issue.message}`);
 		}
 	}
+	// biome-ignore lint/suspicious/noConsole: intentional CLI human-readable summary
 	console.log(lines.join("\n"));
 }
 

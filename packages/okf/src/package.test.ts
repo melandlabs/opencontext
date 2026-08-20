@@ -205,7 +205,7 @@ describe("writeOkfPackage", () => {
 	});
 
 	it("respects userIds / platforms override", async () => {
-		const result = await writeOkfPackage(tmpDir, [sampleMessage], {
+		await writeOkfPackage(tmpDir, [sampleMessage], {
 			userIds: ["u-x", "u-y"],
 			platforms: ["chrome"],
 		});
