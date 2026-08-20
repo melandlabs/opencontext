@@ -15,7 +15,21 @@ export interface VideoGenerationRequest {
 	negative_prompt?: string;
 	audio?: boolean;
 	seed?: number;
+	/**
+	 * Optional cancellation handle forwarded by the caller. Provider adapters
+	 * may attach this to long-running upstream requests so an in-flight
+	 * generation can be aborted promptly.
+	 */
+	signal?: AbortSignal;
 }
+
+export type VideoGenerationErrorType =
+	| "configuration_error"
+	| "api_error"
+	| "generation_error"
+	| "timeout_error"
+	| "provider_not_found"
+	| "unknown_error";
 
 export interface VideoGenerationResponse {
 	success: boolean;
@@ -27,7 +41,7 @@ export interface VideoGenerationResponse {
 	duration: number;
 	provider: string;
 	error?: string;
-	error_type?: string;
+	error_type?: VideoGenerationErrorType;
 }
 
 export interface VideoModelInfo {

@@ -137,7 +137,7 @@ export * from "./sandbox";
 // (via the historical `export { ... } from "./agent"` block in
 // `packages/ai/src/index.ts`). Re-exporting them here would create
 // duplicate-identifier errors once the root barrel pulls in `./agent/index`.
-// Import them from `@melandlabs/ai/agent/<submodule>` (subpath exports) or
+// Import them from `./<submodule>` (subpath exports) or
 // from the package root directly:
 //
 //   - ./billing         → MODEL_PRICING, getModelPricing, calculate*Credits, ...

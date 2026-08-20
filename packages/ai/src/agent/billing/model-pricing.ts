@@ -714,3 +714,52 @@ export function calculateCreditsLegacy(inputTokens: number, outputTokens: number
 	}
 	return inputTokens / BASE_INPUT_TOKENS_PER_CREDIT + outputTokens / BASE_OUTPUT_TOKENS_PER_CREDIT;
 }
+
+/**
+ * Canonical usage shape consumed by {@link computeFinalCredits}.
+ *
+ * `inputTokens` follows the Anthropic convention: the count of NON-cached prompt
+ * tokens only (cache writes/reads are reported separately). `costUsd`, when
+ * present, is the authoritative per-request cost the upstream actually billed.
+ */
+export interface FinalUsage {
+	inputTokens: number;
+	outputTokens: number;
+	cacheCreationInputTokens: number;
+	cacheReadInputTokens: number;
+	cacheCreation1hTokens?: number;
+	cacheCreation5mTokens?: number;
+	/** Upstream-reported per-request cost in USD (OpenRouter `usage.cost`). */
+	costUsd?: number;
+}
+
+/**
+ * Compute the authoritative credits to charge for a COMPLETED request.
+ *
+ * Prefers the upstream's real reported cost (`costUsd`) — drift-proof and
+ * exactly what the provider billed us — and otherwise falls back to a
+ * cache-aware local computation: real tokens x MODEL_PRICING with the prompt
+ * cache multipliers applied (cache reads at 0.1x, writes at 1.25x/2x). Output
+ * tokens are always included. Returns a rounded-up, non-negative credit integer.
+ *
+ * This is the single source of truth for "what should this request cost", used
+ * by the proxy routes to reconcile the up-front estimated hold against reality.
+ */
+export function computeFinalCredits(usage: FinalUsage, model: ModelType = "default"): number {
+	if (typeof usage.costUsd === "number" && Number.isFinite(usage.costUsd) && usage.costUsd > 0) {
+		return Math.max(0, Math.ceil(usage.costUsd / CREDIT_VALUE_USD));
+	}
+
+	const stats = calculatePromptCacheStats(
+		{
+			inputTokens: usage.inputTokens || 0,
+			outputTokens: usage.outputTokens || 0,
+			cacheCreationInputTokens: usage.cacheCreationInputTokens || 0,
+			cacheReadInputTokens: usage.cacheReadInputTokens || 0,
+			cacheCreation1hTokens: usage.cacheCreation1hTokens,
+			cacheCreation5mTokens: usage.cacheCreation5mTokens,
+		},
+		model,
+	);
+	return Math.max(0, Math.ceil(stats.creditsWithCache));
+}

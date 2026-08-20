@@ -2412,9 +2412,7 @@ const enUS = {
 			},
 			// Surfaces when the agent preflight reports the built-in Claude
 			// runtime isn't authenticated (e.g. `claude auth login` was never
-			// run, or the session has been cleared). Mirrors alloomi's
-			// `authentication_error` policy entry but names the two
-			// remediation paths explicitly.
+			// run, or the session has been cleared).
 			runtimeNotLoggedIn: {
 				title: "Claude runtime not signed in",
 				description:
