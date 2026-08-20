@@ -68,3 +68,10 @@ POST /v1/okf/export         { userId, botId?, platform?, since?, until?, types?,
 memory.okfImport  { userId, botId?, platform?, document }
 memory.okfExport  { userId, botId?, platform?, since?, until?, types?, includeArchived? }
 ```
+
+## Full reference
+
+See [docs/okf.md](./docs/okf.md) for the complete OKF v0.2 format
+spec, every front-matter field documented individually, required
+minimum validation, encoding rules, and full CLI/HTTP/MCP request /
+response shapes.
