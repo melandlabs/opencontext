@@ -71,15 +71,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Pre-seed OKF's dist via pnpm's `...` suffix so its transitive
-      # dep closure (memory-store in particular) is built topologically
-      # before the full serial `pnpm -r build` runs. Without this, the
-      # OKF ↔ memory-store workspace cycle (memory-store → okf via
-      # `dependencies`, okf → memory-store via `devDependencies`) lets
-      # pnpm 10 schedule memory-store's tsup DTS before OKF has written
-      # its d.ts, failing with TS2307 (`Cannot find module
-      # '@melandlabs/memory-store'` from `packages/okf/src/cli.ts:24`).
-      - run: pnpm --filter @melandlabs/okf... build
       - run: pnpm -r build
       - run: pnpm -r typecheck
 
@@ -104,14 +95,6 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # examples/ smoke-tests import @melandlabs/* packages and need dist/
       # artifacts to be present before `pnpm -r test` runs.
-      # Pre-seed OKF's dist via pnpm's `...` suffix so its transitive dep
-      # closure (memory-store in particular) is built topologically before
-      # the full serial `pnpm -r build` runs. Without this, the OKF ↔
-      # memory-store workspace cycle (memory-store → okf via `dependencies`,
-      # okf → memory-store via `devDependencies`) lets pnpm 10 schedule
-      # memory-store's tsup DTS before OKF has written its d.ts, failing
-      # with TS2307 (`Cannot find module '@melandlabs/memory-store'`).
-      - run: pnpm --filter @melandlabs/okf... build
       - run: pnpm -r build
       - run: pnpm -r test
 
@@ -130,12 +113,6 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Pre-seed OKF's dist via pnpm's `...` suffix so its transitive dep
-      # closure (memory-store in particular) is built topologically before
-      # the full serial `pnpm -r build` runs. Without this, the OKF ↔
-      # memory-store workspace cycle lets pnpm 10 schedule memory-store's
-      # tsup DTS before OKF has written its d.ts, failing with TS2307.
-      - run: pnpm --filter @melandlabs/okf... build
       - run: pnpm -r build
 
   changesets:

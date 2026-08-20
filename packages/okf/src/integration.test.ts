@@ -15,11 +15,20 @@
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { createRawMessageStore } from "@melandlabs/memory-store";
-import { closeRawMessageStore } from "@melandlabs/memory-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startOkf } from "./cli.js";
 import { readOkfPackage, writeOkfPackage } from "./package.js";
+
+// Lazy memory-store loader. See the matching helper in `cli.ts` for the
+// rationale (workspace cycle between `okf` and `memory-store`).
+type MemoryStoreModule = typeof import("@melandlabs/memory-store");
+let cachedMemoryStore: MemoryStoreModule | undefined;
+async function loadMemoryStore(): Promise<MemoryStoreModule> {
+	if (!cachedMemoryStore) {
+		cachedMemoryStore = await import("@melandlabs/memory-store");
+	}
+	return cachedMemoryStore;
+}
 
 let tmpDir: string;
 const originalDbPath = process.env.MEMORY_STORE_DB_PATH;
@@ -43,7 +52,7 @@ afterEach(async () => {
 		process.env.MEMORY_STORE_DB_PATH = originalDbPath;
 	}
 	// Always close the singleton so successive tests start fresh.
-	await closeRawMessageStore().catch(() => undefined);
+	await (await loadMemoryStore()).closeRawMessageStore().catch(() => undefined);
 	await rm(tmpDir, { recursive: true, force: true });
 });
 
@@ -126,7 +135,7 @@ describe("OKF end-to-end", () => {
 		}
 
 		// 3. Query the memory store directly.
-		const store = createRawMessageStore({});
+		const store = (await loadMemoryStore()).createRawMessageStore({});
 		const manager = await store.getManager();
 		const rows = (await manager.queryMessages({
 			userId: FIXTURE_USER,
@@ -139,7 +148,7 @@ describe("OKF end-to-end", () => {
 
 		// 4. Emit a Knowledge Package.
 		const outputDir = join(tmpDir, "output");
-		const emitStore = createRawMessageStore({});
+		const emitStore = (await loadMemoryStore()).createRawMessageStore({});
 		const emitManager = await emitStore.getManager();
 		const emitRows = (await emitManager.queryMessages({
 			userId: FIXTURE_USER,
@@ -200,7 +209,7 @@ describe("OKF end-to-end", () => {
 		// Capture the originals.
 		let before: Array<{ messageId: string; content: string; timestamp: number; factType: string }>;
 		{
-			const store = createRawMessageStore({});
+			const store = (await loadMemoryStore()).createRawMessageStore({});
 			const manager = await store.getManager();
 			before = (await manager.queryMessages({
 				userId: FIXTURE_USER,
@@ -211,7 +220,7 @@ describe("OKF end-to-end", () => {
 
 		// Emit.
 		const outputDir = join(tmpDir, "output");
-		const store = createRawMessageStore({});
+		const store = (await loadMemoryStore()).createRawMessageStore({});
 		const manager = await store.getManager();
 		const rows = (await manager.queryMessages({
 			userId: FIXTURE_USER,
@@ -244,7 +253,7 @@ describe("OKF end-to-end", () => {
 		}
 
 		// Compare.
-		const storeAfter = createRawMessageStore({});
+		const storeAfter = (await loadMemoryStore()).createRawMessageStore({});
 		const managerAfter = await storeAfter.getManager();
 		const after = (await managerAfter.queryMessages({
 			userId: reIngestUser,

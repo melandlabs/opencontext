@@ -37,15 +37,11 @@
 	},
 	"peerDependencies": {
 		"@melandlabs/indexeddb": "workspace:*",
-		"@melandlabs/memory-store": "workspace:*",
 		"hono": "^4.6.14",
 		"zod": "^4.3.6"
 	},
 	"peerDependenciesMeta": {
 		"@melandlabs/indexeddb": {
-			"optional": true
-		},
-		"@melandlabs/memory-store": {
 			"optional": true
 		},
 		"hono": {

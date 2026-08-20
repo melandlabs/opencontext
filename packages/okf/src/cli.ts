@@ -21,13 +21,29 @@
 
 import { readFile, stat } from "node:fs/promises";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import { createRawMessageStore } from "@melandlabs/memory-store";
 import { filterRawMessagesByOkfType, isBlockingOkfIssue, okfToRawMessage } from "./codec.js";
 import type { OkfIssue } from "./errors.js";
 import { parseOkf, validateOkfFrontMatter } from "./frontmatter.js";
 import { type WriteOkfPackageResult, readOkfPackage, writeOkfPackage } from "./package.js";
 
 // ─── Local types ──────────────────────────────────────────────────────
+
+// `@melandlabs/memory-store` is loaded lazily because OKF and memory-store
+// form a workspace-level cycle (memory-store → okf via `dependencies`,
+// okf → memory-store via `peerDependencies`); a static `import` here
+// would pull memory-store in at module-evaluation time and break pnpm 10's
+// topological sort in `pnpm -r build`. Runtime callers of
+// `createRawMessageStore` already live inside `async` functions, so the
+// extra `await` is harmless and only fires on code paths that actually
+// touch the store.
+type CreateRawMessageStore = (typeof import("@melandlabs/memory-store"))["createRawMessageStore"];
+let cachedCreateRawMessageStore: CreateRawMessageStore | undefined;
+async function loadCreateRawMessageStore(): Promise<CreateRawMessageStore> {
+	if (!cachedCreateRawMessageStore) {
+		cachedCreateRawMessageStore = (await import("@melandlabs/memory-store")).createRawMessageStore;
+	}
+	return cachedCreateRawMessageStore;
+}
 
 interface RawMessageStorageManagerLike {
 	upsertRawMessages?: (input: { userId: string; messages: RawMessage[] }) => Promise<unknown>;
@@ -585,7 +601,7 @@ async function runIngest(args: OkfIngestOptions, runOptions: OkfRunOptions): Pro
 	}
 
 	if (messages.length > 0) {
-		const store = createRawMessageStore({});
+		const store = (await loadCreateRawMessageStore())({});
 		try {
 			const manager = (await store.getManager()) as RawMessageStorageManagerLike;
 			if (typeof manager.upsertRawMessages === "function") {
@@ -646,7 +662,7 @@ function renderIngestHuman(summary: OkfIngestSummary, total: number): void {
 }
 
 async function collectExistingIds(userId: string, botId?: string): Promise<Set<string>> {
-	const store = createRawMessageStore({});
+	const store = (await loadCreateRawMessageStore())({});
 	try {
 		const manager = await store.getManager();
 		if (typeof manager.queryMessages !== "function") return new Set();
@@ -679,7 +695,7 @@ export interface OkfEmitSummary {
 async function runEmit(args: OkfEmitOptions, runOptions: OkfRunOptions): Promise<OkfRunResult> {
 	const { sink } = runOptions;
 	const log = (msg: string) => console.warn(`[opencontext/okf] ${msg}`);
-	const store = createRawMessageStore({});
+	const store = (await loadCreateRawMessageStore())({});
 	let result: WriteOkfPackageResult;
 	try {
 		const manager = await store.getManager();
