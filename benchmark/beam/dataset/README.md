@@ -22,7 +22,7 @@ python dataset/convert.py --scale 10m    # writes dataset/beam_10m.json
 python dataset/convert.py --scale sample # writes sample_conversation.json (no HF download)
 
 # 3. Run the benchmark
-pnpm --filter @openloomi/benchmark-beam benchmark -- \
+pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json
 ```
 

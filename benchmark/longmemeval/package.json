@@ -1,5 +1,6 @@
 {
-	"name": "@openloomi/benchmark-longmemeval",
+	"name": "@melandlabs/benchmark-longmemeval",
+	"private": true,
 	"type": "module",
 	"scripts": {
 		"dev": "tsx src/index.ts",
