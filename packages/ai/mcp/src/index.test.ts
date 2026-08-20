@@ -28,6 +28,10 @@ describe("@melandlabs/mcp", () => {
 		process.env.OPENCONTEXT_MCP_CONFIG_PATH = undefined;
 		process.env.OPENCONTEXT_TOKEN_PATH = undefined;
 		process.env.OPENCONTEXT_AUTH_TOKEN = undefined;
+		// getOpenContextDir() prefers OPENCONTEXT_HOME over HOME, so clear
+		// it too — otherwise a host with OPENCONTEXT_HOME pre-set makes the
+		// "~/.opencontext/..." default checks fail.
+		process.env.OPENCONTEXT_HOME = undefined;
 
 		tempDir = await mkdtemp(path.join(os.tmpdir(), "mcp-test-"));
 	});
