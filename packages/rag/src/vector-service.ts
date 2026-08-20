@@ -251,9 +251,7 @@ export async function searchVectorStore(
  * Existing sqlite-vec / pgvector stores remain vector-only and use the dense
  * branch as a backwards-compatible fallback.
  */
-export async function searchHybridVectorStore(
-	query: HybridSearchQuery,
-): Promise<VectorSearchResult[]> {
+export async function searchHybridVectorStore(query: HybridSearchQuery): Promise<VectorSearchResult[]> {
 	const vectorStore = await getVectorStore();
 	const defaults = getHybridConfig();
 
@@ -271,11 +269,7 @@ export async function searchHybridVectorStore(
 	}
 
 	if (!query.vector?.length) return [];
-	const results = await vectorStore.similaritySearch(
-		query.vector,
-		query.limit,
-		query.filter?.userId,
-	);
+	const results = await vectorStore.similaritySearch(query.vector, query.limit, query.filter?.userId);
 	if (!query.filter?.documentIds?.length) return results;
 	const allowedDocumentIds = new Set(query.filter.documentIds);
 	return results.filter((result) => allowedDocumentIds.has(result.documentId));
