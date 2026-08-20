@@ -36,7 +36,7 @@ import { type WriteOkfPackageResult, readOkfPackage, writeOkfPackage } from "./p
 // `createRawMessageStore` already live inside `async` functions, so the
 // extra `await` is harmless and only fires on code paths that actually
 // touch the store.
-type CreateRawMessageStore = (typeof import("@melandlabs/memory-store"))["createRawMessageStore"];
+type CreateRawMessageStore = typeof import("@melandlabs/memory-store")["createRawMessageStore"];
 let cachedCreateRawMessageStore: CreateRawMessageStore | undefined;
 async function loadCreateRawMessageStore(): Promise<CreateRawMessageStore> {
 	if (!cachedCreateRawMessageStore) {
