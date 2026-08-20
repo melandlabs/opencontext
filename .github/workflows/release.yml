@@ -54,11 +54,22 @@ jobs:
       # can be built in parallel with `packages/indexeddb` (which depends on
       # it) and the consumer's tsup fails to resolve the workspace import.
       # CI's `pnpm -r build` works because there's only one implicit filter
-      # and pnpm sorts by the dependency graph. The OKF ↔ memory-store pair
-      # used to be a workspace-level cycle that broke pnpm's topological
-      # order (causing TS2307 in either package's DTS step depending on which
-      # ran first); OKF now loads memory-store lazily so the cycle is broken
-      # at the module level and pnpm can serialize memory-store after OKF.
+      # and pnpm sorts by the dependency graph.
+      #
+      # OKF's `cli.ts` lazy-imports `@melandlabs/memory-store` to break the
+      # runtime cycle (`memory-store` → `okf` via `dependencies`, `okf` →
+      # `memory-store` via `devDependencies`), but TypeScript's DTS step
+      # still resolves the `typeof import(...)` reference and needs the
+      # workspace package's `dist/index.d.ts` on disk. Since OKF only
+      # depends on memory-store through `devDependencies`, pnpm 10 does
+      # not serialize memory-store ahead of OKF and the two tsup DTS steps
+      # race; whichever one runs first crashes with TS2307 (`Cannot find
+      # module '@melandlabs/memory-store'`). The first pass uses pnpm's
+      # `...` suffix to build OKF's transitive dep closure (forcing
+      # memory-store ahead of OKF in the topological order and seeding
+      # every consumer's `dist/*.d.ts`), and the second pass rebuilds the
+      # full workspace serially against the already-seeded types.
+      - run: pnpm --filter @melandlabs/okf... build
       - run: pnpm -r --filter './packages/**' build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
