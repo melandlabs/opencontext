@@ -1,5 +1,14 @@
 # @melandlabs/shared
 
+## 0.3.5
+
+### Patch Changes
+
+- Backfill fields that consumers (e.g. alloomi `apps/web`) were already reading from the local monorepo but that the published `0.3.x` line was missing:
+  - `MessageMetadata.taskIntegrationRecovery` — `{ type: "task_execution", taskId, executionId, platform }`. Used by the chat UI to mark continuation messages spawned by a post-authorization recovery run.
+  - `CustomUIDataTypes["meetingAsset"]` and `["meetingAnalysisFailure"]` — meeting-recording render shape and the failure counterpart emitted when the recording cannot be analyzed.
+  - `Attachment.sha256` — content-addressable identifier (hex-encoded SHA-256) so the same document delivered twice is recognised as one.
+
 ## 0.3.4
 
 ### Minor Changes
