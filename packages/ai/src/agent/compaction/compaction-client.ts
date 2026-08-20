@@ -58,7 +58,7 @@ function normalizeCompactionRole(role: string): "user" | "assistant" | "system" 
  * @returns CompactionResponse | null - Summary result or null on failure
  */
 export async function triggerCompaction(options: CompactionOptions): Promise<CompactionResponse | null> {
-	const { messages, level, platform, authToken } = options;
+	const { messages, level, authToken } = options;
 
 	if (!messages || messages.length === 0) {
 		return null;

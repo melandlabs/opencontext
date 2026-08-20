@@ -1,5 +1,11 @@
 # @melandlabs/search
 
+## 0.3.1
+
+### Patch Changes
+
+- Add an optional `signal?: AbortSignal` fourth argument to `search()` so callers can cancel an in-flight Brave request (e.g. when the originating `NextRequest` aborts). Forwards the signal to the underlying `fetch`.
+
 ## 0.3.0
 
 ### Minor Changes

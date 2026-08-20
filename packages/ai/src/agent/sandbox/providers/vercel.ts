@@ -168,7 +168,7 @@ export class VercelProvider extends BaseSandboxProvider {
 
 	async exec(options: SandboxExecOptions): Promise<SandboxExecResult> {
 		const startTime = Date.now();
-		const { command, args = [], cwd, env, timeout, userId } = options;
+		const { command, args = [], userId } = options;
 
 		try {
 			const sandbox = await this.getSandbox(userId);
@@ -176,8 +176,8 @@ export class VercelProvider extends BaseSandboxProvider {
 			const result = await sandbox.runCommand({
 				cmd: command,
 				args,
-				cwd: undefined,
-				env: env,
+				cwd: options.cwd,
+				env: options.env,
 			});
 
 			return {

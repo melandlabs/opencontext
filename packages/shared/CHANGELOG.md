@@ -1,5 +1,12 @@
 # @melandlabs/shared
 
+## 0.3.4
+
+### Minor Changes
+
+- Add `workspaceArtifactManifestSchema`, `messageWorkspaceSchema`, and the `workspace` field on `messageMetadataSchema` so consumers can attach a per-message workspace manifest (session or execution scope) without a separate side-channel. Also export the inferred `WorkspaceArtifactManifest` and `MessageWorkspace` types.
+- Restore the `./ref`, `./soul`, and `./utils` subpath exports so apps can import e.g. `@melandlabs/shared/ref` directly (previously only available on the 0.3.x line before 0.3.3).
+
 ## 0.3.0
 
 ### Minor Changes

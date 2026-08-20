@@ -3,11 +3,36 @@ import { z } from "zod";
 
 export type DataPart = { type: "append-message"; message: string };
 
+export const workspaceArtifactManifestSchema = z.object({
+	version: z.literal(1),
+	files: z.array(
+		z.object({
+			path: z.string().min(1),
+			name: z.string().min(1),
+			type: z.string().min(1),
+			snapshotPath: z.string().min(1).optional(),
+		}),
+	),
+});
+
+export const messageWorkspaceSchema = z.discriminatedUnion("scope", [
+	z.object({
+		scope: z.literal("session"),
+		artifacts: workspaceArtifactManifestSchema,
+	}),
+	z.object({
+		scope: z.literal("execution"),
+		executionId: z.string().min(1),
+		artifacts: workspaceArtifactManifestSchema,
+	}),
+]);
+
 export const messageMetadataSchema = z.object({
 	createdAt: z.string().optional(),
 	disableAction: z.boolean().optional(),
 	executionKey: z.string().optional(),
 	executionId: z.string().optional(),
+	workspace: messageWorkspaceSchema.optional(),
 	executionAnchor: z.enum(["user", "assistant"]).optional(),
 	executionSource: z.string().optional(),
 	executionSequence: z.number().int().positive().optional(),
@@ -97,6 +122,8 @@ export const messageMetadataSchema = z.object({
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
+export type WorkspaceArtifactManifest = z.infer<typeof workspaceArtifactManifestSchema>;
+export type MessageWorkspace = z.infer<typeof messageWorkspaceSchema>;
 
 export type CustomUIDataTypes = {
 	appendMessage: string;

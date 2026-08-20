@@ -2,6 +2,7 @@ export * from "./client";
 export * from "./embedding";
 export * from "./extractor";
 export * from "./forgetting";
+export * from "./grouping";
 export * from "./manager";
 export * from "./memory-graph-evolution";
 export * from "./memory-graph-lifecycle";

@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/shared",
-	"version": "0.3.0",
+	"version": "0.3.4",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -11,7 +11,10 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": "./dist/index.js",
-		"./errors": "./dist/errors.js"
+		"./errors": "./dist/errors.js",
+		"./ref": "./dist/ref.js",
+		"./soul": "./dist/soul.js",
+		"./utils": "./dist/utils.js"
 	},
 	"repository": {
 		"type": "git",

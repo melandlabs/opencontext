@@ -50,8 +50,14 @@ function getApiKey(): string {
  * @param query - Search query string
  * @param type - Search type: "web" (default) or "news"
  * @param count - Number of results to return (default: 10, max: 20)
+ * @param signal - Optional cancellation signal to abort the underlying fetch
  */
-export async function search(query: string, type: SearchType = "web", count = 10): Promise<SearchResult[]> {
+export async function search(
+	query: string,
+	type: SearchType = "web",
+	count = 10,
+	signal?: AbortSignal,
+): Promise<SearchResult[]> {
 	const apiKey = getApiKey();
 	const safeCount = Math.min(count, 20);
 	const baseUrl = type === "news" ? BRAVE_NEWS_API_URL : BRAVE_SEARCH_API_URL;
@@ -64,6 +70,7 @@ export async function search(query: string, type: SearchType = "web", count = 10
 			Accept: "application/json",
 			"X-Subscription-Token": apiKey,
 		},
+		signal,
 	});
 
 	if (!response.ok) {
