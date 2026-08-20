@@ -191,14 +191,6 @@ function hasCommandFingerprintConflict(
 	);
 }
 
-function ownerScope(userId: string, input: { workspaceId?: string; tenantId?: string }): OwnerScope {
-	return {
-		userId,
-		workspaceId: input.workspaceId,
-		tenantId: input.tenantId,
-	};
-}
-
 function correctedSummaryId(scope: OwnerScope, commandId: string): string {
 	return `memory-graph-correction:${ownerScopeKey(scope)}:${encodeURIComponent(commandId)}`;
 }
