@@ -5,7 +5,7 @@
  * functions below are inverses — modulo the noted lossy round-trip
  * (`status: deprecated → archivedAt = now`).
  *
- * Mapping reference (see `docs/okf.md` for the full table):
+ * Mapping reference (see `../docs/okf.md` for the full table):
  *
  *   type           → factType           (Reference/Concept → world,
  *                                       Experience/Episode → experience,
