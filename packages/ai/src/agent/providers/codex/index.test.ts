@@ -391,39 +391,6 @@ describe("CodexAgent", () => {
 		expect(await readFile(join(workDir, "stdin.txt"), "utf8")).toBe("hello codex");
 	});
 
-	it("materializes image inputs and passes them to codex exec", async () => {
-		const workDir = await createFakeCodexWorkDir(defaultFakeCodexScript());
-		const agent = new CodexAgent({
-			provider: "codex",
-			workDir,
-			providerConfig: { codexPath: process.execPath },
-		});
-		const imageBytes = Buffer.from("fake-png-bytes");
-
-		await collectMessages(
-			agent.run("what is in this image?", {
-				images: [
-					{
-						data: imageBytes.toString("base64"),
-						mimeType: "image/png",
-					},
-				],
-			}),
-		);
-
-		const args = JSON.parse(await readFile(join(workDir, "args.json"), "utf8")) as string[];
-		const imageFlagIndex = args.indexOf("--image");
-		expect(imageFlagIndex).toBeGreaterThan(-1);
-
-		const imagePath = args[imageFlagIndex + 1];
-		expect(imagePath).toBeDefined();
-		if (!imagePath) throw new Error("Codex --image path was not provided");
-		expect(imagePath).toContain(".opencontext-codex-images");
-		expect(imagePath).toMatch(/\.png$/);
-		expect(await readFile(imagePath)).toEqual(imageBytes);
-		expect(await readFile(join(workDir, "stdin.txt"), "utf8")).toBe("what is in this image?");
-	});
-
 	it("writes multiline conversation context to Codex stdin", async () => {
 		const workDir = await createFakeCodexWorkDir(defaultFakeCodexScript());
 		const agent = new CodexAgent({

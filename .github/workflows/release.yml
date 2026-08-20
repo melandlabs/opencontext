@@ -54,8 +54,15 @@ jobs:
       # can be built in parallel with `packages/indexeddb` (which depends on
       # it) and the consumer's tsup fails to resolve the workspace import.
       # CI's `pnpm -r build` works because there's only one implicit filter
-      # and pnpm sorts by the dependency graph.
-      - run: pnpm -r --filter './packages/**' build
+      # and pnpm sorts by the dependency graph, but pnpm 10 still launches
+      # topological leaves concurrently — `packages/okf` and
+      # `packages/memory-store` are both leaves (OKF imports memory-store
+      # through an optional peerDep, so pnpm does not know it must come
+      # first), and OKF's tsup reaches the DTS step before memory-store has
+      # written its `dist/index.d.ts`, failing with TS2307. `--workspace-
+      # concurrency=1` forces a serial build so each package's d.ts is on
+      # disk before any consumer starts.
+      - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
       # avoids changesets trying to push a tag (we let the version PR do
