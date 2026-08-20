@@ -71,7 +71,15 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r build
+      # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
+      # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
+      # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
+      # tsup child-worker heap OOMs on DTS generation. Linux passes
+      # comfortably without it.
+      - name: Build
+        run: pnpm -r build
+        env:
+          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
 
   test:
@@ -95,7 +103,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # examples/ smoke-tests import @melandlabs/* packages and need dist/
       # artifacts to be present before `pnpm -r test` runs.
-      - run: pnpm -r build
+      # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
+      # the default worker heap; see the matching note in the typecheck
+      # job above.
+      - name: Build
+        run: pnpm -r build
+        env:
+          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
 
   build:
