@@ -113,6 +113,8 @@ export type GroupByType = "none" | "day" | "week" | "month";
 export interface RawMessageQuery {
 	userId?: string;
 	platform?: string;
+	/** Optional connector allowlist applied in addition to `platform`. */
+	platforms?: string[];
 	botId?: string;
 	channel?: string;
 	person?: string;

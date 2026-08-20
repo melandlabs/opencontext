@@ -1,5 +1,11 @@
 # @melandlabs/indexeddb
 
+## 0.5.7
+
+### Patch Changes
+
+- Add the optional `platforms?: string[]` field to `RawMessageQuery`. Acts as an additional connector allowlist on top of the singular `platform`. Consumers that want the SQL clause `platform IN (?, ?, …)` build it from this list directly.
+
 ## 0.5.6
 
 ### Patch Changes
