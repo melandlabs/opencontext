@@ -111,6 +111,7 @@ export {
 	getVectorStore,
 	addDocumentToVectorStore,
 	searchVectorStore,
+	searchHybridVectorStore,
 	deleteDocumentFromVectorStore,
 	getVectorStoreStats,
 	configureVectorService,
@@ -127,6 +128,10 @@ export {
 	getSQLiteVecStore,
 	resetSQLiteVecStore,
 	ChromaVectorStore,
+	HybridSearchAdapter,
+	fuseHybridResults,
+	LanceDBStore,
+	MilvusStore,
 } from "@melandlabs/rag";
 
 export type {
@@ -140,6 +145,19 @@ export type {
 	VectorSearchResult,
 	DocumentChunk,
 	ChromaVectorStoreOptions,
+	IHybridVectorStore,
+	HybridSearchFilter,
+	HybridSearchQuery,
+	HybridFusionStrategy,
+	HybridRetrievalConfig,
+	VectorStoreBackend,
+	VectorServiceConfig,
+	HybridFusionInput,
+	HybridSearchAdapterOptions,
+	LexicalSearchProvider,
+	LanceDBFtsOptions,
+	LanceDBStoreOptions,
+	MilvusStoreOptions,
 } from "@melandlabs/rag";
 
 // ─── 3b. Cloud / local embedding provider abstraction ─────────────────────

@@ -24,12 +24,42 @@ export {
 	getVectorStore,
 	addDocumentToVectorStore,
 	searchVectorStore,
+	searchHybridVectorStore,
 	deleteDocumentFromVectorStore,
 	getVectorStoreStats,
 	configureVectorService,
+	isHybridVectorStore,
 	type IVectorStore,
+	type IHybridVectorStore,
 	type SearchResult,
+	type VectorSearchResult,
+	type DocumentChunk,
+	type HybridSearchFilter,
+	type HybridSearchQuery,
+	type HybridFusionStrategy,
+	type VectorStoreBackend,
+	type HybridRetrievalConfig,
+	type CustomVectorServiceConfig,
+	type LanceDBVectorServiceConfig,
+	type MilvusVectorServiceConfig,
+	type VectorServiceConfig,
 } from "./vector-service";
+
+export {
+	HybridSearchAdapter,
+	fuseHybridResults,
+	type HybridFusionInput,
+	type HybridSearchAdapterOptions,
+	type LexicalSearchProvider,
+} from "./hybrid-search";
+
+export {
+	LanceDBStore,
+	type LanceDBFtsOptions,
+	type LanceDBStoreOptions,
+} from "./lancedb-store";
+
+export { MilvusStore, type MilvusStoreOptions } from "./milvus-store";
 
 export { UniversalEmbeddings } from "./universal-embeddings";
 
@@ -51,8 +81,6 @@ export {
 	SQLiteVecStore,
 	getSQLiteVecStore,
 	resetSQLiteVecStore,
-	type VectorSearchResult,
-	type DocumentChunk,
 } from "./sqlite-vec-store";
 
 export {
