@@ -386,6 +386,8 @@ export interface AgentRuntimeRecovery {
 	 * coordinator verified that every canonical instruction remains retryable.
 	 */
 	instructionSettlements: readonly AgentRuntimeInstructionSettlement[];
+	/** Canonical instructions left retryable by the durable recovery claim. */
+	replayableInstructionIds: readonly string[];
 	/**
 	 * Called only after Claude confirms that the expected provider session was
 	 * resumed and any settlement-aware outbox replay has finished. The host may
@@ -396,6 +398,8 @@ export interface AgentRuntimeRecovery {
 		runtimeSessionId: string;
 		providerSessionId: string;
 		runEpoch: number;
+		/** True when registration actually replayed at least one outbox instruction. */
+		replayedInstructions?: boolean;
 		continueGoal: () => Promise<AgentRuntimeRecoveryContinuationResult>;
 		/**
 		 * Evaluates durable evidence after provider loss without producing another
@@ -668,6 +672,14 @@ export interface AgentTaskExecutionControl {
 export interface AgentOptions {
 	/** Session ID for continuing conversations */
 	sessionId?: string;
+	/**
+	 * Trusted Goal Runtime attachment selected by the host.
+	 *
+	 * `undefined` preserves the legacy behavior of using `sessionId`, a string
+	 * pins a different Runtime Session, and `null` deliberately runs an
+	 * ordinary chat turn without attaching it to a paused Goal.
+	 */
+	goalRuntimeSessionId?: string | null;
 	/** Trace id for cross-hop first-token (TTFT) latency instrumentation. */
 	traceId?: string;
 	/**

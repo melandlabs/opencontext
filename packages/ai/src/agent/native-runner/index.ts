@@ -117,6 +117,8 @@ export interface NativeAgentRunnerContext {
 	 * select an arbitrary provider session to resume.
 	 */
 	runtimeRecovery?: AgentOptions["runtimeRecovery"];
+	/** Host-only Goal Runtime attachment. Public request JSON cannot set it. */
+	goalRuntimeSessionId?: string | null;
 }
 
 export type NativeAgentMemoryContextStatus = "applied" | "baseline" | "no-op" | "failed";
@@ -359,6 +361,8 @@ function buildAgentOptions(
 ): AgentOptions {
 	return {
 		sessionId: body.sessionId,
+		goalRuntimeSessionId:
+			context.goalRuntimeSessionId === undefined ? body.sessionId : context.goalRuntimeSessionId,
 		session: context.session,
 		authToken: body.authToken,
 		conversation: body.conversation,

@@ -1,5 +1,43 @@
 # @melandlabs/ai
 
+## 0.8.0
+
+### Minor Changes
+
+- Port Goal Runtime agent symbols from the openloomi fork into `@melandlabs/ai`:
+
+  - Add `GOAL_STEP_COMPLETION_MARKER_OPEN`, `goalStepCompletionMarker`, and
+    `stripGoalStepCompletionMarkers` exports in `runtime-instructions/constants.ts`
+    so the formatter can emit and strip the per-step completion marker used by
+    simplified Goals.
+  - Add `"agent_report"` to `GoalCriterionVerificationSchema` so runtime
+    instructions can declare agent-report verification, and widen
+    `RuntimeProviderSchema` from `"claude"` to `"claude" | "codex"` to match
+    the runtime provider surfaces already used in `native-agent/`.
+  - Add `replayableInstructionIds: readonly string[]` and the optional
+    `replayedInstructions` flag on `AgentRuntimeRecovery` so the host can be
+    notified when an outbox replay actually occurred during recovery.
+  - Add the tri-state `goalRuntimeSessionId?: string | null` on `AgentOptions`
+    and `NativeAgentRunnerContext`, plus the `buildAgentOptions` bridge that
+    copies it through (defaulting to `body.sessionId` when undefined and to
+    an explicit `null` when the host wants an un-attached chat turn).
+  - Teach `formatter.ts` to render the new `agent_report` verification case
+    and emit the step-completion protocol block whenever a required
+    `agent_report` criterion is present.
+
+  The step-completion marker uses the prefix `OPENCONTEXT_STEP_COMPLETE:`
+  (previously `OPENLOOMI_STEP_COMPLETE:` in the openloomi fork). In-flight
+  Goals authored against the old prefix will no longer be auto-stripped —
+  those targets should be drained or retired before upgrade.
+
+  All changes are additive (new optional fields, a new enum member, a new
+  schema case). No existing public API is removed or renamed.
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/memory-consolidation@0.5.2
+
 ## 0.7.1
 
 ### Patch Changes

@@ -8,24 +8,12 @@
 	"bin": {
 		"opencontext": "./dist/cli/opencontext.js"
 	},
-	"files": [
-		"dist",
-		"README.md"
-	],
+	"files": ["dist", "README.md"],
 	"publishConfig": {
 		"access": "public"
 	},
 	"license": "Apache-2.0",
-	"keywords": [
-		"opencontext",
-		"melandlabs",
-		"memory",
-		"rag",
-		"agent",
-		"temporal-graph",
-		"mcp",
-		"llm"
-	],
+	"keywords": ["opencontext", "melandlabs", "memory", "rag", "agent", "temporal-graph", "mcp", "llm"],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/melandlabs/opencontext.git",

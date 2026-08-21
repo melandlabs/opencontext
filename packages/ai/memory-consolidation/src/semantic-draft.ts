@@ -676,3 +676,26 @@ export async function invokeSemanticMemoryDraftSummarizerProviderBatch(
 		reasonCodes: [...new Set(results.flatMap((result) => result.reasonCodes))],
 	};
 }
+
+export function defaultSummarizeMemoryCluster(
+	cluster: MemoryConsolidationPreservedClusterReport,
+	records: MemoryEvidenceRecord[],
+): SemanticMemoryDraft {
+	const sources = records.filter((record) => cluster.recordIds.includes(record.id)).slice(0, 5);
+	const content = sources
+		.map((record) => record.text)
+		.filter(Boolean)
+		.join(" ")
+		.trim();
+
+	return {
+		type: "fact",
+		content: content || `Cluster ${cluster.clusterKey}`,
+		sourceRecordIds: sources.map((record) => record.id),
+		confidence: Math.min(1, cluster.score),
+		metadata: {
+			clusterKey: cluster.clusterKey,
+			competitionKey: cluster.competitionKey,
+		},
+	};
+}

@@ -1,5 +1,15 @@
 # @melandlabs/memory-store
 
+## 1.1.5
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+  - @melandlabs/memory-consolidation@0.5.2
+  - @melandlabs/ai@0.8.0
+  - @melandlabs/okf@0.2.0
+
 ## 1.1.4
 
 ### Patch Changes
