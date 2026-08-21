@@ -69,12 +69,11 @@ jobs:
       # memory-store ahead of OKF in the topological order and seeding
       # every consumer's `dist/*.d.ts`), and the second pass rebuilds the
       # full workspace serially against the already-seeded types.
-      # `--workspace-concurrency=1` on the second pass guarantees
-      # memory-store finishes its DTS before OKF's DTS kicks off, since
-      # the parallel rebuild otherwise races even though the first pass
-      # already produced both packages' `dist/`. Matches the pattern in
-      # ci.yml.
-      - run: pnpm --filter @melandlabs/okf... build
+      # `--workspace-concurrency=1` on BOTH passes guarantees memory-store
+      # finishes its DTS before OKF's DTS kicks off, since the parallel
+      # rebuild otherwise races even though the first pass already
+      # produced both packages' `dist/`. Matches the pattern in ci.yml.
+      - run: pnpm --filter @melandlabs/okf... --workspace-concurrency=1 build
       - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
