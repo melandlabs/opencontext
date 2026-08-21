@@ -77,7 +77,19 @@ jobs:
       # tsup child-worker heap OOMs on DTS generation. Linux passes
       # comfortably without it.
       - name: Build
-        run: pnpm -r build
+        # OKF imports `@melandlabs/memory-store` through `devDependencies`
+        # only (runtime cycle is broken via a lazy import), so pnpm 10 does
+        # not serialize memory-store ahead of OKF and the two tsup DTS steps
+        # race: whichever one resolves `typeof import('@melandlabs/memory-store')`
+        # first crashes with TS2307. The first pass uses pnpm's `...` suffix
+        # to build OKF's transitive dep closure (forcing memory-store ahead of
+        # OKF in the topological order and seeding every consumer's
+        # `dist/*.d.ts`), and the second pass rebuilds the full workspace
+        # serially against the already-seeded types. Matches the pattern in
+        # release.yml.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
@@ -107,7 +119,19 @@ jobs:
       # the default worker heap; see the matching note in the typecheck
       # job above.
       - name: Build
-        run: pnpm -r build
+        # OKF imports `@melandlabs/memory-store` through `devDependencies`
+        # only (runtime cycle is broken via a lazy import), so pnpm 10 does
+        # not serialize memory-store ahead of OKF and the two tsup DTS steps
+        # race: whichever one resolves `typeof import('@melandlabs/memory-store')`
+        # first crashes with TS2307. The first pass uses pnpm's `...` suffix
+        # to build OKF's transitive dep closure (forcing memory-store ahead of
+        # OKF in the topological order and seeding every consumer's
+        # `dist/*.d.ts`), and the second pass rebuilds the full workspace
+        # serially against the already-seeded types. Matches the pattern in
+        # release.yml.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
