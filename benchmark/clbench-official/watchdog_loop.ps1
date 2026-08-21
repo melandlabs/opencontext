@@ -1,10 +1,10 @@
-# Outer loop - respawns watchdog.ps1 every ~45 minutes so it survives sandbox kill.
+﻿# Outer loop - respawns watchdog.ps1 every ~45 minutes so it survives sandbox kill.
 # Logs to watchdog_loop.log.
 
 $logFile = 'D:\opencontext\benchmark\clbench-official\watchdog_loop.log'
 $watchdog = 'D:\opencontext\benchmark\clbench-official\watchdog.ps1'
-$inferOut = 'D:\opencontext\benchmark\clbench-official\outputs\openloomi-cl.jsonl'
-$gradedOut = 'D:\opencontext\benchmark\clbench-official\outputs\openloomi-cl_graded.jsonl'
+$inferOut = 'D:\opencontext\benchmark\clbench-official\outputs\opencontext-cl.jsonl'
+$gradedOut = 'D:\opencontext\benchmark\clbench-official\outputs\opencontext-cl_graded.jsonl'
 $workDir = 'D:\opencontext\benchmark\clbench-official'
 
 function Log([string]$msg) {

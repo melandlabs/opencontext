@@ -1337,6 +1337,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
 		const scanLimit = Math.max(limit, Math.floor(input.scanLimit ?? limit * 10));
 		const threshold = input.threshold ?? 0.7;
+		// sqlite-vec rejects knn queries with k > 4096 ("k value in knn query
+		// too large"), so the widening scan must stop there instead of
+		// doubling past the engine limit and throwing.
+		const vecKnnMaxK = 4096;
 		let currentScanLimit = scanLimit;
 		while (true) {
 			const rows = this.db
@@ -1375,7 +1379,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			if (results.length >= limit || rows.length < currentScanLimit) {
 				return results.slice(0, limit);
 			}
-			currentScanLimit *= 2;
+			if (currentScanLimit >= vecKnnMaxK) {
+				return results.slice(0, limit);
+			}
+			currentScanLimit = Math.min(currentScanLimit * 2, vecKnnMaxK);
 		}
 	}
 

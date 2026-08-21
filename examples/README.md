@@ -233,12 +233,12 @@ your own app you call these functions directly.
 ## Used in production
 
 The same primitives these demos exercise are wired into a real
-end-user product: **[OpenLoomi](https://github.com/melandlabs/openloomi)**,
+end-user product: **[OpenContext](https://github.com/melandlabs/opencontext)**,
 a cross-platform desktop "Attention Agent" that consumes the memory
 API, retrieval primitives, loop engine, integrations mesh, and voice
 packages to keep a short/mid/long-term _Holistic Context_ across
 Gmail / Slack / Linear / Notion, run scheduled morning briefs and
 end-of-day recaps, and surface on-demand assistance inside Telegram /
 WhatsApp / iMessage / QQ / Feishu. See the
-[OpenLoomi README](https://github.com/melandlabs/openloomi) for how
+[repo README](https://github.com/melandlabs/opencontext) for how
 the same calls shown above power a real product.

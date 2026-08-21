@@ -387,19 +387,146 @@ def run_personamem(args) -> None:
 
 SCRIPTMEM_DIR = BENCH_ROOT / "scriptmem" / "dataset" / "raw"
 SCRIPTMEM_FILES = ("angry.json", "enemy.json", "friends.json", "man_earth.json")
+SCRIPTMEM_SCRIPTS_DIR = BENCH_ROOT / "scriptmem" / "dataset" / "scripts"
+SCRIPTMEM_TITLES = {
+    "angry": "12 Angry Men",
+    "enemy": "An Enemy of the People",
+    "friends": "Friends",
+    "man_earth": "The Man from Earth",
+}
+
+# ScriptMem renames the six Friends leads in its (private) conversation text;
+# the mapping below was inferred from the public questions (e.g. "Bennett's
+# ex-wife" + Carol, "Dexter's mom" + Nora Bing, Roger dating "Fiona").
+FRIENDS_RENAME_FULL = [
+    ("Ross Geller", "Bennett Geller"),
+    ("Monica Geller", "Chloe Geller"),
+    ("Rachel Green", "Ariel Green"),
+    ("Chandler Bing", "Dexter Bing"),
+    ("Joey Tribbiani", "Ethan Tribbiani"),
+    ("Phoebe Buffay", "Fiona Buffay"),
+]
+FRIENDS_RENAME_FIRST = [
+    ("Ross", "Bennett"), ("Monica", "Chloe"), ("Rachel", "Ariel"),
+    ("Chandler", "Dexter"), ("Joey", "Ethan"), ("Phoebe", "Fiona"),
+    ("Rach", "Ariel"), ("Pheebs", "Fiona"),
+]
+# NBC air dates, Friends season 1 (verified against thetvdb/next-episode).
+FRIENDS_S1_AIR_DATES = [
+    "September 22, 1994", "September 29, 1994", "October 6, 1994",
+    "October 13, 1994", "October 20, 1994", "October 27, 1994",
+    "November 3, 1994", "November 10, 1994", "November 17, 1994",
+    "December 15, 1994", "January 5, 1995", "January 12, 1995",
+    "January 19, 1995", "February 9, 1995", "February 16, 1995",
+    "February 23, 1995", "February 23, 1995", "March 2, 1995",
+    "March 9, 1995", "April 6, 1995", "April 27, 1995",
+    "May 4, 1995", "May 11, 1995", "May 18, 1995",
+]
+
+
+def rename_friends(text: str) -> str:
+    for old, new in FRIENDS_RENAME_FULL:
+        text = text.replace(old, new)
+    for old, new in FRIENDS_RENAME_FIRST:
+        text = re.sub(rf"\b{re.escape(old)}\b", new, text)
+    return text
+
+
+def chunk_lines(text: str, size: int = 5000) -> list[str]:
+    chunks: list[str] = []
+    buf = ""
+    for line in text.splitlines():
+        if buf and len(buf) + len(line) + 1 > size:
+            chunks.append(buf)
+            buf = ""
+        buf = f"{buf}\n{line}" if buf else line
+    if buf:
+        chunks.append(buf)
+    return chunks
+
+
+def scriptmem_real_sessions(source: str) -> list[dict] | None:
+    """Build sessions from locally sourced script text (dataset/scripts/).
+    Returns None when no real text is available for the source."""
+    sdir = SCRIPTMEM_SCRIPTS_DIR
+    if source == "angry":
+        path = sdir / "twelve_angry_men_play.txt"
+        if not path.exists():
+            return None
+        text = path.read_text(encoding="utf-8")
+        return [{"key": f"part_{i + 1:02d}", "date": "Unknown", "text": c}
+                for i, c in enumerate(chunk_lines(text)) if c.strip()]
+    if source == "enemy":
+        path = sdir / "enemy_gutenberg2446.txt"
+        if not path.exists():
+            return None
+        text = path.read_text(encoding="utf-8")
+        start = re.search(r"\*\*\* START OF [^\n]*\n", text)
+        end = re.search(r"\*\*\* END OF [^\n]*", text)
+        if start:
+            text = text[start.end():]
+        if end:
+            text = text[: end.start()]
+        return [{"key": f"part_{i + 1:02d}", "date": "Unknown", "text": c}
+                for i, c in enumerate(chunk_lines(text)) if c.strip()]
+    if source == "man_earth":
+        path = sdir / "man_earth_transcript.txt"
+        if not path.exists():
+            return None
+        text = path.read_text(encoding="utf-8")
+        return [{"key": f"part_{i + 1:02d}", "date": "Unknown", "text": c}
+                for i, c in enumerate(chunk_lines(text)) if c.strip()]
+    if source == "friends":
+        path = sdir / "friends_season_01.json"
+        if not path.exists():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+        sessions: list[dict] = []
+        for ep in data["episodes"]:
+            m = re.search(r"_e(\d+)$", ep["episode_id"])
+            ep_num = int(m.group(1)) if m else 0
+            date = FRIENDS_S1_AIR_DATES[ep_num - 1] if 1 <= ep_num <= len(FRIENDS_S1_AIR_DATES) else "Unknown"
+            for sc in ep["scenes"]:
+                lines = []
+                for u in sc["utterances"]:
+                    t = (u.get("transcript") or "").strip()
+                    if not t:
+                        continue
+                    speakers = u.get("speakers") or []
+                    speaker = ", ".join(speakers) or "Narration"
+                    if any("scene" in s.lower() for s in speakers):
+                        speaker = "Narration"
+                    lines.append(f"{rename_friends(speaker)}: {rename_friends(t)}")
+                if lines:
+                    sessions.append({
+                        "key": sc["scene_id"],
+                        "date": date,
+                        "text": "\n".join(lines),
+                    })
+        return sessions
+    return None
+
+
+def scriptmem_session_ts(date: str) -> int:
+    try:
+        return int(datetime.strptime(date, "%B %d, %Y").replace(tzinfo=timezone.utc).timestamp() * 1000)
+    except ValueError:
+        return now_ms()
 
 
 def run_scriptmem(args) -> None:
     # Upstream ScriptMem does not publish the original script text; the
-    # `conversation` field only carries a synthetic schema example. We ingest
-    # whatever sessions exist (per-sample userId isolation) so the full
-    # Add/Search -> answer -> evaluate chain is exercised end to end.
+    # `conversation` field only carries a synthetic schema example. When real
+    # script text is available under dataset/scripts/ (see README), we ingest
+    # that instead, under a separate userId namespace so the placeholder
+    # memories never mix with real ones.
     records = []
     for filename in SCRIPTMEM_FILES:
         source = filename[:-5]
         data = json.loads((SCRIPTMEM_DIR / filename).read_text(encoding="utf-8"))
         if args.limit:
             data = data[: args.limit]
+        real_sessions = scriptmem_real_sessions(source)
         for sample_index, sample in enumerate(data):
             sample_id = sample.get("sample_id") or f"{source}-{sample_index}"
             user_id = f"aml_scriptmem_{source}_{sample_id}"
@@ -411,27 +538,40 @@ def run_scriptmem(args) -> None:
             if not any(k.startswith("session_") for k in conv) and isinstance(conv.get("format_example"), dict):
                 sessions_source = conv["format_example"]
             speakers = sessions_source.get("speakers") or []
+            if real_sessions is not None:
+                user_id += "_real"
+                speakers = [SCRIPTMEM_TITLES[source]]
             if not args.skip_ingest:
                 msgs = []
-                for key in sorted(sessions_source.keys()):
-                    if not key.startswith("session_") or key.endswith("_date_time"):
-                        continue
-                    turns = sessions_source.get(key) or []
-                    if not isinstance(turns, list) or not turns:
-                        continue
-                    date = sessions_source.get(f"{key}_date_time", "")
-                    body = "\n".join(
-                        f"{t.get('speaker') or 'Narration'}: {t.get('text', '')}" for t in turns
-                    )
-                    content = f"# {source} {sample_id} — {key}\n# Date: {date}\n\n{body}"
-                    msgs.append({
-                        "messageId": f"{user_id}__{key}",
-                        "platform": "benchmark", "botId": "aml-scriptmem",
-                        "timestamp": now_ms(), "content": content, "createdAt": now_ms(),
-                    })
+                if real_sessions is not None:
+                    for s in real_sessions:
+                        ts = scriptmem_session_ts(s["date"])
+                        content = f"# {SCRIPTMEM_TITLES[source]} — {s['key']}\n# Date: {s['date']}\n\n{s['text']}"
+                        msgs.append({
+                            "messageId": f"{user_id}__{s['key']}",
+                            "platform": "benchmark", "botId": "aml-scriptmem",
+                            "timestamp": ts, "content": content, "createdAt": now_ms(),
+                        })
+                else:
+                    for key in sorted(sessions_source.keys()):
+                        if not key.startswith("session_") or key.endswith("_date_time"):
+                            continue
+                        turns = sessions_source.get(key) or []
+                        if not isinstance(turns, list) or not turns:
+                            continue
+                        date = sessions_source.get(f"{key}_date_time", "")
+                        body = "\n".join(
+                            f"{t.get('speaker') or 'Narration'}: {t.get('text', '')}" for t in turns
+                        )
+                        content = f"# {source} {sample_id} — {key}\n# Date: {date}\n\n{body}"
+                        msgs.append({
+                            "messageId": f"{user_id}__{key}",
+                            "platform": "benchmark", "botId": "aml-scriptmem",
+                            "timestamp": now_ms(), "content": content, "createdAt": now_ms(),
+                        })
                 if msgs:
                     n = ingest(msgs, user_id)
-                    print(f"[scriptmem] ingested {n} sessions for {source}:{sample_id}")
+                    print(f"[scriptmem] ingested {n} sessions for {source}:{sample_id} ({'real text' if real_sessions is not None else 'placeholder'})")
             for i, qa in enumerate(sample.get("qa", [])):
                 if args.max_questions and i >= args.max_questions:
                     break

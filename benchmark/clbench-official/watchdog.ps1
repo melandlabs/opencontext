@@ -1,4 +1,4 @@
-# Watchdog v3 - monitors eval runs and restarts them if dead.
+﻿# Watchdog v3 - monitors eval runs and restarts them if dead.
 # Detects death by EITHER:
 #   - missing powershell process (CIM match)
 #   - file mtime older than threshold (stale file)
@@ -12,9 +12,9 @@ param(
 )
 
 $logFile = 'D:\opencontext\benchmark\clbench-official\monitor.log'
-$inferOut = 'D:\opencontext\benchmark\clbench-official\outputs\openloomi-cl.jsonl'
-$gradedOut = 'D:\opencontext\benchmark\clbench-official\outputs\openloomi-cl_graded.jsonl'
-$inferScript = 'D:\opencontext\benchmark\clbench-official\run_openloomi_eval.ps1'
+$inferOut = 'D:\opencontext\benchmark\clbench-official\outputs\opencontext-cl.jsonl'
+$gradedOut = 'D:\opencontext\benchmark\clbench-official\outputs\opencontext-cl_graded.jsonl'
+$inferScript = 'D:\opencontext\benchmark\clbench-official\run_opencontext_eval.ps1'
 $evalScript = 'D:\opencontext\benchmark\clbench-official\eval_only.ps1'
 $workDir = 'D:\opencontext\benchmark\clbench-official'
 
@@ -29,7 +29,7 @@ function Check-ScriptsRunning {
     $cmdLines = Get-CimInstance Win32_Process -Filter "Name = 'powershell.exe'" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty CommandLine
     $hasInfer = $false; $hasEval = $false
     foreach ($c in $cmdLines) {
-        if ($c -match 'run_openloomi_eval\.ps1') { $hasInfer = $true }
+        if ($c -match 'run_opencontext_eval\.ps1') { $hasInfer = $true }
         if ($c -match 'eval_only\.ps1') { $hasEval = $true }
     }
     return @{ Infer = $hasInfer; Eval = $hasEval }

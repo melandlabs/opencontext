@@ -1,7 +1,7 @@
-# smoke_external.ps1
+﻿# smoke_external.ps1
 # Smoke-test the official CL-bench pipeline with EXTERNAL models on the
-# OpenRouter API (NOT openloomi). Goal: produce a small baseline we can
-# compare against the openloomi agent run on the same N samples.
+# OpenRouter API (NOT opencontext). Goal: produce a small baseline we can
+# compare against the opencontext agent run on the same N samples.
 #
 # Workflow:
 #   1. Take the first N samples of CL-bench-Life.jsonl.
@@ -115,4 +115,4 @@ foreach ($r in $Results) {
   Write-Host ("  {0,-40}  {1}/{2}  ({3:P0})" -f $r.Model, $r.Pass, $r.Total, $r.Rate)
 }
 Write-Host ""
-Write-Host "openloomi baseline: see outputs/openloomi-cl_graded.jsonl (filtered to first $Samples samples)"
+Write-Host "opencontext baseline: see outputs/opencontext-cl_graded.jsonl (filtered to first $Samples samples)"
