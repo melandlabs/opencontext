@@ -19,6 +19,8 @@ import runpy
 import sys
 from pathlib import Path
 
+import httpx
+
 
 class _AsyncFileWrapper:
     """Adds the async context-manager protocol to a plain file object
@@ -54,11 +56,54 @@ def _patched_open(self, mode="r", *args, **kwargs):
     return fileobj
 
 
+# The pipelines do `response.json()["choices"][0]["message"]["content"].strip()`.
+# OpenRouter/upstream providers occasionally return `"content": null` on a 200
+# (observed with qwen/qwen3-14b); the vendored pipeline then crashes and the
+# whole run dies. Retry the request a couple of times, and if content is still
+# null coerce it to "" so the run completes (empty answers simply score 0).
+_original_post = httpx.AsyncClient.post
+
+
+def _content_of(payload):
+    try:
+        return payload["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return None
+
+
+async def _patched_post(self, url, *args, **kwargs):
+    response = await _original_post(self, url, *args, **kwargs)
+    if not str(url).rstrip("/").endswith("/chat/completions"):
+        return response
+    if response.status_code == 200 and _content_of(response.json()) is None:
+        for attempt in range(2):
+            print(f"[run_pipeline] null content from {url}, retry {attempt + 1}/2", file=sys.stderr)
+            response = await _original_post(self, url, *args, **kwargs)
+            if response.status_code != 200 or _content_of(response.json()) is not None:
+                break
+    original_json = response.json
+
+    def _json_coercing_null_content():
+        payload = original_json()
+        try:
+            message = payload["choices"][0]["message"]
+        except (KeyError, IndexError, TypeError):
+            return payload
+        if isinstance(message, dict) and message.get("content") is None:
+            print(f"[run_pipeline] null content persisted for {url}; using empty answer", file=sys.stderr)
+            message["content"] = ""
+        return payload
+
+    response.json = _json_coercing_null_content
+    return response
+
+
 def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     pipeline = sys.argv[1]
     Path.open = _patched_open
+    httpx.AsyncClient.post = _patched_post
     sys.argv = [pipeline] + sys.argv[2:]
     runpy.run_path(pipeline, run_name="__main__")
 

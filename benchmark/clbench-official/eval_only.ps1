@@ -1,21 +1,21 @@
-# eval_only.ps1
+﻿# eval_only.ps1
 # Run only eval.py on an existing infer output (skips infer entirely).
-# Designed to run in parallel with run_openloomi_eval.ps1 — it does not
-# touch openloomi, only OpenRouter.
+# Designed to run in parallel with run_opencontext_eval.ps1 — it does not
+# touch opencontext, only OpenRouter.
 #
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File eval_only.ps1
 #
 # Override:
-#   $env:INPUT_FILE  - default outputs/openloomi-cl.jsonl
-#   $env:OUTPUT_FILE - default outputs/openloomi-cl_graded.jsonl
+#   $env:INPUT_FILE  - default outputs/opencontext-cl.jsonl
+#   $env:OUTPUT_FILE - default outputs/opencontext-cl_graded.jsonl
 
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location -LiteralPath $ScriptDir
 
-$InputFile  = if ($env:INPUT_FILE)  { $env:INPUT_FILE }  else { "outputs/openloomi-cl.jsonl" }
-$OutputFile = if ($env:OUTPUT_FILE) { $env:OUTPUT_FILE } else { "outputs/openloomi-cl_graded.jsonl" }
+$InputFile  = if ($env:INPUT_FILE)  { $env:INPUT_FILE }  else { "outputs/opencontext-cl.jsonl" }
+$OutputFile = if ($env:OUTPUT_FILE) { $env:OUTPUT_FILE } else { "outputs/opencontext-cl_graded.jsonl" }
 $Workers    = if ($env:WORKERS)     { [int]$env:WORKERS } else { 1 }
 
 $QwenModel   = "qwen/qwen3.7-plus"

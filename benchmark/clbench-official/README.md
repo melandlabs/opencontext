@@ -1,9 +1,9 @@
-# clbench-official
+﻿# clbench-official
 
 This directory mirrors the official [Tencent-Hunyuan/CL-bench](https://github.com/Tencent-Hunyuan/CL-bench)
 evaluation pipeline (`infer.py` + `eval.py`) but with two tweaks:
 
-1. **Inference** is routed to your local **openloomi** server via its
+1. **Inference** is routed to your local **opencontext** server via its
    OpenAI-compatible proxy at
    `http://127.0.0.1:<port>/v1/chat/completions`
    (see `apps/web/app/api/ai/v1/chat/completions/route.ts`). The agent runtime
@@ -20,8 +20,8 @@ release.
 
 This directory ships two inference variants:
 
-- **openloomi** (original): `openloomi_proxy.py` + `run_openloomi_eval.ps1`,
-  described below. Output slug `openloomi-cl`.
+- **opencontext** (original): `opencontext_proxy.py` + `run_opencontext_eval.ps1`,
+  described below. Output slug `opencontext-cl`.
 - **opencontext** (new): `opencontext_proxy.py` + `run_opencontext_eval.ps1`,
   which ingests the context into the local opencontext memory-store daemon
   and answers from retrieved memories. Output slug `opencontext-cl`. See
@@ -34,8 +34,8 @@ This directory ships two inference variants:
 | `infer.py`                 | upstream Tencent-Hunyuan/CL-bench, untouched                             |
 | `eval.py`                  | upstream Tencent-Hunyuan/CL-bench, untouched                             |
 | `CL-bench-Life.jsonl`      | `tencent/CL-bench-Life` on Hugging Face (405 tasks)                      |
-| `openloomi_proxy.py`       | local: OpenAI-compat proxy → openloomi server                            |
-| `run_openloomi_eval.ps1`   | local: glues `infer.py` to openloomi and `eval.py` to OpenRouter qwen    |
+| `opencontext_proxy.py`       | local: OpenAI-compat proxy → opencontext server                            |
+| `run_opencontext_eval.ps1`   | local: glues `infer.py` to opencontext and `eval.py` to OpenRouter qwen    |
 | `opencontext_proxy.py`     | local: OpenAI-compat proxy → opencontext memory daemon                   |
 | `run_opencontext_eval.ps1` | local: opencontext variant of the pipeline (slug `opencontext-cl`)       |
 | `.env.example`             | local: `OPENROUTER_API_KEY=...` for the judge                            |
@@ -49,34 +49,34 @@ Copy-Item .env.example .env
 # edit .env to put your real OPENROUTER_API_KEY
 ```
 
-You also need an openloomi token. The default location the script reads from
-is `$env:USERPROFILE\.openloomi\token`; override with `$env:TOKEN_FILE` or
-`$env:OPENLOOMI_TOKEN`.
+You also need an opencontext token. The default location the script reads from
+is `$env:USERPROFILE\.opencontext\token`; override with `$env:TOKEN_FILE` or
+`$env:OPENCONTEXT_TOKEN`.
 
 ## Smoke test (5 samples)
 
 ```powershell
 $env:MAX_SAMPLES = 5
-powershell -ExecutionPolicy Bypass -File run_openloomi_eval.ps1
+powershell -ExecutionPolicy Bypass -File run_opencontext_eval.ps1
 ```
 
 ## Full run (405 samples)
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File run_openloomi_eval.ps1
+powershell -ExecutionPolicy Bypass -File run_opencontext_eval.ps1
 ```
 
 To resume after an interrupted run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File run_openloomi_eval.ps1    # resumes outputs automatically
+powershell -ExecutionPolicy Bypass -File run_opencontext_eval.ps1    # resumes outputs automatically
 ```
 
 To re-grade an existing inference output without re-running the agent:
 
 ```powershell
 $env:SKIP_INFER = 1
-powershell -ExecutionPolicy Bypass -File run_openloomi_eval.ps1
+powershell -ExecutionPolicy Bypass -File run_opencontext_eval.ps1
 ```
 
 ## OpenContext variant
@@ -95,7 +95,7 @@ node packages/opencontext/dist/cli/opencontext.js http --embedding-provider loca
 # or: opencontext http   → serves http://127.0.0.1:7421, no auth
 ```
 
-Then run — no openloomi token needed:
+Then run — no opencontext token needed:
 
 ```powershell
 # Smoke test (5 samples)
@@ -124,9 +124,9 @@ Outputs land in `outputs/opencontext-cl.jsonl` and
 
 | Env var           | Default                                | Purpose                                                  |
 | ----------------- | -------------------------------------- | -------------------------------------------------------- |
-| `PORT`            | `3515`                                 | openloomi port                                           |
-| `OPENLOOMI_TOKEN` | (read from file)                       | Bearer token for the OpenAI-compat proxy                 |
-| `TOKEN_FILE`      | `$env:USERPROFILE\.openloomi\token`    | Fallback location for the openloomi token                |
+| `PORT`            | `3515`                                 | opencontext port                                           |
+| `OPENCONTEXT_TOKEN` | (read from file)                       | Bearer token for the OpenAI-compat proxy                 |
+| `TOKEN_FILE`      | `$env:USERPROFILE\.opencontext\token`    | Fallback location for the opencontext token                |
 | `QWEN_MODEL`      | `qwen/qwen3.7-plus`                    | Judge model name (passed to `--judge-model`)             |
 | `QWEN_BASE_URL`   | `https://openrouter.ai/api/v1`         | Judge API base URL                                       |
 | `OPENROUTER_KEY`  | (read from `.env`)                     | Judge API key                                            |
@@ -150,6 +150,6 @@ Outputs land in `outputs/opencontext-cl.jsonl` and
 | Per-category statistics               | yes                              | yes (upstream)                      |
 | Thinking-trace exclusion              | not enforced                     | implicit (judge scores `model_output` only) |
 
-The new numbers in `outputs/openloomi-cl_graded.jsonl` (or
+The new numbers in `outputs/opencontext-cl_graded.jsonl` (or
 `outputs/opencontext-cl_graded.jsonl` for the opencontext variant) are directly
 comparable to the Tencent CL-bench-Life leaderboard.

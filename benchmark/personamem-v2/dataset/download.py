@@ -46,12 +46,19 @@ def download(url: str, dest: Path) -> int:
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
     print(f"  downloading: {url}")
+    expected = None
     with urllib.request.urlopen(url) as resp, tmp.open("wb") as f:
+        if resp.headers.get("Content-Length"):
+            expected = int(resp.headers["Content-Length"])
         while True:
             chunk = resp.read(1 << 20)
             if not chunk:
                 break
             f.write(chunk)
+    actual = tmp.stat().st_size
+    if expected is not None and actual != expected:
+        tmp.unlink()
+        raise IOError(f"truncated download: {url} ({actual}/{expected} bytes) — re-run to resume")
     tmp.replace(dest)
     return dest.stat().st_size
 

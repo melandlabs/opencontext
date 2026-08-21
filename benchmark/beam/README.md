@@ -4,7 +4,7 @@ BEAM (Benchmarking EffecTive Agent Memory, Tavakoli et al., ICLR 2026,
 arXiv:2510.27246) runner for the OpenContext memory system.
 
 BEAM is the post-2025 standard for long-term LLM-agent memory
-benchmarks. Its 10 categories map **1:1 onto OpenLoomi product claims** —
+benchmarks. Its 10 categories map **1:1 onto OpenContext product claims** —
 this runner exists to make that case airtight for the investor deck.
 
 ## Why BEAM (vs LoCoMo / LongMemEval / CLBench)
@@ -19,13 +19,13 @@ this runner exists to make that case airtight for the investor deck.
 BEAM is also the most-cited agent-memory benchmark of 2025–2026.
 SOTA numbers are tracked at the BEAM leaderboard (see paper §6).
 
-## Alloomi × BEAM claim mapping
+## OpenContext × BEAM claim mapping
 
-Each BEAM category is wired to a specific Alloomi product claim in
-`src/scorer.ts → ALLOOMI_CLAIM_MAP`. The CLI prints this mapping in the
+Each BEAM category is wired to a specific OpenContext product claim in
+`src/scorer.ts → OPENCONTEXT_CLAIM_MAP`. The CLI prints this mapping in the
 per-category summary table.
 
-| BEAM category                | What it tests                           | Alloomi claim                                               |
+| BEAM category                | What it tests                           | OpenContext claim                                               |
 | ---------------------------- | --------------------------------------- | ----------------------------------------------------------- |
 | **abstention**               | "Knows when NOT to answer"              | **Active forgetting** — the system knows when NOT to answer |
 | **contradiction_resolution** | Reconciles conflicting prior statements | **Cross-session attribution**                               |
@@ -38,7 +38,7 @@ per-category summary table.
 | **summarization**            | Compresses long contexts                | Long-context compression                                    |
 | **temporal_reasoning**       | Dates, durations, ordering              | Time-aware retrieval                                        |
 
-For deck / blog demos, run the **Alloomi highlight subset** with
+For deck / blog demos, run the **OpenContext highlight subset** with
 `--type knowledge_update,preference_following,contradiction_resolution,multi_session_reasoning`.
 That covers 4 of the 5 headline claims in one shot.
 
@@ -57,7 +57,7 @@ benchmark/beam/
 │   ├── dataset.ts              # JSON loader + scale/type/conversation filtering
 │   ├── prompts.ts              # BEAM_NUGGET_JUDGE_PROMPT (rubric + 1-shot)
 │   ├── metrics.ts              # evaluateNuggetJudge + calculateNuggetCategoryMetrics
-│   ├── scorer.ts               # 10-type map + ALLOOMI_CLAIM_MAP
+│   ├── scorer.ts               # 10-type map + OPENCONTEXT_CLAIM_MAP
 │   ├── opencontext-client.ts   # VERBATIM copy of longmemeval/src/opencontext-client.ts
 │   ├── evaluator.ts            # BeamEvaluator — chunked ingest (20 turns) + nugget judge
 │   └── index.ts                # CLI (--scale / --type / --conversations / --questions-per-conv)
@@ -96,7 +96,7 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/beam_1m.json \
   --output results/beam_1m_$(date +%Y%m%d_%H%M%S).json
 
-# Alloomi claim subset, 5 conversations (good for blog demo)
+# OpenContext claim subset, 5 conversations (good for blog demo)
 pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/beam_1m.json \
   --type knowledge_update,preference_following,contradiction_resolution,multi_session_reasoning \
@@ -134,9 +134,9 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
     "abstention_count": 38
   },
   "per_category": {
-    "abstention":          { "alloomi_claim": "Active forgetting…",  "nugget_mean": 0.81, … },
-    "knowledge_update":    { "alloomi_claim": "Active reinforcement…", … },
-    "preference_following":{ "alloomi_claim": "Knows you better…", … },
+    "abstention":          { "opencontext_claim": "Active forgetting…",  "nugget_mean": 0.81, … },
+    "knowledge_update":    { "opencontext_claim": "Active reinforcement…", … },
+    "preference_following":{ "opencontext_claim": "Knows you better…", … },
     …
   },
   "per_entry": [

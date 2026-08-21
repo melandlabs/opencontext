@@ -1,4 +1,4 @@
-$gradedPath = 'D:\opencontext\benchmark\clbench-official\outputs\openloomi-cl_graded.jsonl'
+﻿$gradedPath = 'D:\opencontext\benchmark\clbench-official\outputs\opencontext-cl_graded.jsonl'
 $lines = Get-Content $gradedPath
 
 $kw = @{

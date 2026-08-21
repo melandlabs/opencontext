@@ -6,7 +6,7 @@
  *     --dataset dataset/beam_1m.json \
  *     --output results/beam_1m_$(date +%Y%m%d_%H%M%S).json
  *
- * Or, to demo the Alloomi claim subset:
+ * Or, to demo the OpenContext claim subset:
  *   pnpm --filter @melandlabs/benchmark-beam benchmark -- \
  *     --dataset dataset/beam_1m.json \
  *     --type ku,pf,cr,mr --conversations 5
@@ -19,8 +19,8 @@ import { BeamEvaluator } from "./evaluator";
 import { type NuggetCategoryMetrics, calculateNuggetCategoryMetrics } from "./metrics";
 import { checkOpencontextHealth, getOpencontextBaseUrl } from "./opencontext-client";
 import {
-	ALLOOMI_CLAIM_MAP,
-	ALLOOMI_HIGHLIGHT_CATEGORIES,
+	OPENCONTEXT_CLAIM_MAP,
+	OPENCONTEXT_HIGHLIGHT_CATEGORIES,
 	QUESTION_TYPES,
 	QUESTION_TYPE_NAMES,
 } from "./scorer";
@@ -158,7 +158,7 @@ Examples:
   # Smoke test (sample_conversation.json ships with the repo)
   pnpm benchmark -- --dataset dataset/sample_conversation.json
 
-  # Alloomi claim subset, 5 conversations
+  # OpenContext claim subset, 5 conversations
   pnpm benchmark -- --dataset dataset/beam_1m.json \\
     --type knowledge_update,preference_following,contradiction_resolution,multi_session_reasoning \\
     --conversations 5
@@ -201,7 +201,7 @@ function printSummary(
 		if (!preds || preds.length === 0) continue;
 		const m: NuggetCategoryMetrics = calculateNuggetCategoryMetrics(preds);
 		console.log(`\n${category} (${QUESTION_TYPE_NAMES[category]}):`);
-		console.log(`  Alloomi claim: ${ALLOOMI_CLAIM_MAP[category]}`);
+		console.log(`  OpenContext claim: ${OPENCONTEXT_CLAIM_MAP[category]}`);
 		console.log(`  Count:         ${m.count}`);
 		console.log(`  Nugget Mean:   ${m.nugget_mean.toFixed(4)}`);
 		console.log(`  Pass Rate:     ${m.nugget_pass_rate.toFixed(4)} (${m.nugget_pass_count}/${m.count})`);
@@ -209,10 +209,10 @@ function printSummary(
 	}
 
 	console.log(`\n${"=".repeat(80)}`);
-	console.log("Alloomi Highlight Subset (--type ku,pf,cr,mr)");
+	console.log("OpenContext Highlight Subset (--type ku,pf,cr,mr)");
 	console.log("=".repeat(80));
 	const highlight: Prediction[] = [];
-	for (const c of ALLOOMI_HIGHLIGHT_CATEGORIES) {
+	for (const c of OPENCONTEXT_HIGHLIGHT_CATEGORIES) {
 		const preds = predictionsByCategory[c];
 		if (preds) highlight.push(...preds);
 	}
@@ -373,7 +373,7 @@ async function main() {
 			QUESTION_TYPES.filter((c) => predictionsByCategory[c].length > 0).map((c) => [
 				c,
 				{
-					alloomi_claim: ALLOOMI_CLAIM_MAP[c],
+					opencontext_claim: OPENCONTEXT_CLAIM_MAP[c],
 					...calculateNuggetCategoryMetrics(predictionsByCategory[c]),
 				},
 			]),

@@ -30,7 +30,7 @@ export interface LoadBeamOptions {
 	questionsPerConv?: number;
 	/**
 	 * Filter to specific question categories (e.g. ["knowledge_update",
-	 * "preference_following"] for the Alloomi claim subset).
+	 * "preference_following"] for the OpenContext claim subset).
 	 * Default: undefined (return all categories).
 	 */
 	types?: BeamQuestionCategory[];

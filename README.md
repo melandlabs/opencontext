@@ -15,7 +15,7 @@ host process or agents.
 [![License](https://img.shields.io/badge/License-Apache_2.0-F8D52A?logo=apache)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@melandlabs/opencontext.svg)](https://www.npmjs.com/package/@melandlabs/opencontext)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/xkJaJyWcsv)
-[![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/AlloomiAI)
+[![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/OpenContextAI)
 
 </div>
 
@@ -249,9 +249,9 @@ in [`docs/architecture.md`](./docs/architecture.md).
 
 ## Used in production
 
-- **[OpenLoomi](https://github.com/melandlabs/openloomi)** — a
-  cross-platform desktop "Attention Agent" built on top of OpenContext.
-  See the [OpenLoomi README](https://github.com/melandlabs/openloomi)
+- **[OpenContext](https://github.com/melandlabs/opencontext)** — a
+  cross-platform desktop "Attention Agent" built on top of this runtime.
+  See the [repo README](https://github.com/melandlabs/opencontext)
   for how the same primitives wire up into a real product.
 
 ## Documentation

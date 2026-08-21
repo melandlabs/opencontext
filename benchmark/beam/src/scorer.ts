@@ -3,7 +3,7 @@
  *
  * Each BEAM question category maps to:
  *   - a human-readable label (for the summary table),
- *   - the Alloomi product claim it validates (for the investor deck).
+ *   - the OpenContext product claim it validates (for the investor deck).
  */
 
 import type { BeamQuestionCategory } from "./types";
@@ -22,12 +22,12 @@ export const QUESTION_TYPE_NAMES: Record<BeamQuestionCategory, string> = {
 };
 
 /**
- * Mapping from BEAM category → the Alloomi product claim it directly tests.
+ * Mapping from BEAM category → the OpenContext product claim it directly tests.
  *
  * Used by the CLI summary to render the "BEAM-1M #1 / <claim>" framing.
  * If a claim is dropped, remove the entry here so we don't print a stale one.
  */
-export const ALLOOMI_CLAIM_MAP: Record<BeamQuestionCategory, string> = {
+export const OPENCONTEXT_CLAIM_MAP: Record<BeamQuestionCategory, string> = {
 	abstention: "Active forgetting (the system knows when NOT to answer)",
 	contradiction_resolution: "Cross-session attribution",
 	event_ordering: "Cross-session attribution",
@@ -42,9 +42,9 @@ export const ALLOOMI_CLAIM_MAP: Record<BeamQuestionCategory, string> = {
 
 /**
  * Convenience: the subset of categories most often used for blog/deck
- * demos, matching the 4 most public Alloomi claims.
+ * demos, matching the 4 most public OpenContext claims.
  */
-export const ALLOOMI_HIGHLIGHT_CATEGORIES: BeamQuestionCategory[] = [
+export const OPENCONTEXT_HIGHLIGHT_CATEGORIES: BeamQuestionCategory[] = [
 	"knowledge_update",
 	"preference_following",
 	"contradiction_resolution",

@@ -1,6 +1,6 @@
 /**
- * Memory contracts - types for OpenLoomi memory system.
- * Copied from @openloomi/ai/memory/contracts for standalone benchmark use.
+ * Memory contracts - types for the OpenContext memory system.
+ * Copied from @melandlabs/ai (memory/contracts) for standalone benchmark use.
  */
 
 export type MemoryTier = "short" | "mid" | "long";

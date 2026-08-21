@@ -2257,7 +2257,7 @@ const zhHans = {
 				suggestions: ["检查 API 配置", "请重试", "如果问题持续存在，请联系支持"],
 			},
 			// Shown when the built-in Claude runtime is not authenticated (e.g. `claude auth login`
-			// has never been run, or the session was cleared). Modelled after alloomi's
+			// has never been run, or the session was cleared). Modelled after opencontext's
 			// `authentication_error` policy entry, but explicitly lists two remediation paths.
 			runtimeNotLoggedIn: {
 				title: "Claude runtime 未登录",
