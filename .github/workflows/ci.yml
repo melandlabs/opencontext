@@ -82,12 +82,26 @@ jobs:
         # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
         # tsup child-worker heap OOMs on DTS generation. Linux passes
         # comfortably without it.
-        # Note: OKF ↔ memory-store form a workspace cycle, but both
-        # directions are now lazy-imported (`memory-store/src/{http,mcp}.ts`
-        # for `@melandlabs/okf/{http,mcp}`, `okf/src/cli.ts` for
-        # `@melandlabs/memory-store`), so `pnpm -r build` resolves the
-        # cycle without needing a pre-build step.
-        run: pnpm -r build
+        # OKF ↔ memory-store form a workspace cycle, but the OKF →
+        # memory-store direction is only a `devDependency` (the runtime
+        # cycle is broken via a lazy `await import(...)` inside
+        # `okf/src/cli.ts`). pnpm 10 therefore does not enforce a
+        # topological edge from memory-store to okf, so `pnpm -r build`
+        # starts the two tsup DTS steps in parallel and the OKF one
+        # races the memory-store one — whichever resolves
+        # `typeof import('@melandlabs/memory-store')` first crashes with
+        # TS2307 because the other hasn't written its `dist/index.d.ts`
+        # yet. Pure timing flake on a single `pnpm -r build` invocation.
+        #
+        # Two-pass build (mirrors release.yml's published-tarball build):
+        # the first pass uses pnpm's `...` suffix to build OKF's
+        # transitive dep closure (forcing memory-store ahead of OKF in
+        # the topo order and seeding every consumer's `dist/*.d.ts`),
+        # and the second pass rebuilds the full workspace against the
+        # already-seeded types.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
@@ -122,7 +136,13 @@ jobs:
         # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
         # the default worker heap; see the matching note in the typecheck
         # job above.
-        run: pnpm -r build
+        # OKF ↔ memory-store DTS race — see the typecheck job above for
+        # the full explanation. Two-pass build mirrors release.yml: seed
+        # OKF's transitive dep closure first, then rebuild the whole
+        # workspace against the seeded `dist/*.d.ts`.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
