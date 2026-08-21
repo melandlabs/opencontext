@@ -13,7 +13,6 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-F8D52A?logo=apache)](./LICENSE)
 [![npm version](https://img.shields.io/npm/v/@melandlabs/opencontext.svg)](https://www.npmjs.com/package/@melandlabs/opencontext)
 [![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/xkJaJyWcsv)
-[![X](https://img.shields.io/badge/X-Follow-000000?logo=x&logoColor=white)](https://x.com/OpenContextAI)
 
 </div>
 
@@ -257,13 +256,6 @@ OpenContext 既不是记忆库，也不是向量数据库。它是一个运行�
 
 完整的数据流图、传输面与存储后端见
 [`docs/architecture.md`](./docs/architecture.md)。
-
-## 真实使用案例
-
-- **[OpenContext](https://github.com/melandlabs/opencontext)** —— 构建在
-  这套运行时之上的跨平台桌面 "Attention Agent"。读
-  [仓库 README](https://github.com/melandlabs/opencontext) 看同一套
-  原语如何被接成一个真实产品。
 
 ## 文档
 

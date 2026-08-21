@@ -527,7 +527,6 @@ npx @melandlabs/opencontext http --embedding-provider local
 - 📖 [Documentation Index](../README.md)
 - 💬 [Discord](https://discord.com/invite/xkJaJyWcsv)
 - 🐛 [Issues](https://github.com/melandlabs/opencontext/issues)
-- 𝕏 [@OpenContextAI](https://x.com/OpenContextAI)
 
 ## Glossary
 

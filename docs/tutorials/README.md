@@ -150,7 +150,6 @@ If you get stuck:
 - 📖 Check the main project [README](../../README.md)
 - 💬 Join our [Discord](https://discord.com/invite/xkJaJyWcsv)
 - 🐛 [Open an issue](https://github.com/melandlabs/opencontext/issues)
-- 𝕏 Follow [@OpenContextAI](https://x.com/OpenContextAI)
 
 ## Contributing
 
