@@ -61,7 +61,7 @@ OpenContext fits teams who need to **engineer their context** — that is, teams
 | ⏰  | **[Deterministic Loop Engine](./packages/loop)**                                | A scheduler that wakes up, decides whether there is real work, and only then calls into the agent runtime. LLM calls are not the foundation — they are the last step.                                                                                                                                                                                                                                  |
 | 🔍  | **[Retrieval Primitives](./packages/rag)**                                      | Chunking, embeddings, parsers (PDF/ZIP/text), sqlite-vec + pgvector + Chroma adapters. Mix backends without rewriting the recall pipeline.                                                                                                                                                                                                                                                              |
 | 🤖  | **[Agent Runtime](./packages/ai)**                                              | AI SDK wrappers, sandbox providers (native / Claude / Vercel), MCP server, memory-consolidation job, image + audio generation.                                                                                                                                                                                                                                                                          |
-| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime. No React, Next, or Tauri required.                                                                                                                                                                                                                    |
+| 🪶  | **[Library-First API](./packages/opencontext)**                                 | Install once with `pnpm add @melandlabs/opencontext` and get the contracts, memory store, retrieval primitives, loop engine, and agent runtime.                                                                                                                                                                                                          |
 | 🛡️  | **[Audit + Encrypted Storage](./packages/audit)**                               | Structured audit logging to `~/.opencontext/logs/audit.jsonl`, Fernet symmetric encryption for secrets, URL allowlist/blocklist for outbound calls.                                                                                                                                                                                                                                                       |
 
 ## Benchmarks
@@ -76,7 +76,7 @@ Third-party memory and long-context recall benchmarks (numbers current as of 202
 
 ## Quick Start
 
-There are four ways to get opencontext into your project. Pick the one
+There are several ways to get opencontext into your project. Pick the one
 that matches what you're building.
 
 ### 1. Embed the runtime into your own app
@@ -122,41 +122,32 @@ const hits = await store.search({
 // hits.warnings — per-source degradation (e.g. missing embedder)
 ```
 
-### 2. Build this monorepo from source
+### 2. Manage memory from the CLI
+
+Write and query memory straight from the command line. `add` writes a
+single raw message to the active manager with no LLM roundtrip, and
+`search` runs a unified read across memory, insights, and knowledge.
 
 ```bash
-git clone https://github.com/melandlabs/opencontext.git
-cd opencontext
-pnpm install
-pnpm -r build
-```
+pnpm add -g @melandlabs/opencontext    # puts the `opencontext` bin on PATH
 
-### 3. Manage memory from the CLI
-
-The same memory store the HTTP and MCP daemons talk to is reachable from
-the command line. `add` writes a single raw message straight to the active
-manager — no LLM roundtrip — and `search` runs a unified read across
-memory, insights, and knowledge.
-
-```bash
 # Write a fact (auto-fills messageId, platform="cli", timestamp=now)
-opencontext add --user alice --text "Rust achieves memory safety without GC"
+opencontext add --text "Rust achieves memory safety without GC"
 
 # Write with full provenance for later consolidation
 opencontext add \
-  --user alice --bot general \
   --text "Discussed Q4 roadmap with the team" \
   --source "meeting://2026-08-20" --kind experience \
   --tag topic=roadmap --tag team=eng
 
 # Plain hybrid search (RRF across memory + insights + knowledge)
-opencontext search --user alice --query "memory safety" --k 5
+opencontext search --query "memory safety" --k 5
 
 # Inspect what would have been sent to the LLM, no synthesis call
-opencontext search --user alice --query "what did we chat about last weekend" --context-only
+opencontext search --query "what did we chat about last weekend" --context-only
 
 # Script-friendly JSON
-opencontext search --user alice --query "x" --json | jq '.results[].id'
+opencontext search --query "x" --json | jq '.results[].id'
 ```
 
 `add` accepts `--user` (default `"default"`), `--bot` (default `"default"`),
@@ -169,10 +160,10 @@ Run `opencontext <command> --help` for the full flag list. See the
 [Getting Started tutorial](./docs/tutorials/00-getting-started.md#managing-memory-from-the-cli)
 for the full flag reference and worked examples.
 
-### 4. Run the HTTP daemon from npm
+### 3. Run the HTTP daemon from npm
 
 ```bash
-# After `pnpm add -g @melandlabs/opencontext`, the bin is on PATH:
+pnpm add -g @melandlabs/opencontext    # puts the `opencontext` bin on PATH
 opencontext http \
   --embedding-provider local \
   --memory-backend sqlite-vec \
@@ -183,7 +174,7 @@ npx -y @melandlabs/opencontext http \
 curl http://127.0.0.1:7421/health
 ```
 
-### 5. Wire the MCP server into Claude Desktop / Cursor
+### 4. Wire the MCP server into Claude Desktop / Cursor
 
 ```bash
 opencontext mcp \
@@ -191,7 +182,7 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
-### 6. Use with DeepSeek Harness (DSH)
+### 5. Use with DeepSeek Harness (DSH)
 
 OpenContext is available as a DSH plugin that gives any DSH agent durable memory and retrieval-augmented context:
 
@@ -215,7 +206,7 @@ The plugin exposes 16 `oc_*` tools (e.g., `oc_search`, `oc_remember`, `oc_memory
 
 See [`plugins/dsh-opencontext/README.md`](./plugins/dsh-opencontext/README.md) for configuration options and the full tool reference.
 
-### 7. Diagnose the install
+### 6. Diagnose the install
 
 ```bash
 opencontext doctor             # human-readable health checks
