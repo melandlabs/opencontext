@@ -69,10 +69,16 @@ jobs:
       # memory-store ahead of OKF in the topological order and seeding
       # every consumer's `dist/*.d.ts`), and the second pass rebuilds the
       # full workspace serially against the already-seeded types.
-      # `--workspace-concurrency=1` on BOTH passes guarantees memory-store
-      # finishes its DTS before OKF's DTS kicks off, since the parallel
-      # rebuild otherwise races even though the first pass already
-      # produced both packages' `dist/`. Matches the pattern in ci.yml.
+      #
+      # Even with `--workspace-concurrency=1` pnpm's topological order
+      # still puts OKF ahead of memory-store (memory-store is OKF's
+      # `devDependency`, and pnpm 10 doesn't lift devDeps above their
+      # consumers in the build graph). So OKF's DTS step would still
+      # race against memory-store's DTS step. Build memory-store first
+      # explicitly to seed its `dist/*.d.ts` before OKF's tsup worker
+      # resolves the `typeof import('@melandlabs/memory-store')` ref
+      # in `cli.ts`.
+      - run: pnpm --filter @melandlabs/memory-store build
       - run: pnpm --filter @melandlabs/okf... --workspace-concurrency=1 build
       - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
 
