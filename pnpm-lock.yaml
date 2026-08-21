@@ -41,6 +41,9 @@ importers:
       baseline-browser-mapping:
         specifier: ^2.10.0
         version: 2.11.13
+      cross-env:
+        specifier: ^10.1.0
+        version: 10.1.0
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.26)(tsx@4.23.12)(typescript@5.9.3)(yaml@2.9.0)
@@ -111,10 +114,10 @@ importers:
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.5.0
+        specifier: ^0.7.0
         version: link:../packages/ai
       '@melandlabs/ai-rag':
-        specifier: ^0.2.6
+        specifier: ^0.2.9
         version: link:../packages/ai/rag
       '@melandlabs/api':
         specifier: ^0.3.0
@@ -126,7 +129,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/config
       '@melandlabs/contracts':
-        specifier: ^0.5.0
+        specifier: ^0.6.0
         version: link:../packages/contracts
       '@melandlabs/cron':
         specifier: ^0.3.0
@@ -144,7 +147,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/i18n
       '@melandlabs/indexeddb':
-        specifier: ^0.5.0
+        specifier: ^0.5.8
         version: link:../packages/indexeddb
       '@melandlabs/insights':
         specifier: ^0.3.0
@@ -153,28 +156,28 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations
       '@melandlabs/integrations-asana':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/asana
       '@melandlabs/integrations-calendar':
         specifier: ^0.3.0
         version: link:../packages/integrations/calendar
       '@melandlabs/integrations-channels':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/channels
       '@melandlabs/integrations-composio':
         specifier: ^0.3.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/facebook-messenger
       '@melandlabs/integrations-feishu':
-        specifier: ^0.3.1
+        specifier: ^0.3.2
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
         specifier: ^0.3.0
@@ -183,37 +186,37 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations/google-meet
       '@melandlabs/integrations-hubspot':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/instagram
       '@melandlabs/integrations-jira':
-        specifier: ^0.2.2
+        specifier: ^0.2.3
         version: link:../packages/integrations/jira
       '@melandlabs/integrations-linkedin':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../packages/integrations/x
       '@melandlabs/loop':
         specifier: ^0.3.1
@@ -225,13 +228,13 @@ importers:
         specifier: ^0.5.0
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^1.0.0
+        specifier: ^1.1.0
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.4.1
+        specifier: ^0.5.0
         version: link:../packages/opencontext
       '@melandlabs/rag':
-        specifier: ^0.2.2
+        specifier: ^0.3.0
         version: link:../packages/rag
       '@melandlabs/rss':
         specifier: ^0.3.0
@@ -243,10 +246,10 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/security
       '@melandlabs/shared':
-        specifier: ^0.3.0
+        specifier: ^0.4.0
         version: link:../packages/shared
       '@melandlabs/sqlite':
-        specifier: ^0.5.0
+        specifier: ^0.5.1
         version: link:../packages/sqlite
       '@melandlabs/storage':
         specifier: ^0.3.0
@@ -1170,13 +1173,13 @@ importers:
         specifier: ^0.37.1
         version: 0.37.1(@types/node@22.20.1)(apache-arrow@18.1.0)(encoding@0.1.13)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.6
+        specifier: ^0.2.9
         version: link:../ai/rag
       '@melandlabs/integrations':
         specifier: ^0.3.0
         version: link:../integrations
       '@melandlabs/okf':
-        specifier: ^0.1.0
+        specifier: ^0.2.0
         version: link:../okf
       '@melandlabs/security':
         specifier: ^0.3.0
@@ -1986,6 +1989,9 @@ packages:
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
+
+  '@epic-web/invariant@1.0.0':
+    resolution: {integrity: sha512-lrTPqgvfFQtR/eY/qkIzp98OGdNJu0m5ji3q/nJI8v3SXkRKEnWiOxMmbvcSoAIzv/cGiuvRy57k4suKQSAdwA==}
 
   '@esbuild/aix-ppc64@0.25.12':
     resolution: {integrity: sha512-Hhmwd6CInZ3dwpuGTF8fJG6yoWmsToE+vYgD4nytZVxcu1ulHpUQRAB1UJ8+N1Am3Mz4+xOByoQoSZf4D+CpkA==}
@@ -4462,6 +4468,11 @@ packages:
   croner@8.1.2:
     resolution: {integrity: sha512-ypfPFcAXHuAZRCzo3vJL6ltENzniTjwe/qsLleH1V2/7SRDjgvRQyrLmumFTLmjFax4IuSxfGXEn79fozXcJog==}
     engines: {node: '>=18.0'}
+
+  cross-env@10.1.0:
+    resolution: {integrity: sha512-GsYosgnACZTADcmEyJctkJIoqAhHjttw7RsFrVoJNXbsWWqaq6Ym+7kZjq6mS45O0jij6vtiReppKQEtqWy6Dw==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -8027,6 +8038,8 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
+  '@epic-web/invariant@1.0.0': {}
+
   '@esbuild/aix-ppc64@0.25.12':
     optional: true
 
@@ -9393,14 +9406,6 @@ snapshots:
       chai: 6.2.2
       tinyrainbow: 3.1.1
 
-  '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))':
-    dependencies:
-      '@vitest/spy': 2.1.9
-      estree-walker: 3.0.3
-      magic-string: 0.30.21
-    optionalDependencies:
-      vite: 6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0)
-
   '@vitest/mocker@2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -10048,6 +10053,11 @@ snapshots:
   croner@10.0.1: {}
 
   croner@8.1.2: {}
+
+  cross-env@10.1.0:
+    dependencies:
+      '@epic-web/invariant': 1.0.0
+      cross-spawn: 7.0.6
 
   cross-spawn@7.0.6:
     dependencies:
@@ -10975,7 +10985,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0)
+      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -12054,7 +12064,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0):
+  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 
@@ -12868,7 +12878,7 @@ snapshots:
   vitest@2.1.9(@types/node@22.20.1)(jiti@2.7.0)(jsdom@24.1.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(tsx@4.23.12)(yaml@2.9.0):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@22.20.1)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
+      '@vitest/mocker': 2.1.9(vite@6.4.3(@types/node@26.2.0)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9

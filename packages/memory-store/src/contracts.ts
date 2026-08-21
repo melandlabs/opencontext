@@ -13,8 +13,8 @@
  * dedicated files; this module only hosts the boundary contracts.
  */
 
-import type { FactType } from "@melandlabs/contracts";
 import type { MemoryRecord } from "@melandlabs/ai/memory";
+import type { FactType } from "@melandlabs/contracts";
 
 /** Prefix used to reserve chat-memory evidence IDs that must not collide. */
 export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
