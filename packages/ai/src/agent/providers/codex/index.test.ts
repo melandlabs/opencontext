@@ -724,10 +724,16 @@ if (args.includes("--version")) {
   console.log("codex-cli 0.145.0");
   process.exit(0);
 }
-fs.writeFileSync("args.json", JSON.stringify(args));
+// Wire stdin consumers BEFORE the args.json write. On loaded CI runners
+// the fs write can take long enough that the parent already delivers and
+// half-closes stdin; if no consumer is attached by then the kernel sees
+// no reader on the pipe and the parent's end() surfaces as EPIPE,
+// tripping runCodexCommand's "successful exit with failed delivery = fatal"
+// guard. Real Codex resumes stdin eagerly, never gated on disk I/O.
 let stdin = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
+fs.writeFileSync("args.json", JSON.stringify(args));
 process.stdin.on("end", () => {
   fs.writeFileSync("stdin.txt", stdin);
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-1" }));
