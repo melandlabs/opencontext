@@ -85,11 +85,14 @@ jobs:
         # to build OKF's transitive dep closure (forcing memory-store ahead of
         # OKF in the topological order and seeding every consumer's
         # `dist/*.d.ts`), and the second pass rebuilds the full workspace
-        # serially against the already-seeded types. Matches the pattern in
-        # release.yml.
+        # serially against the already-seeded types. `--workspace-concurrency=1`
+        # on the second pass guarantees memory-store finishes its DTS before
+        # OKF's DTS kicks off, since the parallel rebuild otherwise races even
+        # though the first pass already produced both packages' `dist/`.
+        # Matches the pattern in release.yml.
         run: |
           pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' build
+          pnpm -r --filter './packages/**' --workspace-concurrency=1 build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
@@ -127,11 +130,14 @@ jobs:
         # to build OKF's transitive dep closure (forcing memory-store ahead of
         # OKF in the topological order and seeding every consumer's
         # `dist/*.d.ts`), and the second pass rebuilds the full workspace
-        # serially against the already-seeded types. Matches the pattern in
-        # release.yml.
+        # serially against the already-seeded types. `--workspace-concurrency=1`
+        # on the second pass guarantees memory-store finishes its DTS before
+        # OKF's DTS kicks off, since the parallel rebuild otherwise races even
+        # though the first pass already produced both packages' `dist/`.
+        # Matches the pattern in release.yml.
         run: |
           pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' build
+          pnpm -r --filter './packages/**' --workspace-concurrency=1 build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test

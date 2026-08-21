@@ -724,17 +724,21 @@ if (args.includes("--version")) {
   console.log("codex-cli 0.145.0");
   process.exit(0);
 }
-// Wire stdin consumers BEFORE the args.json write. On loaded CI runners
-// the fs write can take long enough that the parent already delivers and
-// half-closes stdin; if no consumer is attached by then the kernel sees
-// no reader on the pipe and the parent's end() surfaces as EPIPE,
-// tripping runCodexCommand's "successful exit with failed delivery = fatal"
-// guard. Real Codex resumes stdin eagerly, never gated on disk I/O.
+// Wire stdin consumers eagerly so the parent's \`proc.stdin.end(prompt)\`
+// never races past a half-attached pipe reader and surfaces as EPIPE
+// (\`runCodexCommand\` treats a successful exit with a failed delivery as
+// fatal). Real Codex never gates stdin reads on disk I/O; the fake has to
+// match. Persisting argv/stdin to disk happens in the \`end\` handler so the
+// test only sees a populated \`args.json\` once the prompt has actually
+// drained — on heavily-loaded CI runners writing \`args.json\` from the
+// top-level sometimes lost the race against an early child exit, which
+// surfaced as ENOENT on the post-run \`readFile\` even though the run
+// itself had succeeded.
 let stdin = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
-fs.writeFileSync("args.json", JSON.stringify(args));
 process.stdin.on("end", () => {
+  fs.writeFileSync("args.json", JSON.stringify(args));
   fs.writeFileSync("stdin.txt", stdin);
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-1" }));
   console.log(JSON.stringify({
