@@ -9,6 +9,7 @@
 // Re-export from sandbox package
 // ============================================================================
 
+import type { WorkspaceArtifactManifest } from "@melandlabs/shared";
 import type { PromptCacheStats } from "./billing/model-pricing";
 import type { SandboxConfig, SandboxProviderType } from "./sandbox/types";
 
@@ -74,7 +75,66 @@ export type AgentMessageType =
 	| "memoryUpdate"
 	| "artifact_baseline"
 	| "scheduleNotice"
+	| "workspace_artifacts"
 	| "retry";
+
+/**
+ * Minimal structural shape of a host auth session. Mirrors the parts of a
+ * next-auth `Session` that agents actually read, without depending on
+ * next-auth. The index signature keeps richer host sessions assignable.
+ */
+export interface AgentAuthSessionUser {
+	id?: string;
+	email?: string | null;
+	name?: string | null;
+	image?: string | null;
+	[key: string]: unknown;
+}
+
+export interface AgentAuthSession {
+	user?: AgentAuthSessionUser | null;
+	expires?: string;
+	[key: string]: unknown;
+}
+
+/**
+ * Limits connector-backed tools and data to an explicit allowlist.
+ *
+ * An omitted scope preserves the legacy unrestricted behavior. An empty
+ * allowlist intentionally exposes no connector-backed capability.
+ */
+export interface ConnectorVisibilityScope {
+	mode: "allowlist";
+	connectorIds: string[];
+}
+
+export type AgentToolResultFile = {
+	path: string;
+	name: string;
+	type: string;
+	isTemporary?: boolean;
+	snapshotPath?: string;
+};
+
+export type AgentMultimodalContent = {
+	contentType: string;
+	mimeType: string;
+	data: string;
+	sourceType: string;
+};
+
+export type AgentToolResultFileMetadata = {
+	generatedFiles?: AgentToolResultFile[];
+	generatedFile?: AgentToolResultFile;
+	codeFile?: {
+		path: string;
+		name: string;
+		language: string;
+		snapshotPath?: string;
+	};
+	/** Inline contents left only when host-side materialization was unavailable. */
+	multimodalContents?: AgentMultimodalContent[];
+};
 
 export interface AgentMessage {
 	type: AgentMessageType;
@@ -102,6 +162,10 @@ export interface AgentMessage {
 	 * file is edited in place.
 	 */
 	fileSnapshots?: Record<string, string>;
+	/** Durable file refs resolved at the host boundary for a tool result. */
+	fileMetadata?: AgentToolResultFileMetadata;
+	/** New or changed previewable files observed across the assistant run. */
+	workspaceArtifacts?: WorkspaceArtifactManifest;
 	/** Plan fields */
 	plan?: TaskPlan;
 	/** Error fields */
@@ -322,6 +386,8 @@ export interface AgentRuntimeRecovery {
 	 * coordinator verified that every canonical instruction remains retryable.
 	 */
 	instructionSettlements: readonly AgentRuntimeInstructionSettlement[];
+	/** Canonical instructions left retryable by the durable recovery claim. */
+	replayableInstructionIds: readonly string[];
 	/**
 	 * Called only after Claude confirms that the expected provider session was
 	 * resumed and any settlement-aware outbox replay has finished. The host may
@@ -332,6 +398,8 @@ export interface AgentRuntimeRecovery {
 		runtimeSessionId: string;
 		providerSessionId: string;
 		runEpoch: number;
+		/** True when registration actually replayed at least one outbox instruction. */
+		replayedInstructions?: boolean;
 		continueGoal: () => Promise<AgentRuntimeRecoveryContinuationResult>;
 		/**
 		 * Evaluates durable evidence after provider loss without producing another
@@ -568,11 +636,83 @@ export interface McpConfig {
 	mcpConfigPath?: string;
 }
 
+export interface ActiveAgentTaskExecution {
+	taskId: string;
+	executionId: string;
+	userMessageId?: string;
+	assistantMessageId?: string;
+}
+
+export interface AgentTaskExecutionCompletion {
+	status: "success" | "error" | "timeout" | "interrupted" | "blocked";
+	error?: string | null;
+}
+
+export interface AgentTaskExecutionHandoff {
+	taskId: string;
+	taskExecutionId: string;
+	reusedActiveExecution: boolean;
+	completion: Promise<AgentTaskExecutionCompletion>;
+}
+
+/**
+ * Host-owned control plane for the terminal executeTaskNow tool.
+ *
+ * The agent provider only transports these callbacks. The host decides
+ * whether the user's raw request is an explicit saved-task control command,
+ * which execution can be transferred, and where worker events are streamed.
+ */
+export interface AgentTaskExecutionControl {
+	canExecuteTaskNow: () => boolean;
+	getActiveExecution: () => ActiveAgentTaskExecution | null;
+	onHandoff?: (handoff: AgentTaskExecutionHandoff) => void;
+	onEvent?: (message: AgentMessage) => void | Promise<void>;
+}
+
 export interface AgentOptions {
 	/** Session ID for continuing conversations */
 	sessionId?: string;
-	/** User session for authentication and context (used for business tools) */
-	session?: unknown; // Session from next-auth
+	/**
+	 * Trusted Goal Runtime attachment selected by the host.
+	 *
+	 * `undefined` preserves the legacy behavior of using `sessionId`, a string
+	 * pins a different Runtime Session, and `null` deliberately runs an
+	 * ordinary chat turn without attaching it to a paused Goal.
+	 */
+	goalRuntimeSessionId?: string | null;
+	/** Trace id for cross-hop first-token (TTFT) latency instrumentation. */
+	traceId?: string;
+	/**
+	 * Agent-run id: correlates every LLM request made during ONE agent execution
+	 * (the claude subprocess agent loop). Unlike traceId it is ALWAYS present
+	 * (independent of trace sampling), so model-stats can aggregate by agent
+	 * execution in production. Propagated to the subprocess as an HTTP header.
+	 */
+	runId?: string;
+	/**
+	 * Caller-supplied HTTP headers intended for cross-process requests made
+	 * on behalf of this agent execution (embeddings, compaction, etc.).
+	 * Typical use is cross-cutting concerns like first-party billing
+	 * attribution, e.g. `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 *
+	 * **This field is a passive holder, not an auto-forwarder.** The agent
+	 * runtime does NOT inject these into outbound requests. Callers that
+	 * invoke `getConfiguredEmbeddingProvider({ extraHeaders })` or
+	 * `triggerCompaction({ extraHeaders })` must explicitly pass
+	 * `options.extraHeaders` (or a composed subset) into those calls.
+	 *
+	 * Hosts compose these with provider-level defaults; intermediate code
+	 * MUST NOT silently drop caller-supplied entries.
+	 */
+	extraHeaders?: Record<string, string>;
+	/**
+	 * User session for authentication and context (used for business tools).
+	 *
+	 * Structurally compatible with a next-auth `Session` without depending on
+	 * it, so hosts can read `session.user.id` directly. Hosts that need their
+	 * own stricter `Session` type should cast at the boundary.
+	 */
+	session?: AgentAuthSession;
 	/** Cloud auth token for embeddings API (needed in native mode) */
 	authToken?: string;
 	/** Conversation history */
@@ -604,6 +744,22 @@ export interface AgentOptions {
 	subagents?: Record<string, AgentSubagentDefinition>;
 	/** Task ID for tracking */
 	taskId?: string;
+	/** Connector-backed capabilities visible to this agent run. */
+	connectorScope?: ConnectorVisibilityScope;
+	/** Host-owned saved-task execution guard and controller-to-worker handoff. */
+	taskExecutionControl?: AgentTaskExecutionControl;
+	/**
+	 * When true, ClaudeAgent skips the Anthropic prompt-cache lookup before
+	 * calling the model. Use for hermetic one-shot tasks (e.g. contract review)
+	 * whose input must not bleed into or be retrieved from the shared cache.
+	 */
+	skipPromptCacheLookup?: boolean;
+	/**
+	 * When true, provider credentials resolved for this run are not mirrored
+	 * into `process.env`. Use for isolated runs that must not mutate shared
+	 * process state.
+	 */
+	skipProcessEnvMirror?: boolean;
 	/** Abort controller for cancellation */
 	abortController?: AbortController;
 	/**

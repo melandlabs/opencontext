@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/rag",
-	"version": "0.2.2",
+	"version": "0.3.0",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -16,7 +16,10 @@
 		"./parsers": "./dist/parsers.js",
 		"./universal-embeddings": "./dist/universal-embeddings.js",
 		"./sqlite-vec-store": "./dist/sqlite-vec-store.js",
-		"./pgvector-store": "./dist/pgvector-store.js"
+		"./pgvector-store": "./dist/pgvector-store.js",
+		"./hybrid-search": "./dist/hybrid-search.js",
+		"./lancedb-store": "./dist/lancedb-store.js",
+		"./milvus-store": "./dist/milvus-store.js"
 	},
 	"repository": {
 		"type": "git",
@@ -46,8 +49,22 @@
 		"drizzle-orm": "^0.44.0"
 	},
 	"devDependencies": {
+		"@lancedb/lancedb": "^0.37.1",
 		"@melandlabs/config": "workspace:*",
+		"@zilliz/milvus2-sdk-node": "2.5.13",
 		"typescript": "^5.6.3"
+	},
+	"peerDependencies": {
+		"@lancedb/lancedb": "^0.37.1",
+		"@zilliz/milvus2-sdk-node": "^2.5.13"
+	},
+	"peerDependenciesMeta": {
+		"@lancedb/lancedb": {
+			"optional": true
+		},
+		"@zilliz/milvus2-sdk-node": {
+			"optional": true
+		}
 	},
 	"scripts": {
 		"build": "tsup",

@@ -289,6 +289,13 @@ export interface GraphAwareRetrievalInput {
 	applicabilityContexts?: MemoryApplicabilityContext[];
 	visibilityMode: GraphRetrievalVisibilityMode;
 	includeDeprecated?: boolean;
+	/**
+	 * Optional ISO-8601 timestamp for time-travel retrieval. When present,
+	 * `parseAsOf` (re-exported from `./graph-retrieval`) resolves it to epoch
+	 * ms and applies it through `applicabilityContains`. Omitting keeps the
+	 * pre-time-travel behaviour.
+	 */
+	asOf?: string;
 	metadata?: Record<string, unknown>;
 }
 

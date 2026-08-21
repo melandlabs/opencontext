@@ -132,26 +132,6 @@ const ALLOWED_STORAGE_DOMAINS = [
 ];
 
 /**
- * Check if a hostname matches any allowed domain pattern
- */
-function isAllowedDomain(hostname: string): boolean {
-	const lowerHostname = hostname.toLowerCase();
-
-	for (const pattern of ALLOWED_STORAGE_DOMAINS) {
-		if (pattern.startsWith("*.")) {
-			const baseDomain = pattern.slice(2);
-			if (lowerHostname === baseDomain || lowerHostname.endsWith(`.${baseDomain}`)) {
-				return true;
-			}
-		} else if (lowerHostname === pattern) {
-			return true;
-		}
-	}
-
-	return false;
-}
-
-/**
  * Validate a URL for SSRF risks
  * @param url - The URL to validate
  * @param options - Validation options

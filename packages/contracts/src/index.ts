@@ -12,3 +12,4 @@ export * from "./decision.js";
 export * from "./errors.js";
 export * from "./fact-type.js";
 export * from "./vsa-fact.js";
+export * from "./okf.js";

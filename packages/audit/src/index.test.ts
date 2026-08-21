@@ -35,6 +35,11 @@ describe("@melandlabs/audit", () => {
 		tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "audit-test-"));
 		vi.stubEnv("HOME", tempDir);
 		vi.stubEnv("USERPROFILE", tempDir);
+		// getOpenContextDir() prefers OPENCONTEXT_HOME over HOME, so make
+		// sure it falls through to the stubbed HOME — otherwise a host
+		// with OPENCONTEXT_HOME pre-set leaks the real audit log
+		// directory into every test.
+		vi.stubEnv("OPENCONTEXT_HOME", "");
 		vi.resetModules();
 		const mod = (await import("./index")) as AuditModule;
 		audit = mod;

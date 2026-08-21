@@ -1,5 +1,49 @@
 # @melandlabs/integrations-weixin
 
+## 0.3.6
+
+### Patch Changes
+
+- Fix runtime resolution of `@tencent-weixin/openclaw-weixin` types in
+  `ilink-client.ts`. The source imports `src/api/types`, which tsc resolves
+  through `moduleResolution: "bundler"` but Node.js cannot resolve at
+  runtime because the published package ships the file at
+  `dist/src/api/types.js` (no `exports` entry exposes `src/`, and Node.js
+  cannot execute the raw `.ts` source). Switch all four import sites to
+  the explicit `dist/src/api/types.js` path so the built `dist/index.js`,
+  `dist/ilink-client.js`, and `dist/ws-listener.js` load cleanly without
+  requiring downstream `pnpm.patchedDependencies` overrides.
+
+  **Workaround note**: the `dist/src/api/types.js` path is an internal build
+  artifact of `@tencent-weixin/openclaw-weixin`. Upstream should ideally add
+  an `exports` entry that maps `./api/types` to the compiled output (or
+  re-export types from `dist/index.js`); once that lands we should switch
+  back to a public subpath. Tracked via the openloomi `apps/web`
+  `send-reply` and `handler` weixin paths, which import the affected
+  subpaths at runtime.
+
+- Updated dependencies
+- Updated dependencies
+  - @melandlabs/integrations-weixin@0.3.6
+  - @melandlabs/ai@0.8.0
+
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [f550140]
+  - @melandlabs/ai@0.7.1
+  - @melandlabs/integrations-weixin@0.3.5
+
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [6fc52c9]
+  - @melandlabs/ai@0.7.0
+  - @melandlabs/integrations-weixin@0.3.4
+  - @melandlabs/integrations-channels@0.3.1
+
 ## 0.3.3
 
 ### Patch Changes

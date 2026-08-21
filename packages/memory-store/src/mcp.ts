@@ -593,6 +593,24 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		},
 	);
 
+	// OKF v0.2 importer / exporter tools. They reuse the same McpServer
+	// so `memory.okfImport` and `memory.okfExport` are available alongside
+	// the rest of the memory-store tools without extra wiring.
+	//
+	// `@melandlabs/okf/mcp` is loaded through a non-literal string
+	// specifier (the same pattern `memory-store/src/http.ts` uses for
+	// `@melandlabs/okf/http`) so TypeScript can't resolve its types at
+	// compile time. memory-store → okf and okf → memory-store form a
+	// workspace cycle, and a static import here would force OKF's
+	// `dist/mcp.d.ts` to exist before memory-store can emit its own
+	// `dist/mcp.d.ts`. Loading lazily keeps the runtime contract
+	// identical (OKF ships alongside memory-store as a regular
+	// `dependency`) while letting pnpm 10 build memory-store first
+	// in topological order without a type-level cycle.
+	const okfMcpSpecifier: string = "@melandlabs/okf/mcp";
+	const { registerOkfTools } = await import(okfMcpSpecifier);
+	registerOkfTools(server, rawStore);
+
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
 	return server;

@@ -15,3 +15,16 @@ export const AGENT_GOAL_LIMITS = {
 	evidencePayloadBytes: 256 * 1024,
 	idempotencyKeyCharacters: 256,
 } as const;
+
+export const GOAL_STEP_COMPLETION_MARKER_OPEN = "<!-- OPENCONTEXT_STEP_COMPLETE:" as const;
+
+export function goalStepCompletionMarker(criterionId: string): string {
+	const encodedId = Array.from(new TextEncoder().encode(criterionId), (byte) =>
+		byte.toString(16).padStart(2, "0"),
+	).join("");
+	return `${GOAL_STEP_COMPLETION_MARKER_OPEN}${encodedId} -->`;
+}
+
+export function stripGoalStepCompletionMarkers(text: string): string {
+	return text.replace(/^<!-- OPENCONTEXT_STEP_COMPLETE:[0-9a-f]+ -->[\t ]*(?:\r?\n)?/gm, "");
+}

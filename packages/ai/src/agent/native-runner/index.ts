@@ -74,6 +74,18 @@ export interface NativeAgentRequest {
 		platform?: string | null;
 	}>;
 	authToken?: string;
+	/**
+	 * Caller-supplied HTTP headers for cross-process requests made on behalf
+	 * of this agent run (embeddings, compaction, etc.). Typical use is
+	 * first-party billing attribution, e.g.
+	 * `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 *
+	 * **Passive holder — the runtime does not auto-forward.** Callers invoking
+	 * `getConfiguredEmbeddingProvider({ extraHeaders })` or
+	 * `triggerCompaction({ extraHeaders })` must pass this through explicitly.
+	 * See `AgentOptions.extraHeaders` for the full contract.
+	 */
+	extraHeaders?: Record<string, string>;
 }
 
 export interface NativeAgentSession {
@@ -105,6 +117,8 @@ export interface NativeAgentRunnerContext {
 	 * select an arbitrary provider session to resume.
 	 */
 	runtimeRecovery?: AgentOptions["runtimeRecovery"];
+	/** Host-only Goal Runtime attachment. Public request JSON cannot set it. */
+	goalRuntimeSessionId?: string | null;
 }
 
 export type NativeAgentMemoryContextStatus = "applied" | "baseline" | "no-op" | "failed";
@@ -347,6 +361,8 @@ function buildAgentOptions(
 ): AgentOptions {
 	return {
 		sessionId: body.sessionId,
+		goalRuntimeSessionId:
+			context.goalRuntimeSessionId === undefined ? body.sessionId : context.goalRuntimeSessionId,
 		session: context.session,
 		authToken: body.authToken,
 		conversation: body.conversation,
@@ -367,6 +383,7 @@ function buildAgentOptions(
 		aiSoulPrompt: userSettings.aiSoulPrompt,
 		language: userSettings.language,
 		abortController: context.abortController,
+		extraHeaders: body.extraHeaders,
 		stream: true,
 	};
 }
@@ -613,7 +630,7 @@ async function buildFocusedInsightsPromptContext(
 			if (timeline.length > 0) {
 				content += "   Recent Emails:\n";
 				const seen = new Set<string>();
-				timeline.forEach((rawEvent) => {
+				for (const rawEvent of timeline) {
 					const event =
 						rawEvent && typeof rawEvent === "object"
 							? (rawEvent as { title?: string; description?: string })
@@ -623,7 +640,7 @@ async function buildFocusedInsightsPromptContext(
 					const isDuplicate = title === description;
 					const key = isDuplicate ? title : `${title}||${description}`;
 
-					if (seen.has(key)) return;
+					if (seen.has(key)) continue;
 					seen.add(key);
 
 					if (isDuplicate) {
@@ -634,7 +651,7 @@ async function buildFocusedInsightsPromptContext(
 						const d = description.length > 200 ? `${description.substring(0, 200)}...` : description;
 						content += `     - ${t}: ${d}\n`;
 					}
-				});
+				}
 			}
 
 			if (insight.platform) {
@@ -812,6 +829,7 @@ function sanitizeAttachmentFileName(fileName: string, index: number): string {
 	const fallback = `attachment-${index + 1}`;
 	const baseName = path
 		.basename(fileName.replace(/\\/g, "/"))
+		// biome-ignore lint/suspicious/noControlCharactersInRegex: intentional — strips Windows-illegal + ASCII control chars from attachment filenames
 		.replace(/[<>:"/\\|?*\u0000-\u001f]/g, "_")
 		.trim();
 	const normalized = baseName.replace(/^\.+$/, "").trim();

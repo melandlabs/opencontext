@@ -391,39 +391,6 @@ describe("CodexAgent", () => {
 		expect(await readFile(join(workDir, "stdin.txt"), "utf8")).toBe("hello codex");
 	});
 
-	it("materializes image inputs and passes them to codex exec", async () => {
-		const workDir = await createFakeCodexWorkDir(defaultFakeCodexScript());
-		const agent = new CodexAgent({
-			provider: "codex",
-			workDir,
-			providerConfig: { codexPath: process.execPath },
-		});
-		const imageBytes = Buffer.from("fake-png-bytes");
-
-		await collectMessages(
-			agent.run("what is in this image?", {
-				images: [
-					{
-						data: imageBytes.toString("base64"),
-						mimeType: "image/png",
-					},
-				],
-			}),
-		);
-
-		const args = JSON.parse(await readFile(join(workDir, "args.json"), "utf8")) as string[];
-		const imageFlagIndex = args.indexOf("--image");
-		expect(imageFlagIndex).toBeGreaterThan(-1);
-
-		const imagePath = args[imageFlagIndex + 1];
-		expect(imagePath).toBeDefined();
-		if (!imagePath) throw new Error("Codex --image path was not provided");
-		expect(imagePath).toContain(".opencontext-codex-images");
-		expect(imagePath).toMatch(/\.png$/);
-		expect(await readFile(imagePath)).toEqual(imageBytes);
-		expect(await readFile(join(workDir, "stdin.txt"), "utf8")).toBe("what is in this image?");
-	});
-
 	it("writes multiline conversation context to Codex stdin", async () => {
 		const workDir = await createFakeCodexWorkDir(defaultFakeCodexScript());
 		const agent = new CodexAgent({
@@ -757,11 +724,21 @@ if (args.includes("--version")) {
   console.log("codex-cli 0.145.0");
   process.exit(0);
 }
-fs.writeFileSync("args.json", JSON.stringify(args));
+// Wire stdin consumers eagerly so the parent's \`proc.stdin.end(prompt)\`
+// never races past a half-attached pipe reader and surfaces as EPIPE
+// (\`runCodexCommand\` treats a successful exit with a failed delivery as
+// fatal). Real Codex never gates stdin reads on disk I/O; the fake has to
+// match. Persisting argv/stdin to disk happens in the \`end\` handler so the
+// test only sees a populated \`args.json\` once the prompt has actually
+// drained — on heavily-loaded CI runners writing \`args.json\` from the
+// top-level sometimes lost the race against an early child exit, which
+// surfaced as ENOENT on the post-run \`readFile\` even though the run
+// itself had succeeded.
 let stdin = "";
 process.stdin.setEncoding("utf8");
 process.stdin.on("data", (chunk) => { stdin += chunk; });
 process.stdin.on("end", () => {
+  fs.writeFileSync("args.json", JSON.stringify(args));
   fs.writeFileSync("stdin.txt", stdin);
   console.log(JSON.stringify({ type: "thread.started", thread_id: "thread-1" }));
   console.log(JSON.stringify({

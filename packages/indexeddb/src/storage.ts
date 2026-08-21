@@ -113,6 +113,8 @@ export type GroupByType = "none" | "day" | "week" | "month";
 export interface RawMessageQuery {
 	userId?: string;
 	platform?: string;
+	/** Optional connector allowlist applied in addition to `platform`. */
+	platforms?: string[];
 	botId?: string;
 	channel?: string;
 	person?: string;
@@ -295,7 +297,74 @@ export interface RawMessageStorage {
 	updateMessageEmbeddings(updates: RawMessageEmbeddingUpdate[], userId?: string): Promise<number>;
 }
 
-export interface RawMessageStorageManager extends RawMessageStorage {
+export interface RawMessageForgettingCycleResult {
+	status: "success";
+	createdSummaries: number;
+	transitionedRecords: number;
+	archivedDetailRecords: number;
+	hardDeletedRecords: number;
+}
+
+/**
+ * Result shape returned by `RawMessageStorageManager.searchMessagesSemantically`.
+ * Kept loose (string id, free-form metadata) so the SQLite-vec and Chroma
+ * backends can each populate the bits they care about without leaking
+ * vector-store specifics into the unified-search caller.
+ */
+export interface RawMessageSemanticHit {
+	id: string;
+	content: string;
+	similarity: number;
+	metadata: Record<string, unknown>;
+}
+
+/**
+ * BM25-shaped lexical hit returned by `RawMessageStorageManager.lexicalSearch`.
+ * Mirrors the SQLite FTS5 query output: `bm25` is the raw rank (negative,
+ * smaller = more relevant), `similarity` is the `[0..1]` proxy score that
+ * the unified-search RRF can reason about uniformly with semantic hits.
+ */
+export interface RawMessageLexicalHit {
+	message: RawMessage;
+	bm25: number;
+	similarity: number;
+}
+
+/**
+ * Optional search hooks. The contract stays optional so backends without a
+ * semantic / BM25 capability (e.g. IndexedDB without FTS5, or SQLite
+ * without sqlite-vec loaded) can implement the rest of `RawMessageStorage`
+ * without faking search support — callers probe with `typeof === "function"`
+ * and degrade gracefully when the hook is missing.
+ */
+export interface RawMessageSearchHooks {
+	searchMessagesSemantically?(input: {
+		userId: string;
+		queryEmbedding: number[];
+		limit?: number;
+		threshold?: number;
+		botId?: string;
+		includeArchived?: boolean;
+	}): Promise<RawMessageSemanticHit[]>;
+	lexicalSearch?(input: {
+		userId: string;
+		keywords: string[];
+		limit: number;
+		botId?: string;
+		includeArchived?: boolean;
+	}): Promise<RawMessageLexicalHit[]>;
+}
+
+export interface RawMessageStorageManager extends RawMessageStorage, RawMessageSearchHooks {
+	forgettingCycle?(input: {
+		userId: string;
+		options?: {
+			dryRun?: boolean;
+			hardDeleteArchivedOlderThan?: number;
+			shortRetentionMs?: number;
+			midRetentionMs?: number;
+		};
+	}): Promise<RawMessageForgettingCycleResult>;
 	init(): Promise<void>;
 	close(): Promise<void>;
 }

@@ -21,7 +21,19 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+// getOpenContextDir() prefers OPENCONTEXT_HOME over HOME. The path resolver
+// re-reads it on every call, so just clearing it in beforeEach would work —
+// but vi.hoisted also protects any module-load-time path resolution that may
+// be added later. A host with OPENCONTEXT_HOME pre-set (e.g. pointing at
+// ~/.alloomi) would otherwise leak its real dir into the home-dir-default
+// assertions below.
+vi.hoisted(() => {
+	// getOpenContextDir() treats any non-empty override as authoritative,
+	// so explicitly clearing it forces the fall-through to HOME.
+	process.env.OPENCONTEXT_HOME = "";
+});
 
 import {
 	__resetSQLiteRawMessageManagerForTests,

@@ -28,6 +28,14 @@ export interface EmbeddingProviderFactoryOptions {
 	providerType?: EmbeddingProviderType;
 	cloud?: Omit<CloudEmbeddingProviderOptions, "userAuthToken">;
 	local?: LocalTransformersEmbeddingProviderOptions;
+	/**
+	 * Optional HTTP headers that get attached to every request the cloud
+	 * embedding provider makes. Useful for tenant/billing attribution
+	 * (`x-tenant-usage-task`) and similar cross-cutting concerns that
+	 * downstream proxies inspect. Names and values are passed through
+	 * verbatim.
+	 */
+	extraHeaders?: Record<string, string>;
 }
 
 export interface CloudEmbeddingProviderOptions {
@@ -36,6 +44,11 @@ export interface CloudEmbeddingProviderOptions {
 	baseURL?: string;
 	modelName?: string;
 	batchSize?: number;
+	/**
+	 * Optional HTTP headers that get attached to every request. See
+	 * `EmbeddingProviderFactoryOptions.extraHeaders` for the rationale.
+	 */
+	extraHeaders?: Record<string, string>;
 }
 
 export function getConfiguredEmbeddingProvider(
@@ -50,6 +63,7 @@ export function getConfiguredEmbeddingProvider(
 	return new CloudEmbeddingProvider({
 		...options.cloud,
 		userAuthToken: options.userAuthToken,
+		extraHeaders: options.extraHeaders,
 	});
 }
 
@@ -79,6 +93,7 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 	private userAuthToken?: string;
 	private batchSize: number;
 	private dimensions?: number;
+	private extraHeaders?: Record<string, string>;
 
 	constructor(options: CloudEmbeddingProviderOptions = {}) {
 		this.apiKey = options.apiKey || process.env.OPENROUTER_API_KEY || "";
@@ -88,6 +103,7 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 		this.baseURL = options.baseURL || DEFAULT_CLOUD_EMBEDDING_BASE_URL;
 		this.baseURL = this.baseURL.replace(/\/+$/, "");
 		this.batchSize = options.batchSize ?? getEmbeddingBatchSize();
+		this.extraHeaders = options.extraHeaders;
 	}
 
 	getModelName(): string {
@@ -134,6 +150,12 @@ export class CloudEmbeddingProvider implements EmbeddingProvider {
 		} else if (this.userAuthToken) {
 			headers.Authorization = `Bearer ${this.userAuthToken}`;
 		} else {
+		}
+
+		if (this.extraHeaders) {
+			for (const [name, value] of Object.entries(this.extraHeaders)) {
+				headers[name] = value;
+			}
 		}
 
 		const response = await fetch(`${this.baseURL}/embeddings`, {

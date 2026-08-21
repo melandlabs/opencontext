@@ -1,4 +1,5 @@
 import { canonicalJson } from "./canonical-json";
+import { goalStepCompletionMarker } from "./constants";
 import { RuntimeInstructionSchema } from "./schema";
 import type { AgentGoal, GoalConstraint, GoalContextReference, RuntimeInstruction } from "./types";
 
@@ -99,6 +100,11 @@ function formatGoal(goal: AgentGoal): string {
 		`Success criteria:\n${requiredCriteria.join("\n")}`,
 		formatConstraintGroup("Model guidance", modelGuidance),
 		formatConstraintGroup("Runtime-enforced constraints (enforced outside the model)", runtimeConstraints),
+		formatStepCompletionProtocol(
+			goal.successCriteria.find(
+				(criterion) => criterion.required && criterion.verification.type === "agent_report",
+			),
+		),
 		`Execution limits:\n${formatExecutionLimits(goal).join("\n")}`,
 		`Completion policy: ${goal.completionPolicy}`,
 	]
@@ -123,6 +129,7 @@ function formatConstraintGroup(title: string, constraints: GoalConstraint[]): st
 
 function formatVerification(verification: AgentGoal["successCriteria"][number]["verification"]): string {
 	switch (verification.type) {
+		case "agent_report":
 		case "model_evidence":
 		case "manual":
 			return verification.type;
@@ -190,6 +197,8 @@ function formatContinuation(instruction: Extract<RuntimeInstruction, { kind: "go
 	return [
 		`Action: Continue working on Goal revision ${instruction.goalRevision}.`,
 		`Missing criteria:\n${missing}`,
+		"Finish this step before starting a later step.",
+		formatStepCompletionProtocol(instruction.payload.missingCriteria[0]),
 		`Evaluation reason:\n${escapeText(instruction.payload.reason)}`,
 		`Remaining budget:\n${formattedBudget}`,
 	].join("\n\n");
@@ -240,4 +249,16 @@ function escapeText(value: string): string {
 
 function escapeAttribute(value: string): string {
 	return escapeText(value).replaceAll('"', "&quot;").replaceAll("'", "&apos;");
+}
+
+function formatStepCompletionProtocol(
+	criterion: Pick<AgentGoal["successCriteria"][number], "id"> | undefined,
+): string | undefined {
+	if (!criterion) return undefined;
+	const marker = goalStepCompletionMarker(criterion.id);
+	return [
+		"Work only on this current step; do not start a later step yet.",
+		`When and only when the current step is fully complete, begin the final assistant response with this exact line: ${marker}`,
+		"If the step is incomplete, do not emit that line.",
+	].join("\n");
 }

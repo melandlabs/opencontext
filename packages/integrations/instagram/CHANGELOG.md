@@ -1,5 +1,13 @@
 # @melandlabs/integrations-instagram
 
+## 0.3.1
+
+### Patch Changes
+
+- Updated dependencies [448387a]
+  - @melandlabs/shared@0.4.0
+  - @melandlabs/integrations-channels@0.3.1
+
 ## 0.3.0
 
 ### Minor Changes

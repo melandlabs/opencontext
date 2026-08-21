@@ -1,5 +1,27 @@
 # @melandlabs/shared
 
+## 0.4.0
+
+### Minor Changes
+
+- 448387a: Add `workspaceArtifactManifestSchema`, `messageWorkspaceSchema`, and the `workspace` field on `messageMetadataSchema` so consumers can attach a per-message workspace manifest (session or execution scope) without a separate side-channel. Exports the inferred `WorkspaceArtifactManifest` and `MessageWorkspace` types.
+
+## 0.3.5
+
+### Patch Changes
+
+- Backfill fields that consumers were already reading from the local monorepo but that the published `0.3.x` line was missing:
+  - `MessageMetadata.taskIntegrationRecovery` — `{ type: "task_execution", taskId, executionId, platform }`. Used by the chat UI to mark continuation messages spawned by a post-authorization recovery run.
+  - `CustomUIDataTypes["meetingAsset"]` and `["meetingAnalysisFailure"]` — meeting-recording render shape and the failure counterpart emitted when the recording cannot be analyzed.
+  - `Attachment.sha256` — content-addressable identifier (hex-encoded SHA-256) so the same document delivered twice is recognised as one.
+
+## 0.3.4
+
+### Minor Changes
+
+- Add `workspaceArtifactManifestSchema`, `messageWorkspaceSchema`, and the `workspace` field on `messageMetadataSchema` so consumers can attach a per-message workspace manifest (session or execution scope) without a separate side-channel. Also export the inferred `WorkspaceArtifactManifest` and `MessageWorkspace` types.
+- Restore the `./ref`, `./soul`, and `./utils` subpath exports so apps can import e.g. `@melandlabs/shared/ref` directly (previously only available on the 0.3.x line before 0.3.3).
+
 ## 0.3.0
 
 ### Minor Changes

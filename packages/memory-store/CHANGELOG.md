@@ -1,5 +1,144 @@
 # @melandlabs/memory-store
 
+## 1.1.5
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+  - @melandlabs/memory-consolidation@0.5.2
+  - @melandlabs/ai@0.8.0
+  - @melandlabs/okf@0.2.0
+
+## 1.1.4
+
+### Patch Changes
+
+- 4351a4a: Load `@melandlabs/okf/http` and `@melandlabs/okf/mcp` lazily inside the HTTP / MCP server start functions instead of via static `import`. This breaks the workspace DTS cycle between memory-store and OKF (memory-store → okf via `dependencies`, okf → memory-store via `devDependencies`) so `pnpm -r build` can serialize memory-store before OKF and emit `dist/http.d.ts` / `dist/mcp.d.ts` without needing OKF's types on disk first. Runtime behavior is unchanged — `@melandlabs/okf` remains a regular `dependency` so the dynamic `import()` resolves at startup in any host that already has the OKF package installed.
+
+  Also unblocks the release workflow's `publish` job, which has been red since the v0.2 OKF release because the same DTS cycle crashed memory-store's `tsup --dts` step before it could produce the tarballs that the `smoke` job installs from npmjs.org.
+
+  - @melandlabs/okf@0.2.0
+
+## 1.1.3
+
+### Patch Changes
+
+- 6fa5b89: Republish to replace the workspace:\* deps that slipped into 1.1.2.
+
+  `memory-store@1.1.2` was uploaded with raw `workspace:*` specifiers (e.g.
+  `@melandlabs/ai: workspace:*`) after a manual version bump to dodge
+  npm's 24-hour republish cooldown. Downstream installs that resolve
+  against the public registry — most importantly the release `smoke`
+  job, which runs `pnpm install --ignore-workspace` against npmjs.org —
+  fail with `ERR_PNPM_WORKSPACE_PKG_NOT_FOUND` because no workspace
+  exists outside the monorepo.
+
+  Bumping to 1.1.3 routes through `pnpm changeset publish`, which calls
+  `pnpm pack` to generate the tarball. `pnpm pack` substitutes the
+  linked workspace versions into the packaged `package.json`, so the
+  published artifact carries versioned deps (`@melandlabs/ai: 0.7.0`,
+  `@melandlabs/okf: 0.2.0`, …) — verified locally against the same
+  `packages/memory-store` tree that the release workflow builds.
+
+  No source change vs 1.1.1 / 1.1.2; the `factType?: FactType` type
+  addition to `RawMessage` and the OKF HTTP / MCP wiring are already
+  shipped. 1.1.2 is deprecated on npm with a pointer to 1.1.3.
+
+- Updated dependencies [f550140]
+  - @melandlabs/ai@0.7.1
+  - @melandlabs/okf@0.2.0
+
+## 1.1.2
+
+### Patch Changes
+
+- Add the optional `factType?: FactType` field to the public `RawMessage` interface in `@melandlabs/memory-store/contracts`. The SQLite storage adapter already persisted `fact_type` to its column and the retrieval-side `RawMessageQuery.factTypes` filter already read it, but the public type omitted the field, forcing callers that set it (e.g. the `opencontext add --kind` CLI) to cast through `as any`. The IndexedDB `RawMessage` already had `factType?`, so this aligns the two boundary types.
+
+  No runtime change — purely a type-only addition. Storage and search behavior are unchanged.
+
+  - @melandlabs/okf@0.2.0
+
+## 1.1.0
+
+### Minor Changes
+
+- b86d8d0: This changeset ships OKF (Open Knowledge Format) v0.2 as a first-class
+  import / export format for the opencontext memory store. The OKF spec
+  itself is unchanged — what changes is the surface that bridges it to
+  `RawMessage`.
+
+  **What's new**
+
+  - **`@melandlabs/okf`** — new package. Codec (`okfToRawMessage` /
+    `rawMessageToOkf`), package I/O (`readOkfPackage` /
+    `writeOkfPackage`), CLI (`startOkf({action: ingest | emit | validate |
+inspect})`), HTTP (`registerOkfRoutes`), MCP (`registerOkfTools`).
+    Round-trip semantics: the front-matter `resource` is honoured as the
+    canonical `messageId`, so `emit → ingest` upserts in place rather
+    than creating `-2` suffixed duplicates.
+  - **`@melandlabs/contracts`** — adds `OkfFrontMatter`, `OkfDocument`,
+    `OkfPackageManifest` schemas, the canonical `OKF_TYPES` set
+    (`Reference`, `Concept`, `Experience`, `Episode`, `Opinion`,
+    `MentalModel`, `Belief`), and `okfTypeToFactType` /
+    `factTypeToOkfType` inverses. Front-matter is `.passthrough()` so
+    vendor-specific extension flags survive the round-trip under
+    `metadata.okfExtras` without being lifted into first-class fields.
+  - **`@melandlabs/memory-store`** — the unified daemon now exposes
+    `POST /v1/okf/import`, `POST /v1/okf/import-batch`,
+    `POST /v1/okf/export`, `memory.okfImport`, `memory.okfExport`,
+    re-using the same `OkfRunOptions.sink` so HTTP / MCP / CLI agree on
+    the `issues[]` envelope.
+  - **`@melandlabs/opencontext`** — `opencontext okf ingest | emit |
+validate | inspect` subcommand, plus facade re-exports of the OKF
+    surface so host apps don't reach into the subpackage.
+
+  **Required front-matter**
+
+  Blocking (`exit=1` regardless of `--continue-on-error`):
+
+  - `type` present (`missing_type`)
+  - `generated.at` present and parseable (`missing_generated_at`)
+  - valid YAML inside a front-matter fence (`invalid_yaml` /
+    `invalid_frontmatter`)
+  - non-empty body (`empty_body`)
+
+  Soft warnings (surfaced in `issues[]`, do not force non-zero exit):
+
+  - `generated.by` absent (`missing_generated_by`)
+  - `description`, `tags`, `sources`, `verified`, `stale_after`,
+    `supersedes` / `superseded_by` absent
+
+  `validate` agrees with `ingest`: a file is `valid: true` only when
+  no blocking issue is present.
+
+  **Backward compatibility**
+
+  - New public surface is purely additive. Existing `RawMessage` /
+    `FactType` consumers are unaffected.
+  - `yaml@^2` is added to the runtime tree (transitive dep of
+    `@melandlabs/okf`); `tsup` already keeps it external so the
+    opencontext bundle doesn't grow.
+  - The SQLite scope-conflict guard still fires when a re-ingest tries
+    to land the same `messageId` under a different `userId` — that
+    hasn't changed.
+
+### Patch Changes
+
+- Updated dependencies [6fc52c9]
+- Updated dependencies [6fc52c9]
+- Updated dependencies [b86d8d0]
+- Updated dependencies [448387a]
+- Updated dependencies [a435e2e]
+  - @melandlabs/ai@0.7.0
+  - @melandlabs/ai-rag@0.2.9
+  - @melandlabs/contracts@0.6.0
+  - @melandlabs/okf@0.2.0
+  - @melandlabs/shared@0.4.0
+  - @melandlabs/rag@0.3.0
+  - @melandlabs/indexeddb@0.5.8
+  - @melandlabs/sqlite@0.5.1
+
 ## 1.0.0
 
 ### Minor Changes

@@ -3,6 +3,9 @@ import { defineConfig } from "tsup";
 export default defineConfig({
 	entry: {
 		index: "src/index.ts",
+		extractor: "src/extractor.ts",
+		grouping: "src/grouping.ts",
+		client: "src/client.ts",
 	},
 	format: ["esm"],
 	dts: true,

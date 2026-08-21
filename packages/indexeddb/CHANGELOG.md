@@ -1,5 +1,42 @@
 # @melandlabs/indexeddb
 
+## 0.5.8
+
+### Patch Changes
+
+- Updated dependencies [b86d8d0]
+  - @melandlabs/contracts@0.6.0
+
+## 0.5.7
+
+### Patch Changes
+
+- Add the optional `platforms?: string[]` field to `RawMessageQuery`. Acts as an additional connector allowlist on top of the singular `platform`. Consumers that want the SQL clause `platform IN (?, ?, …)` build it from this list directly.
+
+## 0.5.6
+
+### Patch Changes
+
+- Add the `./client` subpath export so apps can import `@melandlabs/indexeddb/client` directly (same surface as `@melandlabs/indexeddb`, but loaded as its own tsup entry so dynamic `import()` calls get a smaller bundle).
+
+## 0.5.5
+
+### Patch Changes
+
+- Add the `RawMessageSearchHooks` interface (`searchMessagesSemantically`, `lexicalSearch` as optional methods) and have `RawMessageStorageManager` extend it. Also export the `RawMessageSemanticHit` / `RawMessageLexicalHit` shapes. Apps that gate on `typeof storage.searchMessagesSemantically === "function"` (unified-search route) compile against the published types. No runtime change for backends that don't implement these hooks.
+
+## 0.5.4
+
+### Patch Changes
+
+- Add the `./extractor` and `./grouping` subpath exports so apps can import platform extractor helpers (`RawMessageData`, `extractSlackMessages`, …) and the `groupRawMessagesByPeriod` utility directly. `grouping.ts` is the same implementation that used to live in `packages/indexeddb/src/grouping.ts` before the opencontext rename.
+
+## 0.5.3
+
+### Patch Changes
+
+- Declare the optional `forgettingCycle` method on `RawMessageStorageManager` so apps that gate on `typeof storage.forgettingCycle === "function"` (the IndexedDB→SQLite migration runner) compile against the published types. Add the `RawMessageForgettingCycleResult` shape that the optional method returns. No runtime behavior change for backends that don't implement it.
+
 ## 0.5.0
 
 ### Minor Changes

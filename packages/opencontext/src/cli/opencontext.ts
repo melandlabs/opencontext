@@ -32,8 +32,13 @@
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import { createRawMessageStore } from "@melandlabs/memory-store";
+import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { startHttpServer, startMcpServer } from "../index.js";
+import { parseAddArgs, runAdd } from "./add.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
+import { parseListArgs, runList } from "./list.js";
+import { parseSearchArgs, runSearch } from "./search.js";
+import { parseStatsArgs, runStats } from "./stats.js";
 
 // Shape that satisfies the `unified` field of `MemoryStoreConfig` (which
 // is what `startHttpServer` accepts). Kept local to this bin so we don't
@@ -385,7 +390,12 @@ Usage:
 Commands:
   mcp     Start the MCP server on stdio (default)
   http    Start the HTTP server
+  add     Append a raw message to the active manager (no LLM roundtrip)
+  search  Unified read with --mode {auto|lex|sem} and --context-only
+  list    Browse raw messages by filter (newest first by default)
+  stats   Report counts from the active raw-message store
   doctor  Run health checks against the local install
+  okf     OKF v0.2 (Open Knowledge Format) importer / exporter
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -395,9 +405,16 @@ Examples:
   opencontext mcp --embedding-provider local --memory-backend sqlite-vec
   opencontext http
   opencontext http --port 8080
+  opencontext add --user alice --text "Rust achieves memory safety without GC"
+  opencontext search --user alice --query "memory safety" --k 5
+  opencontext search --user alice --query "x" --context-only
+  opencontext list --user alice --since 2026-08-01 --limit 20
+  opencontext stats --json | jq '.stats.totalMessages'
   opencontext doctor
   opencontext doctor --json
-  opencontext doctor --section memory-store`);
+  opencontext doctor --section memory-store
+  opencontext okf ingest ./my-wiki --user=alice --json
+  opencontext okf emit --user=alice --output=./export-2026-08-19`);
 }
 
 function printHttpHelp(): void {
@@ -541,9 +558,35 @@ async function main(): Promise<void> {
 		return;
 	}
 
+	if (head === "add" || head === "ADD") {
+		process.exit(await runAdd(parseAddArgs(argv.slice(1))));
+	}
+
+	if (head === "search" || head === "SEARCH") {
+		process.exit(await runSearch(parseSearchArgs(argv.slice(1))));
+	}
+
+	if (head === "list" || head === "LIST") {
+		process.exit(await runList(parseListArgs(argv.slice(1))));
+	}
+
+	if (head === "stats" || head === "STATS") {
+		process.exit(await runStats(parseStatsArgs(argv.slice(1))));
+	}
+
 	if (head === "doctor" || head === "DOCTOR") {
 		await runDoctor(parseDoctorArgs(argv.slice(1)));
 		return;
+	}
+
+	if (head === "okf" || head === "OKF") {
+		const okfArgs = parseOkfArgs(argv.slice(1));
+		if (okfArgs.action === "help") {
+			printOkfHelp();
+			process.exit(0);
+		}
+		const result = await startOkf(okfArgs, { packageVersion: "@melandlabs/opencontext" });
+		process.exit(result.exit);
 	}
 
 	if (head === "--help" || head === "-h") {

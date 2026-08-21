@@ -1,5 +1,13 @@
 # @melandlabs/sqlite
 
+## 0.5.1
+
+### Patch Changes
+
+- Updated dependencies [b86d8d0]
+  - @melandlabs/contracts@0.6.0
+  - @melandlabs/indexeddb@0.5.8
+
 ## 0.5.0
 
 ### Minor Changes

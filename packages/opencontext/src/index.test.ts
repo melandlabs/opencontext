@@ -13,7 +13,18 @@
  * breakage to a downstream host app.
  */
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// getOpenContextDir() prefers OPENCONTEXT_HOME over HOME, and the facade
+// transitively imports LOOP_PATHS whose home string is captured at module
+// load time. Clear OPENCONTEXT_HOME before any module-load-time path
+// resolution so a host with OPENCONTEXT_HOME pre-set (e.g. ~/.alloomi)
+// doesn't leak its real dir into the re-exports assertion below.
+vi.hoisted(() => {
+	// getOpenContextDir() treats any non-empty override as authoritative,
+	// so explicitly clearing it forces the fall-through to HOME.
+	process.env.OPENCONTEXT_HOME = "";
+});
 
 import * as facade from "./index";
 

@@ -1,5 +1,12 @@
 # @melandlabs/integrations-runtime
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [b86d8d0]
+  - @melandlabs/contracts@0.6.0
+
 ## 0.3.2
 
 ### Patch Changes

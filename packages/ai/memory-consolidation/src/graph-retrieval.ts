@@ -644,3 +644,178 @@ export function createGraphAwareRetrievalDryRunRetriever(
 		},
 	};
 }
+
+/**
+ * Resolve an ISO-8601 `asOf` to epoch milliseconds. Missing or unparseable
+ * values fall back to "now", preserving the pre-time-travel behaviour.
+ */
+export function parseAsOf(asOf: string | undefined, now = Date.now()): number {
+	if (typeof asOf !== "string" || asOf.length === 0) return now;
+	const ms = Date.parse(asOf);
+	return Number.isFinite(ms) ? ms : now;
+}
+
+// ============================================================================
+// Legacy helpers from alloomi/packages/ai/memory-consolidation (pre-npm).
+// Restored so callers migrating from the workspace link to the npm tarball
+// still resolve `applicabilityContains`, `DefaultGraphAwareRetriever`, and
+// the relevance scoring helpers without changing call sites.
+// ============================================================================
+
+const DEFAULT_RELEVANCE_THRESHOLD = 0.3;
+
+function clamp01(value: number): number {
+	return Math.max(0, Math.min(1, value));
+}
+
+/**
+ * Returns true when the applicability window contains `asOfMs`. Items without
+ * applicability metadata are always included — applicability is opt-in.
+ */
+export function applicabilityContains(
+	applicability: MemoryApplicabilityContext | undefined,
+	asOfMs: number,
+): boolean {
+	if (!applicability) return true;
+	if (typeof applicability.validFrom === "number" && asOfMs < applicability.validFrom) {
+		return false;
+	}
+	if (typeof applicability.validUntil === "number" && asOfMs > applicability.validUntil) {
+		return false;
+	}
+	return true;
+}
+
+function isApplicable(
+	applicability: MemoryApplicabilityContext | undefined,
+	contexts: MemoryApplicabilityContext[] | undefined,
+	asOfMs: number,
+): boolean {
+	if (!applicability) return true;
+	if (typeof applicability.validFrom === "number" && asOfMs < applicability.validFrom) {
+		return false;
+	}
+	if (typeof applicability.validUntil === "number" && asOfMs > applicability.validUntil) {
+		return false;
+	}
+	if (!contexts || contexts.length === 0) {
+		return applicability.scope === "global";
+	}
+	return contexts.some((ctx) => {
+		if (ctx.scope !== applicability.scope) return false;
+		if (applicability.key && ctx.key && applicability.key !== ctx.key) {
+			return false;
+		}
+		return true;
+	});
+}
+
+export class DefaultGraphAwareRetriever implements GraphAwareRetriever {
+	async compare(input: GraphAwareRetrievalInput): Promise<GraphAwareRetrievalResult> {
+		const reasonCodes: string[] = [];
+		const applicableNodeIds = new Set<string>();
+		const hiddenDeprecatedNodeIds: string[] = [];
+		const asOfMs = parseAsOf(input.asOf);
+
+		for (const node of input.snapshot.nodes) {
+			if (node.visibility === "deprecated" && !input.includeDeprecated) {
+				hiddenDeprecatedNodeIds.push(node.id);
+				continue;
+			}
+			if (node.visibility === "audit-only" && input.visibilityMode !== "audit") {
+				continue;
+			}
+			if (!isApplicable(node.applicability, input.applicabilityContexts, asOfMs)) {
+				continue;
+			}
+			applicableNodeIds.add(node.id);
+		}
+
+		const baselineSet = new Set(input.baselineNodeIds);
+		const expandedClusterIds = new Set<string>();
+
+		for (const edge of input.snapshot.edges) {
+			if (!applicableNodeIds.has(edge.fromNodeId) || !applicableNodeIds.has(edge.toNodeId)) {
+				continue;
+			}
+			if (!applicabilityContains(edge.applicability, asOfMs)) {
+				continue;
+			}
+			if (baselineSet.has(edge.fromNodeId) || baselineSet.has(edge.toNodeId)) {
+				for (const cluster of input.snapshot.clusters) {
+					if (
+						!applicabilityContains(cluster.applicability, asOfMs) ||
+						!cluster.nodeIds.includes(edge.fromNodeId) ||
+						!cluster.nodeIds.includes(edge.toNodeId)
+					) {
+						continue;
+					}
+					expandedClusterIds.add(cluster.clusterId);
+				}
+			}
+		}
+
+		for (const cluster of input.snapshot.clusters) {
+			if (!applicabilityContains(cluster.applicability, asOfMs)) continue;
+			if (cluster.nodeIds.some((id) => baselineSet.has(id))) {
+				expandedClusterIds.add(cluster.clusterId);
+			}
+		}
+
+		const rankedNodeIds = Array.from(baselineSet).filter((id) => applicableNodeIds.has(id));
+
+		if (hiddenDeprecatedNodeIds.length > 0) {
+			reasonCodes.push("hidden_deprecated_nodes");
+		}
+		if (expandedClusterIds.size > 0) {
+			reasonCodes.push("cluster_expansion");
+		}
+		if (input.visibilityMode === "conflict") {
+			reasonCodes.push("conflict_visibility");
+		}
+
+		const auditTrail: MemoryGraphAuditTrail[] =
+			input.visibilityMode === "audit"
+				? rankedNodeIds.map((nodeId) => ({
+						ownerScope: input.ownerScope,
+						nodeId,
+						sourceNodeIds: [],
+						edgeIds: [],
+						operationIds: [],
+						reasonCodes: [...reasonCodes],
+					}))
+				: [];
+
+		return {
+			ownerScope: input.ownerScope,
+			rankedNodeIds,
+			hiddenDeprecatedNodeIds,
+			withheldBaselineNodes: [],
+			addedBeyondBaselineNodes: [],
+			expandedClusterIds: Array.from(expandedClusterIds),
+			auditTrail: auditTrail.length > 0 ? auditTrail : undefined,
+			reasonCodes,
+		};
+	}
+}
+
+export const defaultGraphAwareRetriever = new DefaultGraphAwareRetriever();
+
+export function buildGraphAwareRetrievalRelevanceScore(input: {
+	query: string;
+	nodeContent: string;
+}): number {
+	if (!input.query || !input.nodeContent) return 0;
+	const queryWords = input.query.toLowerCase().split(/\s+/).filter(Boolean);
+	const content = input.nodeContent.toLowerCase();
+	if (queryWords.length === 0) return 0;
+	const hits = queryWords.filter((word) => content.includes(word)).length;
+	return clamp01(hits / queryWords.length);
+}
+
+export function filterByRelevanceThreshold<T extends { score: number }>(
+	items: T[],
+	threshold = DEFAULT_RELEVANCE_THRESHOLD,
+): T[] {
+	return items.filter((item) => item.score >= threshold);
+}

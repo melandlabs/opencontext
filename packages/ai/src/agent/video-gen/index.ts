@@ -8,6 +8,7 @@
 export type {
 	VideoGenerationRequest,
 	VideoGenerationResponse,
+	VideoGenerationErrorType,
 	VideoModelInfo,
 	VideoCapabilities,
 } from "./types";

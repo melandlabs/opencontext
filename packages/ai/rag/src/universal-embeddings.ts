@@ -13,12 +13,8 @@ import {
 export class UniversalEmbeddings implements EmbeddingProvider {
 	private provider: EmbeddingProvider;
 
-	constructor(
-		userAuthToken?: string,
-		provider?: EmbeddingProvider,
-		options: Omit<EmbeddingProviderFactoryOptions, "userAuthToken"> = {},
-	) {
-		this.provider = provider ?? getConfiguredEmbeddingProvider({ ...options, userAuthToken });
+	constructor(userAuthToken?: string, options: Omit<EmbeddingProviderFactoryOptions, "userAuthToken"> = {}) {
+		this.provider = getConfiguredEmbeddingProvider({ ...options, userAuthToken });
 	}
 
 	async embedDocuments(texts: string[]): Promise<number[][]> {

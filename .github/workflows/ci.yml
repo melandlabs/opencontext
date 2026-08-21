@@ -71,7 +71,39 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm -r build
+      # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
+      # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
+      # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
+      # tsup child-worker heap OOMs on DTS generation. Linux passes
+      # comfortably without it.
+      - name: Build
+        # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
+        # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
+        # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
+        # tsup child-worker heap OOMs on DTS generation. Linux passes
+        # comfortably without it.
+        # OKF ↔ memory-store form a workspace cycle, but the OKF →
+        # memory-store direction is only a `devDependency` (the runtime
+        # cycle is broken via a lazy `await import(...)` inside
+        # `okf/src/cli.ts`). pnpm 10 therefore does not enforce a
+        # topological edge from memory-store to okf, so `pnpm -r build`
+        # starts the two tsup DTS steps in parallel and the OKF one
+        # races the memory-store one — whichever resolves
+        # `typeof import('@melandlabs/memory-store')` first crashes with
+        # TS2307 because the other hasn't written its `dist/index.d.ts`
+        # yet. Pure timing flake on a single `pnpm -r build` invocation.
+        #
+        # Two-pass build (mirrors release.yml's published-tarball build):
+        # the first pass uses pnpm's `...` suffix to build OKF's
+        # transitive dep closure (forcing memory-store ahead of OKF in
+        # the topo order and seeding every consumer's `dist/*.d.ts`),
+        # and the second pass rebuilds the full workspace against the
+        # already-seeded types.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
+        env:
+          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
 
   test:
@@ -95,7 +127,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # examples/ smoke-tests import @melandlabs/* packages and need dist/
       # artifacts to be present before `pnpm -r test` runs.
-      - run: pnpm -r build
+      # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
+      # the default worker heap; see the matching note in the typecheck
+      # job above.
+      - name: Build
+        # examples/ smoke-tests import @melandlabs/* packages and need dist/
+        # artifacts to be present before `pnpm -r test` runs.
+        # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
+        # the default worker heap; see the matching note in the typecheck
+        # job above.
+        # OKF ↔ memory-store DTS race — see the typecheck job above for
+        # the full explanation. Two-pass build mirrors release.yml: seed
+        # OKF's transitive dep closure first, then rebuild the whole
+        # workspace against the seeded `dist/*.d.ts`.
+        run: |
+          pnpm --filter @melandlabs/okf... build
+          pnpm -r --filter './packages/**' build
+        env:
+          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
 
   build:

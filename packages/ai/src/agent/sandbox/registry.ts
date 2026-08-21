@@ -31,7 +31,7 @@ class SandboxRegistry {
 	}
 
 	register(plugin: SandboxPlugin): void {
-		const { type, name } = plugin.metadata;
+		const { type } = plugin.metadata;
 
 		if (this.plugins.has(type)) {
 		}

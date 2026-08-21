@@ -3,11 +3,36 @@ import { z } from "zod";
 
 export type DataPart = { type: "append-message"; message: string };
 
+export const workspaceArtifactManifestSchema = z.object({
+	version: z.literal(1),
+	files: z.array(
+		z.object({
+			path: z.string().min(1),
+			name: z.string().min(1),
+			type: z.string().min(1),
+			snapshotPath: z.string().min(1).optional(),
+		}),
+	),
+});
+
+export const messageWorkspaceSchema = z.discriminatedUnion("scope", [
+	z.object({
+		scope: z.literal("session"),
+		artifacts: workspaceArtifactManifestSchema,
+	}),
+	z.object({
+		scope: z.literal("execution"),
+		executionId: z.string().min(1),
+		artifacts: workspaceArtifactManifestSchema,
+	}),
+]);
+
 export const messageMetadataSchema = z.object({
 	createdAt: z.string().optional(),
 	disableAction: z.boolean().optional(),
 	executionKey: z.string().optional(),
 	executionId: z.string().optional(),
+	workspace: messageWorkspaceSchema.optional(),
 	executionAnchor: z.enum(["user", "assistant"]).optional(),
 	executionSource: z.string().optional(),
 	executionSequence: z.number().int().positive().optional(),
@@ -79,6 +104,14 @@ export const messageMetadataSchema = z.object({
 	// Marks visible continuation messages created after an authorization card is
 	// granted after the original run has already ended.
 	authorizationContinuation: z.boolean().optional(),
+	taskIntegrationRecovery: z
+		.object({
+			type: z.literal("task_execution"),
+			taskId: z.string().min(1),
+			executionId: z.string().min(1),
+			platform: z.string().min(1),
+		})
+		.optional(),
 	onboardingIntentId: z.string().optional(),
 	taskTemplate: z
 		.object({
@@ -97,6 +130,8 @@ export const messageMetadataSchema = z.object({
 });
 
 export type MessageMetadata = z.infer<typeof messageMetadataSchema>;
+export type WorkspaceArtifactManifest = z.infer<typeof workspaceArtifactManifestSchema>;
+export type MessageWorkspace = z.infer<typeof messageWorkspaceSchema>;
 
 export type CustomUIDataTypes = {
 	appendMessage: string;
@@ -426,6 +461,71 @@ export type CustomUIDataTypes = {
 		}>;
 		skillId: string;
 	};
+	meetingAsset: {
+		recordingId: string;
+		title: string;
+		sourceType: "recording" | "upload";
+		audioSource: "mic" | "system" | "mic+system" | "uploaded_file";
+		audioPath: string;
+		startedAt: string;
+		endedAt?: string;
+		durationSeconds: number;
+		creator: string;
+		visibility: "private";
+		template: "general" | "sales" | "customer_success" | "user_interview";
+		summary: string;
+		keyPoints: string[];
+		actionItems: Array<{
+			text: string;
+			owner?: string;
+			dueDate?: string;
+			sourceQuote?: string;
+		}>;
+		participants: string[];
+		decisions: string[];
+		commitments: string[];
+		risks: string[];
+		openQuestions: string[];
+		opportunities: string[];
+		notableQuotes: string[];
+		customerSignals: Array<{
+			type: "pain" | "objection" | "budget" | "timeline" | "competitor" | "risk";
+			text: string;
+		}>;
+		transcript: string;
+		proactiveContext?: {
+			employeeId: string;
+			calendarEvent: {
+				id: string;
+				title: string;
+				startTime: string;
+				endTime: string;
+				participants: string[];
+			};
+		};
+	};
+	meetingAnalysisFailure: {
+		audioPath: string;
+		fileName: string;
+		recordingId: string;
+		errorCode: string;
+		sourceType: "recording" | "upload";
+		audioSource: "mic" | "system" | "mic+system" | "uploaded_file";
+		startedAt: string;
+		endedAt?: string;
+		durationSeconds: number;
+		template: "general" | "sales" | "customer_success" | "user_interview";
+		proactiveContext?: {
+			employeeId: string;
+			calendarEvent: {
+				id: string;
+				title: string;
+				startTime: string;
+				endTime: string;
+				participants: string[];
+			};
+		};
+	};
 	/**
 	 * Provider-timeout interruption. Emitted alongside an `error` part when the
 	 * agent was killed mid-tool-call by an absolute wall-clock deadline (issue
@@ -456,6 +556,12 @@ export interface Attachment {
 	expired?: boolean;
 	expiredAt?: string;
 	cid?: string;
+	/**
+	 * SHA-256 of the raw bytes, hex encoded. Identifies content independently of
+	 * file name or storage path, so the same document delivered twice is
+	 * recognisable as one, and an edited copy is recognisable as different.
+	 */
+	sha256?: string;
 }
 
 export interface ExtractedMessageInfo {

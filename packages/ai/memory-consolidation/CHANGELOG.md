@@ -1,5 +1,47 @@
 # @melandlabs/memory-consolidation
 
+## 0.5.2
+
+### Patch Changes
+
+- Restore alloomi-side `graph-retrieval` and `semantic-draft` surface on the
+  npm tarball so callers migrating from the workspace link to the npm
+  package keep resolving without call-site changes:
+
+  - `./graph-retrieval` now exports `parseAsOf`, `applicabilityContains`,
+    `DefaultGraphAwareRetriever`, `defaultGraphAwareRetriever`,
+    `buildGraphAwareRetrievalRelevanceScore`, `filterByRelevanceThreshold`
+    in addition to the existing `applicabilityMatchesTrustedContexts`,
+    `buildGraphAwareRetrievalDryRun`, and
+    `createGraphAwareRetrievalDryRunRetriever`.
+  - `./semantic-draft` now exports `defaultSummarizeMemoryCluster` next to
+    the existing `summarizeSemanticMemoryDraftCandidate` etc.
+  - `GraphAwareRetrievalInput` gains an optional `asOf?: string` field
+    (`MemoryGraphSnapshotQuery` already had one). Time-travel falls back to
+    "now" when omitted, so behaviour for existing callers is byte-identical.
+  - `DefaultGraphAwareRetriever.compare()` populates the new
+    `withheldBaselineNodes` and `addedBeyondBaselineNodes` result fields
+    (empty arrays), satisfying the post-#471 `GraphAwareRetrievalResult`
+    shape without rewriting the legacy ranking logic.
+
+  Background: `consolidation.ts` (alloomi #3386) and the `memory-graph-as-of`
+  unit test reference symbols that lived only in alloomi's local
+  `packages/ai/memory-consolidation` source and never landed in the
+  opencontext monorepo before `9586da91 chore(opencontext): move 49 packages`.
+  Alloomi's `refactor-opencontext` branch swaps the workspace link for the
+  npm package, so these symbols need to be available in the published
+  tarball to keep `tsc --noEmit` and the affected vitest suite green.
+
+## 0.5.1
+
+### Patch Changes
+
+- Restore alloomi-side `graph-retrieval` and `semantic-draft` surface on the npm tarball so callers migrating from the workspace link to the npm package keep resolving without call-site changes:
+  - `./graph-retrieval` now exports `parseAsOf`, `applicabilityContains`, `DefaultGraphAwareRetriever`, `defaultGraphAwareRetriever`, `buildGraphAwareRetrievalRelevanceScore`, `filterByRelevanceThreshold` in addition to the existing `applicabilityMatchesTrustedContexts`, `buildGraphAwareRetrievalDryRun`, and `createGraphAwareRetrievalDryRunRetriever`.
+  - `./semantic-draft` now exports `defaultSummarizeMemoryCluster` next to the existing `summarizeSemanticMemoryDraftCandidate` etc.
+  - `GraphAwareRetrievalInput` gains an optional `asOf?: string` field (`MemoryGraphSnapshotQuery` already had one). Time-travel falls back to "now" when omitted, so behaviour for existing callers is byte-identical.
+  - `DefaultGraphAwareRetriever.compare()` populates the new `withheldBaselineNodes` and `addedBeyondBaselineNodes` result fields (empty arrays), satisfying the post-#471 `GraphAwareRetrievalResult` shape without rewriting the legacy ranking logic.
+
 ## 0.5.0
 
 ### Minor Changes

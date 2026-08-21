@@ -40,6 +40,8 @@ export interface CompactionOptions {
 	platform: CompactionPlatform;
 	/** Auth token (Bearer token for /api/ai/v1/chat/completions) */
 	authToken: string;
+	/** Extra request headers merged into the compaction call (e.g. usage tagging). */
+	extraHeaders?: Record<string, string>;
 }
 
 function normalizeCompactionRole(role: string): "user" | "assistant" | "system" {
@@ -58,7 +60,7 @@ function normalizeCompactionRole(role: string): "user" | "assistant" | "system" 
  * @returns CompactionResponse | null - Summary result or null on failure
  */
 export async function triggerCompaction(options: CompactionOptions): Promise<CompactionResponse | null> {
-	const { messages, level, platform, authToken } = options;
+	const { messages, level, authToken, extraHeaders } = options;
 
 	if (!messages || messages.length === 0) {
 		return null;
@@ -93,6 +95,7 @@ export async function triggerCompaction(options: CompactionOptions): Promise<Com
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${authToken}`,
+				...extraHeaders,
 			},
 			body: JSON.stringify({
 				messages: compactionMessages,

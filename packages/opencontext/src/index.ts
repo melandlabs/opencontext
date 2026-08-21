@@ -119,6 +119,7 @@ export {
 	getVectorStore,
 	addDocumentToVectorStore,
 	searchVectorStore,
+	searchHybridVectorStore,
 	deleteDocumentFromVectorStore,
 	getVectorStoreStats,
 	configureVectorService,
@@ -135,6 +136,10 @@ export {
 	getSQLiteVecStore,
 	resetSQLiteVecStore,
 	ChromaVectorStore,
+	HybridSearchAdapter,
+	fuseHybridResults,
+	LanceDBStore,
+	MilvusStore,
 } from "@melandlabs/rag";
 
 export type {
@@ -148,6 +153,19 @@ export type {
 	VectorSearchResult,
 	DocumentChunk,
 	ChromaVectorStoreOptions,
+	IHybridVectorStore,
+	HybridSearchFilter,
+	HybridSearchQuery,
+	HybridFusionStrategy,
+	HybridRetrievalConfig,
+	VectorStoreBackend,
+	VectorServiceConfig,
+	HybridFusionInput,
+	HybridSearchAdapterOptions,
+	LexicalSearchProvider,
+	LanceDBFtsOptions,
+	LanceDBStoreOptions,
+	MilvusStoreOptions,
 } from "@melandlabs/rag";
 
 // ─── 3b. Cloud / local embedding provider abstraction ─────────────────────
@@ -291,3 +309,69 @@ export { createMinimalContext as getIntegrationManager } from "@melandlabs/integ
 // the facade's main bundle (one canonical copy of the code).
 export { startHttpServer } from "@melandlabs/memory-store/http";
 export { startMcpServer } from "@melandlabs/memory-store/mcp";
+
+// ─── 13. OKF v0.2 (Open Knowledge Format) importer / exporter ──────────
+// Markdown + YAML-front-matter ⇄ RawMessage codec. The HTTP and MCP
+// front-ends re-use the same `RawMessageStore` so a host that already
+// runs `opencontext http` / `opencontext mcp` can serve `POST
+// /v1/okf/import` and `memory.okfImport` without extra wiring.
+export {
+	parseOkf,
+	parseOkfFrontMatter,
+	stringifyOkf,
+	validateOkfFrontMatter,
+	okfToRawMessage,
+	rawMessageToOkf,
+	okfTypeToFactType,
+	factTypeToOkfType,
+	extractMarkdownLinks,
+	slugify,
+	ingestOkfString,
+	readOkfPackage,
+	writeOkfPackage,
+	OkfError,
+	okfIssue,
+	parseOkfArgs,
+	startOkf,
+	printOkfHelp,
+	isOkfType,
+	OkfFrontMatterSchema,
+	OkfDocumentSchema,
+	OkfPackageManifestSchema,
+	OKF_TYPES,
+} from "@melandlabs/okf";
+export type {
+	OkfFrontMatter,
+	OkfDocument,
+	OkfPackageManifest,
+	OkfSource,
+	OkfVerification,
+	OkfGenerated,
+	OkfIssue,
+	OkfIssueCode,
+	ParsedOkfDocument,
+	OkfToRawMessageOptions,
+	OkfToRawMessageResult,
+	RawMessageToOkfOptions,
+	RawMessageToOkfResult,
+	ReadOkfPackageOptions,
+	OkfPackageFile,
+	ReadOkfPackageResult,
+	WriteOkfPackageOptions,
+	WriteOkfPackageResult,
+	OkfAction,
+	OkfCommonOptions,
+	OkfIngestOptions,
+	OkfEmitOptions,
+	OkfValidateOptions,
+	OkfInspectOptions,
+	OkfHelpOptions,
+	OkfOptions,
+	OkfRunResult,
+	OkfRunOptions,
+	OkfIngestSummary,
+	OkfEmitSummary,
+	OkfValidateSummary,
+	OkfInspectSummary,
+	OkfInspectOutput,
+} from "@melandlabs/okf";

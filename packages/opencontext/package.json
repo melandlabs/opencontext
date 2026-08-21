@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.4.1",
+	"version": "0.5.1",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -22,8 +22,9 @@
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@hono/node-server": "^1.13.7",
-		"@melandlabs/ai-rag": "^0.2.6",
+		"@melandlabs/ai-rag": "^0.2.9",
 		"@melandlabs/integrations": "^0.3.0",
+		"@melandlabs/okf": "^0.2.0",
 		"@melandlabs/security": "^0.3.0",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",
@@ -57,6 +58,7 @@
 		"@melandlabs/indexeddb": "workspace:*",
 		"@melandlabs/loop": "workspace:*",
 		"@melandlabs/memory-store": "workspace:*",
+		"@melandlabs/okf": "workspace:*",
 		"@melandlabs/rag": "workspace:*",
 		"@melandlabs/search": "workspace:*",
 		"@melandlabs/shared": "workspace:*",
@@ -67,6 +69,18 @@
 		"@types/node": "^22.13.10",
 		"tsup": "^8.0.0",
 		"typescript": "^5.6.3"
+	},
+	"peerDependencies": {
+		"@lancedb/lancedb": "^0.37.1",
+		"@zilliz/milvus2-sdk-node": "^2.5.13"
+	},
+	"peerDependenciesMeta": {
+		"@lancedb/lancedb": {
+			"optional": true
+		},
+		"@zilliz/milvus2-sdk-node": {
+			"optional": true
+		}
 	},
 	"scripts": {
 		"build": "tsup",

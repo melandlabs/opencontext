@@ -1,5 +1,86 @@
 # @melandlabs/ai
 
+## 0.8.0
+
+### Minor Changes
+
+- Port Goal Runtime agent symbols from the openloomi fork into `@melandlabs/ai`:
+
+  - Add `GOAL_STEP_COMPLETION_MARKER_OPEN`, `goalStepCompletionMarker`, and
+    `stripGoalStepCompletionMarkers` exports in `runtime-instructions/constants.ts`
+    so the formatter can emit and strip the per-step completion marker used by
+    simplified Goals.
+  - Add `"agent_report"` to `GoalCriterionVerificationSchema` so runtime
+    instructions can declare agent-report verification, and widen
+    `RuntimeProviderSchema` from `"claude"` to `"claude" | "codex"` to match
+    the runtime provider surfaces already used in `native-agent/`.
+  - Add `replayableInstructionIds: readonly string[]` and the optional
+    `replayedInstructions` flag on `AgentRuntimeRecovery` so the host can be
+    notified when an outbox replay actually occurred during recovery.
+  - Add the tri-state `goalRuntimeSessionId?: string | null` on `AgentOptions`
+    and `NativeAgentRunnerContext`, plus the `buildAgentOptions` bridge that
+    copies it through (defaulting to `body.sessionId` when undefined and to
+    an explicit `null` when the host wants an un-attached chat turn).
+  - Teach `formatter.ts` to render the new `agent_report` verification case
+    and emit the step-completion protocol block whenever a required
+    `agent_report` criterion is present.
+
+  The step-completion marker uses the prefix `OPENCONTEXT_STEP_COMPLETE:`
+  (previously `OPENLOOMI_STEP_COMPLETE:` in the openloomi fork). In-flight
+  Goals authored against the old prefix will no longer be auto-stripped —
+  those targets should be drained or retired before upgrade.
+
+  All changes are additive (new optional fields, a new enum member, a new
+  schema case). No existing public API is removed or renamed.
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/memory-consolidation@0.5.2
+
+## 0.7.1
+
+### Patch Changes
+
+- f550140: Fix CodexAgent test plumbing flake on darwin CI. `defaultFakeCodexScript`
+  now drains stdin before persisting argv/stdin to disk; on heavily-loaded
+  macOS runners the previous "writeFileSync first, attach listeners second"
+  ordering could lose the race against an early child exit, surfacing as
+  ENOENT on the post-run `readFile`. The `data`/`end` listeners are still
+  attached eagerly so `proc.stdin.end()` cannot surface as EPIPE either.
+
+## 0.7.0
+
+### Minor Changes
+
+- 6fc52c9: Surface the additional `agent/*` subpaths required by alloomi (and other downstream consumers):
+
+  - `agent/registry`
+  - `agent/cli-process`
+  - `agent/prompt-context`
+  - `agent/claude/cli-locations`
+  - `agent/runtime/output-event-bus`
+  - `agent/billing/{index,model-pricing}`
+  - `agent/compaction/{index,compaction,compaction-client}`
+  - `agent/model/index`
+  - `agent/routing/index`
+  - `agent/codex/{index,command,interrupt-marker,metadata,parser,runtime-preflight,transport-status}`
+  - `agent/hermes/{index,command,metadata}`
+  - `agent/openclaw/{index,command,metadata}`
+  - `agent/opencode/{index,command,metadata,parser}`
+  - `agent/standalone/{index,metadata}`
+  - `agent/acp/{agent,mapper,stdio-client}`
+  - `agent/native-agent/{native-runner,provider-env,register-provider,runtime-contract,runtime-preference,runtime-probe}`
+
+  `StandAloneAgent.run` now resolves the model through `createDynamicModel(isNativeMode, modelName)` — cloud auth must be configured by calling `setAIUserContext` (with the user JWT) before the agent runs; the standalone agent itself no longer threads `authToken` into the model factory.
+
+### Patch Changes
+
+- Updated dependencies [b86d8d0]
+- Updated dependencies [448387a]
+  - @melandlabs/contracts@0.6.0
+  - @melandlabs/shared@0.4.0
+
 ## 0.5.0
 
 ### Minor Changes

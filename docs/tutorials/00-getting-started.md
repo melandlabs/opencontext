@@ -180,6 +180,122 @@ main().catch(console.error);
 
 > **Note:** SDK mode requires manual embedding handling. For automatic embeddings with better results, use the HTTP server below.
 
+## Managing Memory from the CLI
+
+Beyond the SDK, the same memory store is reachable from the command line
+with two verbs: `add` writes a single raw message straight to the active
+manager — no LLM roundtrip, no `consolidate()` loop — and `search` runs a
+unified read across memory, insights, and knowledge. CLI is the lightest
+entry point: no daemon, no HTTP client, just `npx …` or a globally
+installed `opencontext`.
+
+### `opencontext add` — write one fact
+
+`add` is the CLI equivalent of `messages.storeMessages(...)`. It bypasses
+the agentic `consolidate()` loop, so it's fast and deterministic — useful
+for CLI backfills, scripted ingestion, and ad-hoc captures that you intend
+to let `consolidate` pick up later.
+
+Auto-filled when omitted:
+
+| Field      | Default                  |
+| ---------- | ------------------------ |
+| `userId`   | `"default"`              |
+| `botId`    | `"default"`              |
+| `platform` | `"cli"`                  |
+| `timestamp`| `Date.now()`             |
+| `messageId`| `crypto.randomUUID()`    |
+| `createdAt`| `Date.now()`             |
+
+**Flag reference:**
+
+| Flag                        | Purpose                                                                |
+| --------------------------- | ---------------------------------------------------------------------- |
+| `--text <text>` *(required)*| Message content                                                        |
+| `--user <id>`               | User / workspace id                                                    |
+| `--bot <id>`                | Bot id                                                                 |
+| `--platform <name>`         | Origin platform tag (e.g. `"slack"`, `"telegram"`)                     |
+| `--channel <name>`          | Channel label                                                          |
+| `--person <id>`             | Author / sender id                                                     |
+| `--source <uri>`            | Stored in `metadata.source`                                            |
+| `--kind <factType>`         | Kind tag, written to the top-level `factType` field. The closed set `world \| experience \| mental_model` is what `search --kind` recognises; anything else is accepted but will produce zero hits from the filter |
+| `--at <iso-8601>`           | Timestamp override                                                     |
+| `--tag <key=value>`         | Free-form tag, repeatable (also `--tag=k=v`)                           |
+| `--json`                    | Emit JSON envelope `{ ok, exit, count, ids, platform }` instead of the default human line. `ids[]` are numeric DB row IDs, not the UUID `messageId` |
+
+**Exit codes:** `0` on success, `1` on validation error or backend refusal.
+
+**Examples:**
+
+```bash
+# Minimal
+opencontext add --user alice --text "Rust achieves memory safety without GC"
+
+# Full provenance for later consolidation
+opencontext add \
+  --user alice --bot general \
+  --text "Discussed Q4 roadmap with the team" \
+  --source "meeting://2026-08-20" --kind experience \
+  --tag topic=roadmap --tag team=eng
+
+# Script-friendly
+opencontext add --user alice --text "..." --json
+```
+
+### `opencontext search` — read across memory + insights + knowledge
+
+`search` is the CLI equivalent of `store.search(...)`, with three flavours
+picked by `--mode` and one escape hatch (`--context-only`) that surfaces the
+exact prompt context that would have been sent to the LLM — without paying
+for a synthesis call.
+
+**Flag reference:**
+
+| Flag                          | Purpose                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `--query <text>` / `-q` *(required)* | Search query                                                                                     |
+| `--user <id>`                 | User / workspace id (default `"default"`)                                                              |
+| `--mode <name>`               | `auto` (default, RRF hybrid) / `lex` (similarity, default sources) / `sem` (similarity, memory only)    |
+| `--k <int>` / `--limit`       | Top-k (default `10`)                                                                                   |
+| `--threshold <float>`         | Similarity threshold in `[0, 1]`                                                                       |
+| `--bot <id>`                  | Filter to one bot, repeatable                                                                          |
+| `--kind <factType>`           | Filter on `factTypes` (maps to DB `fact_type` column), repeatable. `add --kind` writes to the same column, so the two flags are symmetric |
+| `--since <iso-8601>`          | Inclusive start date for memory timestamps                                                             |
+| `--until <iso-8601>`          | Inclusive end date for memory timestamps                                                               |
+| `--json`                      | Emit full `SearchOutput` as JSON                                                                       |
+| `--context-only`              | Print the prompt context that would have been sent to the LLM (no synthesis call)                      |
+| `--explain`                   | In human output, also print the `warnings[]` block. `reasoning` is not surfaced by this CLI — `synthesize` is hardcoded to `false` so no LLM synthesis runs |
+
+**Exit codes:** `0` on completion (zero hits is still success), `1` on
+validation error or backend failure.
+
+**Examples:**
+
+```bash
+# Plain hybrid search across all sources
+opencontext search --user alice --query "memory safety" --k 5
+
+# Lex-only, top 5
+opencontext search --user alice --query "memory safety" --mode lex --k 5
+
+# Date-scoped
+opencontext search --user alice --query "Q4 roadmap" \
+  --since 2026-08-01 --until 2026-08-31 --k 20
+
+# Debug: see what the LLM would have received, no model call
+opencontext search --user alice --query "what did we chat about last weekend" --context-only
+
+# Script-friendly
+opencontext search --user alice --query "x" --json | jq '.results[].id'
+```
+
+> **Tip:** `--mode auto` runs the same hybrid pipeline the HTTP
+> `/v1/search` endpoint uses (RRF across memory + insights + knowledge).
+> Use `--mode sem` when you want only the memory source, or `--mode lex`
+> to skip hybrid ranking and rely on similarity scoring alone.
+
+Run `opencontext <command> --help` for the full, up-to-date flag list.
+
 ## Using the HTTP Server
 
 OpenContext can run as a standalone HTTP server with local embeddings:

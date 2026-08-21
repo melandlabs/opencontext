@@ -26,22 +26,22 @@ export type {
 	GetUpdatesResp,
 	GetConfigResp,
 	SendTypingReq,
-} from "@tencent-weixin/openclaw-weixin/src/api/types";
+} from "@tencent-weixin/openclaw-weixin/dist/src/api/types.js";
 export {
 	MessageType,
 	MessageState,
 	MessageItemType,
 	UploadMediaType,
 	TypingStatus,
-} from "@tencent-weixin/openclaw-weixin/src/api/types";
+} from "@tencent-weixin/openclaw-weixin/dist/src/api/types.js";
 
-import type { GetConfigResp, GetUpdatesResp } from "@tencent-weixin/openclaw-weixin/src/api/types";
+import type { GetConfigResp, GetUpdatesResp } from "@tencent-weixin/openclaw-weixin/dist/src/api/types.js";
 import {
 	MessageState,
 	MessageType,
 	TypingStatus,
 	UploadMediaType,
-} from "@tencent-weixin/openclaw-weixin/src/api/types";
+} from "@tencent-weixin/openclaw-weixin/dist/src/api/types.js";
 
 // ============= Official CDN Utility Functions ==============================================
 export { uploadBufferToCdn } from "./cdn/cdn-upload";

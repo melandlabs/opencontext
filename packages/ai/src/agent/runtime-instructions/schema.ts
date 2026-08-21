@@ -54,6 +54,7 @@ export const GoalSourceSchema = z
 
 export const GoalCriterionVerificationSchema = z.discriminatedUnion("type", [
 	z.object({ type: z.literal("model_evidence") }).strict(),
+	z.object({ type: z.literal("agent_report") }).strict(),
 	z
 		.object({
 			type: z.literal("command_result"),
@@ -588,7 +589,7 @@ export const RuntimeInstructionSchema = z
 		}
 	});
 
-export const RuntimeProviderSchema = z.literal("claude");
+export const RuntimeProviderSchema = z.enum(["claude", "codex"]);
 
 export const RuntimeSessionStateSchema = z.enum([
 	"starting",
