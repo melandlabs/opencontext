@@ -1,5 +1,12 @@
 # @melandlabs/integrations-telegram
 
+## 0.3.5
+
+### Patch Changes
+
+- Updated dependencies [f550140]
+  - @melandlabs/ai@0.7.1
+
 ## 0.3.4
 
 ### Patch Changes

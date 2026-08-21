@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/integrations-imessage",
-	"version": "0.3.4",
+	"version": "0.3.5",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -23,7 +27,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · integrations/imessage module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@melandlabs/ai": "workspace:*",
 		"@melandlabs/env-config": "workspace:*",
