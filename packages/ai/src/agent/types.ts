@@ -677,8 +677,22 @@ export interface AgentOptions {
 	 * execution in production. Propagated to the subprocess as an HTTP header.
 	 */
 	runId?: string;
-	/** Stable first-party billing classification for this agent execution. */
-	usageTaskCode?: string;
+	/**
+	 * Caller-supplied HTTP headers intended for cross-process requests made
+	 * on behalf of this agent execution (embeddings, compaction, etc.).
+	 * Typical use is cross-cutting concerns like first-party billing
+	 * attribution, e.g. `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 *
+	 * **This field is a passive holder, not an auto-forwarder.** The agent
+	 * runtime does NOT inject these into outbound requests. Callers that
+	 * invoke `getConfiguredEmbeddingProvider({ extraHeaders })` or
+	 * `triggerCompaction({ extraHeaders })` must explicitly pass
+	 * `options.extraHeaders` (or a composed subset) into those calls.
+	 *
+	 * Hosts compose these with provider-level defaults; intermediate code
+	 * MUST NOT silently drop caller-supplied entries.
+	 */
+	extraHeaders?: Record<string, string>;
 	/**
 	 * User session for authentication and context (used for business tools).
 	 *

@@ -74,6 +74,18 @@ export interface NativeAgentRequest {
 		platform?: string | null;
 	}>;
 	authToken?: string;
+	/**
+	 * Caller-supplied HTTP headers for cross-process requests made on behalf
+	 * of this agent run (embeddings, compaction, etc.). Typical use is
+	 * first-party billing attribution, e.g.
+	 * `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 *
+	 * **Passive holder — the runtime does not auto-forward.** Callers invoking
+	 * `getConfiguredEmbeddingProvider({ extraHeaders })` or
+	 * `triggerCompaction({ extraHeaders })` must pass this through explicitly.
+	 * See `AgentOptions.extraHeaders` for the full contract.
+	 */
+	extraHeaders?: Record<string, string>;
 }
 
 export interface NativeAgentSession {
@@ -367,6 +379,7 @@ function buildAgentOptions(
 		aiSoulPrompt: userSettings.aiSoulPrompt,
 		language: userSettings.language,
 		abortController: context.abortController,
+		extraHeaders: body.extraHeaders,
 		stream: true,
 	};
 }
