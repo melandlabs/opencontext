@@ -74,11 +74,12 @@ jobs:
       # still puts OKF ahead of memory-store (memory-store is OKF's
       # `devDependency`, and pnpm 10 doesn't lift devDeps above their
       # consumers in the build graph). So OKF's DTS step would still
-      # race against memory-store's DTS step. Build memory-store first
-      # explicitly to seed its `dist/*.d.ts` before OKF's tsup worker
+      # race against memory-store's DTS step. Build memory-store's
+      # closure first explicitly (`...` pulls in contracts, rag, etc.)
+      # so its `dist/*.d.ts` is on disk before OKF's tsup worker
       # resolves the `typeof import('@melandlabs/memory-store')` ref
       # in `cli.ts`.
-      - run: pnpm --filter @melandlabs/memory-store build
+      - run: pnpm --filter @melandlabs/memory-store... --workspace-concurrency=1 build
       - run: pnpm --filter @melandlabs/okf... --workspace-concurrency=1 build
       - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
 
