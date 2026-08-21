@@ -1,5 +1,12 @@
 # @melandlabs/integrations-gmail
 
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@0.9.0
+
 ## 0.3.6
 
 ### Patch Changes

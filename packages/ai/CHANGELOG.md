@@ -1,5 +1,15 @@
 # @melandlabs/ai
 
+## 0.9.0
+
+### Minor Changes
+
+- Add `AgentOptions.userContext?: string` and export `appendAgentUserContext(systemPrompt, userContext)` from `@melandlabs/ai/agent`.
+
+  `appendAgentUserContext` is a tiny provider-side helper that wraps pre-rendered user background as an untrusted `<user_context>` block and appends it to a system prompt. Callers own sourcing, formatting, versioning, and freezing the profile snapshot for the run; providers only attach it. The wrapper explicitly labels the content as untrusted descriptive context that must not override system rules, permissions, tool access, privacy limits, or safety policies.
+
+  Ported from alloomi PR #3387 (Feature/user profile pr3 agent injection). The alloomi web app wires `userContext` into `ClaudeAgent` (main / plan / execute prompts) via the `appendAgentUserContext` wrapper.
+
 ## 0.8.0
 
 ### Minor Changes

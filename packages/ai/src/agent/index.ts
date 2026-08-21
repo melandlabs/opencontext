@@ -42,6 +42,7 @@ export type {
 } from "./types";
 
 export { DEFAULT_ALLOWED_TOOLS } from "./types";
+export { appendAgentUserContext } from "./user-context";
 
 // Compaction preprocessing
 // Exported from the package root so apps can depend on the shared algorithm
