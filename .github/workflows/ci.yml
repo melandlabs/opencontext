@@ -77,22 +77,17 @@ jobs:
       # tsup child-worker heap OOMs on DTS generation. Linux passes
       # comfortably without it.
       - name: Build
-        # OKF imports `@melandlabs/memory-store` through `devDependencies`
-        # only (runtime cycle is broken via a lazy import), so pnpm 10 does
-        # not serialize memory-store ahead of OKF and the two tsup DTS steps
-        # race: whichever one resolves `typeof import('@melandlabs/memory-store')`
-        # first crashes with TS2307. The first pass uses pnpm's `...` suffix
-        # to build OKF's transitive dep closure (forcing memory-store ahead of
-        # OKF in the topological order and seeding every consumer's
-        # `dist/*.d.ts`), and the second pass rebuilds the full workspace
-        # serially against the already-seeded types. `--workspace-concurrency=1`
-        # on the second pass guarantees memory-store finishes its DTS before
-        # OKF's DTS kicks off, since the parallel rebuild otherwise races even
-        # though the first pass already produced both packages' `dist/`.
-        # Matches the pattern in release.yml.
-        run: |
-          pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' --workspace-concurrency=1 build
+        # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
+        # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
+        # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
+        # tsup child-worker heap OOMs on DTS generation. Linux passes
+        # comfortably without it.
+        # Note: OKF ↔ memory-store form a workspace cycle, but both
+        # directions are now lazy-imported (`memory-store/src/{http,mcp}.ts`
+        # for `@melandlabs/okf/{http,mcp}`, `okf/src/cli.ts` for
+        # `@melandlabs/memory-store`), so `pnpm -r build` resolves the
+        # cycle without needing a pre-build step.
+        run: pnpm -r build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
@@ -122,22 +117,12 @@ jobs:
       # the default worker heap; see the matching note in the typecheck
       # job above.
       - name: Build
-        # OKF imports `@melandlabs/memory-store` through `devDependencies`
-        # only (runtime cycle is broken via a lazy import), so pnpm 10 does
-        # not serialize memory-store ahead of OKF and the two tsup DTS steps
-        # race: whichever one resolves `typeof import('@melandlabs/memory-store')`
-        # first crashes with TS2307. The first pass uses pnpm's `...` suffix
-        # to build OKF's transitive dep closure (forcing memory-store ahead of
-        # OKF in the topological order and seeding every consumer's
-        # `dist/*.d.ts`), and the second pass rebuilds the full workspace
-        # serially against the already-seeded types. `--workspace-concurrency=1`
-        # on the second pass guarantees memory-store finishes its DTS before
-        # OKF's DTS kicks off, since the parallel rebuild otherwise races even
-        # though the first pass already produced both packages' `dist/`.
-        # Matches the pattern in release.yml.
-        run: |
-          pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' --workspace-concurrency=1 build
+        # examples/ smoke-tests import @melandlabs/* packages and need dist/
+        # artifacts to be present before `pnpm -r test` runs.
+        # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
+        # the default worker heap; see the matching note in the typecheck
+        # job above.
+        run: pnpm -r build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test

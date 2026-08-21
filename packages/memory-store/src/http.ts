@@ -47,7 +47,6 @@
 
 import { serve } from "@hono/node-server";
 import type { RawMessage } from "@melandlabs/indexeddb";
-import { registerOkfRoutes } from "@melandlabs/okf/http";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { Hono } from "hono";
 import type { UnifiedSearchDeps } from "./config";
@@ -442,6 +441,23 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 	// `/v1/okf/export` without extra wiring. Failures inside the OKF
 	// codec (missing fields, schema drift, store conflict) are surfaced
 	// via the same `issues[]` envelope the CLI uses.
+	//
+	// `@melandlabs/okf/http` is loaded lazily (and through a non-literal
+	// string specifier so TypeScript can't resolve its types at
+	// compile time) because memory-store and OKF form a workspace
+	// cycle: memory-store → okf via `dependencies`, okf → memory-store
+	// via `devDependencies`. A static import of `registerOkfRoutes`
+	// here would force `dist/http.d.ts` to exist for OKF before
+	// memory-store can emit its own `dist/http.d.ts`, and OKF's DTS
+	// step in turn needs memory-store's `dist/index.d.ts`. Loading
+	// through `await import(okfHttpSpecifier)` keeps the runtime
+	// contract identical (OKF ships alongside memory-store as a
+	// regular `dependency`, so the dynamic import resolves at startup
+	// in any environment that already has the OKF package installed)
+	// while letting pnpm 10 build memory-store first in topological
+	// order without a type-level cycle.
+	const okfHttpSpecifier: string = "@melandlabs/okf/http";
+	const { registerOkfRoutes } = await import(okfHttpSpecifier);
 	registerOkfRoutes(app, rawStore);
 
 	const server = serve({ fetch: app.fetch, port, hostname: host });

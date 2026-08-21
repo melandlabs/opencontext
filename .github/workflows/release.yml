@@ -47,41 +47,13 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # Build every package so the published tarballs contain fresh dist/.
-      # A single filter that matches `./packages/**` is intentional: with
-      # multiple filters (e.g. ./packages/* + ./packages/ai/*), pnpm still
-      # picks up both top-level and subpath packages but stops enforcing a
-      # topological order between them, so `packages/ai/memory-consolidation`
-      # can be built in parallel with `packages/indexeddb` (which depends on
-      # it) and the consumer's tsup fails to resolve the workspace import.
-      # CI's `pnpm -r build` works because there's only one implicit filter
-      # and pnpm sorts by the dependency graph.
       #
-      # OKF's `cli.ts` lazy-imports `@melandlabs/memory-store` to break the
-      # runtime cycle (`memory-store` → `okf` via `dependencies`, `okf` →
-      # `memory-store` via `devDependencies`), but TypeScript's DTS step
-      # still resolves the `typeof import(...)` reference and needs the
-      # workspace package's `dist/index.d.ts` on disk. Since OKF only
-      # depends on memory-store through `devDependencies`, pnpm 10 does
-      # not serialize memory-store ahead of OKF and the two tsup DTS steps
-      # race; whichever one runs first crashes with TS2307 (`Cannot find
-      # module '@melandlabs/memory-store'`). The first pass uses pnpm's
-      # `...` suffix to build OKF's transitive dep closure (forcing
-      # memory-store ahead of OKF in the topological order and seeding
-      # every consumer's `dist/*.d.ts`), and the second pass rebuilds the
-      # full workspace serially against the already-seeded types.
-      #
-      # Even with `--workspace-concurrency=1` pnpm's topological order
-      # still puts OKF ahead of memory-store (memory-store is OKF's
-      # `devDependency`, and pnpm 10 doesn't lift devDeps above their
-      # consumers in the build graph). So OKF's DTS step would still
-      # race against memory-store's DTS step. Build memory-store's
-      # closure first explicitly (`...` pulls in contracts, rag, etc.)
-      # so its `dist/*.d.ts` is on disk before OKF's tsup worker
-      # resolves the `typeof import('@melandlabs/memory-store')` ref
-      # in `cli.ts`.
-      - run: pnpm --filter @melandlabs/memory-store... --workspace-concurrency=1 build
-      - run: pnpm --filter @melandlabs/okf... --workspace-concurrency=1 build
-      - run: pnpm -r --filter './packages/**' --workspace-concurrency=1 build
+      # Note: OKF ↔ memory-store form a workspace cycle, but both
+      # directions are now lazy-imported (`memory-store/src/{http,mcp}.ts`
+      # for `@melandlabs/okf/{http,mcp}`, `okf/src/cli.ts` for
+      # `@melandlabs/memory-store`), so `pnpm -r build` resolves the
+      # cycle without needing a pre-build step or `--workspace-concurrency=1`.
+      - run: pnpm -r build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
       # avoids changesets trying to push a tag (we let the version PR do
