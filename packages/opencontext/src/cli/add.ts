@@ -34,6 +34,7 @@
 import { randomUUID } from "node:crypto";
 
 import { getRawMessageManager } from "@melandlabs/memory-store";
+import type { RawMessage } from "@melandlabs/memory-store";
 
 export interface AddOptions {
 	userId: string;
@@ -161,7 +162,6 @@ export async function runAdd(opts: AddOptions): Promise<number> {
 
 	const metadata: Record<string, unknown> = { ...opts.tags };
 	if (opts.source) metadata.source = opts.source;
-	if (opts.kind) metadata.kind = opts.kind;
 
 	const message = {
 		messageId,
@@ -173,6 +173,10 @@ export async function runAdd(opts: AddOptions): Promise<number> {
 		timestamp,
 		content: opts.text,
 		createdAt: Date.now(),
+		// `--kind` writes to the top-level `fact_type` column, which is what
+		// `search --kind` filters on. Writing it to `metadata.kind` would be a
+		// dead duplicate — no other code path reads `metadata.kind`.
+		factType: opts.kind as RawMessage["factType"] | undefined,
 		metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
 	};
 
@@ -240,7 +244,8 @@ Identity:
 Provenance:
   --source <uri>             Source URI (stored in metadata.source)
   --kind <factType>          Memory kind, e.g. "world" | "experience" |
-                             "mental_model" (stored in metadata.kind)
+                             "mental_model" (stored as the top-level
+                             factType — filterable via 'search --kind')
   --at <iso-8601>            Timestamp override (default: now)
   --tag <key=value>          Free-form tag (repeatable, also accepts --tag=k=v)
 

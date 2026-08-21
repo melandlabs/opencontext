@@ -1,5 +1,18 @@
 # @melandlabs/ai-rag
 
+## 0.2.9
+
+### Patch Changes
+
+- 6fc52c9: Add the optional `usageTaskCode?: string` field to `EmbeddingProviderFactoryOptions` and `CloudEmbeddingProviderOptions`. When set, `CloudEmbeddingProvider.callEmbeddingAPI` forwards it as the `x-alloomi-usage-task` HTTP header so the upstream proxy can attribute credit consumption.
+
+  Also flatten `UniversalEmbeddings`'s constructor: the second parameter is now `Omit<EmbeddingProviderFactoryOptions, "userAuthToken">` (was previously `(provider, options)`). Existing callers using `new UniversalEmbeddings(authToken, { usageTaskCode })` (matching the pre-npm `@melandlabs/rag` API) now type-check and forward `usageTaskCode` end-to-end.
+
+- Updated dependencies [b86d8d0]
+- Updated dependencies [448387a]
+  - @melandlabs/contracts@0.6.0
+  - @melandlabs/shared@0.4.0
+
 ## 0.2.6
 
 ### Patch Changes

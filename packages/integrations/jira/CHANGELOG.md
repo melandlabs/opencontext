@@ -1,5 +1,12 @@
 # @melandlabs/integrations-jira
 
+## 0.2.3
+
+### Patch Changes
+
+- Updated dependencies [448387a]
+  - @melandlabs/shared@0.4.0
+
 ## 0.2.2
 
 ### Patch Changes

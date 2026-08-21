@@ -1,5 +1,11 @@
 # @melandlabs/shared
 
+## 0.4.0
+
+### Minor Changes
+
+- 448387a: Add `workspaceArtifactManifestSchema`, `messageWorkspaceSchema`, and the `workspace` field on `messageMetadataSchema` so consumers can attach a per-message workspace manifest (session or execution scope) without a separate side-channel. Exports the inferred `WorkspaceArtifactManifest` and `MessageWorkspace` types.
+
 ## 0.3.5
 
 ### Patch Changes

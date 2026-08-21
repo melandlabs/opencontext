@@ -45,6 +45,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 | Get started in 5 minutes | [Getting Started](./00-getting-started.md) |
 | Understand how memory works | [User Guide](./01-user-guide.md) |
 | Understand the temporal graph model | [User Guide](./01-user-guide.md#the-temporal-context-graph) |
+| Write or read memory from the CLI (`add` / `search`) | [Getting Started](./00-getting-started.md#managing-memory-from-the-cli) |
 
 ### Building Agents
 
@@ -112,7 +113,7 @@ Welcome to the OpenContext tutorial series! These guides will help you get start
 
 | Tutorial | Focus | Key Topics |
 |----------|-------|------------|
-| [00-getting-started.md](./00-getting-started.md) | Quick Start | Installation, first API call, HTTP server, MCP |
+| [00-getting-started.md](./00-getting-started.md) | Quick Start | Installation, first API call, HTTP server, MCP, CLI `add` / `search` |
 | [01-user-guide.md](./01-user-guide.md) | Core Concepts | Four verbs, temporal graph, IAgent, memory-aware agents |
 | [02-developer-guide.md](./02-developer-guide.md) | Integration | Embedding, HTTP server, MCP, backend selection |
 | [03-advanced-usage.md](./03-advanced-usage.md) | Advanced Features | Multi-source search, reasoning-backed retrieval, temporal queries, platforms, DeepSeek Harness plugin |

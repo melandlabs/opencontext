@@ -13,6 +13,7 @@
  * dedicated files; this module only hosts the boundary contracts.
  */
 
+import type { FactType } from "@melandlabs/contracts";
 import type { MemoryRecord } from "@melandlabs/ai/memory";
 
 /** Prefix used to reserve chat-memory evidence IDs that must not collide. */
@@ -62,6 +63,15 @@ export interface RawMessage {
 	 * whole episodes atomically.
 	 */
 	sourceEpisodeId?: string;
+	/**
+	 * Optional fact-type classification. Mirrors `factType` on the
+	 * IndexedDB {@link RawMessage} and on `MemoryRecord` in
+	 * `@melandlabs/ai`. Persisted to the SQLite `fact_type` column by
+	 * the storage adapter so retrieval-side filters (`RawMessageQuery.factTypes`,
+	 * `search --kind`) can narrow to a single class without re-classifying
+	 * at query time.
+	 */
+	factType?: FactType;
 }
 
 function normalizeTimestampToMs(value: number | undefined): number {

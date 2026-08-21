@@ -200,10 +200,12 @@ describe("runAdd", () => {
 		expect(msg.person).toBe("u_42");
 		expect(msg.metadata).toEqual({
 			source: "meeting://2026-08-20",
-			kind: "experience",
 			topic: "roadmap",
 			team: "eng",
 		});
+		// `--kind` writes to the top-level `factType` so `search --kind` can
+		// filter on the DB `fact_type` column. It is NOT in `metadata`.
+		expect(msg.factType).toBe("experience");
 		// Auto-filled fields
 		expect(msg.messageId).toMatch(/^[0-9a-f-]{36}$/i);
 		expect(typeof msg.createdAt).toBe("number");

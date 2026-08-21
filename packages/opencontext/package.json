@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.4.1",
+	"version": "0.5.1",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -8,12 +8,24 @@
 	"bin": {
 		"opencontext": "./dist/cli/opencontext.js"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
 	"license": "Apache-2.0",
-	"keywords": ["opencontext", "melandlabs", "memory", "rag", "agent", "temporal-graph", "mcp", "llm"],
+	"keywords": [
+		"opencontext",
+		"melandlabs",
+		"memory",
+		"rag",
+		"agent",
+		"temporal-graph",
+		"mcp",
+		"llm"
+	],
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/melandlabs/opencontext.git",
@@ -22,9 +34,9 @@
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@hono/node-server": "^1.13.7",
-		"@melandlabs/ai-rag": "^0.2.6",
+		"@melandlabs/ai-rag": "^0.2.9",
 		"@melandlabs/integrations": "^0.3.0",
-		"@melandlabs/okf": "^0.1.0",
+		"@melandlabs/okf": "^0.2.0",
 		"@melandlabs/security": "^0.3.0",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",

@@ -131,7 +131,45 @@ pnpm install
 pnpm -r build
 ```
 
-### 3. Run the HTTP daemon from npm
+### 3. Manage memory from the CLI
+
+The same memory store the HTTP and MCP daemons talk to is reachable from
+the command line. `add` writes a single raw message straight to the active
+manager — no LLM roundtrip — and `search` runs a unified read across
+memory, insights, and knowledge.
+
+```bash
+# Write a fact (auto-fills messageId, platform="cli", timestamp=now)
+opencontext add --user alice --text "Rust achieves memory safety without GC"
+
+# Write with full provenance for later consolidation
+opencontext add \
+  --user alice --bot general \
+  --text "Discussed Q4 roadmap with the team" \
+  --source "meeting://2026-08-20" --kind experience \
+  --tag topic=roadmap --tag team=eng
+
+# Plain hybrid search (RRF across memory + insights + knowledge)
+opencontext search --user alice --query "memory safety" --k 5
+
+# Inspect what would have been sent to the LLM, no synthesis call
+opencontext search --user alice --query "what did we chat about last weekend" --context-only
+
+# Script-friendly JSON
+opencontext search --user alice --query "x" --json | jq '.results[].id'
+```
+
+`add` accepts `--user` (default `"default"`), `--bot` (default `"default"`),
+`--platform`, `--channel`, `--person`, `--source`, `--kind`, `--at`,
+and repeatable `--tag key=value`. `search` accepts `--mode {auto|lex|sem}`,
+`--k`, `--threshold`, repeatable `--bot` / `--kind`, `--since` / `--until`,
+and `--explain` to surface reasoning + warnings alongside the hits.
+
+Run `opencontext <command> --help` for the full flag list. See the
+[Getting Started tutorial](./docs/tutorials/00-getting-started.md#managing-memory-from-the-cli)
+for the full flag reference and worked examples.
+
+### 4. Run the HTTP daemon from npm
 
 ```bash
 # After `pnpm add -g @melandlabs/opencontext`, the bin is on PATH:
@@ -145,7 +183,7 @@ npx -y @melandlabs/opencontext http \
 curl http://127.0.0.1:7421/health
 ```
 
-### 4. Wire the MCP server into Claude Desktop / Cursor
+### 5. Wire the MCP server into Claude Desktop / Cursor
 
 ```bash
 opencontext mcp \
@@ -153,7 +191,7 @@ opencontext mcp \
   --memory-backend sqlite-vec
 ```
 
-### 5. Use with DeepSeek Harness (DSH)
+### 6. Use with DeepSeek Harness (DSH)
 
 OpenContext is available as a DSH plugin that gives any DSH agent durable memory and retrieval-augmented context:
 
@@ -177,7 +215,7 @@ The plugin exposes 16 `oc_*` tools (e.g., `oc_search`, `oc_remember`, `oc_memory
 
 See [`plugins/dsh-opencontext/README.md`](./plugins/dsh-opencontext/README.md) for configuration options and the full tool reference.
 
-### 6. Diagnose the install
+### 7. Diagnose the install
 
 ```bash
 opencontext doctor             # human-readable health checks

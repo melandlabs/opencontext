@@ -1,5 +1,17 @@
 # @melandlabs/rag
 
+## 0.3.0
+
+### Minor Changes
+
+- a435e2e: Add LanceDB and Milvus hybrid vector stores, reusable RRF and weighted fusion,
+  and expose hybrid retrieval through the OpenContext facade.
+
+### Patch Changes
+
+- Updated dependencies [448387a]
+  - @melandlabs/shared@0.4.0
+
 ## 0.2.2
 
 ### Patch Changes

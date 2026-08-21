@@ -109,13 +109,13 @@ describeIf("opencontext add — real storage round-trip", () => {
 		expect(row.person).toBe("u_42");
 		expect(row.timestamp).toBeGreaterThan(0);
 		expect(row.createdAt).toBeGreaterThan(0);
-		// metadata survives round-trip
+		// metadata survives round-trip (kind is now a top-level factType, not in metadata)
 		expect(row.metadata).toEqual({
 			source: "meeting://2026-08-20",
-			kind: "experience",
 			topic: "roadmap",
 			team: "eng",
 		});
+		expect(row.factType).toBe("experience");
 	});
 
 	it("default --user falls back to 'default' in storage", async () => {
