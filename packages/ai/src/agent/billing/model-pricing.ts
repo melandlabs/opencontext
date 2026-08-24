@@ -33,6 +33,7 @@ export type ModelType =
 	| "moonshotai/kimi-k2.6"
 	| "minimax/minimax-m2.5"
 	| "minimax/minimax-m2.7"
+	| "minimax/minimax-m3"
 	| "qwen/qwen3.6-plus"
 	| "qwen/qwen3.6-flash"
 	| "qwen/qwen3.7-max"
@@ -156,6 +157,11 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		supportsVision: false,
 	},
 	"minimax/minimax-m2.7": {
+		inputPricePerMillion: 0.3,
+		outputPricePerMillion: 1.2,
+		supportsVision: false,
+	},
+	"minimax/minimax-m3": {
 		inputPricePerMillion: 0.3,
 		outputPricePerMillion: 1.2,
 		supportsVision: false,

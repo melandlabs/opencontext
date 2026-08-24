@@ -1,5 +1,11 @@
 # @melandlabs/ai
 
+## 0.9.1
+
+### Patch Changes
+
+- Add pricing entry for `minimax/minimax-m3` to `MODEL_PRICING` (input $0.30, output $1.20 per million tokens, no vision support).
+
 ## 0.9.0
 
 ### Minor Changes
