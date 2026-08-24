@@ -4,13 +4,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { makeKnowledgeTools, registerKnowledgeTools } from "../src/tools-knowledge.js";
-import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeConfig, makeFakeBackend } from "./_helpers.js";
 
 describe("knowledge tools", () => {
 	describe("makeKnowledgeTools", () => {
 		it("should create 3 knowledge tools", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -23,7 +23,7 @@ describe("knowledge tools", () => {
 
 		it("oc_knowledge_search should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -40,7 +40,7 @@ describe("knowledge tools", () => {
 
 		it("oc_document_upload should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -56,7 +56,7 @@ describe("knowledge tools", () => {
 
 		it("oc_document_list should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -74,7 +74,7 @@ describe("knowledge tools", () => {
 
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const ctx = {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
@@ -92,7 +92,7 @@ describe("knowledge tools", () => {
 		it("disposer should clean up all tools", () => {
 			const disposers = [vi.fn(), vi.fn(), vi.fn()];
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			let callCount = 0;
 			const ctx = {
 				tools: {
@@ -118,7 +118,7 @@ describe("knowledge tools", () => {
 	describe("oc_knowledge_search execute", () => {
 		it("should return error when query is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -133,7 +133,7 @@ describe("knowledge tools", () => {
 
 		it("should return fallback when backend does not support knowledge", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -151,7 +151,7 @@ describe("knowledge tools", () => {
 	describe("oc_document_upload execute", () => {
 		it("should return error when content is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],
@@ -166,7 +166,7 @@ describe("knowledge tools", () => {
 
 		it("should return error when filename is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeKnowledgeTools(
 				backend,
 				config as unknown as Parameters<typeof makeKnowledgeTools>[1],

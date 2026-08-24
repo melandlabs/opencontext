@@ -20,12 +20,25 @@ import { startOkf } from "./cli.js";
 import { readOkfPackage, writeOkfPackage } from "./package.js";
 
 // Lazy memory-store loader. See the matching helper in `cli.ts` for the
-// rationale (workspace cycle between `okf` and `memory-store`).
-type MemoryStoreModule = typeof import("@melandlabs/memory-store");
-let cachedMemoryStore: MemoryStoreModule | undefined;
-async function loadMemoryStore(): Promise<MemoryStoreModule> {
+// rationale (workspace cycle between `okf` and `memory-store`). The
+// module id is indirected through a string variable so tsup DTS never
+// tries to resolve `@melandlabs/memory-store`'s `dist/*.d.ts` at emit
+// time — the test isn't a tsup entry, but keeping the pattern identical
+// avoids drift and matches `cli.ts`'s safer shape.
+const MEMORY_STORE_MODULE_ID = "@melandlabs/memory-store";
+
+interface MemoryStoreModuleLike {
+	createRawMessageStore: (config?: Record<string, unknown>) => {
+		getManager(): Promise<unknown>;
+		close(): Promise<void>;
+	};
+	closeRawMessageStore: () => Promise<void>;
+}
+
+let cachedMemoryStore: MemoryStoreModuleLike | undefined;
+async function loadMemoryStore(): Promise<MemoryStoreModuleLike> {
 	if (!cachedMemoryStore) {
-		cachedMemoryStore = await import("@melandlabs/memory-store");
+		cachedMemoryStore = (await import(/* @vite-ignore */ MEMORY_STORE_MODULE_ID)) as MemoryStoreModuleLike;
 	}
 	return cachedMemoryStore;
 }

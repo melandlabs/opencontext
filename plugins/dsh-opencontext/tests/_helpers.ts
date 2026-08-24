@@ -10,7 +10,7 @@ import { expect, vi } from "vitest";
 
 import type { MemoryItem, OpenContextBackend, SearchHit } from "../src/backend.js";
 import type { ResolvedConfig } from "../src/config.js";
-import type { ToolError, ToolOk, ToolResult } from "../src/errors.js";
+import type { ToolResult } from "../src/errors.js";
 
 export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedConfig {
 	return {
@@ -25,18 +25,25 @@ export function makeConfig(overrides: Partial<ResolvedConfig> = {}): ResolvedCon
 		maxRecallItems: 4,
 		autoSummarize: false,
 		captureToolResults: false,
+		captureToolOutcomes: true,
 		enableInsights: true,
 		enableKnowledge: true,
 		...overrides,
 	};
 }
 
-export function assertToolError<T>(result: ToolResult<T>): asserts result is ToolError {
+export function assertToolError<T>(result: ToolResult<T>): asserts result is ToolResult<T> & { ok: false } {
 	expect(result.ok).toBe(false);
+	if (result.ok) {
+		throw new Error("expected ok=false");
+	}
 }
 
-export function assertToolOk<T>(result: ToolResult<T>): asserts result is ToolOk<T> {
+export function assertToolOk<T>(result: ToolResult<T>): asserts result is ToolResult<T> & { ok: true } {
 	expect(result.ok).toBe(true);
+	if (!result.ok) {
+		throw new Error("expected ok=true");
+	}
 }
 
 export function makeSearchHit(over: Partial<SearchHit> = {}): SearchHit {

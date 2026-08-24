@@ -11,6 +11,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lockfile:
+    # Fail-fast on stale pnpm-lock.yaml. Catches the "package.json bumped
+    # but lockfile not regenerated" mistake at PR time rather than at
+    # release time, where it broke the 0.6.0 release commit's CI on push
+    # to main (`pnpm install --frozen-lockfile` failed with
+    # `ERR_PNPM_OUTDATED_LOCKFILE`). Cheap: no install, no build, no test.
+    name: pnpm-lock.yaml consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Regenerate lockfile
+        run: pnpm install --lockfile-only
+      - name: Diff pnpm-lock.yaml
+        run: |
+          if ! git diff --exit-code pnpm-lock.yaml; then
+            echo "::error::pnpm-lock.yaml is out of sync with package.json. Run \`pnpm install\` locally and commit the regenerated lockfile."
+            git diff pnpm-lock.yaml | head -200
+            exit 1
+          fi
+
   lint:
     name: Lint (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
@@ -82,26 +111,7 @@ jobs:
         # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
         # tsup child-worker heap OOMs on DTS generation. Linux passes
         # comfortably without it.
-        # OKF ↔ memory-store form a workspace cycle, but the OKF →
-        # memory-store direction is only a `devDependency` (the runtime
-        # cycle is broken via a lazy `await import(...)` inside
-        # `okf/src/cli.ts`). pnpm 10 therefore does not enforce a
-        # topological edge from memory-store to okf, so `pnpm -r build`
-        # starts the two tsup DTS steps in parallel and the OKF one
-        # races the memory-store one — whichever resolves
-        # `typeof import('@melandlabs/memory-store')` first crashes with
-        # TS2307 because the other hasn't written its `dist/index.d.ts`
-        # yet. Pure timing flake on a single `pnpm -r build` invocation.
-        #
-        # Two-pass build (mirrors release.yml's published-tarball build):
-        # the first pass uses pnpm's `...` suffix to build OKF's
-        # transitive dep closure (forcing memory-store ahead of OKF in
-        # the topo order and seeding every consumer's `dist/*.d.ts`),
-        # and the second pass rebuilds the full workspace against the
-        # already-seeded types.
-        run: |
-          pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' build
+        run: pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
@@ -136,13 +146,7 @@ jobs:
         # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
         # the default worker heap; see the matching note in the typecheck
         # job above.
-        # OKF ↔ memory-store DTS race — see the typecheck job above for
-        # the full explanation. Two-pass build mirrors release.yml: seed
-        # OKF's transitive dep closure first, then rebuild the whole
-        # workspace against the seeded `dist/*.d.ts`.
-        run: |
-          pnpm --filter @melandlabs/okf... build
-          pnpm -r --filter './packages/**' build
+        run: pnpm -r --filter './packages/**' build
         env:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test

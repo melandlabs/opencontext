@@ -1,5 +1,49 @@
 # @melandlabs/memory-store
 
+## 1.1.7
+
+### Patch Changes
+
+- Updated dependencies [bbf2485]
+- Updated dependencies [35ec14e]
+  - @melandlabs/okf@0.2.1
+  - @melandlabs/sqlite@0.5.2
+
+## Unreleased
+
+### Patch Changes
+
+- `cli-shared.ts`: add `--reasoning` / `--no-reasoning` /
+  `--reasoning-base-url` / `--reasoning-model` / `--reasoning-timeout-ms`
+  flags (and `REASONING` / `OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL`
+  / `OPENCONTEXT_LLM_TIMEOUT_MS` env equivalents). When `--reasoning` is set,
+  `buildUnified()` wires `unified.reasoning.{queryRewriter, iterativePlanner}`
+  using a raw `fetch` against the OpenAI-compatible chat completions endpoint
+  (no `ai` SDK dependency). Honors the `OPENCONTEXT_LLM_API_KEY` env var that
+  the `@melandlabs/opencontext` facade already documents — existing `.env`
+  files work as-is. Reasoning stays off by default; if `OPENCONTEXT_LLM_API_KEY`
+  is missing the bin refuses to start with a clear remediation message.
+
+- `http.ts`: `POST /v1/search` body now plumbs `reasoningStrategy` through
+  to `SearchInput.reasoningStrategy` (previously the field was silently
+  dropped, so per-call reasoning had no effect over HTTP).
+
+- `mcp.ts`: `memory.search` tool schema gains `reasoningStrategy`
+  (`"none" | "rewrite" | "iterative"`, optional), and the handler plumbs
+  it through to `SearchInput.reasoningStrategy`. The MCP daemon now mirrors
+  the SDK surface for reasoning strategies.
+
+- `cli-http.ts` / `cli-mcp.ts`: `--help` output documents the new reasoning
+  flags and includes an end-to-end `--reasoning` example for both daemons.
+
+## 1.1.6
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@0.9.0
+  - @melandlabs/okf@0.2.0
+
 ## 1.1.5
 
 ### Patch Changes

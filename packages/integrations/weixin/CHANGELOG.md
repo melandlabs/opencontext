@@ -1,5 +1,13 @@
 # @melandlabs/integrations-weixin
 
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@0.9.0
+  - @melandlabs/integrations-weixin@0.3.7
+
 ## 0.3.6
 
 ### Patch Changes

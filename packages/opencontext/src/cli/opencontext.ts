@@ -31,8 +31,13 @@
 
 import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
-import { createRawMessageStore } from "@melandlabs/memory-store";
+import {
+	createIterativeRecallPlanner,
+	createRawMessageStore,
+	createUserVoiceRewriter,
+} from "@melandlabs/memory-store";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
+import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
@@ -81,11 +86,9 @@ interface UnifiedConfig {
 		}>
 	>;
 	reasoning?: {
-		complete?: (prompt: string) => Promise<string>;
-		queryRewriter?: import("@melandlabs/memory-store").QueryRewriter;
-		iterativePlanner?: import("@melandlabs/memory-store").IterativeRecallPlanner;
+		queryRewriter?: ReturnType<typeof createUserVoiceRewriter>;
+		iterativePlanner?: ReturnType<typeof createIterativeRecallPlanner>;
 		defaultStrategy?: "none" | "rewrite" | "iterative";
-		defaultMergeStrategy?: "similarity" | "rrf";
 	};
 }
 
@@ -99,6 +102,15 @@ interface UnifiedArgs {
 	insightsCollection: string;
 	knowledgeBackend: "chroma" | "none";
 	knowledgeCollection: string;
+	/**
+	 * Wire `unified.reasoning.{queryRewriter, iterativePlanner}` from the
+	 * `OPENCONTEXT_LLM_*` env vars. Off by default — opt in via
+	 * `--reasoning` or `REASONING=1`.
+	 */
+	reasoning: boolean;
+	reasoningBaseUrl?: string;
+	reasoningModel?: string;
+	reasoningTimeoutMs?: number;
 }
 
 interface HttpArgs extends UnifiedArgs {
@@ -124,6 +136,12 @@ function unifiedFromEnv(env: NodeJS.ProcessEnv): UnifiedArgs {
 		insightsCollection: env.INSIGHTS_COLLECTION ?? "opencontext_insights",
 		knowledgeBackend: (env.KNOWLEDGE_BACKEND as UnifiedArgs["knowledgeBackend"] | undefined) ?? "none",
 		knowledgeCollection: env.KNOWLEDGE_COLLECTION ?? "opencontext_knowledge",
+		reasoning: env.REASONING === "1" || env.REASONING === "true",
+		reasoningBaseUrl: env.OPENCONTEXT_LLM_BASE_URL,
+		reasoningModel: env.OPENCONTEXT_LLM_MODEL,
+		reasoningTimeoutMs: env.OPENCONTEXT_LLM_TIMEOUT_MS
+			? Number.parseInt(env.OPENCONTEXT_LLM_TIMEOUT_MS, 10)
+			: undefined,
 	};
 }
 
@@ -155,6 +173,21 @@ function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => strin
 			break;
 		case "--knowledge-collection":
 			args.knowledgeCollection = takeValue();
+			break;
+		case "--reasoning":
+			args.reasoning = true;
+			break;
+		case "--no-reasoning":
+			args.reasoning = false;
+			break;
+		case "--reasoning-base-url":
+			args.reasoningBaseUrl = takeValue();
+			break;
+		case "--reasoning-model":
+			args.reasoningModel = takeValue();
+			break;
+		case "--reasoning-timeout-ms":
+			args.reasoningTimeoutMs = Number.parseInt(takeValue(), 10);
 			break;
 		default:
 			throw new Error(`${logPrefix} unknown flag: ${arg}`);
@@ -302,23 +335,6 @@ async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
 		log(`embedQuery wired via openrouter (model=${model})`);
 	}
 
-	// ── 1.5 Wire the reasoning providers (query rewriter + iterative recall
-	//      planner) when an LLM key is configured. Reasoning stays opt-in per
-	//      request (`reasoningStrategy`); the default strategy remains "none"
-	//      so existing clients see no behaviour change.
-	if (process.env.OPENCONTEXT_LLM_API_KEY) {
-		try {
-			const { createMemoryReasoningProviders } = await import("../memory-reasoning.js");
-			const { queryRewriter, iterativePlanner } = createMemoryReasoningProviders({});
-			unified.reasoning = { queryRewriter, iterativePlanner };
-			log(
-				`reasoning wired (model=${process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini"}; request reasoningStrategy=rewrite|iterative to use it)`,
-			);
-		} catch (error) {
-			log(`Warning: Failed to wire reasoning providers: ${(error as Error).message}`);
-		}
-	}
-
 	// ── 2. Wire the memory source backend.
 	if (args.memoryBackend === "sqlite-vec") {
 		const store = createRawMessageStore({ env: undefined });
@@ -402,6 +418,64 @@ async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
 		log(`knowledge backend wired via chroma (collection=${args.knowledgeCollection})`);
 	}
 
+	// ── 5. Wire the reasoning providers (query rewriter + iterative
+	//      planner). Off by default — opt in via `--reasoning` or
+	//      `REASONING=1`. Reads `OPENCONTEXT_LLM_*` env vars (same names as
+	//      `cli-shared.ts` and the `createMemoryReasoningProviders` helper
+	//      the SDK exposes) so the existing `.env` works as-is.
+	if (args.reasoning) {
+		const apiKey = process.env.OPENCONTEXT_LLM_API_KEY;
+		if (!apiKey) {
+			throw new Error(
+				"--reasoning requires OPENCONTEXT_LLM_API_KEY (and ideally OPENCONTEXT_LLM_BASE_URL / OPENCONTEXT_LLM_MODEL) in the environment",
+			);
+		}
+		const baseUrl =
+			args.reasoningBaseUrl ?? process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
+		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
+		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
+
+		const complete = async (prompt: string): Promise<string> => {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), timeoutMs);
+			timer.unref?.();
+			try {
+				const res = await fetch(`${baseUrl}/chat/completions`, {
+					method: "POST",
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${apiKey}`,
+						"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://opencontext.ai",
+						"X-Title": "opencontext AI",
+					},
+					body: JSON.stringify({
+						model,
+						messages: [{ role: "user", content: prompt }],
+						temperature: 0,
+					}),
+					signal: controller.signal,
+				});
+				if (!res.ok) throw new Error(`reasoning LLM ${res.status}: ${await res.text()}`);
+				const body = (await res.json()) as {
+					choices?: Array<{ message?: { content?: string } }>;
+				};
+				const text = body.choices?.[0]?.message?.content?.trim();
+				if (!text) throw new Error("reasoning LLM response missing choices[0].message.content");
+				return text;
+			} finally {
+				clearTimeout(timer);
+			}
+		};
+
+		const queryRewriter = createUserVoiceRewriter({ complete });
+		const iterativePlanner = createIterativeRecallPlanner({ complete });
+
+		if (!unified.reasoning) unified.reasoning = {};
+		unified.reasoning.queryRewriter = queryRewriter;
+		unified.reasoning.iterativePlanner = iterativePlanner;
+		log(`reasoning wired (model=${model}, baseUrl=${baseUrl})`);
+	}
+
 	return unified;
 }
 
@@ -473,12 +547,40 @@ Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawM
                                   (env: KNOWLEDGE_BACKEND, default: none)
   --knowledge-collection <name>   Chroma collection (default: opencontext_knowledge)
 
+Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
+  --reasoning                     Enable the LLM reasoning layer so /v1/search and
+                                  memory.search can honor reasoningStrategy:
+                                    "rewrite"    — first-person memory-check rephrase
+                                    "iterative"  — planner that searches, notes evidence,
+                                                   searches again
+                                  (env: REASONING=1, default: off)
+  --no-reasoning                  Explicitly disable even if REASONING=1 is set.
+  --reasoning-base-url <url>      OpenAI-compatible base URL for the reasoning LLM.
+                                  (env: OPENCONTEXT_LLM_BASE_URL, default: https://openrouter.ai/api/v1)
+  --reasoning-model <name>        Reasoning LLM model identifier.
+                                  (env: OPENCONTEXT_LLM_MODEL, default: openai/gpt-4o-mini)
+  --reasoning-timeout-ms <int>    Per-request timeout (default: 30000).
+
+  Required env when --reasoning is set:
+    OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
+    OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
+    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
+
 Examples:
   opencontext http
   opencontext http --port 8080
 
   # Local ONNX embedder + sqlite-vec ANN (no API key, no extra services).
   opencontext http --embedding-provider local --memory-backend sqlite-vec
+
+  # Same as above + LLM reasoning (query-rewriter + iterative planner).
+  # Reads OPENCONTEXT_LLM_API_KEY / OPENCONTEXT_LLM_BASE_URL /
+  # OPENCONTEXT_LLM_MODEL from the environment so .env Just Works.
+  # After this, POST /v1/search honors body.reasoningStrategy: rewrite|iterative.
+  opencontext http \\
+    --embedding-provider local \\
+    --memory-backend sqlite-vec \\
+    --reasoning
 
   # Wire everything via a running Chroma server
   opencontext http \\
@@ -521,12 +623,36 @@ Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawM
                                   (env: KNOWLEDGE_BACKEND, default: none)
   --knowledge-collection <name>   Chroma collection (default: opencontext_knowledge)
 
+Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
+  --reasoning                     Enable the LLM reasoning layer so memory.search
+                                  can honor reasoningStrategy: 'rewrite' | 'iterative'.
+                                  (env: REASONING=1, default: off)
+  --no-reasoning                  Explicitly disable even if REASONING=1 is set.
+  --reasoning-base-url <url>      OpenAI-compatible base URL for the reasoning LLM.
+                                  (env: OPENCONTEXT_LLM_BASE_URL, default: https://openrouter.ai/api/v1)
+  --reasoning-model <name>        Reasoning LLM model identifier.
+                                  (env: OPENCONTEXT_LLM_MODEL, default: openai/gpt-4o-mini)
+  --reasoning-timeout-ms <int>    Per-request timeout (default: 30000).
+
+  Required env when --reasoning is set:
+    OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
+    OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
+    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
+
 Examples:
   # Default — all three *_not_configured warnings remain
   opencontext mcp
 
   # Local ONNX embedder + sqlite-vec ANN (no API key, no extra services)
   opencontext mcp --embedding-provider local --memory-backend sqlite-vec
+
+  # Same as above + LLM reasoning (memory.search honors
+  # reasoningStrategy: 'rewrite' | 'iterative'). Reads OPENCONTEXT_LLM_*
+  # from the environment so .env Just Works.
+  opencontext mcp \\
+    --embedding-provider local \\
+    --memory-backend sqlite-vec \\
+    --reasoning
 
   # Wire everything via a running Chroma server
   opencontext mcp \\
@@ -545,7 +671,15 @@ async function startMcp(argv: string[]): Promise<void> {
 
 	const shutdown = async (signal: NodeJS.Signals) => {
 		console.error(`[opencontext/mcp] ${signal} received, shutting down…`);
+		// Mirror cli-mcp.ts — close the transport first, then drain the
+		// SQLite stores so sqlite-vec's TLS mutex destructors don't race
+		// in-flight queries during SIGTERM teardown.
 		await server.close();
+		try {
+			await closeSQLiteVsaStore();
+		} catch (error) {
+			console.error("[opencontext/mcp] closeSQLiteVsaStore failed:", error);
+		}
 		process.exit(0);
 	};
 	process.once("SIGINT", shutdown);

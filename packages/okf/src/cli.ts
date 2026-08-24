@@ -28,19 +28,40 @@ import { type WriteOkfPackageResult, readOkfPackage, writeOkfPackage } from "./p
 
 // ─── Local types ──────────────────────────────────────────────────────
 
-// `@melandlabs/memory-store` is loaded lazily because OKF and memory-store
-// form a workspace-level cycle (memory-store → okf via `dependencies`,
-// okf → memory-store via `peerDependencies`); a static `import` here
-// would pull memory-store in at module-evaluation time and break pnpm 10's
-// topological sort in `pnpm -r build`. Runtime callers of
-// `createRawMessageStore` already live inside `async` functions, so the
-// extra `await` is harmless and only fires on code paths that actually
-// touch the store.
-type CreateRawMessageStore = typeof import("@melandlabs/memory-store")["createRawMessageStore"];
-let cachedCreateRawMessageStore: CreateRawMessageStore | undefined;
-async function loadCreateRawMessageStore(): Promise<CreateRawMessageStore> {
+// Hand-written shape to break the OKF ↔ memory-store workspace cycle
+// at the source level. `cli.ts` is re-exported from `index.ts` (the
+// tsup DTS entry), so any static `typeof import("@melandlabs/memory-store")`
+// or literal `await import("@melandlabs/memory-store")` here would force
+// tsup DTS to resolve memory-store's dist/*.d.ts at OKF's emit time.
+// pnpm 10 can't break the cycle between the two packages, so they get
+// scheduled in parallel and OKF's DTS races memory-store's.
+//
+// The shape below mirrors the public surface of memory-store's
+// `RawMessageStore` (`packages/memory-store/src/storage/raw-message-store.ts`)
+// trimmed to the methods `cli.ts` actually calls. If the runtime shape
+// diverges, update this type — the `cast` below preserves runtime
+// safety via `RawMessageStorageManagerLike` rather than the strict
+// return type.
+const MEMORY_STORE_MODULE_ID = "@melandlabs/memory-store";
+
+interface RawMessageStoreLike {
+	getManager(): Promise<RawMessageStorageManagerLike>;
+	close(): Promise<void>;
+}
+
+type CreateRawMessageStoreFn = (config?: Record<string, unknown>) => RawMessageStoreLike;
+
+let cachedCreateRawMessageStore: CreateRawMessageStoreFn | undefined;
+async function loadCreateRawMessageStore(): Promise<CreateRawMessageStoreFn> {
 	if (!cachedCreateRawMessageStore) {
-		cachedCreateRawMessageStore = (await import("@melandlabs/memory-store")).createRawMessageStore;
+		// Indirect the module specifier through a string variable so
+		// TypeScript / tsup DTS don't try to resolve it at type-check /
+		// declaration-emit time. Runtime still hits the real
+		// `@melandlabs/memory-store` via the resolved module id.
+		const mod = (await import(/* @vite-ignore */ MEMORY_STORE_MODULE_ID)) as {
+			createRawMessageStore: CreateRawMessageStoreFn;
+		};
+		cachedCreateRawMessageStore = mod.createRawMessageStore;
 	}
 	return cachedCreateRawMessageStore;
 }

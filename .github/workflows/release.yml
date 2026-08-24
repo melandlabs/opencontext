@@ -48,11 +48,12 @@ jobs:
 
       # Build every package so the published tarballs contain fresh dist/.
       #
-      # Note: OKF ↔ memory-store form a workspace cycle, but both
-      # directions are now lazy-imported (`memory-store/src/{http,mcp}.ts`
-      # for `@melandlabs/okf/{http,mcp}`, `okf/src/cli.ts` for
-      # `@melandlabs/memory-store`), so `pnpm -r build` resolves the
-      # cycle without needing a pre-build step or `--workspace-concurrency=1`.
+      # Note: OKF ↔ memory-store form a workspace cycle. The OKF side
+      # (`packages/okf/src/cli.ts`) hand-writes the raw-store interface
+      # and indirect-imports memory-store through a string variable, so
+      # tsup DTS doesn't need to resolve `@melandlabs/memory-store` at
+      # emit time and pnpm can schedule the two `tsup` runs in parallel
+      # without a DTS race. `pnpm -r build` works in a single pass.
       - run: pnpm -r build
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`

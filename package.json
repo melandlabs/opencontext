@@ -18,7 +18,7 @@
 		"format:check": "biome format .",
 		"clean": "pnpm -r clean && rm -rf node_modules",
 		"changeset": "changeset",
-		"version": "changeset version && biome format --write .",
+		"version": "changeset version && pnpm install && biome format --write .",
 		"release": "pnpm build:packages && changeset publish"
 	},
 	"devDependencies": {

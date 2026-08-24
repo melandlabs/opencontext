@@ -20,6 +20,7 @@
  * full unified-flag surface.
  */
 
+import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import type { UnifiedSearchDeps } from "../config";
 import { startMcpServer } from "../mcp";
 import { type UnifiedArgs, buildUnified, parseUnifiedArgs, printUnifiedHelp } from "./cli-shared";
@@ -84,6 +85,14 @@ Examples:
     --embedding-provider local \\
     --memory-backend sqlite-vec
 
+  # Same as above + LLM reasoning (memory.search honors
+  # reasoningStrategy: 'rewrite' | 'iterative'). Reads OPENCONTEXT_LLM_*
+  # from the environment so .env Just Works.
+  opencontext-memory-mcp \\
+    --embedding-provider local \\
+    --memory-backend sqlite-vec \\
+    --reasoning
+
   # Wire everything via a running Chroma server
   opencontext-memory-mcp \\
     --embedding-provider openrouter \\
@@ -108,7 +117,18 @@ async function main(): Promise<void> {
 	const shutdown = async (signal: NodeJS.Signals) => {
 		// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 		console.error(`[memory-store/mcp] ${signal} received, shutting down…`);
+		// Close MCP first so no new requests start; then drain the active
+		// SQLite stores before exit so sqlite-vec's TLS mutex destructors
+		// don't race in-flight queries. Otherwise SIGTERM surfaces
+		//     libc++abi: ... mutex lock failed: Invalid argument
+		// from the C++ runtime as we tear down.
 		await server.close();
+		try {
+			await closeSQLiteVsaStore();
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
+			console.error("[memory-store/mcp] closeSQLiteVsaStore failed:", error);
+		}
 		process.exit(0);
 	};
 	process.once("SIGINT", shutdown);

@@ -123,7 +123,10 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload, next);
+			await (handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)(
+				payload,
+				next,
+			);
 
 			expect(nextCalled).toHaveBeenCalled();
 		});
@@ -164,7 +167,10 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload, next);
+			await (handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)(
+				payload,
+				next,
+			);
 
 			expect(captureSource).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -212,7 +218,10 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload, next);
+			await (handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)(
+				payload,
+				next,
+			);
 
 			// Verify capture was called
 			expect(captureSource).toHaveBeenCalled();
@@ -262,7 +271,10 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload, next);
+			await (handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)(
+				payload,
+				next,
+			);
 
 			expect(captureSource).not.toHaveBeenCalled();
 		});
@@ -303,7 +315,10 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload, next);
+			await (handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>)(
+				payload,
+				next,
+			);
 
 			const call = captureSource.mock.calls[0];
 			expect(call).toBeDefined();
@@ -348,7 +363,9 @@ describe("events-tool-result", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			const result = await handler?.(payload, next);
+			const result = await (
+				handler as unknown as (payload: unknown, next: () => Promise<unknown>) => Promise<unknown>
+			)(payload, next);
 
 			// Should still return the downstream result
 			expect(result).toEqual({ result: "success" });

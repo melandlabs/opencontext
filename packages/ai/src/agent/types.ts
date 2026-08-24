@@ -878,6 +878,12 @@ export interface AgentOptions {
 	language?: string | null;
 	/** User timezone for date/time operations */
 	timezone?: string | null;
+	/**
+	 * Pre-rendered, untrusted background about the current user. Callers own
+	 * sourcing, formatting, versioning, and freezing; providers only wrap and
+	 * append this text.
+	 */
+	userContext?: string;
 
 	// --------------------------------------------------------------------------
 	// Provider-override surface (added for non-chat callers like

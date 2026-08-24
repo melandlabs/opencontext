@@ -367,6 +367,87 @@ const adHoc = await store.search({
 
 Resolution order at lookup time is: per-call `reasoningStrategy` → store-level `unified.reasoning.defaultStrategy` → `"none"`. Set `defaultStrategy: "none"` explicitly if you want to opt out of a default that another module turned on.
 
+### Exposing Reasoning Over HTTP and MCP
+
+The same reasoning layer is reachable from the `@melandlabs/memory-store` CLI daemons — no host-side wiring required. Add `--reasoning` and the bin reads `OPENCONTEXT_LLM_API_KEY` / `OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL` from your environment and wires `queryRewriter` + `iterativePlanner` into the `unified` deps.
+
+Reasoning is **off by default** — the flag is opt-in. If `OPENCONTEXT_LLM_API_KEY` is missing, the daemon refuses to start with a clear remediation message rather than starting in a degraded state.
+
+```bash
+# HTTP daemon (port 7421 by default)
+opencontext-memory-http \
+  --reasoning \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+
+# MCP daemon (stdio transport)
+opencontext-memory-mcp \
+  --reasoning \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+```
+
+> **stdio wire format: NDJSON.** Each JSON-RPC object is one line followed
+> by a newline. This is set by `@modelcontextprotocol/sdk@^1.25.3`'s
+> `StdioServerTransport`. If you build a custom client, serialize with
+> `JSON.stringify(obj) + '\n'` and split on `\n` on the receive side.
+
+Once the daemon is running, the existing endpoints / tools accept a `reasoningStrategy` field that selects which strategy to run per call:
+
+```bash
+# HTTP — POST /v1/search
+curl -X POST http://127.0.0.1:7421/v1/search \
+  -H 'content-type: application/json' \
+  -d '{
+    "userId": "user-42",
+    "query": "What outdoor activities has the user mentioned?",
+    "reasoningStrategy": "iterative",
+    "limit": 5
+  }'
+```
+
+```jsonc
+// MCP — memory.search tool
+{
+  "userId": "user-42",
+  "query": "What does the user enjoy doing on weekends?",
+  "reasoningStrategy": "rewrite", // or "iterative"
+  "limit": 5
+}
+```
+
+The response carries a `reasoning` block so callers can observe what ran:
+
+```jsonc
+{
+  "query": "What outdoor activities has the user mentioned?",
+  "count": 2,
+  "results": [/* … */],
+  "reasoning": {
+    "strategy": "iterative",
+    "iterations": 4,
+    "evidenceCount": 6,
+    "degraded": false
+  },
+  "warnings": []
+}
+```
+
+If the daemon was started **without** `--reasoning`, calls with `reasoningStrategy: "rewrite" | "iterative"` still succeed — the response includes a `memory_*_not_configured` warning and falls back to the default hybrid search. Opting out is the safe default for low-latency / no-LLM deployments; opt in per daemon when you want reasoning available.
+
+Additional flags and env vars for fine-grained control:
+
+| Flag / env                              | Default                                          | Purpose                                       |
+| --------------------------------------- | ------------------------------------------------ | --------------------------------------------- |
+| `--reasoning` / `REASONING=1`           | off                                              | Enable the LLM reasoning layer.               |
+| `--no-reasoning`                        | —                                                | Force-disable even when `REASONING=1` is set. |
+| `--reasoning-base-url` / `OPENCONTEXT_LLM_BASE_URL` | `https://openrouter.ai/api/v1`        | OpenAI-compatible base URL.                   |
+| `--reasoning-model` / `OPENCONTEXT_LLM_MODEL`        | `openai/gpt-4o-mini`                | Reasoning LLM model identifier.               |
+| `--reasoning-timeout-ms` / `OPENCONTEXT_LLM_TIMEOUT_MS` | `30000`                              | Per-request timeout.                          |
+| `OPENCONTEXT_LLM_API_KEY`               | _required when `--reasoning`_                    | Bearer token for the reasoning LLM.           |
+
+See `opencontext-memory-http --help` / `opencontext-memory-mcp --help` for the full flag surface.
+
 
 ### Date-Range Filtering
 

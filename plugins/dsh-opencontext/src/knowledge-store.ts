@@ -115,6 +115,11 @@ export class LibKnowledgeStore {
 
 		this.ensureDb();
 
+		const db = this.db;
+		if (!db) {
+			throw new KnowledgeUnavailableError("local embedding provider is not available");
+		}
+
 		const documentId = makeDocumentId(input.content, input.filename, input.scopeId, input.userId);
 		const chunks = await chunkDocument(input.content);
 		if (chunks.length === 0) {
@@ -153,16 +158,14 @@ export class LibKnowledgeStore {
 				JSON.stringify(input.metadata ?? {}),
 			);
 
-		const insertChunk = this.db?.prepare(
+		const insertChunk = db.prepare(
 			`INSERT INTO chunks
 			 (id, documentId, chunkIndex, content, metadata)
 			 VALUES (?, ?, ?, ?, ?)`,
 		);
-		const insertVec = this.db?.prepare(
-			`INSERT INTO ${this.vecTableName(dim)} (embedding, chunk_id) VALUES (?, ?)`,
-		);
+		const insertVec = db.prepare(`INSERT INTO ${this.vecTableName(dim)} (embedding, chunk_id) VALUES (?, ?)`);
 
-		const insertAll = this.db?.transaction((items: Array<{ chunk: TextChunk; embedding: number[] }>) => {
+		const insertAll = db.transaction((items: Array<{ chunk: TextChunk; embedding: number[] }>) => {
 			for (const { chunk, embedding } of items) {
 				const chunkId = `${documentId}_chunk_${chunk.index}`;
 				insertChunk.run(chunkId, documentId, chunk.index, chunk.content, JSON.stringify({}));
@@ -170,7 +173,7 @@ export class LibKnowledgeStore {
 			}
 		});
 
-		insertAll(chunks.map((chunk, i) => ({ chunk, embedding: embeddings[i]! })));
+		insertAll(chunks.map((chunk, i) => ({ chunk, embedding: embeddings[i] as number[] })));
 
 		return { documentId, chunks: chunks.length };
 	}
@@ -394,7 +397,8 @@ export class LibKnowledgeStore {
 	private floatArrayToBytes(arr: number[]): Buffer {
 		const buffer = Buffer.allocUnsafe(arr.length * 4);
 		for (let i = 0; i < arr.length; i++) {
-			buffer.writeFloatLE(arr[i]!, i * 4);
+			const value = arr[i];
+			buffer.writeFloatLE(value as number, i * 4);
 		}
 		return buffer;
 	}

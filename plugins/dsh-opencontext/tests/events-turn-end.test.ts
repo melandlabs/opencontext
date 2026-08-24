@@ -92,7 +92,7 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			const _result = await handler?.(payload);
+			const _result = await (handler as unknown as (payload: unknown) => Promise<unknown>)(payload);
 
 			expect(remember).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -137,7 +137,7 @@ describe("events-turn-end", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			await handler?.(payload);
+			await (handler as unknown as (payload: unknown) => Promise<unknown>)(payload);
 
 			expect(remember).not.toHaveBeenCalled();
 		});
@@ -179,7 +179,7 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			await handler?.(payload);
+			await (handler as unknown as (payload: unknown) => Promise<unknown>)(payload);
 
 			expect(captureSource).toHaveBeenCalledWith(
 				expect.objectContaining({
@@ -223,7 +223,7 @@ describe("events-turn-end", () => {
 				session: { header: { id: "session-123" } },
 			};
 
-			const result = await handler?.(payload);
+			const result = await (handler as unknown as (payload: unknown) => Promise<unknown>)(payload);
 
 			expect(ctx.logger.warn).toHaveBeenCalled();
 			expect((result as unknown as { errors: unknown[] }).errors).toHaveLength(1);
@@ -268,7 +268,7 @@ describe("events-turn-end", () => {
 				toolsUsed: ["search"],
 			};
 
-			await handler?.(payload);
+			await (handler as unknown as (payload: unknown) => Promise<unknown>)(payload);
 
 			const call = remember.mock.calls[0];
 			expect(call).toBeDefined();

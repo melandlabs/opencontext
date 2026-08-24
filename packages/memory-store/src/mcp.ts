@@ -27,7 +27,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
-import type { UnifiedSearchDeps } from "./config";
+import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { createUnifiedSearch } from "./search/unified-search";
@@ -54,35 +54,6 @@ interface RawMessageManagerLike {
 	upsertRawMessages?: (input: { userId: string; messages: RawMessage[] }) => Promise<unknown>;
 	storeMessages?: RawMessageStoreFn;
 	getMessageById?: RawMessageGetFn;
-}
-
-async function embedMissingMessages(messages: RawMessage[], deps: UnifiedSearchDeps): Promise<RawMessage[]> {
-	if (typeof deps.embedQuery !== "function") {
-		return messages;
-	}
-	const out: RawMessage[] = [];
-	for (const message of messages) {
-		if (Array.isArray(message.embedding) && message.embedding.length > 0) {
-			out.push(message);
-			continue;
-		}
-		if (typeof message.content !== "string" || message.content.length === 0) {
-			out.push(message);
-			continue;
-		}
-		const vector = await deps.embedQuery({
-			userId: message.userId,
-			query: message.content,
-		});
-		out.push({
-			...message,
-			embedding: vector,
-			embeddingModel: message.embeddingModel ?? "server",
-			embeddingDimensions: vector.length,
-			embeddingUpdatedAt: Date.now(),
-		});
-	}
-	return out;
 }
 
 export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
@@ -121,6 +92,12 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			.optional()
 			.describe(
 				"Per-tier evidence scope for synthesis. Default: ['summary','raw','insight','knowledge']. Ignored when `synthesize` is falsy.",
+			),
+		reasoningStrategy: z
+			.enum(["none", "rewrite", "iterative"])
+			.optional()
+			.describe(
+				"LLM reasoning strategy. `rewrite` rephrases the query before embedding; `iterative` runs a planner that searches, notes evidence, and searches again. Requires `unified.reasoning.{queryRewriter,iterativePlanner}` to be wired into the server.",
 			),
 		synthesize: z
 			.union([z.boolean(), z.object({ responseSchema: z.record(z.string(), z.unknown()).optional() })])
@@ -212,6 +189,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				query: string;
 				sources?: ("memory" | "insights" | "knowledge")[];
 				tiers?: Array<"summary" | "raw" | "insight" | "knowledge">;
+				reasoningStrategy?: "none" | "rewrite" | "iterative";
 				synthesize?: boolean | { responseSchema?: Record<string, unknown> };
 				responseSchema?: Record<string, unknown>;
 				limit?: number;
@@ -239,6 +217,10 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				documentIds: a.documentIds,
 				authToken: a.authToken,
 				includeArchivedInsights: a.includeArchivedInsights,
+				reasoningStrategy:
+					a.reasoningStrategy === "rewrite" || a.reasoningStrategy === "iterative"
+						? a.reasoningStrategy
+						: undefined,
 				...(a.tiers ? { tiers: a.tiers } : {}),
 				...(wantsSynthesis
 					? {
@@ -272,8 +254,14 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			};
 			const manager = (await rawStore.getManager()) as RawMessageManagerLike;
 			const incoming = [a.message as RawMessage].map((m) => ({ ...m, userId: m.userId ?? a.userId }));
-			const messages =
-				a.embedOnInsert === true ? await embedMissingMessages(incoming, options.unified ?? {}) : incoming;
+
+			// Same three-path embed-on-insert policy as the HTTP handler — keep
+			// the implementations in sync via `embed-on-insert.ts`.
+			const { messages, warnings } = await applyEmbedOnInsertPolicy(
+				incoming,
+				a.embedOnInsert,
+				options.unified,
+			);
 
 			let result: unknown;
 			if (typeof manager.upsertRawMessages === "function") {
@@ -297,7 +285,12 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				content: [
 					{
 						type: "text" as const,
-						text: JSON.stringify({ ok: true, count: messages.length, result }),
+						text: JSON.stringify({
+							ok: true,
+							count: messages.length,
+							result,
+							...(warnings.length > 0 ? { warnings } : {}),
+						}),
 					},
 				],
 			};
@@ -611,6 +604,10 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 	const { registerOkfTools } = await import(okfMcpSpecifier);
 	registerOkfTools(server, rawStore);
 
+	// Wire format on stdio is NDJSON — one JSON-RPC object per line.
+	// This is the default set by `@modelcontextprotocol/sdk` v1.25.x's
+	// `StdioServerTransport` (it appends `\n` on send and reads by `indexOf('\n')`).
+	// If you fork a client, serialize with `JSON.stringify(obj) + '\n'`.
 	const transport = new StdioServerTransport();
 	await server.connect(transport);
 	return server;
