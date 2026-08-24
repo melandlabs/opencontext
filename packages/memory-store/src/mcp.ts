@@ -122,6 +122,12 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			.describe(
 				"Per-tier evidence scope for synthesis. Default: ['summary','raw','insight','knowledge']. Ignored when `synthesize` is falsy.",
 			),
+		reasoningStrategy: z
+			.enum(["none", "rewrite", "iterative"])
+			.optional()
+			.describe(
+				"LLM reasoning strategy. `rewrite` rephrases the query before embedding; `iterative` runs a planner that searches, notes evidence, and searches again. Requires `unified.reasoning.{queryRewriter,iterativePlanner}` to be wired into the server.",
+			),
 		synthesize: z
 			.union([z.boolean(), z.object({ responseSchema: z.record(z.string(), z.unknown()).optional() })])
 			.optional()
@@ -212,6 +218,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				query: string;
 				sources?: ("memory" | "insights" | "knowledge")[];
 				tiers?: Array<"summary" | "raw" | "insight" | "knowledge">;
+				reasoningStrategy?: "none" | "rewrite" | "iterative";
 				synthesize?: boolean | { responseSchema?: Record<string, unknown> };
 				responseSchema?: Record<string, unknown>;
 				limit?: number;
@@ -239,6 +246,10 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				documentIds: a.documentIds,
 				authToken: a.authToken,
 				includeArchivedInsights: a.includeArchivedInsights,
+				reasoningStrategy:
+					a.reasoningStrategy === "rewrite" || a.reasoningStrategy === "iterative"
+						? a.reasoningStrategy
+						: undefined,
 				...(a.tiers ? { tiers: a.tiers } : {}),
 				...(wantsSynthesis
 					? {

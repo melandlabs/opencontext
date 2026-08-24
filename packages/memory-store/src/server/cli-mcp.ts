@@ -84,6 +84,14 @@ Examples:
     --embedding-provider local \\
     --memory-backend sqlite-vec
 
+  # Same as above + LLM reasoning (memory.search honors
+  # reasoningStrategy: 'rewrite' | 'iterative'). Reads OPENCONTEXT_LLM_*
+  # from the environment so .env Just Works.
+  opencontext-memory-mcp \\
+    --embedding-provider local \\
+    --memory-backend sqlite-vec \\
+    --reasoning
+
   # Wire everything via a running Chroma server
   opencontext-memory-mcp \\
     --embedding-provider openrouter \\

@@ -97,6 +97,15 @@ Examples:
     --embedding-provider local \\
     --memory-backend sqlite-vec
 
+  # Same as above + LLM reasoning (query-rewriter + iterative planner).
+  # Reads OPENCONTEXT_LLM_API_KEY / OPENCONTEXT_LLM_BASE_URL /
+  # OPENCONTEXT_LLM_MODEL from the environment so .env Just Works.
+  # After this, POST /v1/search honors body.reasoningStrategy: rewrite|iterative.
+  opencontext-memory-http \\
+    --embedding-provider local \\
+    --memory-backend sqlite-vec \\
+    --reasoning
+
   # Wire everything via a running Chroma server
   opencontext-memory-http \\
     --embedding-provider openrouter \\

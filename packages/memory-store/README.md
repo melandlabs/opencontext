@@ -49,6 +49,7 @@ endpoints:
 | Read a single `RawMessage` | `manager.getMessageById(id)` | `GET /v1/raw-messages/:id?userId=…` | `memory.getRawMessage` |
 | Persist a `RawMessage` | `manager.storeMessages([…])` | `POST /v1/raw-messages` | `memory.writeRawMessage` |
 | Read-only LLM synthesis over evidence | `store.search({ ...input, synthesize: true })` | `POST /v1/search` (set `synthesize: true`) | `memory.search` (set `synthesize: true`) |
+| LLM reasoning layer (query-rewrite / iterative planner) | `store.search({ ...input, reasoningStrategy: "rewrite" \| "iterative" })` | `POST /v1/search` (set `reasoningStrategy`) | `memory.search` (set `reasoningStrategy`) |
 | **Agentic write-back** (gather → plan → vet → persist) | `store.consolidate(input)` | `POST /v1/consolidate:apply` | `memory.consolidate` |
 | Health probe | — | `GET /health` | `memory.health` |
 
@@ -66,6 +67,39 @@ CLI bins ship with the package:
 opencontext-memory-http --port 7421 --host 127.0.0.1
 opencontext-memory-mcp
 ```
+
+Both bins accept the same `--embedding-provider` / `--*-backend` flag surface
+(see `--help` for the full list). Reasoning is **off by default** — opt in
+with `--reasoning`, which reads `OPENCONTEXT_LLM_API_KEY` /
+`OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL` from the environment:
+
+```bash
+# HTTP daemon with local embeddings + sqlite-vec memory + LLM reasoning
+opencontext-memory-http \
+  --reasoning \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+
+# Same wiring, stdio MCP daemon (Claude Desktop / Cursor / Claude Code)
+opencontext-memory-mcp \
+  --reasoning \
+  --embedding-provider local \
+  --memory-backend sqlite-vec
+```
+
+Once the daemon is up, `POST /v1/search` (HTTP) and `memory.search` (MCP)
+honor a `reasoningStrategy` field:
+
+| `reasoningStrategy` | What runs |
+|---|---|
+| `"none"` (default) | Plain hybrid search — no LLM call. |
+| `"rewrite"`         | One LLM call rephrases the query into a first-person memory-check question, then the normal hybrid search runs. |
+| `"iterative"`       | An LLM planner searches, notes evidence, searches again — multi-hop / temporal questions benefit most. |
+
+The response carries a `reasoning` block (`{ strategy, iterations,
+evidenceCount, degraded }`) so callers can observe what ran. See
+[Recipe 9](#9-http-daemon) and [Recipe 10](#10-mcp-daemon) below for the
+programmatic equivalents.
 
 ## Configuration matrix
 
@@ -85,6 +119,10 @@ opencontext-memory-mcp
 | `unified.searchSummaries`                              | optional                        | L1/L2/L3 summary recall (used by `reflect`)               |
 | `unified.peerScopeCheck`                              | optional                        | host check that gates `peerFilter` narrowing              |
 | `unified.reranker`                                    | optional                        | cross-encoder / learned ranker applied after merge        |
+| `unified.reasoning.queryRewriter`                     | optional, enables `"rewrite"`   | turns third-person questions into first-person memory checks before embedding |
+| `unified.reasoning.iterativePlanner`                  | optional, enables `"iterative"` | LLM-driven multi-step recall; planner calls back into `search` and `note` actions |
+| `unified.reasoning.complete`                          | optional, enables `synthesize`  | single-turn LLM callback for evidence synthesis (`reflect`) |
+| `unified.reasoning.defaultStrategy`                   | optional                        | `"none" \| "rewrite" \| "iterative"` — applied when callers omit `reasoningStrategy` |
 | `graphStore`                                          | optional                        | `MemoryGraphStoreWithOperationHistory`; powers `consolidate` |
 | `storage`                                             | optional                        | `MemoryStorageAdapter` for `deprecateRecords` writes      |
 | `logger`                                              | optional                        | `console`-shaped logger; defaults to `console`            |
@@ -396,15 +434,58 @@ Or run the CLI:
 MEMORY_HTTP_HOST=0.0.0.0 MEMORY_HTTP_PORT=7421 opencontext-memory-http
 ```
 
+To opt into LLM reasoning from the CLI, add `--reasoning`. The bin reads
+`OPENCONTEXT_LLM_API_KEY` / `OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL`
+from the environment — your existing `.env` works as-is:
+
+```bash
+OPENCONTEXT_LLM_API_KEY=sk-... \
+  opencontext-memory-http \
+    --reasoning \
+    --embedding-provider local \
+    --memory-backend sqlite-vec
+```
+
+Programmatically, wire the reasoning layer via `unified.reasoning`:
+
+```ts
+import { startHttpServer } from "@melandlabs/memory-store/http";
+import {
+	createUserVoiceRewriter,
+	createIterativeRecallPlanner,
+} from "@melandlabs/memory-store";
+
+const complete = async (prompt: string) => callMyLlm(prompt); // any OpenAI-compatible chat completions endpoint
+
+const { url, stop } = await startHttpServer({
+	port: 7421,
+	host: "127.0.0.1",
+	unified: {
+		embedQuery: myEmbedder,
+		reasoning: {
+			queryRewriter: createUserVoiceRewriter({ complete }),
+			iterativePlanner: createIterativeRecallPlanner({ complete }),
+			// defaultStrategy: "iterative",  // uncomment to enable by default
+		},
+	},
+});
+```
+
 Endpoints:
 
 | Method + path                          | Body                                                                                                |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | `GET  /health`                         | —                                                                                                   |
-| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds?, factTypes?, synthesize? }`    |
+| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds?, factTypes?, synthesize?, reasoningStrategy? }` |
 | `POST /v1/consolidate:apply`           | `{ userId, query, ownerScope, tiers?, limit?, threshold?, dryRun?, expectedVersion?, llmPlanReview? }` |
 | `POST /v1/raw-messages`                | `{ userId, messages: RawMessage[] }`                                                                |
 | `GET  /v1/raw-messages/:id?userId=...` | —                                                                                                   |
+
+`reasoningStrategy` accepts `"none"` (default — no LLM call),
+`"rewrite"` (single LLM rephrase), or `"iterative"` (multi-step planner).
+When set and the server is not wired with the corresponding provider, the
+response includes a `*_not_configured` warning and the search falls back to
+the default path.
 
 For container / LAN deployment, put it behind a reverse proxy:
 
@@ -422,15 +503,25 @@ location /memory/ {
 opencontext-memory-mcp
 ```
 
+To expose LLM reasoning to MCP clients (Claude Desktop, Cursor, Claude Code):
+
+```bash
+OPENCONTEXT_LLM_API_KEY=sk-... \
+  opencontext-memory-mcp \
+    --reasoning \
+    --embedding-provider local \
+    --memory-backend sqlite-vec
+```
+
 Tools exposed over stdio:
 
-| Tool                     | Required args                                                                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `memory.health`          | —                                                                                                                                   |
-| `memory.search`          | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds`, `factTypes`, `synthesize`, `tiers`           |
-| `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, factType?, peer?, ... }`                                                    |
-| `memory.getRawMessage`   | `userId`, `messageId`                                                                                                               |
-| `memory.consolidate`     | `userId`, `query`, `ownerScope`, optional `tiers`, `dryRun`, `expectedVersion`, `llmPlanReview`, `plan`                             |
+| Tool                     | Required args                                                                                                                                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `memory.health`          | —                                                                                                                                                                                              |
+| `memory.search`          | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds`, `factTypes`, `synthesize`, `tiers`, **`reasoningStrategy`** (`"none" \| "rewrite" \| "iterative"`)        |
+| `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, factType?, peer?, ... }`                                                                                                               |
+| `memory.getRawMessage`   | `userId`, `messageId`                                                                                                                                                                          |
+| `memory.consolidate`     | `userId`, `query`, `ownerScope`, optional `tiers`, `dryRun`, `expectedVersion`, `llmPlanReview`, `plan`                                                                                        |
 
 #### Claude Desktop (`claude_desktop_config.json`)
 
