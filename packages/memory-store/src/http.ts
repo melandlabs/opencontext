@@ -200,6 +200,14 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			authToken: typeof body.authToken === "string" ? body.authToken : undefined,
 			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
 			dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
+			reasoningStrategy:
+				typeof body.reasoningStrategy === "string"
+					? (body.reasoningStrategy as SearchInput["reasoningStrategy"])
+					: undefined,
+			mergeStrategy:
+				typeof body.mergeStrategy === "string"
+					? (body.mergeStrategy as SearchInput["mergeStrategy"])
+					: undefined,
 			...(wantsSynthesis
 				? {
 						synthesize: {

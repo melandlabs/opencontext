@@ -13,6 +13,7 @@
 #   .\run_aml_local.ps1 -Bench beam -Limit 1
 #   .\run_aml_local.ps1 -Bench personamem -Limit 1 -MaxQuestions 5              # 1 persona, 5 questions, MCQ mode
 #   .\run_aml_local.ps1 -Bench personamem -Limit 1 -MaxQuestions 5 -Mode generative
+#   .\run_aml_local.ps1 -Bench personamem -Limit 1 -MaxQuestions 5 -Reasoning iterative -Tag iterative  # enhanced retrieval
 #   .\run_aml_local.ps1 -Bench scriptmem -MaxQuestions 5                        # ScriptMem: first 5 QA per script
 param(
   [Parameter(Mandatory=$true)][ValidateSet("longmemeval","locomo","clbench","beam","personamem","scriptmem")][string]$Bench,
@@ -23,7 +24,13 @@ param(
   [int]$MaxQuestions = 0,
   [ValidateSet("mcq","generative")][string]$Mode = "mcq",
   [string]$AnswerModel = "qwen/qwen3-14b",
-  [string]$JudgeModel = "qwen/qwen3.7-plus"
+  [string]$JudgeModel = "qwen/qwen3.7-plus",
+  # retrieval reasoning strategy forwarded to /v1/search (daemon must be started
+  # with OPENCONTEXT_LLM_API_KEY — see README "Enhanced retrieval")
+  [ValidateSet("none","rewrite","iterative")][string]$Reasoning = "none",
+  # redirect artifacts to outputs-<Tag>/ instead of outputs/ (keeps enhanced
+  # runs separate from the baseline results)
+  [string]$Tag = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,7 +59,10 @@ $env:JUDGE_API_KEY   = $env:OPENROUTER_API_KEY
 $env:JUDGE_MODEL     = $JudgeModel
 
 $dataDir = @{ longmemeval = "longmemeval-s"; locomo = "locomo-refined"; clbench = "clbench"; beam = "beam"; personamem = "personamem"; scriptmem = "scriptmem" }[$Bench]
-$outDir  = Join-Path $here "outputs\$dataDir"
+$outRoot = if ($Tag) { "outputs-$Tag" } else { "outputs" }
+$outDir  = Join-Path $here "$outRoot\$dataDir"
+$env:AML_REASONING_STRATEGY = $Reasoning
+$env:AML_OUT_DIR = Join-Path $here $outRoot
 $input   = Join-Path $outDir "input.jsonl"
 $answers = Join-Path $outDir "answers.jsonl"
 $judged  = Join-Path $outDir "judged.jsonl"

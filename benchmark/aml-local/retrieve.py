@@ -17,8 +17,14 @@ Usage:
   python retrieve.py scriptmem --max-questions 5
 
 Env:
-  OPENCONTEXT_URL   default http://127.0.0.1:7421
-  AML_TOP_K         default 10
+  OPENCONTEXT_URL          default http://127.0.0.1:7421
+  AML_TOP_K                default 10
+  AML_REASONING_STRATEGY   none|rewrite|iterative (default none) — forwarded to
+                           /v1/search; requires the daemon to be started with
+                           OPENCONTEXT_LLM_API_KEY (see README "Enhanced retrieval")
+  AML_OUT_DIR              override the outputs/ directory (keep enhanced runs
+                           separate from the baseline outputs/)
+  AML_RETRIEVE_WORKERS     parallel search workers for personamem (default 1)
 """
 from __future__ import annotations
 
@@ -32,14 +38,19 @@ import sys
 import time
 import urllib.request
 import urllib.error
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
 BENCH_ROOT = Path(__file__).resolve().parents[1]
-OUT_DIR = Path(__file__).resolve().parent / "outputs"
+OUT_DIR = Path(os.environ["AML_OUT_DIR"]).resolve() if os.environ.get("AML_OUT_DIR") else Path(__file__).resolve().parent / "outputs"
 
 BASE = os.environ.get("OPENCONTEXT_URL", "http://127.0.0.1:7421").rstrip("/")
 TOP_K = int(os.environ.get("AML_TOP_K", "10"))
+REASONING = os.environ.get("AML_REASONING_STRATEGY", "none").strip().lower()
+if REASONING not in ("none", "rewrite", "iterative"):
+    raise SystemExit(f"AML_REASONING_STRATEGY must be none|rewrite|iterative, got {REASONING!r}")
+RETRIEVE_WORKERS = max(1, int(os.environ.get("AML_RETRIEVE_WORKERS", "1")))
 BATCH = 25
 
 
@@ -70,8 +81,21 @@ def ingest(messages: list[dict], user_id: str) -> int:
 
 
 def search(query: str, user_id: str, top_k: int = TOP_K) -> list[dict]:
-    res = http_post("/v1/search", {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"]}, timeout=120)
-    return res.get("results", [])
+    payload = {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"]}
+    if REASONING != "none":
+        payload["reasoningStrategy"] = REASONING
+    # iterative chains up to maxIterations LLM calls + searches server-side
+    timeout = 600 if REASONING != "none" else 120
+    # transient OpenRouter/daemon failures must not kill a 5,000-question run
+    last_err: Exception | None = None
+    for attempt in range(4):
+        try:
+            res = http_post("/v1/search", payload, timeout=timeout)
+            return res.get("results", [])
+        except Exception as err:  # urllib.error.URLError / HTTPError / TimeoutError
+            last_err = err
+            time.sleep(5 * (attempt + 1))
+    raise SystemExit(f"search failed after 4 attempts (user={user_id}, query={query[:60]!r}): {last_err}")
 
 
 def parse_ts(value: str | None) -> int:
@@ -342,7 +366,8 @@ def run_personamem(args) -> None:
         persona_ids = persona_ids[: args.limit]
 
     chunk_msgs = 20
-    records = []
+    # Pass 1: ingest (serial) and collect per-question tasks in CSV order.
+    tasks = []  # (query, user_id, q-row, record_id)
     for pid in persona_ids:
         entry = personas[pid]
         questions = entry["questions"]
@@ -367,19 +392,41 @@ def run_personamem(args) -> None:
             n = ingest(msgs, user_id)
             print(f"[personamem] ingested {n} chunks for persona {pid}")
         for i, q in enumerate(questions):
-            query = unwrap_user_query(q.get("user_query", ""))
-            hits = search(query, user_id)
-            memory_block = MEMORY_CONTEXT_PREFIX + "\n\n".join(h.get("content", "") for h in hits) if hits else ""
-            chat_history = [{"role": "system", "content": memory_block}] if memory_block else []
-            records.append({
-                "id": f"persona{pid}_q{i}",
-                "persona_id": pid,
-                "chat_history": chat_history,
-                "user_query": query,
-                "correct_answer": q.get("correct_answer", ""),
-                "incorrect_answers": parse_incorrect_answers(q.get("incorrect_answers", "")),
-                "preference": q.get("preference", ""),
-            })
+            tasks.append((unwrap_user_query(q.get("user_query", "")), user_id, q, f"persona{pid}_q{i}"))
+
+    # Pass 2: search — each question is independent, so workers only affect
+    # wall-clock, not results (records are assembled in task order below).
+    t0 = time.time()
+    total = len(tasks)
+    if RETRIEVE_WORKERS > 1:
+        all_hits: list = [None] * total
+        done = 0
+        with ThreadPoolExecutor(max_workers=RETRIEVE_WORKERS) as pool:
+            futures = {pool.submit(search, t[0], t[1]): idx for idx, t in enumerate(tasks)}
+            for fut in as_completed(futures):
+                all_hits[futures[fut]] = fut.result()
+                done += 1
+                if done % 25 == 0 or done == total:
+                    rate = done / (time.time() - t0) * 60
+                    eta_min = (total - done) / rate if rate else 0
+                    print(f"[personamem] searched {done}/{total} ({rate:.1f} q/min, eta {eta_min/60:.1f}h)", flush=True)
+    else:
+        all_hits = [search(t[0], t[1]) for t in tasks]
+    print(f"[personamem] searched {total} questions in {time.time() - t0:.0f}s (workers={RETRIEVE_WORKERS}, reasoning={REASONING})")
+
+    records = []
+    for (query, _user_id, q, record_id), hits in zip(tasks, all_hits):
+        memory_block = MEMORY_CONTEXT_PREFIX + "\n\n".join(h.get("content", "") for h in hits) if hits else ""
+        chat_history = [{"role": "system", "content": memory_block}] if memory_block else []
+        records.append({
+            "id": record_id,
+            "persona_id": q["persona_id"],
+            "chat_history": chat_history,
+            "user_query": query,
+            "correct_answer": q.get("correct_answer", ""),
+            "incorrect_answers": parse_incorrect_answers(q.get("incorrect_answers", "")),
+            "preference": q.get("preference", ""),
+        })
     write_jsonl(OUT_DIR / "personamem" / "input.jsonl", records)
 
 
@@ -602,7 +649,7 @@ def main() -> None:
     args = ap.parse_args()
 
     health()
-    print(f"[aml-local] daemon={BASE} top_k={TOP_K} bench={args.bench}")
+    print(f"[aml-local] daemon={BASE} top_k={TOP_K} reasoning={REASONING} out={OUT_DIR} bench={args.bench}")
     {"longmemeval": run_longmemeval, "locomo": run_locomo, "clbench": run_clbench, "beam": run_beam, "personamem": run_personamem, "scriptmem": run_scriptmem}[args.bench](args)
 
 

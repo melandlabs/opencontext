@@ -91,6 +91,54 @@ datasets on the leaderboard. These numbers are for development iteration only an
 are not leaderboard-comparable. Official scores are produced by the platform after
 you apply at agentmemories.ai.
 
+## Enhanced retrieval (AI multi-step reasoning)
+
+The daemon can run `/v1/search` through OpenContext's reasoning layer instead of
+one-shot hybrid retrieval. Two strategies are available (per request, via
+`reasoningStrategy`):
+
+- `rewrite` — an LLM rephrases the question into first-person "user voice"
+  variants before embedding (helps when memories are chat logs)
+- `iterative` — an LLM planner drives **multi-step retrieval**: search → note
+  evidence → search again (up to `OPENCONTEXT_LLM_REASONING_MAX_ITERATIONS`,
+  default 4), which helps on multi-hop / implicit-preference questions
+
+Both degrade gracefully to the baseline hybrid search (BM25 + vector + RRF)
+when the LLM call fails. No code changes are needed — the CLI wires the
+providers automatically when an LLM key is present. Start the daemon with:
+
+```powershell
+cd benchmark\.opencontext-data
+$env:LOCAL_EMBEDDING_REMOTE_HOST='https://hf-mirror.com'
+$env:OPENCONTEXT_LLM_API_KEY=$env:OPENROUTER_API_KEY          # any OpenAI-compatible key
+$env:OPENCONTEXT_LLM_BASE_URL='https://openrouter.ai/api/v1'  # this is the default
+$env:OPENCONTEXT_LLM_MODEL='qwen/qwen3-14b'                   # reasoning model (planner/rewriter); any cheap chat model works
+node D:\opencontext\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
+# expect in the log: reasoning wired (model=...; request reasoningStrategy=rewrite|iterative to use it)
+```
+
+Then run with `-Reasoning` (forwarded as `reasoningStrategy` on every search)
+and `-Tag` (writes to `outputs-<tag>/` so the baseline `outputs/` stays intact):
+
+```powershell
+# smoke: 1 persona, 5 questions, iterative multi-step retrieval
+.\run_aml_local.ps1 -Bench personamem -Limit 1 -MaxQuestions 5 -Reasoning iterative -Tag iterative -SkipIngest
+
+# full personamem retrieval with parallel workers (search is per-question
+# independent; workers only affect wall-clock):
+$env:AML_REASONING_STRATEGY='iterative'
+$env:AML_OUT_DIR="$PWD\outputs-iterative"
+$env:AML_RETRIEVE_WORKERS='8'
+python retrieve.py personamem --skip-ingest
+```
+
+Reasoning retrieval costs extra LLM calls (rewrite: 1 per question; iterative:
+up to maxIterations per question), so full 5,000-question runs should use
+`-SkipIngest` (memories are already embedded) and `AML_RETRIEVE_WORKERS`.
+A reranker plug-in exists in the SDK (`unified.reranker`) but is not wired by
+the CLI; consolidation (`/v1/consolidate:apply`) is a separate write-side
+endpoint not used by these benchmarks.
+
 ## serve.py — AML Add/Search adapter (for official submission)
 
 Implements the [AML API Guide](https://agentmemories.ai/api-guide) contract and

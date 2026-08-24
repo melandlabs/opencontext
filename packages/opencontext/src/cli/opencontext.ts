@@ -80,6 +80,13 @@ interface UnifiedConfig {
 			chunkIndex: number;
 		}>
 	>;
+	reasoning?: {
+		complete?: (prompt: string) => Promise<string>;
+		queryRewriter?: import("@melandlabs/memory-store").QueryRewriter;
+		iterativePlanner?: import("@melandlabs/memory-store").IterativeRecallPlanner;
+		defaultStrategy?: "none" | "rewrite" | "iterative";
+		defaultMergeStrategy?: "similarity" | "rrf";
+	};
 }
 
 interface UnifiedArgs {
@@ -293,6 +300,23 @@ async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
 			return embedding;
 		};
 		log(`embedQuery wired via openrouter (model=${model})`);
+	}
+
+	// ── 1.5 Wire the reasoning providers (query rewriter + iterative recall
+	//      planner) when an LLM key is configured. Reasoning stays opt-in per
+	//      request (`reasoningStrategy`); the default strategy remains "none"
+	//      so existing clients see no behaviour change.
+	if (process.env.OPENCONTEXT_LLM_API_KEY) {
+		try {
+			const { createMemoryReasoningProviders } = await import("../memory-reasoning.js");
+			const { queryRewriter, iterativePlanner } = createMemoryReasoningProviders({});
+			unified.reasoning = { queryRewriter, iterativePlanner };
+			log(
+				`reasoning wired (model=${process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini"}; request reasoningStrategy=rewrite|iterative to use it)`,
+			);
+		} catch (error) {
+			log(`Warning: Failed to wire reasoning providers: ${(error as Error).message}`);
+		}
 	}
 
 	// ── 2. Wire the memory source backend.
