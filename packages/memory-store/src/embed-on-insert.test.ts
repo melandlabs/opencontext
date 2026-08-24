@@ -13,8 +13,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { RawMessage } from "@melandlabs/indexeddb";
 
-import { applyEmbedOnInsertPolicy, embedMissingMessages } from "./embed-on-insert";
 import type { UnifiedSearchDeps } from "./config";
+import { applyEmbedOnInsertPolicy, embedMissingMessages } from "./embed-on-insert";
 
 const baseMessage = (overrides: Partial<RawMessage> = {}): RawMessage => ({
 	messageId: "m-1",
@@ -52,9 +52,7 @@ describe("applyEmbedOnInsertPolicy", () => {
 
 		expect(embedQuery).toHaveBeenCalledTimes(1);
 		expect(out.messages[0].embedding).toEqual([0.4, 0.5]);
-		expect(out.warnings).toEqual([
-			expect.objectContaining({ code: "embed_on_insert_auto_applied" }),
-		]);
+		expect(out.warnings).toEqual([expect.objectContaining({ code: "embed_on_insert_auto_applied" })]);
 	});
 
 	it("path (b) — `embedOnInsert` undefined triggers auto-embed with warning", async () => {

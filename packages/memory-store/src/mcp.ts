@@ -56,7 +56,6 @@ interface RawMessageManagerLike {
 	getMessageById?: RawMessageGetFn;
 }
 
-
 export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
 	const server = new McpServer({
 		name: options.name ?? DEFAULT_NAME,

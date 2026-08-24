@@ -126,6 +126,7 @@ async function main(): Promise<void> {
 		try {
 			await closeSQLiteVsaStore();
 		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
 			console.error("[memory-store/mcp] closeSQLiteVsaStore failed:", error);
 		}
 		process.exit(0);

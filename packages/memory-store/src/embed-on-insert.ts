@@ -99,10 +99,8 @@ export async function applyEmbedOnInsertPolicy(
 	unified: UnifiedSearchDeps | undefined,
 ): Promise<EmbedOnInsertResult> {
 	const messages = incoming;
-	const anyMissing = incoming.some(
-		(m) => !Array.isArray(m.embedding) || m.embedding.length === 0,
-	);
-	const embedderWired = typeof (unified ?? {}).embedQuery === "function";
+	const anyMissing = incoming.some((m) => !Array.isArray(m.embedding) || m.embedding.length === 0);
+	const embedderWired = typeof unified?.embedQuery === "function";
 
 	if (embedOnInsert === true && anyMissing) {
 		return { messages: await embedMissingMessages(messages, unified ?? {}), warnings: [] };

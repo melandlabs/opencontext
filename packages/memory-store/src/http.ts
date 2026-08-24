@@ -89,7 +89,6 @@ interface RawMessageManagerLike {
 	}): Promise<unknown[]>;
 }
 
-
 export async function startHttpServer(options: StartHttpServerOptions = {}): Promise<StartedHttpServer> {
 	const port = options.port ?? Number.parseInt(process.env.MEMORY_HTTP_PORT ?? "7421", 10);
 	const host = options.host ?? process.env.MEMORY_HTTP_HOST ?? "127.0.0.1";
