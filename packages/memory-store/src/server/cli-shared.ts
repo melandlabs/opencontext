@@ -16,6 +16,8 @@
  */
 
 import type { UnifiedSearchDeps } from "../config";
+import { createIterativeRecallPlanner } from "../search/iterative-recall";
+import { createUserVoiceRewriter } from "../search/query-rewriter";
 import { createRawMessageStore } from "../storage/raw-message-store";
 import { isInsightSQLiteVecEnabled, searchInsightsWithSQLiteVec } from "../storage/sqlite-vector-index";
 
@@ -28,6 +30,20 @@ export interface UnifiedArgs {
 	insightsCollection: string;
 	knowledgeBackend: "chroma" | "none";
 	knowledgeCollection: string;
+	/**
+	 * Wire `unified.reasoning.{queryRewriter, iterativePlanner}` from the
+	 * `OPENCONTEXT_LLM_*` env vars. When false, reasoning providers stay
+	 * unset and `POST /v1/search` / `memory.search` requests with
+	 * `reasoningStrategy: "rewrite" | "iterative"` will surface a
+	 * `_not_configured` warning and fall back to the default search path.
+	 */
+	reasoning: boolean;
+	/** OpenAI-compatible base URL the reasoning LLM is served from. */
+	reasoningBaseUrl?: string;
+	/** Reasoning LLM model identifier. */
+	reasoningModel?: string;
+	/** Request timeout for reasoning LLM calls (ms). @default 30000 */
+	reasoningTimeoutMs?: number;
 }
 
 interface AiRagModules {
@@ -79,6 +95,12 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 		insightsCollection: env.INSIGHTS_COLLECTION ?? "opencontext_insights",
 		knowledgeBackend: (env.KNOWLEDGE_BACKEND as UnifiedArgs["knowledgeBackend"] | undefined) ?? "none",
 		knowledgeCollection: env.KNOWLEDGE_COLLECTION ?? "opencontext_knowledge",
+		reasoning: env.REASONING === "1" || env.REASONING === "true",
+		reasoningBaseUrl: env.OPENCONTEXT_LLM_BASE_URL,
+		reasoningModel: env.OPENCONTEXT_LLM_MODEL,
+		reasoningTimeoutMs: env.OPENCONTEXT_LLM_TIMEOUT_MS
+			? Number.parseInt(env.OPENCONTEXT_LLM_TIMEOUT_MS, 10)
+			: undefined,
 	};
 	for (let i = 0; i < argv.length; i += 1) {
 		const arg = argv[i];
@@ -112,6 +134,21 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 				break;
 			case "--knowledge-collection":
 				args.knowledgeCollection = takeValue();
+				break;
+			case "--reasoning":
+				args.reasoning = true;
+				break;
+			case "--no-reasoning":
+				args.reasoning = false;
+				break;
+			case "--reasoning-base-url":
+				args.reasoningBaseUrl = takeValue();
+				break;
+			case "--reasoning-model":
+				args.reasoningModel = takeValue();
+				break;
+			case "--reasoning-timeout-ms":
+				args.reasoningTimeoutMs = Number.parseInt(takeValue(), 10);
 				break;
 		}
 	}
@@ -311,6 +348,64 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 		log(`knowledge backend wired via chroma (collection=${args.knowledgeCollection})`);
 	}
 
+	// ── 5. Wire the reasoning providers (query rewriter + iterative
+	//      planner). Off by default — hosts opt in via `--reasoning` or
+	//      `REASONING=1`. Backed by the same OPENCONTEXT_LLM_* env vars the
+	//      `@melandlabs/opencontext/memory-reasoning` helper uses, so the
+	//      .env the user already has for the facade CLI is reused as-is.
+	if (args.reasoning) {
+		const apiKey = process.env.OPENCONTEXT_LLM_API_KEY;
+		if (!apiKey) {
+			throw new Error(
+				"--reasoning requires OPENCONTEXT_LLM_API_KEY (and ideally OPENCONTEXT_LLM_BASE_URL / OPENCONTEXT_LLM_MODEL) in the environment",
+			);
+		}
+		const baseUrl =
+			args.reasoningBaseUrl ?? process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
+		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
+		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
+
+		const complete = async (prompt: string): Promise<string> => {
+			const controller = new AbortController();
+			const timer = setTimeout(() => controller.abort(), timeoutMs);
+			timer.unref?.();
+			try {
+				const res = await fetch(`${baseUrl}/chat/completions`, {
+					method: "POST",
+					headers: {
+						"content-type": "application/json",
+						authorization: `Bearer ${apiKey}`,
+						"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://opencontext.ai",
+						"X-Title": "opencontext AI",
+					},
+					body: JSON.stringify({
+						model,
+						messages: [{ role: "user", content: prompt }],
+						temperature: 0,
+					}),
+					signal: controller.signal,
+				});
+				if (!res.ok) throw new Error(`reasoning LLM ${res.status}: ${await res.text()}`);
+				const body = (await res.json()) as {
+					choices?: Array<{ message?: { content?: string } }>;
+				};
+				const text = body.choices?.[0]?.message?.content?.trim();
+				if (!text) throw new Error("reasoning LLM response missing choices[0].message.content");
+				return text;
+			} finally {
+				clearTimeout(timer);
+			}
+		};
+
+		const queryRewriter = createUserVoiceRewriter({ complete });
+		const iterativePlanner = createIterativeRecallPlanner({ complete });
+
+		if (!unified.reasoning) unified.reasoning = {};
+		unified.reasoning.queryRewriter = queryRewriter;
+		unified.reasoning.iterativePlanner = iterativePlanner;
+		log(`reasoning wired (model=${model}, baseUrl=${baseUrl})`);
+	}
+
 	return unified;
 }
 
@@ -340,5 +435,24 @@ Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawM
   --knowledge-backend <name>      chroma | none
                                   (env: KNOWLEDGE_BACKEND, default: none)
   --knowledge-collection <name>   Chroma collection (default: opencontext_knowledge)
-  Note: the chroma backends dynamically import @melandlabs/ai-rag.`);
+  Note: the chroma backends dynamically import @melandlabs/ai-rag.
+
+Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
+  --reasoning                     Enable the LLM reasoning layer so /v1/search and
+                                  memory.search can honor reasoningStrategy:
+                                    "rewrite"    — first-person memory-check rephrase
+                                    "iterative"  — planner that searches, notes evidence,
+                                                   searches again
+                                  (env: REASONING=1, default: off)
+  --no-reasoning                  Explicitly disable even if REASONING=1 is set.
+  --reasoning-base-url <url>      OpenAI-compatible base URL for the reasoning LLM.
+                                  (env: OPENCONTEXT_LLM_BASE_URL, default: https://openrouter.ai/api/v1)
+  --reasoning-model <name>        Reasoning LLM model identifier.
+                                  (env: OPENCONTEXT_LLM_MODEL, default: openai/gpt-4o-mini)
+  --reasoning-timeout-ms <int>    Per-request timeout (default: 30000).
+
+  Required env when --reasoning is set:
+    OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
+    OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
+    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model`);
 }

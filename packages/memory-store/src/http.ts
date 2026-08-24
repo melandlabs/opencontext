@@ -200,6 +200,10 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			authToken: typeof body.authToken === "string" ? body.authToken : undefined,
 			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
 			dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
+			reasoningStrategy:
+				body.reasoningStrategy === "rewrite" || body.reasoningStrategy === "iterative"
+					? body.reasoningStrategy
+					: undefined,
 			...(wantsSynthesis
 				? {
 						synthesize: {
