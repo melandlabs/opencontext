@@ -1,5 +1,11 @@
 # @melandlabs/sqlite
 
+## 0.5.2
+
+### Patch Changes
+
+- 35ec14e: Cap the widening vector-scan limit at sqlite-vec's max k (4096) so raw-message similarity search no longer throws "k value in knn query too large" on sparse matches.
+
 ## 0.5.1
 
 ### Patch Changes

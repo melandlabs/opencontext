@@ -1,5 +1,15 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.7
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [35ec14e]
+  - @melandlabs/opencontext@0.6.0
+  - @melandlabs/sqlite@0.5.2
+  - @melandlabs/memory-store@1.1.7
+
 ## 0.3.6
 
 ### Patch Changes

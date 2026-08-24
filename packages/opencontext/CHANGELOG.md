@@ -1,5 +1,18 @@
 # @melandlabs/opencontext
 
+## 0.6.0
+
+### Minor Changes
+
+- Expose the LLM reasoning layer (query-rewriter + iterative planner) over the HTTP and MCP daemons via a new `--reasoning` flag on **`opencontext-memory-http` / `opencontext-memory-mcp`** (the `@melandlabs/memory-store` bins) **and the `opencontext` facade CLI** (`opencontext http --reasoning`, `opencontext mcp --reasoning`). The bin reads `OPENCONTEXT_LLM_API_KEY` / `OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL` from the environment — your existing `.env` works as-is — and wires `unified.reasoning.{queryRewriter, iterativePlanner}` via a raw OpenAI-compatible chat completions fetch (no new SDK dep). Reasoning stays **off by default**; if `OPENCONTEXT_LLM_API_KEY` is missing the bin refuses to start with a clear remediation message rather than silently degrading.
+
+  `POST /v1/search` body and `memory.search` MCP tool now accept a `reasoningStrategy` field (`"none" | "rewrite" | "iterative"`). The response carries a `reasoning` block (`{ strategy, iterations, evidenceCount, degraded }`) so callers can observe what ran. Verified end-to-end against the DeepSeek model in `.env` — iterative: `iterations > 0`, no `*_not_configured` warnings; rewrite: no warnings.
+
+### Patch Changes
+
+- Updated dependencies [bbf2485]
+  - @melandlabs/okf@0.2.1
+
 ## 0.5.1
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @melandlabs/memory-store
 
+## 1.1.7
+
+### Patch Changes
+
+- Updated dependencies [bbf2485]
+- Updated dependencies [35ec14e]
+  - @melandlabs/okf@0.2.1
+  - @melandlabs/sqlite@0.5.2
+
 ## Unreleased
 
 ### Patch Changes
