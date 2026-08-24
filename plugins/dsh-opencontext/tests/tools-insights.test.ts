@@ -4,13 +4,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { makeInsightsTools, registerInsightsTools } from "../src/tools-insights.js";
-import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeConfig, makeFakeBackend } from "./_helpers.js";
 
 describe("insights tools", () => {
 	describe("makeInsightsTools", () => {
 		it("should create 2 insight tools", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			expect(tools).toHaveLength(2);
 			expect(tools[0]?.name).toBe("oc_insights_search");
@@ -19,7 +19,7 @@ describe("insights tools", () => {
 
 		it("oc_insights_search should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
@@ -33,7 +33,7 @@ describe("insights tools", () => {
 
 		it("oc_insight_capture should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 
@@ -50,7 +50,7 @@ describe("insights tools", () => {
 
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const ctx = {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
@@ -68,7 +68,7 @@ describe("insights tools", () => {
 		it("disposer should clean up all tools", () => {
 			const disposers = [vi.fn(), vi.fn()];
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			let callCount = 0;
 			const ctx = {
 				tools: {
@@ -93,7 +93,7 @@ describe("insights tools", () => {
 	describe("oc_insights_search execute", () => {
 		it("should return error when query is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
@@ -105,7 +105,7 @@ describe("insights tools", () => {
 
 		it("should return fallback when backend does not support insights", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const searchTool = tools[0]!;
 
@@ -120,7 +120,7 @@ describe("insights tools", () => {
 	describe("oc_insight_capture execute", () => {
 		it("should return error when content is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 
@@ -132,7 +132,7 @@ describe("insights tools", () => {
 
 		it("should validate insight categories", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeInsightsTools(backend, config as unknown as Parameters<typeof makeInsightsTools>[1]);
 			const captureTool = tools[1]!;
 

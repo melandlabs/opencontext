@@ -231,7 +231,7 @@ importers:
         specifier: ^1.1.6
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.5.0
+        specifier: ^0.5.1
         version: link:../packages/opencontext
       '@melandlabs/rag':
         specifier: ^0.3.0

@@ -4,13 +4,13 @@
 
 import { describe, expect, it, vi } from "vitest";
 import { makeSummaryTools, registerSummaryTools } from "../src/tools-summary.js";
-import { assertToolError, assertToolOk, makeFakeBackend } from "./_helpers.js";
+import { assertToolError, assertToolOk, makeConfig, makeFakeBackend } from "./_helpers.js";
 
 describe("summary tools", () => {
 	describe("makeSummaryTools", () => {
 		it("should create 3 summary tools", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			expect(tools).toHaveLength(3);
 			expect(tools[0]?.name).toBe("oc_session_summary");
@@ -20,7 +20,7 @@ describe("summary tools", () => {
 
 		it("oc_session_summary should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const summaryTool = tools[0]!;
 
@@ -33,7 +33,7 @@ describe("summary tools", () => {
 
 		it("oc_task_outcome should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const outcomeTool = tools[1]!;
 
@@ -46,7 +46,7 @@ describe("summary tools", () => {
 
 		it("oc_recent_summaries should have correct structure", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const listTool = tools[2]!;
 
@@ -62,7 +62,7 @@ describe("summary tools", () => {
 
 		it("should register tools and return disposer", () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const ctx = {
 				tools: { register: vi.fn(() => vi.fn()) },
 			};
@@ -80,7 +80,7 @@ describe("summary tools", () => {
 		it("disposer should clean up all tools", () => {
 			const disposers = [vi.fn(), vi.fn(), vi.fn()];
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			let callCount = 0;
 			const ctx = {
 				tools: {
@@ -106,7 +106,7 @@ describe("summary tools", () => {
 	describe("oc_session_summary execute", () => {
 		it("should return error when summary is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const summaryTool = tools[0]!;
 
@@ -119,7 +119,7 @@ describe("summary tools", () => {
 		it("should call backend.remember with correct params", async () => {
 			const remember = vi.fn().mockResolvedValue({ ids: ["test-id"] });
 			const backend = makeFakeBackend({ remember });
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const summaryTool = tools[0]!;
 
@@ -146,7 +146,7 @@ describe("summary tools", () => {
 	describe("oc_task_outcome execute", () => {
 		it("should return error when outcome is missing", async () => {
 			const backend = makeFakeBackend();
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const outcomeTool = tools[1]!;
 
@@ -159,7 +159,7 @@ describe("summary tools", () => {
 		it("should call backend.remember with task-outcome sourceType", async () => {
 			const remember = vi.fn().mockResolvedValue({ ids: ["test-id"] });
 			const backend = makeFakeBackend({ remember });
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const outcomeTool = tools[1]!;
 
@@ -191,7 +191,7 @@ describe("summary tools", () => {
 				{ id: "3", content: "Other", platform: "other", timestamp: 3000 },
 			]);
 			const backend = makeFakeBackend({ list });
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const listTool = tools[2]!;
 
@@ -210,7 +210,7 @@ describe("summary tools", () => {
 				{ id: "2", content: "Outcome 1", platform: "task-outcome", timestamp: 2000 },
 			]);
 			const backend = makeFakeBackend({ list });
-			const config = { scopeId: "test", timeoutMs: 4000 };
+			const config = makeConfig({ scopeId: "test", timeoutMs: 4000 });
 			const tools = makeSummaryTools(backend, config as unknown as Parameters<typeof makeSummaryTools>[1]);
 			const listTool = tools[2]!;
 
