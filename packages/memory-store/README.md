@@ -503,6 +503,14 @@ location /memory/ {
 opencontext-memory-mcp
 ```
 
+**Wire format on stdio: NDJSON.** Each line is a single JSON-RPC object —
+the request, the response, or a notification. The server writes
+`JSON.stringify(message) + '\n'` and reads by `indexOf('\n')`. This is the
+default set by `@modelcontextprotocol/sdk@^1.25.3`'s `StdioServerTransport`.
+Most official MCP clients (Claude Desktop, Cursor, Claude Code) handle this
+transparently; if you fork a client, serialize outgoing requests with
+`JSON.stringify(obj) + '\n'` and parse incoming lines with `JSON.parse`.
+
 To expose LLM reasoning to MCP clients (Claude Desktop, Cursor, Claude Code):
 
 ```bash

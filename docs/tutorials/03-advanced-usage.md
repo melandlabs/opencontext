@@ -387,6 +387,11 @@ opencontext-memory-mcp \
   --memory-backend sqlite-vec
 ```
 
+> **stdio wire format: NDJSON.** Each JSON-RPC object is one line followed
+> by a newline. This is set by `@modelcontextprotocol/sdk@^1.25.3`'s
+> `StdioServerTransport`. If you build a custom client, serialize with
+> `JSON.stringify(obj) + '\n'` and split on `\n` on the receive side.
+
 Once the daemon is running, the existing endpoints / tools accept a `reasoningStrategy` field that selects which strategy to run per call:
 
 ```bash

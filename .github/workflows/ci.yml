@@ -11,6 +11,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lockfile:
+    # Fail-fast on stale pnpm-lock.yaml. Catches the "package.json bumped
+    # but lockfile not regenerated" mistake at PR time rather than at
+    # release time, where it broke the 0.6.0 release commit's CI on push
+    # to main (`pnpm install --frozen-lockfile` failed with
+    # `ERR_PNPM_OUTDATED_LOCKFILE`). Cheap: no install, no build, no test.
+    name: pnpm-lock.yaml consistent
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Regenerate lockfile
+        run: pnpm install --lockfile-only
+      - name: Diff pnpm-lock.yaml
+        run: |
+          if ! git diff --exit-code pnpm-lock.yaml; then
+            echo "::error::pnpm-lock.yaml is out of sync with package.json. Run \`pnpm install\` locally and commit the regenerated lockfile."
+            git diff pnpm-lock.yaml | head -200
+            exit 1
+          fi
+
   lint:
     name: Lint (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

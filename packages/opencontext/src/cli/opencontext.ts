@@ -37,6 +37,7 @@ import {
 	createUserVoiceRewriter,
 } from "@melandlabs/memory-store";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
+import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
@@ -670,7 +671,15 @@ async function startMcp(argv: string[]): Promise<void> {
 
 	const shutdown = async (signal: NodeJS.Signals) => {
 		console.error(`[opencontext/mcp] ${signal} received, shutting down…`);
+		// Mirror cli-mcp.ts — close the transport first, then drain the
+		// SQLite stores so sqlite-vec's TLS mutex destructors don't race
+		// in-flight queries during SIGTERM teardown.
 		await server.close();
+		try {
+			await closeSQLiteVsaStore();
+		} catch (error) {
+			console.error("[opencontext/mcp] closeSQLiteVsaStore failed:", error);
+		}
 		process.exit(0);
 	};
 	process.once("SIGINT", shutdown);

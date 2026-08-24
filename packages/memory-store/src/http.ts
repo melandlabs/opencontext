@@ -49,7 +49,7 @@ import { serve } from "@hono/node-server";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { Hono } from "hono";
-import type { UnifiedSearchDeps } from "./config";
+import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { createUnifiedSearch } from "./search/unified-search";
@@ -89,34 +89,6 @@ interface RawMessageManagerLike {
 	}): Promise<unknown[]>;
 }
 
-async function embedMissingMessages(messages: RawMessage[], deps: UnifiedSearchDeps): Promise<RawMessage[]> {
-	if (typeof deps.embedQuery !== "function") {
-		return messages;
-	}
-	const out: RawMessage[] = [];
-	for (const message of messages) {
-		if (Array.isArray(message.embedding) && message.embedding.length > 0) {
-			out.push(message);
-			continue;
-		}
-		if (typeof message.content !== "string" || message.content.length === 0) {
-			out.push(message);
-			continue;
-		}
-		const vector = await deps.embedQuery({
-			userId: message.userId,
-			query: message.content,
-		});
-		out.push({
-			...message,
-			embedding: vector,
-			embeddingModel: message.embeddingModel ?? "server",
-			embeddingDimensions: vector.length,
-			embeddingUpdatedAt: Date.now(),
-		});
-	}
-	return out;
-}
 
 export async function startHttpServer(options: StartHttpServerOptions = {}): Promise<StartedHttpServer> {
 	const port = options.port ?? Number.parseInt(process.env.MEMORY_HTTP_PORT ?? "7421", 10);
@@ -267,21 +239,19 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			return c.json({ error: "userId and messages[] required" }, 400);
 		}
 		const manager = (await rawStore.getManager()) as RawMessageManagerLike;
-		const incoming = body.messages as RawMessage[];
+		const incoming = (body.messages as RawMessage[]).map((m) => ({
+			...m,
+			userId: m.userId ?? body.userId,
+		}));
 
-		// ── 1. Auto-embed messages that lack an embedding — but only when
-		//      the client explicitly opted in via `embedOnInsert: true`
-		//      AND an embedder is wired into `unified.*`. We deliberately
-		//      don't auto-embed without the opt-in: hosts that send
-		//      pre-embedded rows from a sidecar shouldn't pay the cost of
-		//      a server-side inference call per message.
-		const messages =
-			body.embedOnInsert === true
-				? await embedMissingMessages(
-						incoming.map((m) => ({ ...m, userId: m.userId ?? body.userId })),
-						options.unified ?? {},
-					)
-				: incoming.map((m) => ({ ...m, userId: m.userId ?? body.userId }));
+		// ── 1. Apply the embed-on-insert policy. See embed-on-insert.ts for the
+		//      three-path contract: caller opt-in, auto-apply with warning, or
+		//      leave pre-embedded rows verbatim.
+		const { messages, warnings } = await applyEmbedOnInsertPolicy(
+			incoming,
+			body.embedOnInsert,
+			options.unified,
+		);
 
 		// ── 2. Insert into the active backend. Host-supplied Postgres
 		//      factories take precedence (their `upsertRawMessages` is a
@@ -338,7 +308,12 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			console.warn("[memory-store/http] sqlite-vec vector update failed:", error);
 		}
 
-		return c.json({ ok: true, count: messages.length, result });
+		return c.json({
+			ok: true,
+			count: messages.length,
+			result,
+			...(warnings.length > 0 ? { warnings } : {}),
+		});
 	});
 
 	app.get("/v1/raw-messages/:id", async (c) => {
@@ -470,9 +445,16 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		url: `http://${host}:${port}`,
 		port,
 		async stop() {
+			// Order matters: close the HTTP server first and wait for it to
+			// drain in-flight handlers, THEN close the stores. Closing the
+			// stores while handlers are still calling into rawStore races
+			// sqlite-vec's TLS mutex destructors against active queries and
+			// surfaces the dreaded
+			//     libc++abi: ... mutex lock failed: Invalid argument
+			// on SIGTERM.
+			await new Promise<void>((resolve) => server.close(() => resolve()));
 			await rawStore.close();
 			await closeSQLiteVsaStore();
-			server.close();
 		},
 	};
 }
