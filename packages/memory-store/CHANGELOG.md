@@ -1,5 +1,19 @@
 # @melandlabs/memory-store
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/contracts@0.7.0
+
+  Follow-up to 1.2.0: `contracts@0.7.0` adds the `./derived-fact` and
+  `./entity-edge` subpath exports whose compiled imports ship inside
+  `memory-store`'s dist. Pinning `contracts@0.7.0` here so the
+  previously-published `1.2.0`'s subpath imports resolve at install
+  time — without this the published-package smoke test exits with
+  `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+
 ## 1.2.0
 
 ### Minor Changes

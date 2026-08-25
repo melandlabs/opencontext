@@ -1,5 +1,29 @@
 # @melandlabs/contracts
 
+## 0.7.0
+
+### Minor Changes
+
+Expose the two new entity / derivation boundary contracts as dedicated
+subpath exports so the `memory-store` primitives that depend on them
+can compile to imports that resolve when consumed via the public
+registry. Both types are also re-exported from the main entry, so
+existing `import { ... } from "@melandlabs/contracts"` callers are
+unaffected; this lands as `minor` rather than `major` because no
+existing API changed its signature.
+
+- `@melandlabs/contracts/derived-fact` — `DerivedFact` /
+  `DerivedKind` contract (closed union of `summary`, `frequency`,
+  `contradiction_candidate`, `temporal_trend`).
+- `@melandlabs/contracts/entity-edge` — `EntityEdge` /
+  `EntityKind` contract (closed union of `person`, `place`, `org`,
+  `product`, `event`, `concept`, `other`).
+
+Required by `@melandlabs/memory-store@1.2.1` — without this release,
+the previously-published `memory-store@1.2.0` compiled dist fails to
+resolve the internal subpath imports on install and the
+published-package smoke test exits with `ERR_PACKAGE_PATH_NOT_EXPORTED`.
+
 ## 0.6.0
 
 ### Minor Changes
