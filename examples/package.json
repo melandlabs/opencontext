@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext-examples",
-	"version": "0.3.7",
+	"version": "0.3.8",
 	"private": true,
 	"type": "module",
 	"description": "Runnable demos for every @melandlabs/* package published from the monorepo that has a Node-callable headline API. Each file exercises the package's real public surface and asserts on the value returned. Run with `pnpm test`.",
@@ -51,8 +51,8 @@
 		"@melandlabs/loop": "^0.3.1",
 		"@melandlabs/mcp": "^0.3.1",
 		"@melandlabs/memory-consolidation": "^0.5.2",
-		"@melandlabs/memory-store": "^1.1.7",
-		"@melandlabs/opencontext": "^0.6.0",
+		"@melandlabs/memory-store": "^1.2.0",
+		"@melandlabs/opencontext": "^0.7.0",
 		"@melandlabs/rag": "^0.3.0",
 		"@melandlabs/rss": "^0.3.0",
 		"@melandlabs/search": "^0.3.0",

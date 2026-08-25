@@ -1,5 +1,101 @@
 # @melandlabs/memory-store
 
+## 1.2.0
+
+### Minor Changes
+
+- Opt-in first-class retrieval primitives + per-channel scoring on the
+  unified search pipeline. All three new primitives follow the existing
+  degraded-mode contract: when a host dep isn't wired in, the SDK
+  surfaces a structured warning and returns an empty result instead of
+  throwing. Surface area is strictly additive — no existing API changed
+  its signature and the new `signals` field on `UnifiedMemorySearchResult`
+  is optional, so this is a `minor` rather than a `major` bump.
+
+  **Distill (per-message entity extraction).** New
+  `distillRawMessage(unified, input)` primitive in
+  `@melandlabs/memory-store/search/distill`. Host injects an LLM /
+  rule-based extractor via `UnifiedSearchDeps.entityExtractor`. Returns
+  `{ edges, warnings }`; emits `distill_extractor_not_configured`,
+  `distill_extractor_failed`, and
+  `distill_extractor_returned_invalid_shape` under the respective failure
+  modes. Normalization silently drops entries with unknown `EntityKind`
+  values (closed enum: person / place / org / product / event / concept /
+  other) and fills in `extractedAt`. New
+  `@melandlabs/contracts/entity-edge` subpath export carries the shared
+  `EntityEdge` / `EntityKind` contract.
+
+  **Derive (windowed fact synthesis).** New
+  `deriveFacts(unified, input)` primitive in
+  `@melandlabs/memory-store/search/derive`. Host injects a deriver via
+  `UnifiedSearchDeps.deriver`. When `candidateTexts` is omitted the
+  primitive pulls candidates via the lexical sub-query; if no topical
+  `query` is supplied it falls back to `userId + botIds` and emits
+  `derive_fallback_query_noise` so the Loop-engine scheduler knows to
+  pass a query next time. Emits `derive_no_candidates`,
+  `derive_deriver_failed`, `derive_deriver_returned_invalid_shape`, and
+  `derive_persist_failed` under their respective failure modes. New
+  `@melandlabs/contracts/derived-fact` subpath export carries the shared
+  `DerivedFact` / `DerivedKind` contract (closed union of summary /
+  frequency / contradiction_candidate / temporal_trend).
+
+  **Entity-search channel.** New optional
+  `UnifiedSearchDeps.entitySearch` sub-query provider surfaces matches
+  as `UnifiedMemorySearchResult`s and fuses them with semantic + lexical
+  via RRF. Under the default `similarity` merge strategy standalone
+  entity hits are suppressed (entity scores live on a different scale
+  than cosine / BM25) and a `memory_entity_requires_rrf` warning is
+  emitted so callers can opt into RRF when they actually want entity
+  matches.
+
+  **Per-hit signals.** Every `store.search()` hit now carries an
+  optional `signals?: HitSignals` field populated by `materializeSignals`:
+  `{ channels, semantic?, lexical?, entity?, rrf? }`. `channels` lists
+  which retrieval paths contributed; per-channel scores carry the
+  highest-ranked appearance; `rrf` mirrors the fused RRF score when RRF
+  is active.
+
+  **Transports + diagnostics.**
+
+  - New `memory.distill` / `memory.derive` MCP tools and matching
+    `POST /v1/distill` / `POST /v1/derive` HTTP endpoints, both
+    surfaced from the same `{ edges | facts, warnings }` shape as the
+    in-process primitives.
+  - `opencontext doctor` gains three opt-in env-var-gated sections
+    (`OPENCONTEXT_ENTITY_EXTRACTOR`, `OPENCONTEXT_ENTITY_SEARCH`,
+    `OPENCONTEXT_DERIVER`) so hosts can self-diagnose whether their
+    wiring is complete before runtime warnings start firing.
+
+  **Docs + examples.**
+
+  - New "Extract, Derive, and Per-Hit Signals" section in
+    `docs/tutorials/03-advanced-usage.md`.
+  - New customer-health-scoring use-case doc
+    (`docs/tutorials/use-cases/08-customer-health-scoring.md`) and
+    runnable example (`examples/src/tutorials/use-cases/35-customer-health-scoring.ts`).
+  - New `examples/src/tutorials/42-extract-derive.ts` walks through
+    `distillRawMessage` + `deriveFacts` + per-hit `signals` against
+    the umbrella facade with stub host deps.
+
+  **Breaking changes worth flagging in release notes (not breaking for
+  existing code paths but call out in upgrade guide).**
+
+  - MCP `memory.distill` / `memory.derive` no longer accept a
+    `persist` flag — the transport cannot carry host-side persist
+    callbacks and the flag only triggered a log line. Hosts needing
+    round-trip persistence should call `distillRawMessage` /
+    `deriveFacts` directly.
+  - HTTP `/v1/distill` / `/v1/derive` return 500 (not 400) on
+    unexpected errors. The primitives are best-effort and shouldn't
+    throw; any thrown exception is a server-side bug.
+  - `EntityEdge.kind` / `DerivedFact.kind` are now runtime-enforced as
+    closed enums — unknown values are silently dropped during
+    normalization.
+
+### Patch Changes
+
+- @melandlabs/okf@0.2.1
+
 ## 1.1.8
 
 ### Patch Changes
