@@ -31,6 +31,8 @@
  */
 
 import type { FactType } from "@melandlabs/contracts";
+import type { DerivedFact } from "@melandlabs/contracts/derived-fact";
+import type { EntityEdge } from "@melandlabs/contracts/entity-edge";
 import type { Peer } from "@melandlabs/contracts/peer";
 import type { RawMessage } from "./contracts";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
@@ -223,6 +225,57 @@ export interface UnifiedSearchDeps {
 		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
 		peers?: ReadonlyArray<Peer>;
 	}) => Promise<MemorySummaryHit[]>;
+	/**
+	 * Optional entity sub-query provider. Hosts wire this in to opt
+	 * into the `entity` channel of unified search: matches are
+	 * projected back as `UnifiedMemorySearchResult`s and fused with
+	 * semantic + lexical via RRF. Without it, the entity channel is
+	 * skipped silently (with a `memory_entity_search_not_configured`
+	 * warning when RRF was requested).
+	 *
+	 * The provider is intentionally narrow: it returns `(messageId,
+	 * label, score)` tuples. The host is responsible for keeping its
+	 * own entity store (graph nodes, separate SQLite table, etc.) —
+	 * the SDK never persists entity edges itself.
+	 */
+	entitySearch?: (input: {
+		userId: string;
+		keywords: string[];
+		limit: number;
+		botId?: string;
+		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+		peers?: ReadonlyArray<Peer>;
+	}) => Promise<Array<{ messageId: string; label: string; score: number }>>;
+	/**
+	 * Optional entity extractor wired into the `distill` primitive. The
+	 * extractor receives the raw message text and returns a batch of
+	 * `EntityEdge`s the host may persist via the `persist` callback
+	 * supplied on the `distill` input.
+	 *
+	 * When omitted, `distill` short-circuits with a
+	 * `distill_extractor_not_configured` warning — matching the
+	 * `memory_iterative_planner_not_configured` precedent.
+	 */
+	entityExtractor?: (input: {
+		userId: string;
+		messageId: string;
+		content: string;
+	}) => Promise<EntityEdge[]>;
+	/**
+	 * Optional deriver wired into the `derive` primitive. The deriver
+	 * receives a window of candidate fact texts and returns a batch of
+	 * `DerivedFact`s the host may persist via the `persist` callback
+	 * supplied on the `derive` input.
+	 *
+	 * When omitted, `derive` short-circuits with a
+	 * `derive_deriver_not_configured` warning — same precedent.
+	 */
+	deriver?: (input: {
+		userId: string;
+		userScope: { userId: string; botIds?: string[]; dateFrom?: string; dateTo?: string };
+		recentFactTexts: string[];
+		window?: { from: number; to: number };
+	}) => Promise<DerivedFact[]>;
 	/**
 	 * Optional host-side check that validates whether a `peerFilter` peer is
 	 * actually reachable from this `userId`. Used by

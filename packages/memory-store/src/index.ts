@@ -197,6 +197,8 @@ export type {
 	UnifiedMemoryReasoningInfo,
 } from "./search/utilities";
 export type {
+	HitChannel,
+	HitSignals,
 	SearchInput,
 	SearchOutput,
 	SearchSource,
@@ -205,7 +207,23 @@ export type {
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
 } from "./search/utilities";
-export { mergeUnifiedMemorySearchResultsRrf } from "./search/utilities";
+export {
+	listNameToChannel,
+	materializeSignals,
+	mergeUnifiedMemorySearchResultsRrf,
+} from "./search/utilities";
+export {
+	type DeriveInput,
+	type DeriveOutput,
+	type DeriveWarning,
+	deriveFacts,
+} from "./search/derive";
+export {
+	type DistillInput,
+	type DistillOutput,
+	type DistillWarning,
+	distillRawMessage,
+} from "./search/distill";
 export {
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
@@ -270,6 +288,10 @@ export type {
 	VsaRecallOutput,
 	VsaRecallScore,
 	VsaVocabularyEntry,
+	EntityEdge,
+	EntityKind,
+	DerivedFact,
+	DerivedKind,
 } from "@melandlabs/contracts";
 export {
 	getSQLiteVsaStore,

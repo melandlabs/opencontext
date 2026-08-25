@@ -111,6 +111,9 @@ const SECTION_NAMES = [
 	"audit",
 	"security",
 	"integrations",
+	"distill",
+	"entity-search",
+	"derive",
 ] as const;
 
 type SectionName = (typeof SECTION_NAMES)[number];
@@ -127,6 +130,9 @@ const SECTIONS: Record<SectionName, SectionRunner> = {
 	audit: checkAudit,
 	security: checkSecurity,
 	integrations: checkIntegrations,
+	distill: checkDistill,
+	"entity-search": checkEntitySearch,
+	derive: checkDerive,
 };
 
 // ─── Argument parser ───────────────────────────────────────────────────────
@@ -194,7 +200,8 @@ Usage:
 Options:
   --section <name>     Run only one section (runtime, filesystem, loop,
                        memory-store, embedding, policies, audit, security,
-                       integrations). Unknown sections warn, do not fail.
+                       integrations, distill, entity-search, derive).
+                       Unknown sections warn, do not fail.
   --json               Emit a machine-readable { ok, exit, results } envelope
                        (stable shape — safe for CI gates).
   --verbose            Show passing checks too (default: warn + fail only).
@@ -214,6 +221,7 @@ Examples:
   opencontext doctor --section runtime --verbose
   opencontext doctor --deep                       # opt-in memory read probe
   opencontext doctor --user alice                 # policy probe as alice
+  opencontext doctor --section distill            # check entity extractor wiring
   opencontext doctor --section bogus              # unknown → warn, exit 0`);
 }
 
@@ -989,4 +997,95 @@ function checkTelegramCredentials(): CheckResult {
 		status: "warn",
 		detail: `${missing.join(" + ")} not set — telegram integration disabled`,
 	};
+}
+
+// ─── 10. distill (entity extraction) ───────────────────────────────────────
+//
+// Surfaces whether the `distill` primitive has the deps it needs to
+// extract from real messages. The host wires `unified.entityExtractor`
+// from its own code path — the doctor cannot introspect the deps
+// object — so we honour an `OPENCONTEXT_ENTITY_EXTRACTOR=1` env var
+// as a host opt-in signal. When the env var is set but no extractor
+// has been wired (e.g. host forgot), we warn about the
+// `distill_extractor_not_configured` degradation path the SDK
+// emits at runtime.
+
+export function checkDistill(_ctx: DoctorContext): Promise<CheckResult[]> {
+	const enabled = process.env.OPENCONTEXT_ENTITY_EXTRACTOR?.trim() === "1";
+	if (!enabled) {
+		return Promise.resolve([
+			{
+				section: "distill",
+				name: "extractor",
+				status: "ok",
+				detail: "not enabled (set OPENCONTEXT_ENTITY_EXTRACTOR=1 to opt in)",
+			},
+		]);
+	}
+	return Promise.resolve([
+		{
+			section: "distill",
+			name: "extractor",
+			status: "warn",
+			detail:
+				"OPENCONTEXT_ENTITY_EXTRACTOR=1 but no runtime probe — ensure `unified.entityExtractor` is wired into your memory-store config, otherwise distill calls will return distill_extractor_not_configured.",
+		},
+	]);
+}
+
+// ─── 11. entity-search (entity sub-query for unified search) ───────────────
+//
+// Same opt-in pattern as `distill`. Without an entity sub-query
+// wired in, the unified search falls back to semantic + lexical only;
+// under RRF it additionally emits `memory_entity_search_not_configured`.
+
+export function checkEntitySearch(_ctx: DoctorContext): Promise<CheckResult[]> {
+	const enabled = process.env.OPENCONTEXT_ENTITY_SEARCH?.trim() === "1";
+	if (!enabled) {
+		return Promise.resolve([
+			{
+				section: "entity-search",
+				name: "provider",
+				status: "ok",
+				detail: "not enabled (set OPENCONTEXT_ENTITY_SEARCH=1 to opt in)",
+			},
+		]);
+	}
+	return Promise.resolve([
+		{
+			section: "entity-search",
+			name: "provider",
+			status: "warn",
+			detail:
+				"OPENCONTEXT_ENTITY_SEARCH=1 but no runtime probe — ensure `unified.entitySearch` is wired into your memory-store config, otherwise RRF searches will surface memory_entity_search_not_configured.",
+		},
+	]);
+}
+
+// ─── 12. derive (fact derivation) ──────────────────────────────────────────
+//
+// Surfaces whether the `derive` primitive has the deps it needs to
+// synthesize facts. Same opt-in env var convention as `distill`.
+
+export function checkDerive(_ctx: DoctorContext): Promise<CheckResult[]> {
+	const enabled = process.env.OPENCONTEXT_DERIVER?.trim() === "1";
+	if (!enabled) {
+		return Promise.resolve([
+			{
+				section: "derive",
+				name: "deriver",
+				status: "ok",
+				detail: "not enabled (set OPENCONTEXT_DERIVER=1 to opt in)",
+			},
+		]);
+	}
+	return Promise.resolve([
+		{
+			section: "derive",
+			name: "deriver",
+			status: "warn",
+			detail:
+				"OPENCONTEXT_DERIVER=1 but no runtime probe — ensure `unified.deriver` is wired into your memory-store config, otherwise derive calls will return derive_deriver_not_configured.",
+		},
+	]);
 }

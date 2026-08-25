@@ -1379,6 +1379,152 @@ Returns plugin status, database path, memory count, and enabled features.
 
 Recalled memories are appended as **untrusted historical evidence**. If they contradict the user's current statement, the user always takes precedence.
 
+## Extract, Derive, and Per-Hit Signals
+
+Two new first-class primitives turn raw messages into structured knowledge, and a parallel change lifts the lid on per-channel scoring.
+
+### Why extract and derive
+
+OpenContext stores raw messages verbatim. That gives the read pipeline enough to do semantic + lexical recall; it does not, by itself, give you entity links or synthesized summaries. Two new primitives close that gap:
+
+- **`distill`** — reads one raw message, returns `EntityEdge[]` (label / kind / relation / source). Opt-in: host provides `entityExtractor`; without it, the call returns an empty list plus a `distill_extractor_not_configured` warning.
+- **`derive`** — reads a window of candidate fact texts, returns `DerivedFact[]` (text / kind / sources / optional window). Opt-in: host provides `deriver`; without it, the call returns an empty list plus a `derive_deriver_not_configured` warning.
+
+The shared shape (`{ edges | facts, warnings }`) mirrors `consolidate()`'s degraded-mode contract: when the LLM isn't wired in, the SDK never throws — it surfaces a warning code and returns an empty list. The host decides what to do with the result.
+
+A third change rides along: every `store.search()` hit gets a `signals` field with per-channel scores (`semantic`, `lexical`, `entity`, `rrf`). This makes the per-channel contributions visible without flattening them into a single number — useful when you want to threshold or re-rank downstream.
+
+### The two verbs
+
+#### `distill`
+
+```typescript
+import { distillRawMessage, type EntityEdge } from "@melandlabs/opencontext";
+
+const entityExtractor = async (input: {
+  userId: string;
+  messageId: string;
+  content: string;
+}): Promise<EntityEdge[]> => {
+  // Replace with your real extractor — local NER, hosted LLM, etc.
+  return [
+    {
+      label: "Luna",
+      kind: "person",
+      relation: "mentions",
+      sourceMessageId: input.messageId,
+      extractedAt: Date.now(),
+      confidence: 0.92,
+    },
+  ];
+};
+
+const unified = { embedQuery: async () => new Array(4).fill(0.1), entityExtractor };
+
+const result = await distillRawMessage(unified, {
+  userId: "u1",
+  messageId: "m1",
+  content: "I adopted a cat named Luna yesterday.",
+  persist: async (edges) => console.log("storing", edges.length, "edges"),
+});
+
+console.log(result.edges);     // [{ label: "luna", ... }]
+console.log(result.warnings);  // [] when the extractor is wired in
+```
+
+Without `entityExtractor` configured, you get:
+
+```json
+{ "edges": [], "warnings": [{ "code": "distill_extractor_not_configured", "message": "..." }] }
+```
+
+#### `derive`
+
+```typescript
+import { deriveFacts, type DerivedFact } from "@melandlabs/opencontext";
+
+const deriver = async (input: {
+  userId: string;
+  userScope: { userId: string; botIds?: string[]; dateFrom?: string; dateTo?: string };
+  recentFactTexts: string[];
+  window?: { from: number; to: number };
+}): Promise<DerivedFact[]> => {
+  return [
+    {
+      text: "User has mentioned cats 4 times this month",
+      kind: "frequency",
+      sources: ["m1", "m2", "m3", "m4"],
+      window: input.window,
+      confidence: 0.8,
+      derivedAt: Date.now(),
+    },
+  ];
+};
+
+const unified = {
+  embedQuery: async () => new Array(4).fill(0.1),
+  searchRawMessagesLexical: async () => [
+    { id: "m1", content: "I love my cat Luna", similarity: 0.7, metadata: {} },
+    { id: "m2", content: "Luna is a tabby", similarity: 0.6, metadata: {} },
+  ],
+  deriver,
+};
+
+const result = await deriveFacts(unified, {
+  userId: "u1",
+  candidateLimit: 50,
+  persist: async (facts) => console.log("storing", facts.length, "facts"),
+});
+```
+
+When `candidateTexts` is omitted, the SDK pulls candidates from `searchRawMessagesLexical` (or the SQLite FTS5 fallback) using keywords derived from the optional `query` field. Pass a topical query from the Loop-engine schedule (e.g. `"cat preferences"`) — without it, the SDK falls back to `userId + botIds` which is rarely useful. When no candidates are available, you get `derive_no_candidates`.
+
+### Reading the signals
+
+Every `store.search()` hit now carries:
+
+```json
+{
+  "type": "memory",
+  "id": "m1",
+  "content": "...",
+  "similarity": 0.81,
+  "metadata": { "rrfScore": 0.0325 },
+  "signals": {
+    "channels": ["semantic", "lexical"],
+    "semantic": 0.91,
+    "lexical": 0.45,
+    "rrf": 0.0325
+  }
+}
+```
+
+The `channels` array lists which retrieval channels the hit appeared in; `semantic` / `lexical` / `entity` carry the per-channel score for the highest-ranked appearance; `rrf` is the fused RRF score when `mergeStrategy: "rrf"` is active.
+
+Without `entitySearch` wired in, the `entity` channel is simply absent — no `signals.entity` and no `entity` in the `channels` array. If you asked for RRF and the entity dep is missing, you'll also get a `memory_entity_search_not_configured` warning so you can surface degraded-mode to the user.
+
+### When to call them
+
+- **`distill`** — call per-message, right after the message lands. Cheap enough to run synchronously in the write path when the extractor is local (rule-based); defer to a queue when the extractor is a hosted LLM.
+- **`derive`** — schedule from the Loop engine (e.g. nightly, weekly). The windowed candidate fetch + LLM call makes it too expensive for a write-path hook.
+
+Both are best-effort: errors land in `warnings`, not thrown exceptions. A Loop-engine scheduler that retries on `distill_extractor_failed` or `derive_deriver_failed` is fine — the SDK does not require success.
+
+### Walkthrough
+
+[`examples/src/tutorials/42-extract-derive.ts`](../../examples/src/tutorials/42-extract-derive.ts) runs all three steps end-to-end:
+
+1. `distill` with a rule-based extractor and an in-memory `entityStore` mock.
+2. `derive` with a trivial summary deriver and an explicit `candidateTexts` list.
+3. `search` with `mergeStrategy: "rrf"` and an `entitySearch` dep that returns a hit for one of the messages — confirm the result carries `signals.entity` and `signals.channels = ["semantic", "lexical", "entity"]`.
+
+Run it via the examples runner:
+
+```bash
+cd examples
+pnpm test
+```
+
 ## Complete Advanced Example Index
 
 All runnable examples referenced in this guide:
@@ -1423,6 +1569,8 @@ All runnable examples referenced in this guide:
 | `examples/src/tutorials/38-channels-example.ts` | Platform adapter error envelopes |
 | `examples/src/tutorials/39-integrations-runtime-example.ts` | Integration runtime helpers |
 | `examples/src/tutorials/40-contracts-example.ts` | User-type and integration-id guards |
+| `examples/src/tutorials/41-peer-profile-example.ts` | `createPeerProfile` + peer relationships |
+| `examples/src/tutorials/42-extract-derive.ts` | `distill` + `derive` + per‑channel `signals` field on hits |
 
 For end-to-end use cases, see the examples linked from [Personal Memory Assistant](./use-cases/05-personal-memory-assistant.md), [Customer Support Agent](./use-cases/06-customer-support-agent.md), and [Research Knowledge Tracker](./use-cases/07-research-tracker.md).
 

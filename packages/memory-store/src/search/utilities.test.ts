@@ -14,6 +14,8 @@ import { describe, expect, it } from "vitest";
 import {
 	type UnifiedMemorySearchInput,
 	type UnifiedMemorySearchResult,
+	listNameToChannel,
+	materializeSignals,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
@@ -149,5 +151,116 @@ describe("UnifiedMemorySearchInput new fields", () => {
 		const input: UnifiedMemorySearchInput = { userId: "u1", query: "q" };
 		expect(input.asOf).toBeUndefined();
 		expect(input.mergeStrategy).toBeUndefined();
+	});
+});
+
+describe("listNameToChannel", () => {
+	it("maps memory-semantic to semantic", () => {
+		expect(listNameToChannel("memory-semantic")).toBe("semantic");
+	});
+
+	it("maps both memory-bm25 and memory-lexical to lexical (legacy + current naming)", () => {
+		expect(listNameToChannel("memory-bm25")).toBe("lexical");
+		expect(listNameToChannel("memory-lexical")).toBe("lexical");
+	});
+
+	it("maps memory-entity to entity", () => {
+		expect(listNameToChannel("memory-entity")).toBe("entity");
+	});
+
+	it("returns undefined for non-channel list names (insights, knowledge, summary)", () => {
+		expect(listNameToChannel("insights")).toBeUndefined();
+		expect(listNameToChannel("knowledge")).toBeUndefined();
+		expect(listNameToChannel("summary")).toBeUndefined();
+		expect(listNameToChannel("")).toBeUndefined();
+	});
+});
+
+describe("materializeSignals", () => {
+	it("returns undefined when the hit is not in any channel list", () => {
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.9 });
+		const m2 = makeResult({ type: "memory", id: "m2", similarity: 0.8 });
+		const out = materializeSignals([{ name: "memory-semantic", hits: [m1] }], m2);
+		expect(out).toBeUndefined();
+	});
+
+	it("populates channels + per-channel similarity for a single-channel hit", () => {
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const out = materializeSignals([{ name: "memory-semantic", hits: [m1] }], m1);
+		expect(out).toEqual({ channels: ["semantic"], semantic: 0.91 });
+	});
+
+	it("populates every channel the hit appeared in (semantic + lexical + entity)", () => {
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const out = materializeSignals(
+			[
+				{ name: "memory-semantic", hits: [m1] },
+				{ name: "memory-bm25", hits: [makeResult({ type: "memory", id: "m1", similarity: 0.45 })] },
+				{ name: "memory-entity", hits: [makeResult({ type: "memory", id: "m1", similarity: 0.85 })] },
+				{ name: "insights", hits: [] },
+			],
+			m1,
+		);
+		expect(out?.channels).toEqual(["semantic", "lexical", "entity"]);
+		expect(out?.semantic).toBe(0.91);
+		expect(out?.lexical).toBe(0.45);
+		expect(out?.entity).toBe(0.85);
+	});
+
+	it("ignores non-channel list names (insights, knowledge)", () => {
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const out = materializeSignals(
+			[
+				{ name: "memory-semantic", hits: [m1] },
+				{ name: "insights", hits: [m1] },
+				{ name: "knowledge", hits: [m1] },
+			],
+			m1,
+		);
+		// Only `semantic` is a real channel — insights / knowledge are skipped.
+		expect(out?.channels).toEqual(["semantic"]);
+		expect(out?.semantic).toBe(0.91);
+	});
+
+	it("takes the first occurrence of (type, id) per channel when the hit is duplicated in a list", () => {
+		const m1First = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const m1Second = makeResult({ type: "memory", id: "m1", similarity: 0.12 });
+		const out = materializeSignals([{ name: "memory-semantic", hits: [m1First, m1Second] }], m1First);
+		// First occurrence wins — the breakdown stays deterministic even when
+		// the same `(type, id)` appears multiple times in a channel list.
+		expect(out?.semantic).toBe(0.91);
+	});
+
+	it("copies rrfScore from metadata onto signals.rrf when present", () => {
+		const m1 = makeResult({
+			type: "memory",
+			id: "m1",
+			similarity: 0.91,
+			metadata: { rrfScore: 0.0325 },
+		});
+		const out = materializeSignals([{ name: "memory-semantic", hits: [m1] }], m1);
+		expect(out?.rrf).toBe(0.0325);
+	});
+
+	it("omits signals.rrf when metadata has no rrfScore", () => {
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const out = materializeSignals([{ name: "memory-semantic", hits: [m1] }], m1);
+		expect(out?.rrf).toBeUndefined();
+	});
+
+	it("does not duplicate a channel if the same name appears in multiple lists", () => {
+		// Defensive: a caller could pass the same channel twice via different
+		// aliases (e.g. "memory-bm25" + "memory-lexical"). Both map to the
+		// same channel — only the first appearance should contribute.
+		const m1 = makeResult({ type: "memory", id: "m1", similarity: 0.91 });
+		const out = materializeSignals(
+			[
+				{ name: "memory-bm25", hits: [makeResult({ type: "memory", id: "m1", similarity: 0.5 })] },
+				{ name: "memory-lexical", hits: [makeResult({ type: "memory", id: "m1", similarity: 0.2 })] },
+			],
+			m1,
+		);
+		expect(out?.channels).toEqual(["lexical"]);
+		expect(out?.lexical).toBe(0.5);
 	});
 });

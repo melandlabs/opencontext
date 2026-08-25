@@ -39,7 +39,9 @@ import {
 	type UnifiedMemorySearchWarning,
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
+	deriveLexicalKeywords,
 	isRawMemorySemanticResult,
+	materializeSignals,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
@@ -51,6 +53,8 @@ import {
 } from "./utilities";
 
 export type {
+	HitChannel,
+	HitSignals,
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
 	UnifiedMemoryReasoningStrategy,
@@ -69,7 +73,10 @@ export type {
 export {
 	clampUnifiedMemorySearchLimit,
 	clampUnifiedMemorySearchThreshold,
+	deriveLexicalKeywords,
 	isRawMemorySemanticResult,
+	listNameToChannel,
+	materializeSignals,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
@@ -106,12 +113,95 @@ export interface UnifiedSearch {
 	consolidate(input: ApplyConsolidateInput): Promise<ApplyConsolidateOutput>;
 }
 
-function deriveLexicalKeywords(query: string): string[] {
-	return query
-		.toLowerCase()
-		.split(/[^\p{L}\p{N}]+/u)
-		.filter((token) => token.length >= 2)
-		.slice(0, 16);
+/**
+ * Heuristic entity-keyword extractor: reuses the lexical tokenizer
+ * and additionally pulls out capitalized proper-noun-shaped tokens
+ * (≥ 3 chars, starting with an uppercase Latin letter). The intent is
+ * to capture obvious named-entity mentions like "Luna", "Acme", "Berlin"
+ * without committing to a full NER pipeline — the host's
+ * `entitySearch` dep is responsible for any language-aware matching
+ * beyond this surface.
+ */
+function deriveEntityKeywords(query: string): string[] {
+	const proper = Array.from(new Set(query.match(/\b[A-Z][a-zA-Z]{2,}\b/g) ?? [])).map((w) => w.toLowerCase());
+	const lexical = deriveLexicalKeywords(query);
+	// Preserve order while deduplicating.
+	const seen = new Set<string>();
+	const out: string[] = [];
+	for (const word of [...proper, ...lexical]) {
+		if (word.length < 2) continue;
+		if (seen.has(word)) continue;
+		seen.add(word);
+		out.push(word);
+	}
+	return out.slice(0, 16);
+}
+
+/**
+ * Run the host's `entitySearch` sub-query and project the matches
+ * back into `UnifiedMemorySearchResult[]` so the outer merge can fuse
+ * them with semantic + lexical channels via RRF.
+ *
+ * Returns `[]` when no entity keywords can be derived (e.g. the query
+ * is short, all-lowercase, or numeric).
+ */
+async function runEntitySearchForQuery(
+	deps: UnifiedSearchDeps,
+	input: UnifiedMemorySearchInput,
+	limit: number,
+	logger: Pick<Console, "warn">,
+	peerPeers: ReadonlyArray<Peer> = [],
+): Promise<UnifiedMemorySearchResult[]> {
+	if (typeof deps.entitySearch !== "function") {
+		return [];
+	}
+	const keywords = deriveEntityKeywords(input.query);
+	if (keywords.length === 0) {
+		return [];
+	}
+	try {
+		const entitySearch = deps.entitySearch;
+		const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+		const matches = (
+			await Promise.all(
+				filters.map((botId) =>
+					entitySearch({
+						userId: input.userId,
+						keywords,
+						limit: Math.ceil(limit / filters.length),
+						botId,
+						...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
+					}),
+				),
+			)
+		).flat();
+		return matches
+			.filter(
+				(m): m is { messageId: string; label: string; score: number } =>
+					typeof m?.messageId === "string" && typeof m?.label === "string" && typeof m?.score === "number",
+			)
+			.map((m) => ({
+				type: "memory" as const,
+				id: m.messageId,
+				// The host's `entitySearch` returns match ids + labels only,
+				// so we surface the entity label as `content`. When the same
+				// `messageId` is also returned by the semantic/lexical channel
+				// (RRF path), the real message content is preserved via the
+				// shared `(type, id)` key; otherwise callers can re-fetch the
+				// original message by `id` (set in metadata as `sourceMessageId`).
+				content: m.label,
+				similarity: m.score,
+				metadata: {
+					scoring: "entity",
+					entityLabel: m.label,
+					isEntityProjection: true,
+					sourceMessageId: m.messageId,
+				},
+			}));
+	} catch (error) {
+		logger.warn?.("[memory-store] entity search failed:", error);
+		return [];
+	}
 }
 
 function parseDateBoundary(value: string, role: "from" | "to"): number | undefined {
@@ -406,10 +496,20 @@ async function runLexicalSearchForKeywords(
  * Sub-query output for the memory source. Each retrieval channel is exposed
  * separately so the outer merge (similarity or RRF) can combine them without
  * losing channel identity.
+ *
+ * `entity` is optional — present only when the host wired
+ * `unified.entitySearch` AND the query yielded at least one entity
+ * keyword. Entity hits are fused into the final ranking ONLY under
+ * `mergeStrategy:'rrf'` (rank fusion keeps the real message content and
+ * avoids mixing the host-defined entity score with cosine/BM25 scales).
+ * Under a similarity merge the standalone entity hits are suppressed and
+ * a `memory_entity_requires_rrf` warning is emitted — only the `entity`
+ * channel signal on co-occurring hits is retained.
  */
 interface MemorySubQueries {
 	semantic: UnifiedMemorySearchResult[];
 	lexical: UnifiedMemorySearchResult[];
+	entity?: UnifiedMemorySearchResult[];
 }
 
 function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
@@ -700,10 +800,52 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			}
 		}
 
-		return {
+		// Optional entity sub-query. Driven by `deps.entitySearch`; the
+		// sub-query is silent (no warning) when the host simply hasn't
+		// wired an entity search dep, except when RRF was explicitly
+		// requested — then we surface a not-configured warning that
+		// mirrors the lexical path.
+		let entity: UnifiedMemorySearchResult[] | undefined;
+		if (typeof deps.entitySearch === "function") {
+			entity = filterByDateRange(
+				await runEntitySearchForQuery(deps, input, limit, logger, peerPeers),
+				input.dateFrom,
+				input.dateTo,
+			);
+			if (entity.length === 0) {
+				entity = undefined;
+			} else if (
+				normalizeUnifiedMemoryMergeStrategy(
+					input.mergeStrategy ?? deps.reasoning?.defaultMergeStrategy ?? "rrf",
+				) !== "rrf"
+			) {
+				// Entity scores are fused via RRF; under a similarity merge the
+				// standalone entity hits are suppressed (see `mergeAcrossSources`),
+				// so surface a hint that the caller should opt into RRF to see them.
+				warnings.push({
+					source: "memory",
+					code: "memory_entity_requires_rrf",
+					message:
+						"Entity channel results are fused via RRF; with mergeStrategy:'similarity' standalone entity hits are suppressed (only the entity channel signal is kept on co-occurring hits). Request mergeStrategy:'rrf' to surface entity matches.",
+				});
+			}
+		} else if (input.mergeStrategy === "rrf") {
+			warnings.push({
+				source: "memory",
+				code: "memory_entity_search_not_configured",
+				message:
+					"RRF merge requested but entity search is not configured; falling back to semantic+lexical RRF.",
+			});
+		}
+
+		const out: MemorySubQueries = {
 			semantic: filterByDateRange(semantic, input.dateFrom, input.dateTo),
 			lexical: filterByDateRange(lexical, input.dateFrom, input.dateTo),
 		};
+		if (entity && entity.length > 0) {
+			out.entity = entity;
+		}
+		return out;
 	}
 
 	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
@@ -1077,6 +1219,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
  * list and let `mergeUnifiedMemorySearchResults` sort by similarity. RRF
  * strategy: feed one `rankedList` per channel so each contributes `1/(k+rank)`
  * to the fused score.
+ *
+ * After the merge (RRF or similarity), every emitted hit has its
+ * `signals` field populated by `materializeSignals` so callers can
+ * read per-channel scores without re-deriving them from metadata.
  */
 function mergeAcrossSources(input: {
 	memorySubs?: MemorySubQueries;
@@ -1086,34 +1232,86 @@ function mergeAcrossSources(input: {
 	strategy: UnifiedMemoryMergeStrategy;
 }): UnifiedMemorySearchResult[] {
 	const memorySubs = input.memorySubs ?? { semantic: [], lexical: [] };
+	const lists = buildChannelLists(memorySubs, input.insightHits, input.knowledgeHits);
+
+	if (input.strategy !== "rrf") {
+		// Entity hits are fused ONLY via RRF (rank-based), because the
+		// host-defined `entity` score lives on a different scale than
+		// semantic cosine similarity and lexical BM25. Mixing it into the
+		// global similarity sort would (a) rank cross-scale scores
+		// meaninglessly and (b) let an entity hit shadow a message's own
+		// real content with just its label. So in the similarity path we
+		// drop standalone entity hits; `buildChannelLists` still includes
+		// the entity list so `materializeSignals` can mark the `entity`
+		// channel on co-occurring (semantic/lexical) hits. A caller that
+		// wants entity matches surfaced should request `mergeStrategy:'rrf'`.
+		// Dedupe by `(type, id)` so a hit surfaced by both semantic and
+		// lexical channels does not appear twice — keep the higher-similarity instance.
+		const seen = new Map<string, UnifiedMemorySearchResult>();
+		for (const hit of [
+			...memorySubs.semantic,
+			...memorySubs.lexical,
+			...input.insightHits,
+			...input.knowledgeHits,
+		]) {
+			const key = `${hit.type}::${hit.id}`;
+			const existing = seen.get(key);
+			if (!existing || hit.similarity > existing.similarity) {
+				seen.set(key, hit);
+			}
+		}
+		const merged = mergeUnifiedMemorySearchResults(Array.from(seen.values()), input.limit);
+		return attachSignals(merged, lists);
+	}
+
 	const all: UnifiedMemorySearchResult[] = [
 		...memorySubs.semantic,
 		...memorySubs.lexical,
+		...(memorySubs.entity ?? []),
 		...input.insightHits,
 		...input.knowledgeHits,
 	];
 
-	if (input.strategy !== "rrf") {
-		return mergeUnifiedMemorySearchResults(all, input.limit);
-	}
+	const merged: UnifiedMemorySearchResult[] =
+		lists.length <= 1
+			? mergeUnifiedMemorySearchResults(all, input.limit)
+			: mergeUnifiedMemorySearchResultsRrf(lists, input.limit);
+	return attachSignals(merged, lists);
+}
 
+function buildChannelLists(
+	memorySubs: MemorySubQueries,
+	insightHits: UnifiedMemorySearchResult[],
+	knowledgeHits: UnifiedMemorySearchResult[],
+): UnifiedMemoryRankedList[] {
 	const lists: UnifiedMemoryRankedList[] = [];
-	if (memorySubs.semantic.length > 0) {
-		lists.push({ name: "memory-semantic", hits: memorySubs.semantic });
+	if (memorySubs.semantic.length > 0) lists.push({ name: "memory-semantic", hits: memorySubs.semantic });
+	if (memorySubs.lexical.length > 0) lists.push({ name: "memory-bm25", hits: memorySubs.lexical });
+	if (memorySubs.entity && memorySubs.entity.length > 0) {
+		lists.push({ name: "memory-entity", hits: memorySubs.entity });
 	}
-	if (memorySubs.lexical.length > 0) {
-		lists.push({ name: "memory-bm25", hits: memorySubs.lexical });
-	}
-	if (input.insightHits.length > 0) {
-		lists.push({ name: "insights", hits: input.insightHits });
-	}
-	if (input.knowledgeHits.length > 0) {
-		lists.push({ name: "knowledge", hits: input.knowledgeHits });
-	}
+	if (insightHits.length > 0) lists.push({ name: "insights", hits: insightHits });
+	if (knowledgeHits.length > 0) lists.push({ name: "knowledge", hits: knowledgeHits });
+	return lists;
+}
 
-	if (lists.length <= 1) {
-		// RRF degenerates to a single list — equivalent to the default sort.
-		return mergeUnifiedMemorySearchResults(all, input.limit);
+/**
+ * Attach `signals` to every hit using the per-channel ranked lists
+ * that fed the merge. Pure — no I/O — and stable across calls because
+ * it only inspects the lists in declaration order.
+ */
+function attachSignals(
+	hits: UnifiedMemorySearchResult[],
+	lists: UnifiedMemoryRankedList[],
+): UnifiedMemorySearchResult[] {
+	if (hits.length === 0 || lists.length === 0) {
+		return hits;
 	}
-	return mergeUnifiedMemorySearchResultsRrf(lists, input.limit);
+	return hits.map((hit) => {
+		const signals = materializeSignals(lists, hit);
+		if (!signals) {
+			return hit;
+		}
+		return { ...hit, signals };
+	});
 }

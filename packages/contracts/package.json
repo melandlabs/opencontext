@@ -14,6 +14,8 @@
 		"./user-type": "./dist/user-type.js",
 		"./integration-id": "./dist/integration-id.js",
 		"./entity-type": "./dist/entity-type.js",
+		"./entity-edge": "./dist/entity-edge.js",
+		"./derived-fact": "./dist/derived-fact.js",
 		"./episode": "./dist/episode.js",
 		"./decision": "./dist/decision.js",
 		"./errors": "./dist/errors.js",

@@ -12,6 +12,8 @@ export default defineConfig({
 		"storage/sqlite-vector-index": "src/storage/sqlite-vector-index.ts",
 		"storage/chroma-memory-index": "src/storage/chroma-memory-index.ts",
 		"search/unified-search": "src/search/unified-search.ts",
+		"search/distill": "src/search/distill.ts",
+		"search/derive": "src/search/derive.ts",
 		"policies/memory-graph-write-policy": "src/policies/memory-graph-write-policy.ts",
 		"policies/memory-graph-correction-policy": "src/policies/memory-graph-correction-policy.ts",
 		"server/cli-http": "src/server/cli-http.ts",

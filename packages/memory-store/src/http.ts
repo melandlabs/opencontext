@@ -11,7 +11,14 @@
  * Endpoints (all POST, JSON in/out):
  *   GET  /health              → { ok: true }
  *   POST /v1/search           → SearchOutput (set `synthesize: true` for
- *                                LLM synthesis)
+ *                                LLM synthesis). Each hit carries a
+ *                                `signals` field with per-channel scores.
+ *   POST /v1/distill          → DistillOutput (entity extraction from
+ *                                a single raw message; requires
+ *                                `unified.entityExtractor`)
+ *   POST /v1/derive           → DeriveOutput (fact derivation over a
+ *                                window of candidate texts; requires
+ *                                `unified.deriver`)
  *   POST /v1/raw-messages     → upsert raw messages (returns count)
  *   GET  /v1/raw-messages/:id → single raw message
  *   POST /v1/consolidate:apply → ApplyConsolidateOutput (agentic write-back)
@@ -46,12 +53,15 @@
  */
 
 import { serve } from "@hono/node-server";
+import { isFactType } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { Hono } from "hono";
 import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
+import { type DeriveInput, deriveFacts } from "./search/derive";
+import { type DistillInput, distillRawMessage } from "./search/distill";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
@@ -185,6 +195,69 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 		};
 		const result = await search.search(input);
 		return c.json(result);
+	});
+
+	app.post("/v1/distill", async (c) => {
+		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+		const userId = typeof body.userId === "string" ? body.userId : null;
+		const messageId = typeof body.messageId === "string" ? body.messageId : null;
+		const content = typeof body.content === "string" ? body.content : null;
+		if (!userId || !messageId || content === null || content.length === 0) {
+			return c.json({ error: "userId, messageId, and a non-empty content are required" }, 400);
+		}
+		const input: DistillInput = { userId, messageId, content };
+		try {
+			const result = await distillRawMessage(options.unified ?? {}, input, console);
+			return c.json(result);
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: server-side error log — needed for ops triage
+			console.error("[memory-store/http] distill failed:", error);
+			return c.json({ error: (error as Error).message ?? "distill failed" }, 500);
+		}
+	});
+
+	app.post("/v1/derive", async (c) => {
+		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
+		const userId = typeof body.userId === "string" ? body.userId : null;
+		if (!userId) {
+			return c.json({ error: "userId is required" }, 400);
+		}
+		const windowFrom = typeof body.windowFrom === "number" ? body.windowFrom : undefined;
+		const windowTo = typeof body.windowTo === "number" ? body.windowTo : undefined;
+		const window =
+			windowFrom !== undefined && windowTo !== undefined ? { from: windowFrom, to: windowTo } : undefined;
+		// Validate peers minimally — accept `[{kind, id}]` shape with
+		// `kind ∈ {"user","agent"}` and a non-empty `id`. Drop invalid
+		// entries silently rather than failing the whole request.
+		const peers = Array.isArray(body.peers)
+			? (body.peers as Array<Record<string, unknown>>).filter(
+					(p): p is { kind: "user" | "agent"; id: string } =>
+						(p?.kind === "user" || p?.kind === "agent") && typeof p?.id === "string" && p.id.length > 0,
+				)
+			: undefined;
+		const factTypes = Array.isArray(body.factTypes)
+			? (body.factTypes as unknown[]).filter(isFactType)
+			: undefined;
+		const input: DeriveInput = {
+			userId,
+			...(typeof body.query === "string" ? { query: body.query } : {}),
+			botIds: Array.isArray(body.botIds) ? (body.botIds as string[]) : undefined,
+			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
+			dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
+			...(window ? { window } : {}),
+			...(Array.isArray(body.candidateTexts) ? { candidateTexts: body.candidateTexts as string[] } : {}),
+			...(typeof body.candidateLimit === "number" ? { candidateLimit: body.candidateLimit } : {}),
+			...(peers && peers.length > 0 ? { peers } : {}),
+			...(factTypes && factTypes.length > 0 ? { factTypes } : {}),
+		};
+		try {
+			const result = await deriveFacts(options.unified ?? {}, input, console);
+			return c.json(result);
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: server-side error log — needed for ops triage
+			console.error("[memory-store/http] derive failed:", error);
+			return c.json({ error: (error as Error).message ?? "derive failed" }, 500);
+		}
 	});
 
 	app.post("/v1/consolidate:apply", async (c) => {

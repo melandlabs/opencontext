@@ -6,7 +6,15 @@
  *
  * Tools registered:
  *   - memory.search            → SearchOutput (read-only; set
- *                                `synthesize: true` for LLM synthesis)
+ *                                `synthesize: true` for LLM synthesis).
+ *                                Each hit carries a `signals` field with
+ *                                per-channel scores.
+ *   - memory.distill           → DistillOutput (entity extraction from
+ *                                a single raw message; requires
+ *                                `unified.entityExtractor`)
+ *   - memory.derive            → DeriveOutput (fact derivation over a
+ *                                window of candidate texts; requires
+ *                                `unified.deriver`)
  *   - memory.writeRawMessage   → { ok: boolean }
  *   - memory.getRawMessage     → RawMessage | null
  *   - memory.consolidate       → ApplyConsolidateOutput (agentic write-back)
@@ -21,6 +29,7 @@
  *   await startMcpServer({ db: { getDb } });
  */
 
+import { isFactType } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -30,6 +39,8 @@ import type { ZodRawShape } from "zod";
 import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
+import { type DeriveInput, deriveFacts } from "./search/derive";
+import { type DistillInput, distillRawMessage } from "./search/distill";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
@@ -372,6 +383,150 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			return {
 				content: [{ type: "text" as const, text: JSON.stringify(result) }],
 			};
+		},
+	);
+
+	const distillSchema: ZodRawShape = {
+		userId: z.string(),
+		messageId: z.string().min(1),
+		content: z.string().min(1),
+	};
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	server.registerTool(
+		"memory.distill",
+		{
+			title: "Distill Entities",
+			description:
+				"Extract `EntityEdge`s from a single raw message via the host's `unified.entityExtractor`. Returns `{ edges, warnings }`. Without the extractor wired in, returns an empty list with a `distill_extractor_not_configured` warning. Persistence is the host's responsibility — the MCP transport cannot carry host-side `persist` callbacks. Call `distillRawMessage` directly from host code if you need round-trip persistence.",
+			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
+			inputSchema: distillSchema as any,
+		},
+		async (args: unknown) => {
+			const a = args as {
+				userId: string;
+				messageId: string;
+				content: string;
+			};
+			const input: DistillInput = {
+				userId: a.userId,
+				messageId: a.messageId,
+				content: a.content,
+			};
+			try {
+				const result = await distillRawMessage(options.unified ?? {}, input, console);
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify(result) }],
+				};
+			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: server-side error log — needed for ops triage
+				console.error("[memory-store/mcp] distill failed:", error);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({ error: (error as Error).message ?? "distill failed" }),
+						},
+					],
+					isError: true,
+				};
+			}
+		},
+	);
+
+	const deriveSchema: ZodRawShape = {
+		userId: z.string(),
+		query: z
+			.string()
+			.optional()
+			.describe(
+				"Optional topical query used to derive lexical keywords when `candidateTexts` is omitted. Loop-engine schedulers should pass the topic they want synthesized facts about (e.g. 'cat preferences'). Without it the lexical fallback uses `userId + botIds` which is rarely useful.",
+			),
+		botIds: z.array(z.string()).optional(),
+		peers: z
+			.array(
+				z.object({
+					kind: z.enum(["user", "agent"]),
+					id: z.string().min(1),
+				}),
+			)
+			.optional()
+			.describe("Optional peer scope forwarded to the lexical candidate-fetch fallback."),
+		factTypes: z
+			.array(z.string())
+			.optional()
+			.describe("Optional FactType filter forwarded to the lexical candidate-fetch fallback."),
+		dateFrom: z.string().optional(),
+		dateTo: z.string().optional(),
+		windowFrom: z.number().optional().describe("Optional time-window start (ms) forwarded to the deriver."),
+		windowTo: z.number().optional().describe("Optional time-window end (ms) forwarded to the deriver."),
+		candidateTexts: z
+			.array(z.string())
+			.optional()
+			.describe(
+				"Pre-computed candidate fact texts. When omitted, the SDK pulls up to `candidateLimit` (default 50) texts via the lexical sub-query.",
+			),
+		candidateLimit: z.number().int().min(1).max(500).optional(),
+	};
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	server.registerTool(
+		"memory.derive",
+		{
+			title: "Derive Facts",
+			description:
+				"Synthesize `DerivedFact`s over a window of candidate fact texts via the host's `unified.deriver`. Returns `{ facts, warnings }`. Without the deriver wired in, returns an empty list with a `derive_deriver_not_configured` warning. Persistence is the host's responsibility — the MCP transport cannot carry host-side `persist` callbacks. Call `deriveFacts` directly from host code if you need round-trip persistence.",
+			// biome-ignore lint/suspicious/noExplicitAny: MCP SDK expects Zod schema type
+			inputSchema: deriveSchema as any,
+		},
+		async (args: unknown) => {
+			const a = args as {
+				userId: string;
+				query?: string;
+				botIds?: string[];
+				peers?: Array<{ kind: "user" | "agent"; id: string }>;
+				factTypes?: string[];
+				dateFrom?: string;
+				dateTo?: string;
+				windowFrom?: number;
+				windowTo?: number;
+				candidateTexts?: string[];
+				candidateLimit?: number;
+			};
+			const window =
+				a.windowFrom !== undefined && a.windowTo !== undefined
+					? { from: a.windowFrom, to: a.windowTo }
+					: undefined;
+			const input: DeriveInput = {
+				userId: a.userId,
+				...(a.query ? { query: a.query } : {}),
+				botIds: a.botIds,
+				...(a.peers && a.peers.length > 0 ? { peers: a.peers } : {}),
+				...(a.factTypes && a.factTypes.length > 0 ? { factTypes: a.factTypes.filter(isFactType) } : {}),
+				dateFrom: a.dateFrom,
+				dateTo: a.dateTo,
+				...(window ? { window } : {}),
+				...(a.candidateTexts ? { candidateTexts: a.candidateTexts } : {}),
+				...(a.candidateLimit !== undefined ? { candidateLimit: a.candidateLimit } : {}),
+			};
+			try {
+				const result = await deriveFacts(options.unified ?? {}, input, console);
+				return {
+					content: [{ type: "text" as const, text: JSON.stringify(result) }],
+				};
+			} catch (error) {
+				// biome-ignore lint/suspicious/noConsole: server-side error log — needed for ops triage
+				console.error("[memory-store/mcp] derive failed:", error);
+				return {
+					content: [
+						{
+							type: "text" as const,
+							text: JSON.stringify({ error: (error as Error).message ?? "derive failed" }),
+						},
+					],
+					isError: true,
+				};
+			}
 		},
 	);
 

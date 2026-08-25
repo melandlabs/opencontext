@@ -11,6 +11,67 @@ import type { Peer } from "@melandlabs/contracts/peer";
 
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
 
+/**
+ * A retrieval channel that contributed to a hit's final score.
+ *
+ *   - `semantic` — dense embedding lookup (`searchRawMessagesAnn` or
+ *     the SQLite manager's semantic-search fallback).
+ *   - `lexical`  — BM25 / FTS5 keyword match
+ *     (`searchRawMessagesLexical` or the SQLite manager's lexical
+ *     fallback).
+ *   - `entity`   — entity-link match supplied by the host's
+ *     `entitySearch` dep.
+ */
+export type HitChannel = "semantic" | "lexical" | "entity";
+
+/**
+ * Per-hit score breakdown. Always emitted by `search()` (default merge
+ * strategy) so callers can threshold / re-rank without losing the
+ * individual channel contributions. The RRF fusion additionally
+ * populates `signals.rrf` and continues to mirror the fused score
+ * onto `metadata.rrfScore` (legacy field).
+ *
+ * Each numeric field is the raw per-channel score for the *first*
+ * (highest-ranked) appearance of the same `(type, id)` key in the
+ * channel's list. Channels that did not contribute are `undefined`.
+ */
+export interface HitSignals {
+	/** Channels the hit actually appeared in. */
+	channels: HitChannel[];
+	/** Semantic sub-query similarity in [0..1] (undefined when absent). */
+	semantic?: number;
+	/** Lexical sub-query BM25 score (undefined when absent). */
+	lexical?: number;
+	/** Entity sub-query match score (undefined when absent). */
+	entity?: number;
+	/** RRF-fused score (only when mergeStrategy === "rrf"). */
+	rrf?: number;
+}
+
+/**
+ * Closed enumeration of every supported `HitChannel`. Exported so
+ * callers can iterate channels (e.g. when building a custom
+ * per-channel re-ranker or a UI legend) without re-declaring the
+ * list. Order is intentional — it matches the declaration order
+ * used by `materializeSignals` when populating `signals.channels`.
+ */
+export const HIT_CHANNELS: readonly HitChannel[] = ["semantic", "lexical", "entity"] as const;
+
+/**
+ * Derive simple lexical keywords from a query string. Splits on any
+ * non-letter/non-digit Unicode boundary, lowercases, drops tokens
+ * shorter than 2 chars, and caps the list at 16. Used by the unified
+ * search lexical sub-query and by the `derive` primitive's candidate
+ * fetch fallback.
+ */
+export function deriveLexicalKeywords(query: string): string[] {
+	return query
+		.toLowerCase()
+		.split(/[^\p{L}\p{N}]+/u)
+		.filter((token) => token.length >= 2)
+		.slice(0, 16);
+}
+
 export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative";
 
 export interface UnifiedMemorySearchWarning {
@@ -130,6 +191,12 @@ export interface UnifiedMemorySearchResult {
 	content: string;
 	similarity: number;
 	metadata: Record<string, unknown>;
+	/**
+	 * Optional per-channel score breakdown. Always populated by the
+	 * pipeline when at least one channel contributed a non-empty list;
+	 * callers should treat absence as "no channel info available".
+	 */
+	signals?: HitSignals;
 }
 
 export interface UnifiedMemorySearchOutput {
@@ -151,8 +218,8 @@ export interface UnifiedMemorySearchOutput {
 // The read-side search input/output plumbing is preserved as the
 // underlying contract for cross-source retrieval, date filtering, RRF
 // merge, and reasoning strategies. The top-level `store.search(input)`
-// verb is built on top of it.
-// compatibility with internal callers; the new types are additive.
+// verb is built on top of it. The new `SearchInput`/`SearchOutput` types
+// are additive and kept backward-compatible with the internal callers.
 
 /**
  * Cross-source retrieval surface for the unified search. Mirrors
@@ -403,6 +470,77 @@ export function toMemoryResult(result: {
 		similarity: result.similarity,
 		metadata: result.metadata,
 	};
+}
+
+/**
+ * Build the `signals` breakdown for a single hit from the per-channel
+ * ranked lists it appeared in. Only the highest-ranked (i.e. first)
+ * appearance of `(type, id)` per channel contributes — duplicate hits
+ * later in the same list are ignored so the breakdown stays
+ * deterministic.
+ *
+ * Used by `mergeAcrossSources` to attach `signals` to every emitted
+ * `UnifiedMemorySearchResult`. Pure; no I/O.
+ */
+export function materializeSignals(
+	lists: ReadonlyArray<{ name: string; hits: UnifiedMemorySearchResult[] }>,
+	hit: UnifiedMemorySearchResult,
+): HitSignals | undefined {
+	const channels: HitChannel[] = [];
+	let semantic: number | undefined;
+	let lexical: number | undefined;
+	let entity: number | undefined;
+
+	for (const list of lists) {
+		const channel = listNameToChannel(list.name);
+		if (!channel) continue;
+		if (channels.includes(channel)) continue;
+		// Scan for the first occurrence of `(type, id)` in the list. The
+		// lists are short (≤ limit) so linear scan is fine here.
+		let found: UnifiedMemorySearchResult | undefined;
+		for (const candidate of list.hits) {
+			if (candidate.type === hit.type && candidate.id === hit.id) {
+				found = candidate;
+				break;
+			}
+		}
+		if (!found) continue;
+		channels.push(channel);
+		if (channel === "semantic" && semantic === undefined) {
+			semantic = found.similarity;
+		} else if (channel === "lexical" && lexical === undefined) {
+			lexical = found.similarity;
+		} else if (channel === "entity" && entity === undefined) {
+			entity = found.similarity;
+		}
+	}
+
+	if (channels.length === 0) {
+		return undefined;
+	}
+
+	const out: HitSignals = { channels };
+	if (semantic !== undefined) out.semantic = semantic;
+	if (lexical !== undefined) out.lexical = lexical;
+	if (entity !== undefined) out.entity = entity;
+	if (typeof hit.metadata.rrfScore === "number") {
+		out.rrf = hit.metadata.rrfScore;
+	}
+	return out;
+}
+
+/**
+ * Map a `UnifiedMemoryRankedList.name` to a `HitChannel`. Unknown names
+ * (e.g. "insights", "knowledge", "summary") are not channels — they
+ * surface their similarity through the merge's `similarity` field and
+ * are simply skipped here so callers can still see which channel set
+ * the hit came from.
+ */
+export function listNameToChannel(name: string): HitChannel | undefined {
+	if (name === "memory-semantic") return "semantic";
+	if (name === "memory-bm25" || name === "memory-lexical") return "lexical";
+	if (name === "memory-entity") return "entity";
+	return undefined;
 }
 
 export function isRawMemorySemanticResult(result: unknown): result is {

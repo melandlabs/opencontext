@@ -52,6 +52,22 @@ Track academic findings, citations, and how understanding evolves as new researc
 
 **Code example:** `examples/src/tutorials/use-cases/32-research-knowledge-tracker.ts`
 
+---
+
+### 4. [Customer Health Scoring](./08-customer-health-scoring.md)
+
+Identify churn-risk accounts in real time by wiring the `distill` + `derive` primitives into a customer success pipeline. Each interaction flows through per-message entity extraction, per-window fact derivation, and per-search signals — surfacing a numeric health score plus human-readable signals that a Loop-engine schedule forwards to the CS team.
+
+**Features demonstrated:**
+- `distill` for per-message product / pain-point entity extraction
+- `derive` over a 21-day window — all four `DerivedKind` shapes (`summary`, `frequency`, `contradiction_candidate`, `temporal_trend`)
+- Per-channel `signals.entity` on search results so CSMs see why a customer match surfaced
+- Best-effort, opt-in LLM contract — the demo uses rule-based stubs that swap out for hosted LLMs in production
+
+**Best for:** Customer success platforms, churn-prevention tooling, CRM enrichment
+
+**Code example:** `examples/src/tutorials/use-cases/35-customer-health-scoring.ts`
+
 ## Running Use Case Examples
 
 Each use case includes a runnable TypeScript example. To run:
@@ -88,6 +104,7 @@ Before working with use cases, complete:
 │     → Personal Memory Assistant (individual scale)          │
 │     → Customer Support Agent (multi-user scale)             │
 │     → Research Tracker (knowledge evolution)                │
+│     → Customer Health Scoring (real-time CS pipeline)       │
 │                                                             │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -114,6 +131,7 @@ Time-travel is used differently per scenario:
 - **Personal Memory**: Track how your thinking changes
 - **Support Agent**: Detect repeat issues over time
 - **Research**: Show knowledge state at specific points
+- **Health Scoring**: Roll up 21-day windows into summary / frequency / contradiction / trend signals
 
 ### Batch Operations
 
@@ -130,6 +148,7 @@ await messages.storeMessages(largeBatch);
 | Personal productivity app | Personal Memory Assistant |
 | Customer service tool | Customer Support Agent |
 | Research/academic tool | Research Knowledge Tracker |
+| Customer success / churn-prevention tool | Customer Health Scoring |
 
 ## Contributing
 

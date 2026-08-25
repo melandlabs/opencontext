@@ -6,6 +6,8 @@ export default defineConfig({
 		"user-type": "src/user-type.ts",
 		"integration-id": "src/integration-id.ts",
 		"entity-type": "src/entity-type.ts",
+		"entity-edge": "src/entity-edge.ts",
+		"derived-fact": "src/derived-fact.ts",
 		episode: "src/episode.ts",
 		decision: "src/decision.ts",
 		errors: "src/errors.ts",

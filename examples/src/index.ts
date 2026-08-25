@@ -86,11 +86,13 @@ import demoChannels from "./tutorials/38-channels-example.ts";
 import demoIntegrationsRuntime from "./tutorials/39-integrations-runtime-example.ts";
 import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
 import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
+import demoExtractDerive from "./tutorials/42-extract-derive.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
 import demoPeerRelationshipExplorer from "./tutorials/use-cases/33-peer-relationship-explorer.ts";
 import demoOkfWikiBridge from "./tutorials/use-cases/34-okf-wiki-bridge.ts";
+import demoCustomerHealthScoring from "./tutorials/use-cases/35-customer-health-scoring.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -130,6 +132,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 		"demo: memory-store — peer-profile facade (createPeerProfile + getProfile/getRelationships)",
 		demoPeerProfile,
 	],
+	["demo: memory-store — distill + derive + per-hit signals", demoExtractDerive],
 	["demo: loop — preferences", demoLoop],
 	["demo: env-config", demoEnvConfig],
 	["demo: env-config — direct package tutorial", demoEnvConfigTutorial],
@@ -160,6 +163,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],
 	["demo: use-case — peer relationship explorer (research-lab collaboration)", demoPeerRelationshipExplorer],
 	["demo: use-case — OKF wiki ↔ opencontext bridge (external openwiki / Obsidian)", demoOkfWikiBridge],
+	[
+		"demo: use-case — customer health scoring (distill + derive + per-hit signals)",
+		demoCustomerHealthScoring,
+	],
 ];
 
 /**
