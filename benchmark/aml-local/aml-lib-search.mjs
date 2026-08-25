@@ -105,11 +105,15 @@ const args = parseArgs(process.argv);
 // ------------------------------------------------------------ LLM complete
 
 const LLM_API_KEY = process.env.OPENCONTEXT_LLM_API_KEY ?? process.env.OPENROUTER_API_KEY ?? "";
-const LLM_BASE_URL = (process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1").replace(/\/$/, "");
+const LLM_BASE_URL = (process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1").replace(
+	/\/$/,
+	"",
+);
 const LLM_MODEL = process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
 
 async function complete(prompt) {
-	if (!LLM_API_KEY) throw new Error("OPENCONTEXT_LLM_API_KEY (or OPENROUTER_API_KEY) is required for reasoning strategies");
+	if (!LLM_API_KEY)
+		throw new Error("OPENCONTEXT_LLM_API_KEY (or OPENROUTER_API_KEY) is required for reasoning strategies");
 	let lastError = null;
 	for (let attempt = 0; attempt < 3; attempt++) {
 		const controller = new AbortController();
@@ -172,15 +176,13 @@ const store = await createMemoryStore({
 		searchRawMessagesLexical: async (input) => {
 			if (typeof holder.manager.lexicalSearchMessages !== "function") return [];
 			const results = await holder.manager.lexicalSearchMessages(input);
-			return results
-				.filter(Boolean)
-				.map((r) => ({
-					type: "memory",
-					id: r.id,
-					content: r.content,
-					similarity: r.similarity,
-					metadata: r.metadata ?? {},
-				}));
+			return results.filter(Boolean).map((r) => ({
+				type: "memory",
+				id: r.id,
+				content: r.content,
+				similarity: r.similarity,
+				metadata: r.metadata ?? {},
+			}));
 		},
 		reasoning: {
 			complete,
