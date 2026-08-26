@@ -3,7 +3,7 @@
  *
  * OKF is a Markdown-with-YAML-front-matter document format used to
  * interchange knowledge between opencontext and external wiki / note
- * tools (openwiki, Obsidian, mkdocs, etc.). The front-matter fields
+ * tools. The front-matter fields
  * defined here are the v0.2 specification; the runtime codecs in
  * `@melandlabs/okf` translate them to / from `RawMessage` records.
  *

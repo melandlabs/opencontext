@@ -2,7 +2,7 @@
  * Use case: external OKF wiki → opencontext bridge.
  *
  * Imagine a small team that keeps its design docs in a wiki that already
- * speaks OKF v0.2 (openwiki, Obsidian-with-OKR, mkdocs-with-okf-plugin).
+ * speaks OKF v0.2.
  * The wiki has been running for months; new docs land there every day.
  * The team wants opencontext to remember everything that's been decided
  * so that agents and humans can recall it at conversation time.

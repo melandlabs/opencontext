@@ -62,6 +62,14 @@ export interface ReadOkfPackageResult {
 	 * so callers can distinguish a manifest failure from per-file ones.
 	 */
 	manifestIssues: OkfIssue[];
+	/**
+	 * Flat aggregator of every issue across the package: manifest-level
+	 * issues first, then every per-file issue in the same order as `files`.
+	 * Callers that want a single list to render / log / count should read
+	 * this; callers that need to distinguish manifest from per-file
+	 * failures should keep reading `manifestIssues` and `f.issues` directly.
+	 */
+	issues: OkfIssue[];
 	files: OkfPackageFile[];
 }
 
@@ -127,7 +135,11 @@ export async function readOkfPackage(
 	});
 
 	files.sort((a, b) => a.path.localeCompare(b.path));
-	return { manifest, manifestIssues, files };
+	const issues: OkfIssue[] = [...manifestIssues];
+	for (const file of files) {
+		issues.push(...file.issues);
+	}
+	return { manifest, manifestIssues, issues, files };
 }
 
 /** Best-effort file mtime capture — returns undefined on stat failure so reads still succeed. */

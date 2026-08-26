@@ -57,6 +57,9 @@ describe("readOkfPackage", () => {
 		const result = await readOkfPackage(tmpDir);
 		expect(result.files).toEqual([]);
 		expect(result.manifest).toBeUndefined();
+		// `issues` must always be defined (never undefined) so callers can
+		// safely iterate it even when there are no files.
+		expect(result.issues).toEqual([]);
 	});
 
 	it("parses .md files and validates front-matter", async () => {
@@ -259,6 +262,12 @@ describe("readOkfPackage — manifest error surfacing", () => {
 		expect(result.manifest).toBeUndefined();
 		expect(result.manifestIssues.length).toBeGreaterThan(0);
 		expect(result.manifestIssues.every((i) => i.code === "schema_mismatch")).toBe(true);
+		// The flat `issues` aggregator must include both manifest issues
+		// and any per-file issues for callers that want a single list.
+		expect(result.issues.length).toBeGreaterThanOrEqual(result.manifestIssues.length);
+		expect(result.issues.filter((i) => i.code === "schema_mismatch").length).toBe(
+			result.manifestIssues.length,
+		);
 	});
 
 	it("captures mtimeMs alongside the file", async () => {

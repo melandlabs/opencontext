@@ -25,6 +25,7 @@ import { filterRawMessagesByOkfType, isBlockingOkfIssue, okfToRawMessage } from 
 import type { OkfIssue } from "./errors.js";
 import { parseOkf, validateOkfFrontMatter } from "./frontmatter.js";
 import { type WriteOkfPackageResult, readOkfPackage, writeOkfPackage } from "./package.js";
+import { startOkfServe } from "./serve.js";
 
 // ─── Local types ──────────────────────────────────────────────────────
 
@@ -75,7 +76,7 @@ interface RawMessageStorageManagerLike {
 
 // ─── Subcommands ───────────────────────────────────────────────────────
 
-export type OkfAction = "ingest" | "emit" | "validate" | "inspect" | "help";
+export type OkfAction = "ingest" | "emit" | "validate" | "inspect" | "serve" | "help";
 
 export interface OkfCommonOptions {
 	json?: boolean;
@@ -115,6 +116,16 @@ export interface OkfInspectOptions extends OkfCommonOptions {
 	file: string;
 }
 
+export interface OkfServeOptions extends OkfCommonOptions {
+	action: "serve";
+	port?: number;
+	host?: string;
+	user?: string;
+	bot?: string;
+	platform?: string;
+	from?: string;
+}
+
 export interface OkfHelpOptions {
 	action: "help";
 }
@@ -124,6 +135,7 @@ export type OkfOptions =
 	| OkfEmitOptions
 	| OkfValidateOptions
 	| OkfInspectOptions
+	| OkfServeOptions
 	| OkfHelpOptions;
 
 /**
@@ -151,6 +163,9 @@ export function parseOkfArgs(argv: string[]): OkfOptions {
 	}
 	if (sub === "inspect") {
 		return parseInspect(rest);
+	}
+	if (sub === "serve") {
+		return parseServe(rest);
 	}
 	throw new Error(`[opencontext/okf] unknown sub-command: ${sub}`);
 }
@@ -364,6 +379,59 @@ function parseInspect(argv: string[]): OkfInspectOptions {
 	return opts;
 }
 
+function parseServe(argv: string[]): OkfServeOptions {
+	const opts: OkfServeOptions = { action: "serve" };
+	const logPrefix = "[opencontext/okf]";
+	for (let i = 0; i < argv.length; i += 1) {
+		const original = argv[i];
+		const inline = splitFlag(original ?? "");
+		const arg = inline ? inline[0] : original;
+		const takeValue = () => {
+			if (inline !== null) return inline[1];
+			i += 1;
+			const next = argv[i];
+			if (next === undefined) throw new Error(`${logPrefix} ${arg} requires a value`);
+			return next;
+		};
+		switch (arg) {
+			case "--port": {
+				const raw = takeValue();
+				const n = Number(raw);
+				if (!Number.isInteger(n) || n < 0 || n > 65535) {
+					throw new Error(`${logPrefix} --port must be a TCP port (0-65535), got ${raw}`);
+				}
+				opts.port = n;
+				break;
+			}
+			case "--host":
+				opts.host = takeValue();
+				break;
+			case "--user":
+				opts.user = takeValue();
+				break;
+			case "--bot":
+				opts.bot = takeValue();
+				break;
+			case "--platform":
+				opts.platform = takeValue();
+				break;
+			case "--from":
+				opts.from = takeValue();
+				break;
+			case "--json":
+				opts.json = true;
+				break;
+			case "--help":
+			case "-h":
+				opts.help = true;
+				break;
+			default:
+				throw new Error(`${logPrefix} unknown flag: ${arg}`);
+		}
+	}
+	return opts;
+}
+
 // ─── Help ──────────────────────────────────────────────────────────────
 
 export function printOkfHelp(): void {
@@ -378,6 +446,7 @@ Commands:
   emit            Export a user's facts as a Knowledge Package (directory of .md + manifest.json).
   validate <dir>  Check every .md file in a directory against the OKF v0.2 schema. No writes.
   inspect <file>  Parse a single file and print the inferred RawMessage. No writes.
+  serve           Boot the OKF viewer HTTP server (live or frozen from --from).
 
 Run "opencontext okf <command> --help" for command-specific options.
 
@@ -385,7 +454,8 @@ Examples:
   opencontext okf ingest ./my-wiki --user=alice --json
   opencontext okf validate ./my-wiki --json
   opencontext okf inspect ./my-wiki/Reference/foo.md --json
-  opencontext okf emit --user=alice --output=./export-2026-08-19 --json`);
+  opencontext okf emit --user=alice --output=./export-2026-08-19 --json
+  opencontext okf serve --port=4321 --from=./my-wiki`);
 }
 
 function printIngestHelp(): void {
@@ -435,6 +505,20 @@ function printInspectHelp(): void {
 	console.log(`opencontext okf inspect <file> [options]
 
   --json                  Emit stable JSON envelope ({ frontMatter, body, inferredRawMessage }).
+  --help, -h`);
+}
+
+function printServeHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
+	console.log(`opencontext okf serve [options]
+
+  --port=<n>              TCP port. Default: 4321.
+  --host=<addr>           Bind address. Default: 127.0.0.1 (loopback only).
+  --from=<dir>            Serve a frozen Knowledge Package directory instead of live store queries.
+  --user=<id>             Live-mode userId filter.
+  --bot=<id>              Live-mode botId filter.
+  --platform=<p>          Live-mode platform filter.
+  --json                  Emit stable JSON envelope ({ ok, exit, port, host, url }).
   --help, -h`);
 }
 
@@ -504,6 +588,13 @@ export async function startOkf(args: OkfOptions, runOptions: OkfRunOptions = {})
 			return { ok: true, exit: 0 };
 		}
 		return runInspect(args, runOptions);
+	}
+	if (args.action === "serve") {
+		if (args.help) {
+			printServeHelp();
+			return { ok: true, exit: 0 };
+		}
+		return runServe(args, runOptions);
 	}
 	// Exhaustiveness check.
 	throw new Error(`[opencontext/okf] unhandled action: ${JSON.stringify(args)}`);
@@ -968,3 +1059,48 @@ function renderInspectHuman(summary: OkfInspectSummary): void {
 export { okfToRawMessage, rawMessageToOkf } from "./codec.js";
 export { parseOkf, parseOkfFrontMatter, stringifyOkf, validateOkfFrontMatter } from "./frontmatter.js";
 export { readOkfPackage, writeOkfPackage } from "./package.js";
+
+// ─── serve ────────────────────────────────────────────────────────────
+
+/**
+ * Boot the OKF viewer HTTP server and block until it stops. Returns the
+ * `OkfRunResult` envelope for the CLI harness; callers that want to
+ * manage the lifecycle themselves should use `startOkfServe` from
+ * `./serve.js` directly.
+ */
+async function runServe(args: OkfServeOptions, runOptions: OkfRunOptions): Promise<OkfRunResult> {
+	const { sink } = runOptions;
+	const handle = await startOkfServe({
+		port: args.port,
+		host: args.host,
+		user: args.user,
+		bot: args.bot,
+		platform: args.platform,
+		from: args.from,
+	});
+	if (args.json) {
+		emitJson(sink, {
+			ok: true,
+			exit: 0,
+			port: handle.port,
+			url: handle.url,
+			mode: handle.mode,
+		});
+	} else {
+		// biome-ignore lint/suspicious/noConsole: intentional CLI banner
+		console.log(`[opencontext/okf] serving on ${handle.url} — Ctrl+C to stop`);
+	}
+	// Block until the server is asked to stop.
+	await new Promise<void>((resolve) => {
+		const shutdown = () => {
+			handle.stop().catch(() => {
+				// biome-ignore lint/suspicious/noConsole: intentional CLI shutdown error
+				console.error("[opencontext/okf] error closing server");
+			});
+			resolve();
+		};
+		process.once("SIGINT", shutdown);
+		process.once("SIGTERM", shutdown);
+	});
+	return { ok: true, exit: 0 };
+}

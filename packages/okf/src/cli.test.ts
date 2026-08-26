@@ -283,3 +283,31 @@ describe("startOkf ingest — blocking issue handling", () => {
 		}
 	});
 });
+
+describe("parseOkfArgs serve", () => {
+	it("parses --port", () => {
+		expect(parseOkfArgs(["serve", "--port=4322"])).toEqual({ action: "serve", port: 4322 });
+	});
+
+	it("parses --from for frozen mode", () => {
+		expect(parseOkfArgs(["serve", "--from=./wiki"])).toEqual({ action: "serve", from: "./wiki" });
+	});
+
+	it("parses live-mode filters", () => {
+		expect(parseOkfArgs(["serve", "--user=u-1", "--bot=b-1", "--platform=p-1"])).toEqual({
+			action: "serve",
+			user: "u-1",
+			bot: "b-1",
+			platform: "p-1",
+		});
+	});
+
+	it("rejects --port values that aren't TCP ports", () => {
+		expect(() => parseOkfArgs(["serve", "--port=99999"])).toThrow(/port/);
+		expect(() => parseOkfArgs(["serve", "--port=abc"])).toThrow(/port/);
+	});
+
+	it("parses --help without throwing", () => {
+		expect(parseOkfArgs(["serve", "--help"])).toEqual({ action: "serve", help: true });
+	});
+});

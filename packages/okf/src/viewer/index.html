@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  OKF viewer — original to opencontext (no upstream branding).
+  Renders an `okf/v0.2` knowledge package as a 3D force-directed graph
+  (sidebar index + canvas + markdown detail pane), using the CDN-pinned
+  libraries below. The HTML, CSS, and JS in this directory are written
+  from scratch and carry no third-party brand marks.
+-->
+<html lang="en" data-theme="light">
+<head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; base-uri 'none'; form-action 'none';" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>opencontext · OKF viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<script
+  src="https://cdn.jsdelivr.net/npm/force-graph@1.49.5/dist/force-graph.min.js"
+  integrity="sha384-Q7cpDGRIjLb0dIzHOl/cCcP5MM6ixkekYU/M/Y4shUqh7h2IgtwAY7coox/PB0/S"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
+  integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/dompurify@3.4.12/dist/purify.min.js"
+  integrity="sha384-piCcpDdJ7qVeK4Tv8Z6Hpcr3ZBIgP16TxQTPVfsLFdZ5uDgwc3Y8Ho7oUnqf12qu"
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.min.js"
+  integrity="sha384-T/0lMUdJpd2S1ZHtRiofG3htU3xPCrFVeAQ1UUE2TJwlEJSV5NUwn30kP28n238E"
+  crossorigin="anonymous"
+></script>
+<link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">oc</span>
+    <div>
+      opencontext
+      <span class="subtitle">OKF viewer</span>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="control">
+    <input class="search" type="search" placeholder="Search pages…" aria-label="Search pages" />
+    <select class="filter" aria-label="Filter by type"><option value="">All types</option></select>
+  </div>
+  <div class="live-pill" id="live"><span class="live-dot"></span><span id="live-text">Live</span></div>
+  <div class="icon-btn" id="toggle-graph" title="Hide graph">⛶</div>
+  <div class="icon-btn" id="theme" title="Toggle theme">◐</div>
+</div>
+<div class="main" id="main">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div id="graph"></div>
+  <div class="splitter" id="splitter" title="Drag to resize"></div>
+  <div class="legend" id="legend"></div>
+  <div class="graph-hint" id="hint"><b>Drag</b> to pan · <b>Scroll</b> to zoom · <b>Click</b> a node to read</div>
+  <div class="detail" id="detail">
+    <div class="empty">
+      <div class="empty-mark" aria-hidden="true">oc</div>
+      <div>Select a page from the index, or click a node in the graph.</div>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast">Graph updated</div>
+<script type="module" src="./client.js"></script>
+</body>
+</html>

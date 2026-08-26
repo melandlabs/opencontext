@@ -3,7 +3,7 @@
 OpenContext uses OKF v0.2 (Open Knowledge Format) as a first-class
 import / export format. OKF is a Markdown-with-YAML-front-matter
 document format used to interchange knowledge between opencontext and
-external wiki / note tools (openwiki, Obsidian, mkdocs, etc.).
+external wiki / note tools (Obsidian, mkdocs, etc.).
 
 The front-matter metadata layer carries the same semantics that
 opencontext's temporal context graph stores on `RawMessage` — facts
@@ -242,3 +242,12 @@ const { manifest, written } = await writeOkfPackage("/tmp/out", messages, {
 - The `metadata.okfExtras` round-trip preserves arbitrary unknown
   front-matter fields both ways (the emitter stashes them back at the
   top level on emit).
+
+## See also
+
+- [`serve-architecture.md`](./serve-architecture.md) — Hono app layout,
+  WikiGraph adapter, live vs. frozen mode, shutdown ordering.
+- [`viewer.md`](./viewer.md) — the `/viewer/` SPA: file layout, graph
+  data flow, persisted UI state, theme customisation.
+- [`alloomi-graph.md`](./alloomi-graph.md) — Mermaid diagrams rendered
+  from a real DingTalk export ingested through `okf ingest`.

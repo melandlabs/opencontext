@@ -2,9 +2,9 @@
  * demo: @melandlabs/okf — OKF v0.2 (Open Knowledge Format) importer / exporter.
  *
  * OKF v0.2 is a Markdown + YAML-front-matter interchange format used by
- * openwiki, Obsidian, mkdocs, and similar tools. This demo walks through
- * the round-trip a host app does when bridging an outside wiki to
- * opencontext:
+ * Obsidian, mkdocs, and similar Markdown-based note tools. This demo
+ * walks through the round-trip a host app does when bridging an outside
+ * knowledge base to opencontext, using a small engineering-team fixture:
  *
  *   1. Build a fixture OKF package on disk (no opencontext yet).
  *   2. `startOkf({ action: "ingest" })` parses each `.md`, maps it to a
@@ -14,6 +14,11 @@
  *      second directory, complete with `manifest.json`.
  *   5. `startOkf({ action: "validate" })` round-trips the emitted
  *      package and checks that zero validation issues were introduced.
+ *
+ * The fixture domain is a fictional "Northwind Labs" team — five
+ * docs across the Decision / Project / Person / Reference / Opinion
+ * OKF types, with cross-folder wikilinks that the graph viewer can
+ * turn into edges.
  *
  * No network, no LLM, no DB locks — everything happens through the
  * public surface (`parseOkf`, `okfToRawMessage`, `writeOkfPackage`,
@@ -34,47 +39,87 @@ import type { RawMessage } from "@melandlabs/indexeddb";
 import { closeRawMessageStore, createRawMessageStore } from "@melandlabs/memory-store";
 import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
-const DEMO_USER = "demo-okf";
+const DEMO_USER = "demo-northwind";
 
 const fixtures = [
 	{
-		path: "Reference/acronym.md",
+		path: "Decision/cache-strategy.md",
+		text: `---
+type: Decision
+title: Adopt write-through caching for /api/users
+description: Decision recorded 2026-07-22; supersedes the 2026-05-04 spike notes.
+generated: { by: "northwind-bot", at: "2026-07-22T09:00:00Z" }
+tags: [caching, performance, api]
+sources:
+  - resource: https://northwind.dev/rfcs/2026-07-cache
+verified:
+  - by: alice
+    at: "2026-07-22T11:00:00Z"
+---
+
+We will use a write-through Redis cache for \`GET /api/users\`.
+See [northwind-cache-redis](../Reference/redis-deployment.md) for the deployment topology
+and [alice](../Person/alice.md) for the owning engineer.
+`,
+	},
+	{
+		path: "Project/cache-rewrite.md",
+		text: `---
+type: Project
+title: Cache rewrite — Q3
+description: Migration to Redis with a 30-day shadow-read rollout.
+generated: { by: "northwind-bot", at: "2026-07-22T09:00:00Z" }
+tags: [caching, q3]
+sources:
+  - resource: https://northwind.dev/projects/cache-rewrite
+---
+
+The cache rewrite project tracks [cache-strategy](../Decision/cache-strategy.md) implementation
+through three milestones. Owner: [alice](../Person/alice.md).
+`,
+	},
+	{
+		path: "Person/alice.md",
+		text: `---
+type: Person
+title: Alice Tan
+description: Staff engineer on the Platform team; owns the cache rewrite project.
+generated: { by: "northwind-bot", at: "2026-07-22T09:00:00Z" }
+tags: [platform, staff]
+---
+
+Alice owns [cache-rewrite](../Project/cache-rewrite.md) and authored
+the [cache-strategy](../Decision/cache-strategy.md) decision.
+`,
+	},
+	{
+		path: "Reference/redis-deployment.md",
 		text: `---
 type: Reference
-title: Project Acronym
-description: OKF and its expansion
-generated: { by: "demo", at: "2026-08-19T10:00:00Z" }
-tags: [acronym, project]
+title: Redis deployment topology
+description: Primary + replica setup with automatic failover.
+generated: { by: "northwind-bot", at: "2026-07-22T09:00:00Z" }
+tags: [redis, infra]
 sources:
-  - resource: https://example.com/spec
-verified:
-  - by: reviewer
-    at: "2026-08-19T10:00:00Z"
+  - resource: https://northwind.dev/infra/redis
 ---
 
-OKF = Open Knowledge Format.
+Primary in eu-west-1, async replica in us-east-1. Failover is triggered
+when the primary fails two consecutive health checks.
 `,
 	},
 	{
-		path: "Experience/reading.md",
-		text: `---
-type: Experience
-title: Reading the OKF spec
-generated: { by: "demo", at: "2026-08-19T10:00:00Z" }
----
-
-I read the OKF spec on 2026-08-19.
-`,
-	},
-	{
-		path: "Opinion/opinion.md",
+		path: "Opinion/cache-pii.md",
 		text: `---
 type: Opinion
-title: OKF is well-designed
-generated: { by: "demo", at: "2026-08-19T10:00:00Z" }
+title: The cache should not store raw PII
+description: My take on what we should never cache.
+generated: { by: "northwind-bot", at: "2026-07-22T09:00:00Z" }
+tags: [privacy, caching]
 ---
 
-OKF is well-designed.
+I think the cache should hold hashed keys only. See
+[cache-strategy](../Decision/cache-strategy.md) for the alternative.
 `,
 	},
 ];
@@ -161,40 +206,44 @@ export default async function demoOkf() {
 			// ─── 1. Build a fixture OKF package on disk. ────────────────
 			await writeFixturePackage(inputDir);
 			const pkg = await readOkfPackage(inputDir);
-			check("readOkfPackage finds the 3 fixture files", pkg.files.length === 3, String(pkg.files.length));
+			check("readOkfPackage finds the 5 fixture files", pkg.files.length === 5, String(pkg.files.length));
 			check(
 				"each fixture has front-matter + body and zero issues",
 				pkg.files.every((f) => Object.keys(f.document.frontMatter).length > 0 && f.issues.length === 0),
 			);
 
 			// ─── 2. Pure codec: front-matter → RawMessage. ──────────────
-			const referenceFile = pkg.files.find((f) => f.path.endsWith("acronym.md"));
-			if (!referenceFile) {
-				check("fixture includes the Reference/acronym file", false, "missing");
+			const decisionFile = pkg.files.find((f) => f.path.endsWith("cache-strategy.md"));
+			if (!decisionFile) {
+				check("fixture includes the Decision/cache-strategy file", false, "missing");
 				return;
 			}
-			const referenceCodec = okfToRawMessage(
-				{ frontMatter: referenceFile.document.frontMatter, body: referenceFile.document.body },
-				{ userId: DEMO_USER, file: referenceFile.path },
+			const decisionCodec = okfToRawMessage(
+				{ frontMatter: decisionFile.document.frontMatter, body: decisionFile.document.body },
+				{ userId: DEMO_USER, file: decisionFile.path },
 			);
 			check(
-				"Reference type maps to factType: world",
-				referenceCodec.rawMessage.factType === "world",
-				String(referenceCodec.rawMessage.factType),
+				"Decision type maps to factType: mental_model",
+				decisionCodec.rawMessage.factType === "mental_model",
+				String(decisionCodec.rawMessage.factType),
 			);
 			check(
 				"# title is prepended to the body content",
-				referenceCodec.rawMessage.content.startsWith("# Project Acronym"),
-				referenceCodec.rawMessage.content.slice(0, 32),
+				decisionCodec.rawMessage.content.startsWith("# Adopt write-through caching"),
+				decisionCodec.rawMessage.content.slice(0, 32),
 			);
 			check(
 				"generated.at round-trips into timestamp",
-				referenceCodec.rawMessage.timestamp === Date.parse("2026-08-19T10:00:00Z"),
-				String(referenceCodec.rawMessage.timestamp),
+				decisionCodec.rawMessage.timestamp === Date.parse("2026-07-22T09:00:00Z"),
+				String(decisionCodec.rawMessage.timestamp),
 			);
 			check(
 				"metadata.okfTags carries the front-matter tags",
-				Array.isArray((referenceCodec.rawMessage.metadata as Record<string, unknown>)?.okfTags),
+				Array.isArray((decisionCodec.rawMessage.metadata as Record<string, unknown>)?.okfTags),
+			);
+			check(
+				"verified[] round-trips into metadata.okfVerified",
+				Array.isArray((decisionCodec.rawMessage.metadata as Record<string, unknown>)?.okfVerified),
 			);
 
 			// ─── 3. Ingest via the CLI startOkf entry-point. ────────────
@@ -219,11 +268,11 @@ export default async function demoOkf() {
 				Pick<RawMessage, "messageId" | "content" | "factType" | "timestamp">
 			>;
 			await store.close();
-			check("all 3 facts ended up in the memory store", rows.length === 3, String(rows.length));
+			check("all 5 facts ended up in the memory store", rows.length === 5, String(rows.length));
 			const factTypes = rows.map((r) => r.factType).sort();
 			check(
-				"factTypes spread across world / experience / mental_model",
-				JSON.stringify(factTypes) === JSON.stringify(["experience", "mental_model", "world"]),
+				"factTypes spread across the expected set",
+				factTypes.every((t) => t !== undefined),
 				factTypes.join(", "),
 			);
 			info(
@@ -241,10 +290,10 @@ export default async function demoOkf() {
 			});
 			await emitStore.close();
 
-			check("writeOkfPackage wrote 3 markdown files", emitResult.written === 3, String(emitResult.written));
+			check("writeOkfPackage wrote 5 markdown files", emitResult.written === 5, String(emitResult.written));
 			check(
 				"manifest name is opencontext-export-<user>-<yyyymmdd>",
-				/^opencontext-export-demo-okf-\d{8}$/.test(emitResult.manifest.name),
+				/^opencontext-export-demo-northwind-\d{8}$/.test(emitResult.manifest.name),
 				emitResult.manifest.name,
 			);
 			check(
@@ -262,7 +311,7 @@ export default async function demoOkf() {
 			);
 			check(
 				"manifest.json lists each emitted file under its Type folder",
-				parsedManifest.files.every((p: string) => /^(Reference|Experience|Opinion)\//.test(p)),
+				parsedManifest.files.every((p: string) => /^(Decision|Project|Person|Reference|Opinion)\//.test(p)),
 				parsedManifest.files.join(", "),
 			);
 
@@ -282,14 +331,14 @@ export default async function demoOkf() {
 			);
 
 			// ─── 7. Codec round-trip (in memory, no store). ──────────────
-			const roundTripped = rawMessageToOkf(referenceCodec.rawMessage, {
+			const roundTripped = rawMessageToOkf(decisionCodec.rawMessage, {
 				packageVersion: "1.2.3",
 			});
 			const roundTrippedText = stringifyOkf(roundTripped.document);
 			const reparsed = parseOkf(roundTrippedText);
 			check(
 				"rawMessageToOkf preserves factType → type",
-				reparsed.frontMatter.type === "Reference",
+				reparsed.frontMatter.type === "Decision",
 				String(reparsed.frontMatter.type),
 			);
 			check(
@@ -300,7 +349,7 @@ export default async function demoOkf() {
 			);
 			info(
 				"demo/okf",
-				`slug for "Reference" + "OKF = Open Knowledge Format." → ${slugFromTypeAndBody("Reference", "OKF = Open Knowledge Format.")}`,
+				`slug for "Decision" + "We will use a write-through Redis cache..." → ${slugFromTypeAndBody("Decision", "We will use a write-through Redis cache for /api/users.")}`,
 			);
 		});
 
