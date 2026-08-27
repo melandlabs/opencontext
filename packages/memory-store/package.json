@@ -2,11 +2,7 @@
 	"name": "@melandlabs/memory-store",
 	"version": "1.2.2",
 	"type": "module",
-	"files": [
-		"dist",
-		"README.md",
-		"LICENSE"
-	],
+	"files": ["dist", "README.md", "LICENSE"],
 	"main": "./dist/index.js",
 	"types": "./dist/index.d.ts",
 	"exports": {
@@ -43,15 +39,7 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext memory storage + search SDK with HTTP and MCP server entry points.",
-	"keywords": [
-		"opencontext",
-		"memory",
-		"storage",
-		"search",
-		"sdk",
-		"mcp",
-		"http"
-	],
+	"keywords": ["opencontext", "memory", "storage", "search", "sdk", "mcp", "http"],
 	"publishConfig": {
 		"access": "public"
 	},
