@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext-examples",
-	"version": "0.3.8",
+	"version": "0.3.9",
 	"private": true,
 	"type": "module",
 	"description": "Runnable demos for every @melandlabs/* package published from the monorepo that has a Node-callable headline API. Each file exercises the package's real public surface and asserts on the value returned. Run with `pnpm test`.",
@@ -51,8 +51,8 @@
 		"@melandlabs/loop": "^0.3.1",
 		"@melandlabs/mcp": "^0.3.1",
 		"@melandlabs/memory-consolidation": "^0.5.2",
-		"@melandlabs/memory-store": "^1.2.0",
-		"@melandlabs/opencontext": "^0.7.0",
+		"@melandlabs/memory-store": "^1.2.2",
+		"@melandlabs/opencontext": "^0.8.0",
 		"@melandlabs/rag": "^0.3.0",
 		"@melandlabs/rss": "^0.3.0",
 		"@melandlabs/search": "^0.3.0",
@@ -69,6 +69,11 @@
 		"node": ">=22"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": ["better-sqlite3", "protobufjs", "sqlite-vec", "sqlite3"]
+		"onlyBuiltDependencies": [
+			"better-sqlite3",
+			"protobufjs",
+			"sqlite-vec",
+			"sqlite3"
+		]
 	}
 }

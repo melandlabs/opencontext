@@ -1,10 +1,18 @@
 # @melandlabs/memory-store
 
+## 1.2.2
+
+### Patch Changes
+
+- Updated dependencies [97b6f2f]
+  - @melandlabs/okf@0.3.0
+
 ## 1.2.1
 
 ### Patch Changes
 
 - Updated dependencies
+
   - @melandlabs/contracts@0.7.0
 
   Follow-up to 1.2.0: `contracts@0.7.0` adds the `./derived-fact` and
