@@ -21,6 +21,9 @@
  *     pnpm test
  */
 
+import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import demoFacade from "./simple/00-facade.ts";
 import demoRagChunk from "./simple/01-rag-chunk.ts";
 import demoRagVectorStore from "./simple/02-rag-vector-store.ts";
@@ -39,14 +42,12 @@ import demoLocalEmbedding from "./simple/14-local-embedding.ts";
 import demoHttpServer from "./simple/15-http-server.ts";
 import demoMcpServer from "./simple/16-mcp-server.ts";
 import demoAiAgent from "./simple/17-ai-agent.ts";
-import { mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
-import demoVsa from "./simple/19-vsa.ts";
-import demoOkf from "./simple/20-okf.ts";
 import { startHttpServer } from "@melandlabs/memory-store/http";
 import { withTmp } from "./_helpers.ts";
+import demoVsa from "./simple/19-vsa.ts";
+import demoOkf from "./simple/20-okf.ts";
+import demoOkfServe from "./simple/21-okf-serve.ts";
 import demoHelloMemory from "./tutorials/00-hello-memory.ts";
 import demoRememberExample from "./tutorials/01-remember-example.ts";
 import demoRecallExample from "./tutorials/02-recall-example.ts";
@@ -87,6 +88,7 @@ import demoIntegrationsRuntime from "./tutorials/39-integrations-runtime-example
 import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
 import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
 import demoExtractDerive from "./tutorials/42-extract-derive.ts";
+import demoOkfServeLive from "./tutorials/43-okf-serve-live.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
@@ -158,15 +160,17 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext — fully-wired MCP server (stdio, all unified deps)", demoMcpServer],
 	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
 	["demo: okf — OKF v0.2 (Open Knowledge Format) importer / exporter", demoOkf],
+	["demo: okf — serve (live + frozen viewer)", demoOkfServe],
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],
 	["demo: use-case — peer relationship explorer (research-lab collaboration)", demoPeerRelationshipExplorer],
-	["demo: use-case — OKF wiki ↔ opencontext bridge (external openwiki / Obsidian)", demoOkfWikiBridge],
+	["demo: use-case — OKF wiki ↔ opencontext bridge (external Markdown / Obsidian)", demoOkfWikiBridge],
 	[
 		"demo: use-case — customer health scoring (distill + derive + per-hit signals)",
 		demoCustomerHealthScoring,
 	],
+	["demo: tutorial — OKF serve live (Northwind Labs: 5 fixtures → store → /api/graph)", demoOkfServeLive],
 ];
 
 /**

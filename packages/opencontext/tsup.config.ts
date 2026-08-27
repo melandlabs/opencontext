@@ -1,3 +1,5 @@
+import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig } from "tsup";
 
 // @melandlabs/opencontext — single-package facade.
@@ -76,4 +78,20 @@ export default defineConfig({
 		// Keep it external for the same reason.
 		"yaml",
 	],
+	// `startOkfServe` (from `@melandlabs/okf/serve`) resolves its vendored
+	// viewer assets via `dirname(import.meta.url)/viewer`. When the okf
+	// package is bundled into this facade, that dirname points to the
+	// facade's dist, not the okf package's. Copy the viewer from
+	// `packages/okf/src/viewer/` into `<facade-dist>/viewer/` so the bundled
+	// serve code finds the static files alongside the bundle. Source of
+	// truth is the okf package — if a future maintainer updates
+	// `packages/okf/src/viewer/`, re-running this build picks it up.
+	onSuccess: async () => {
+		const here = resolve(__dirname);
+		const src = resolve(here, "..", "okf", "src", "viewer");
+		const dest = resolve(here, "dist", "viewer");
+		if (!existsSync(src)) return;
+		mkdirSync(dest, { recursive: true });
+		cpSync(src, dest, { recursive: true });
+	},
 });

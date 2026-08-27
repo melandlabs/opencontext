@@ -58,11 +58,22 @@ const KNOWN_FM_KEYS = new Set([
 	"platform",
 ]);
 
-/** Map an OKF `type` to a `FactType` (the opencontext `world` / `experience` / `mental_model` union). */
+/**
+ * Map an OKF `type` to a `FactType` (the opencontext
+ * `world` / `experience` / `mental_model` union).
+ *
+ * `Person` is a `world` entity; the rest of the OKF v0.2 vocabulary
+ * splits naturally: references + concepts describe the world,
+ * experiences + episodes describe what happened, and decisions /
+ * projects / opinions / beliefs / mental-models all encode a stance
+ * about the world — those land on `mental_model`. New OKF types that
+ * don't fit fall through to `world` as the safe default.
+ */
 export function okfTypeToFactType(type: string): FactType {
 	switch (type) {
 		case "Reference":
 		case "Concept":
+		case "Person":
 			return "world";
 		case "Experience":
 		case "Episode":
@@ -70,6 +81,8 @@ export function okfTypeToFactType(type: string): FactType {
 		case "Opinion":
 		case "MentalModel":
 		case "Belief":
+		case "Decision":
+		case "Project":
 			return "mental_model";
 		default:
 			return "world";

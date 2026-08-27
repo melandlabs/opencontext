@@ -29,6 +29,9 @@ export type ModelType =
 	| "deepseek/deepseek-v4-pro"
 	| "z-ai/glm-5"
 	| "z-ai/glm-5.1"
+	| "z-ai/glm-5.2"
+	| "z-ai/glm-5.3"
+	| "z-ai/glm-5.3-flash"
 	| "moonshotai/kimi-k2.5"
 	| "moonshotai/kimi-k2.6"
 	| "minimax/minimax-m2.5"
@@ -130,6 +133,25 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		inputPricePerMillion: 1.05,
 		outputPricePerMillion: 3.5,
 		supportsVision: false,
+	},
+	"z-ai/glm-5.2": {
+		// OpenRouter list price as of 2026-08-27.
+		inputPricePerMillion: 0.5,
+		outputPricePerMillion: 3.15,
+		supportsVision: false,
+	},
+	"z-ai/glm-5.3": {
+		// OpenRouter list price as of 2026-08-27. Reasoning always enabled.
+		inputPricePerMillion: 1.4,
+		outputPricePerMillion: 4.4,
+		supportsVision: false,
+	},
+	"z-ai/glm-5.3-flash": {
+		// OpenRouter list price as of 2026-08-27; 50% launch promo
+		// (input $0.075 / output $0.25) expires 2026-09-09.
+		inputPricePerMillion: 0.15,
+		outputPricePerMillion: 0.5,
+		supportsVision: true,
 	},
 	"x-ai/grok-4.3": {
 		inputPricePerMillion: 1.25,

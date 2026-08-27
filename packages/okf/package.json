@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/okf",
-	"version": "0.2.1",
+	"version": "0.3.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -21,7 +21,16 @@
 		"./mcp": {
 			"types": "./dist/mcp.d.ts",
 			"import": "./dist/mcp.js"
-		}
+		},
+		"./serve": {
+			"types": "./dist/serve.d.ts",
+			"import": "./dist/serve.js"
+		},
+		"./graph": {
+			"types": "./dist/graph.d.ts",
+			"import": "./dist/graph.js"
+		},
+		"./viewer/*": "./dist/viewer/*"
 	},
 	"repository": {
 		"type": "git",
@@ -37,6 +46,7 @@
 	},
 	"peerDependencies": {
 		"@melandlabs/indexeddb": "workspace:*",
+		"@hono/node-server": "^1.13.7",
 		"hono": "^4.6.14",
 		"zod": "^4.3.6"
 	},
@@ -44,11 +54,15 @@
 		"@melandlabs/indexeddb": {
 			"optional": true
 		},
+		"@hono/node-server": {
+			"optional": true
+		},
 		"hono": {
 			"optional": true
 		}
 	},
 	"devDependencies": {
+		"@hono/node-server": "^1.13.7",
 		"@melandlabs/config": "workspace:*",
 		"@melandlabs/memory-store": "workspace:*",
 		"@types/node": "^22.13.10",

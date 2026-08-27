@@ -26,6 +26,13 @@ describe("okfTypeToFactType", () => {
 		expect(okfTypeToFactType("MentalModel")).toBe("mental_model");
 		expect(okfTypeToFactType("Belief")).toBe("mental_model");
 	});
+	it("maps Decision / Project to mental_model", () => {
+		expect(okfTypeToFactType("Decision")).toBe("mental_model");
+		expect(okfTypeToFactType("Project")).toBe("mental_model");
+	});
+	it("maps Person to world", () => {
+		expect(okfTypeToFactType("Person")).toBe("world");
+	});
 	it("maps unknown types to world", () => {
 		expect(okfTypeToFactType("WhateverNewType")).toBe("world");
 	});

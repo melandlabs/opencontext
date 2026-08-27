@@ -114,7 +114,7 @@ importers:
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.9.0
+        specifier: ^0.10.2
         version: link:../packages/ai
       '@melandlabs/ai-rag':
         specifier: ^0.2.9
@@ -228,10 +228,10 @@ importers:
         specifier: ^0.5.2
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^1.2.0
+        specifier: ^1.2.2
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.7.0
+        specifier: ^0.8.0
         version: link:../packages/opencontext
       '@melandlabs/rag':
         specifier: ^0.3.0
@@ -1139,6 +1139,9 @@ importers:
         specifier: ^2.0.0
         version: 2.9.0
     devDependencies:
+      '@hono/node-server':
+        specifier: ^1.13.7
+        version: 1.19.17(hono@4.13.1)
       '@melandlabs/config':
         specifier: workspace:*
         version: link:../config
@@ -1179,7 +1182,7 @@ importers:
         specifier: ^0.3.0
         version: link:../integrations
       '@melandlabs/okf':
-        specifier: ^0.2.1
+        specifier: ^0.3.1
         version: link:../okf
       '@melandlabs/security':
         specifier: ^0.3.0

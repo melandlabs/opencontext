@@ -1,5 +1,13 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.9
+
+### Patch Changes
+
+- Updated dependencies [97b6f2f]
+  - @melandlabs/opencontext@0.8.0
+  - @melandlabs/memory-store@1.2.2
+
 ## 0.3.8
 
 ### Patch Changes

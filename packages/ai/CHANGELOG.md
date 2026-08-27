@@ -1,5 +1,30 @@
 # @melandlabs/ai
 
+## 0.10.2
+
+### Patch Changes
+
+- Republish with resolved internal dependencies. The 0.10.1 tarball shipped literal `workspace:*` specifiers for `@melandlabs/contracts`, `env-config`, `memory-consolidation` and `shared`, which made it uninstallable from the npm registry.
+
+## 0.10.1
+
+### Patch Changes
+
+- b2bf155: Add OpenRouter pricing for `z-ai/glm-5.3` so it can be selected through `AgentOptions.model`:
+
+  - `z-ai/glm-5.3`: input $1.40/M, output $4.40/M, no vision. Reasoning always enabled.
+
+  Follow-up to 0.10.0 which already shipped pricing for `z-ai/glm-5.2` and `z-ai/glm-5.3-flash`.
+
+## 0.10.0
+
+### Minor Changes
+
+- Add OpenRouter pricing for `z-ai/glm-5.2` and `z-ai/glm-5.3-flash` so they can be selected through `AgentOptions.model` like the other Zhipu entries.
+
+  - `z-ai/glm-5.2`: input $0.50/M, output $3.15/M, no vision.
+  - `z-ai/glm-5.3-flash`: input $0.15/M, output $0.50/M, supports vision. Listed price reflects the 50% launch promo (input $0.075 / output $0.25 per-token basis) that expires 2026-09-09; bump the entry when OpenRouter flips back to list.
+
 ## 0.9.1
 
 ### Patch Changes

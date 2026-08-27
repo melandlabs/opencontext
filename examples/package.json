@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext-examples",
-	"version": "0.3.8",
+	"version": "0.3.9",
 	"private": true,
 	"type": "module",
 	"description": "Runnable demos for every @melandlabs/* package published from the monorepo that has a Node-callable headline API. Each file exercises the package's real public surface and asserts on the value returned. Run with `pnpm test`.",
@@ -10,10 +10,7 @@
 		"test": "node --experimental-strip-types src/index.ts"
 	},
 	"dependencies": {
-		"@melandlabs/ai": "^0.9.0",
-		"better-sqlite3": "^11.7.0",
-		"drizzle-orm": "^0.44.7",
-		"sqlite-vec": "^0.1.6-alpha.5",
+		"@melandlabs/ai": "^0.10.2",
 		"@melandlabs/ai-rag": "^0.2.9",
 		"@melandlabs/api": "^0.3.0",
 		"@melandlabs/audit": "^0.3.1",
@@ -51,8 +48,8 @@
 		"@melandlabs/loop": "^0.3.1",
 		"@melandlabs/mcp": "^0.3.1",
 		"@melandlabs/memory-consolidation": "^0.5.2",
-		"@melandlabs/memory-store": "^1.2.0",
-		"@melandlabs/opencontext": "^0.7.0",
+		"@melandlabs/memory-store": "^1.2.2",
+		"@melandlabs/opencontext": "^0.8.0",
 		"@melandlabs/rag": "^0.3.0",
 		"@melandlabs/rss": "^0.3.0",
 		"@melandlabs/search": "^0.3.0",
@@ -63,7 +60,10 @@
 		"@melandlabs/ui-runtime": "^0.3.0",
 		"@melandlabs/voice-kokoro": "^0.3.0",
 		"@melandlabs/voice-whisper": "^0.3.0",
-		"@melandlabs/vsa": "^0.3.0"
+		"@melandlabs/vsa": "^0.3.0",
+		"better-sqlite3": "^11.7.0",
+		"drizzle-orm": "^0.44.7",
+		"sqlite-vec": "^0.1.6-alpha.5"
 	},
 	"engines": {
 		"node": ">=22"
