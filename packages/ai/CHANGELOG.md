@@ -1,5 +1,11 @@
 # @melandlabs/ai
 
+## 0.10.2
+
+### Patch Changes
+
+- Republish with resolved internal dependencies. The 0.10.1 tarball shipped literal `workspace:*` specifiers for `@melandlabs/contracts`, `env-config`, `memory-consolidation` and `shared`, which made it uninstallable from the npm registry.
+
 ## 0.10.1
 
 ### Patch Changes
