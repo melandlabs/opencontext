@@ -237,6 +237,65 @@ describe("createUnifiedSearch", () => {
 		expect(out.results.some((r) => r.type === "memory" && r.id === "m2")).toBe(true);
 	});
 
+	it("merges planner evidence with baseline top-k when reasoningStrategy='union'", async () => {
+		// Planner notes m1 (rank 3 in its own search, absent from the baseline
+		// lexical path); baseline semantic returns m2/m3. Union must keep m1 in
+		// front, fill the rest from baseline, cap at limit.
+		const m1 = {
+			id: "m1",
+			content: "I adopted a cat named Luna.",
+			similarity: 0.4,
+			metadata: { timestamp: Date.parse("2024-06-10T00:00:00Z") },
+		};
+		const embedQuery = vi.fn().mockResolvedValue(new Array(4).fill(0.1));
+		const replies = [
+			'Thought: search for cat\nAction: search\nAction Input: {"keywords":["cat"]}',
+			'Thought: note it\nAction: note\nAction Input: {"indices":[3]}',
+			"Thought: finish\nAction: finish\nAction Input: {}",
+		];
+		const complete = vi.fn().mockImplementation(() => {
+			const reply = replies.shift();
+			return Promise.resolve(reply ?? "Thought: finish\nAction: finish\nAction Input: {}");
+		});
+		const planner = createIterativeRecallPlanner({ complete, options: { maxIterations: 3 } });
+		const searchDeps: UnifiedSearchDeps = {
+			...baseDeps,
+			embedQuery,
+			// Planner searches with a single keyword ("cat") and sees m1; the
+			// baseline lexical path (multi-keyword query) finds nothing.
+			searchRawMessagesLexical: async (req: { keywords: string[] }) =>
+				req.keywords.length === 1 ? [m1] : [],
+			searchRawMessagesAnn: async () => [
+				{
+					id: "m2",
+					content: "My cat Luna loves tuna.",
+					similarity: 0.9,
+					metadata: { timestamp: Date.parse("2024-06-10T00:00:00Z") },
+				},
+				{
+					id: "m3",
+					content: "I have a dog too.",
+					similarity: 0.8,
+					metadata: { timestamp: Date.parse("2024-06-10T00:00:00Z") },
+				},
+			],
+			reasoning: { iterativePlanner: planner },
+		};
+		const search = createUnifiedSearch(searchDeps);
+		const out = await search.search({
+			userId: "u1",
+			query: "what is my cat's name?",
+			reasoningStrategy: "union",
+			sources: ["memory"],
+			limit: 2,
+		});
+
+		expect(out.reasoning?.strategy).toBe("union");
+		const memoryIds = out.results.filter((r) => r.type === "memory").map((r) => r.id);
+		// planner evidence first, baseline fills up to limit=2
+		expect(memoryIds).toEqual(["m1", "m2"]);
+	});
+
 	it("filters memory results by dateFrom/dateTo", async () => {
 		const search = createUnifiedSearch(baseDeps);
 		const out = await search.search({

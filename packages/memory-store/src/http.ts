@@ -182,7 +182,9 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			dateFrom: typeof body.dateFrom === "string" ? body.dateFrom : undefined,
 			dateTo: typeof body.dateTo === "string" ? body.dateTo : undefined,
 			reasoningStrategy:
-				body.reasoningStrategy === "rewrite" || body.reasoningStrategy === "iterative"
+				body.reasoningStrategy === "rewrite" ||
+				body.reasoningStrategy === "iterative" ||
+				body.reasoningStrategy === "union"
 					? body.reasoningStrategy
 					: undefined,
 			...(wantsSynthesis

@@ -72,7 +72,7 @@ export function deriveLexicalKeywords(query: string): string[] {
 		.slice(0, 16);
 }
 
-export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative";
+export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative" | "union";
 
 export interface UnifiedMemorySearchWarning {
 	source: UnifiedMemorySearchSource;
@@ -372,7 +372,7 @@ export function normalizeUnifiedMemoryReasoningStrategy(
 	value: unknown,
 	defaultStrategy: UnifiedMemoryReasoningStrategy = "none",
 ): UnifiedMemoryReasoningStrategy {
-	if (value === "rewrite" || value === "iterative") {
+	if (value === "rewrite" || value === "iterative" || value === "union") {
 		return value;
 	}
 	return defaultStrategy;

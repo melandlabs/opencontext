@@ -105,10 +105,10 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				"Per-tier evidence scope for synthesis. Default: ['summary','raw','insight','knowledge']. Ignored when `synthesize` is falsy.",
 			),
 		reasoningStrategy: z
-			.enum(["none", "rewrite", "iterative"])
+			.enum(["none", "rewrite", "iterative", "union"])
 			.optional()
 			.describe(
-				"LLM reasoning strategy. `rewrite` rephrases the query before embedding; `iterative` runs a planner that searches, notes evidence, and searches again. Requires `unified.reasoning.{queryRewriter,iterativePlanner}` to be wired into the server.",
+				"LLM reasoning strategy. `rewrite` rephrases the query before embedding; `iterative` runs a planner that searches, notes evidence, and searches again; `union` merges the planner's evidence with the baseline top-k hits (evidence first, deduped, capped at limit). Requires `unified.reasoning.{queryRewriter,iterativePlanner}` to be wired into the server.",
 			),
 		synthesize: z
 			.union([z.boolean(), z.object({ responseSchema: z.record(z.string(), z.unknown()).optional() })])
@@ -200,7 +200,7 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				query: string;
 				sources?: ("memory" | "insights" | "knowledge")[];
 				tiers?: Array<"summary" | "raw" | "insight" | "knowledge">;
-				reasoningStrategy?: "none" | "rewrite" | "iterative";
+				reasoningStrategy?: "none" | "rewrite" | "iterative" | "union";
 				synthesize?: boolean | { responseSchema?: Record<string, unknown> };
 				responseSchema?: Record<string, unknown>;
 				limit?: number;
@@ -229,9 +229,11 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				authToken: a.authToken,
 				includeArchivedInsights: a.includeArchivedInsights,
 				reasoningStrategy:
-					a.reasoningStrategy === "rewrite" || a.reasoningStrategy === "iterative"
-						? a.reasoningStrategy
-						: undefined,
+				a.reasoningStrategy === "rewrite" ||
+				a.reasoningStrategy === "iterative" ||
+				a.reasoningStrategy === "union"
+					? a.reasoningStrategy
+					: undefined,
 				...(a.tiers ? { tiers: a.tiers } : {}),
 				...(wantsSynthesis
 					? {

@@ -570,7 +570,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		reasoningInfo?: UnifiedMemoryReasoningInfo,
 		peerPeers: ReadonlyArray<Peer> = [],
 	): Promise<MemorySubQueries> {
-		if (reasoningStrategy === "iterative" && !deps.reasoning?.iterativePlanner) {
+		if ((reasoningStrategy === "iterative" || reasoningStrategy === "union") && !deps.reasoning?.iterativePlanner) {
 			warnings.push({
 				source: "memory",
 				code: "memory_iterative_planner_not_configured",
@@ -593,8 +593,14 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		// a planner model drive its own searches. The planner's executor runs a
 		// hybrid search: lexical from the provided keywords plus semantic search
 		// from an embedding of those keywords, so the planner benefits from both
-		// exact matching and dense retrieval.
-		if (reasoningStrategy === "iterative" && deps.reasoning?.iterativePlanner) {
+		// exact matching and dense retrieval. The "union" strategy runs the same
+		// planner but keeps its evidence and merges it with the baseline hybrid
+		// result below instead of replacing it.
+		let unionEvidence: UnifiedMemorySearchResult[] | null = null;
+		if (
+			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
+			deps.reasoning?.iterativePlanner
+		) {
 			const planner = deps.reasoning.iterativePlanner;
 			const result = await planner.plan({
 				query: input.query,
@@ -661,15 +667,19 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				}
 			}
 
-			const semantic = result.evidence.map((candidate) => ({
+			const evidence = result.evidence.map((candidate) => ({
 				type: "memory" as const,
 				id: candidate.id,
 				content: candidate.content,
 				similarity: candidate.similarity,
-				metadata: { ...candidate.metadata, reasoning: "iterative" },
+				metadata: { ...candidate.metadata, reasoning: reasoningStrategy },
 			}));
 
-			return { semantic, lexical: [] };
+			if (reasoningStrategy === "iterative") {
+				return { semantic: evidence, lexical: [] };
+			}
+			// union: fall through to the baseline hybrid path; merge below.
+			unionEvidence = evidence;
 		}
 
 		// When no embedding is configured, use default lexical search as fallback
@@ -836,6 +846,44 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				message:
 					"RRF merge requested but entity search is not configured; falling back to semantic+lexical RRF.",
 			});
+		}
+
+		if (unionEvidence) {
+			// Union strategy: planner evidence first, baseline hybrid hits fill the
+			// remaining budget. Dedup by hit id (both channels surface the same
+			// underlying messages), cap at `limit` so the context budget matches
+			// the plain top-k run. Planner hits get a tiny synthetic score boost
+			// above the best baseline hit so any downstream similarity sort keeps
+			// them in front instead of dropping low-scored evidence.
+			const plannerHits = unionEvidence;
+			const base = mergeByMaxScore([
+				filterByDateRange(semantic, input.dateFrom, input.dateTo),
+				filterByDateRange(lexical, input.dateFrom, input.dateTo),
+			]);
+			const maxBase = base.length > 0 ? Math.max(...base.map((h) => h.similarity)) : 0;
+			const seen = new Set<string>();
+			const merged: UnifiedMemorySearchResult[] = [];
+			plannerHits.forEach((hit, i) => {
+				if (seen.has(hit.id)) {
+					return;
+				}
+				seen.add(hit.id);
+				merged.push({
+					...hit,
+					similarity: maxBase + (plannerHits.length - i) * 1e-6,
+				});
+			});
+			for (const hit of base) {
+				if (merged.length >= limit) {
+					break;
+				}
+				if (seen.has(hit.id)) {
+					continue;
+				}
+				seen.add(hit.id);
+				merged.push(hit);
+			}
+			return { semantic: merged.slice(0, limit), lexical: [] };
 		}
 
 		const out: MemorySubQueries = {
