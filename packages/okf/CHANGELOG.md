@@ -1,5 +1,11 @@
 # @melandlabs/okf
 
+## 0.3.1
+
+### Patch Changes
+
+- a8d0826: Fix `feedOkfServe` losing the `this` binding when calling `storeMessages` on the memory-store manager. Previously the helper destructured the method off the manager and invoked the bare function, which made `SQLiteRawMessageManager.storeMessages` throw `TypeError: Cannot read properties of undefined (reading 'init')` the first time any test exercised it. Now uses `.call(manager, …)` so the original manager stays the receiver.
+
 ## 0.3.0
 
 ### Minor Changes
