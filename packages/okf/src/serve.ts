@@ -3,18 +3,25 @@
  *
  * Boots a Hono app with:
  *   GET  /health           → { ok, mode, port, ts }
- *   GET  /api/graph        → WikiGraph JSON (live or frozen)
+ *   GET  /api/graph        → WikiGraph JSON (live / frozen / ephemeral)
  *   GET  /viewer/*         → opencontext static viewer (HTML/CSS/JS)
  *   GET  /                 → 302 → /viewer/
  *   GET  /viewer           → 302 → /viewer/
  *
- * Two modes:
+ * Three modes:
  *   - live  (default): queries the memory store on every `/api/graph`
  *     request so a fresh fact added via `opencontext add …` shows up
  *     in the browser after a refresh (the plan calls for F5-based
  *     refresh; SSE is intentionally omitted).
- *   - frozen: serves a previously-emitted OKF package directory. No
- *     memory-store access; reads the directory on every request.
+ *   - frozen (`--from=<dir>`): serves a previously-emitted OKF package
+ *     directory. No memory-store access; reads the directory on every
+ *     request.
+ *   - ephemeral (`messages: [...]`): in-memory only. The caller hands
+ *     in a `RawMessage[]` and the server builds the graph from it
+ *     directly — no SQLite, no storeMessages, no scratch dir. Useful
+ *     for previewing a graph before committing, for tests that don't
+ *     want a DB, and for demos that build data on the fly. `messages`
+ *     and `from` are mutually exclusive; combining them throws.
  *
  * `startOkfServe` returns a `StartedOkfServe` whose `stop()` shuts
  * down the HTTP server (and, in live mode without a caller-supplied
@@ -86,6 +93,13 @@ export interface OkfServeOptions {
 	 */
 	from?: string;
 	/**
+	 * Ephemeral mode: serve the supplied `RawMessage[]` in memory.
+	 * No memory store, no SQLite, no scratch dir — every `/api/graph`
+	 * request builds the graph from this list. Mutually exclusive
+	 * with `from`.
+	 */
+	messages?: readonly RawMessage[];
+	/**
 	 * Test seam: pass a pre-constructed store to avoid the workspace
 	 * cycle in unit tests. When omitted, the server auto-loads the
 	 * store via `createRawMessageStore({})`.
@@ -104,8 +118,8 @@ export interface StartedOkfServe {
 	url: string;
 	/** Actual bound port. */
 	port: number;
-	/** `live` (memory store) or `frozen` (pre-emitted directory). */
-	mode: "live" | "frozen";
+	/** `live` (memory store), `frozen` (pre-emitted directory), or `ephemeral` (inline messages). */
+	mode: "live" | "frozen" | "ephemeral";
 	/** Stop the HTTP server and (in live mode) close the store. */
 	stop(): Promise<void>;
 }
@@ -152,9 +166,13 @@ async function buildLiveGraph(
  * The server keeps running until `stop()` is called.
  */
 export async function startOkfServe(opts: OkfServeOptions = {}): Promise<StartedOkfServe> {
+	if (opts.messages !== undefined && opts.from !== undefined) {
+		throw new Error("startOkfServe: `messages` and `from` are mutually exclusive");
+	}
 	const port = opts.port ?? 4321;
 	const host = opts.host ?? "127.0.0.1";
-	const mode: "live" | "frozen" = opts.from ? "frozen" : "live";
+	const mode: "live" | "frozen" | "ephemeral" =
+		opts.messages !== undefined ? "ephemeral" : opts.from ? "frozen" : "live";
 
 	const app = new Hono();
 
@@ -169,11 +187,11 @@ export async function startOkfServe(opts: OkfServeOptions = {}): Promise<Started
 		}),
 	);
 
-	// 2. /api/graph — live queries the store; frozen reads the dir.
-	//    The store handle is captured in the closure below so
-	//    `stop()` can decide whether to close it (only when this
-	//    server auto-loaded it — caller-supplied stores are owned
-	//    by the caller).
+	// 2. /api/graph — live queries the store; frozen reads the dir;
+	//    ephemeral builds from the inline messages array. The store
+	//    handle is captured in the closure below so `stop()` can
+	//    decide whether to close it (only when this server auto-loaded
+	//    it — caller-supplied stores are owned by the caller).
 	let liveStore: { store: RawMessageStoreLike; ownStore: boolean } | undefined;
 	if (mode === "live") {
 		const ownStore = opts.rawStore === undefined;
@@ -201,12 +219,28 @@ export async function startOkfServe(opts: OkfServeOptions = {}): Promise<Started
 		// same host can ingest a package the viewer shows. Existing
 		// code in `http.ts` reads from the store only.
 		registerOkfRoutes(app, store);
-	} else {
+	} else if (mode === "frozen") {
 		const fromDir = resolvePath(opts.from ?? ".");
 		app.get("/api/graph", async (c) => {
 			try {
 				const graph = await buildGraphFromDir(fromDir);
 				return c.json(graph);
+			} catch (err) {
+				return c.json(
+					{
+						error: err instanceof Error ? err.message : String(err),
+						code: "graph_build_failed",
+					},
+					500,
+				);
+			}
+		});
+	} else {
+		// ephemeral — capture the messages array in the closure.
+		const inlineMessages = opts.messages ?? [];
+		app.get("/api/graph", async (c) => {
+			try {
+				return c.json(buildGraphFromMessages([...inlineMessages]));
 			} catch (err) {
 				return c.json(
 					{
@@ -257,4 +291,136 @@ export async function startOkfServe(opts: OkfServeOptions = {}): Promise<Started
 			}
 		},
 	};
+}
+
+/**
+ * Options for {@link feedOkfServe} — the one-shot "store these messages
+ * in a memory store, then serve the store as an OKF graph" helper.
+ */
+export interface FeedOkfServeOptions {
+	/** The `RawMessage[]` to upsert into a fresh memory store before serving. */
+	messages: readonly RawMessage[];
+	/** TCP port. Default: 4321. */
+	port?: number;
+	/** Bind address. Default: `127.0.0.1` (loopback only). */
+	host?: string;
+	/** Live-mode user filter. Forwarded into `startOkfServe`. */
+	user?: string;
+}
+
+/**
+ * One-shot helper: auto-create a memory store, upsert the supplied
+ * `RawMessage[]`, and boot the OKF viewer against that store. Collapses
+ * the four-step pattern
+ *
+ * ```ts
+ * const store = createRawMessageStore({});
+ * const manager = await store.getManager();
+ * await manager.storeMessages(messages);
+ * const server = await startOkfServe({ port, rawStore: store });
+ * ```
+ *
+ * into a single call. The returned handle's `stop()` shuts down the
+ * HTTP server and closes the auto-created store.
+ */
+export async function feedOkfServe(opts: FeedOkfServeOptions): Promise<StartedOkfServe> {
+	const createStore = await loadCreateRawMessageStore();
+	const store = createStore({});
+	const manager = await store.getManager();
+	// The local `RawMessageManagerLike` interface doesn't enumerate
+	// `storeMessages` (it lives in the live manager exported by
+	// `@melandlabs/memory-store`), so we narrow at runtime.
+	const insert = (
+		manager as unknown as {
+			storeMessages?: (msgs: readonly RawMessage[]) => Promise<unknown>;
+		}
+	).storeMessages;
+	if (typeof insert !== "function") {
+		// Fail fast — without this, the viewer would boot against an
+		// empty store and silently drop the caller's messages.
+		try {
+			await store.close();
+		} catch {
+			// Best-effort cleanup; the error below is what callers see.
+		}
+		throw new Error("feedOkfServe: memory store manager does not expose storeMessages()");
+	}
+	await insert(opts.messages);
+	const server = await startOkfServe({
+		port: opts.port,
+		host: opts.host,
+		user: opts.user,
+		rawStore: store,
+	});
+	// Wrap stop() so the store gets closed even though startOkfServe
+	// only auto-closes stores it created itself. Mirrors the same
+	// shutdown ordering as startOkfServe's own stop().
+	const innerStop = server.stop;
+	return {
+		url: server.url,
+		port: server.port,
+		mode: server.mode,
+		async stop() {
+			await innerStop();
+			try {
+				await store.close();
+			} catch {
+				// Best-effort — never let a close error mask a
+				// successful HTTP-server shutdown.
+			}
+		},
+	};
+}
+
+/**
+ * Options for {@link serveOkf} — the "attach my existing memory store
+ * to the OKF viewer" helper.
+ */
+export interface ServeOkfOptions {
+	/** TCP port. Default: 4321. */
+	port?: number;
+	/** Bind address. Default: `127.0.0.1` (loopback only). */
+	host?: string;
+	/** Live-mode user filter. */
+	user?: string;
+	/** Live-mode bot filter. */
+	bot?: string;
+	/** Live-mode platform filter. */
+	platform?: string;
+}
+
+/**
+ * Attach an existing memory store to the OKF viewer. This is the
+ * ergonomic counterpart to `startOkfServe({ rawStore: store })` for
+ * callers who already hold a store handle (the most common pattern
+ * once an app has populated memory with `await messages.storeMessages(...)`):
+ *
+ * ```ts
+ * import { createMemoryStore } from "@melandlabs/opencontext";
+ * import { serveOkf } from "@melandlabs/okf";
+ *
+ * const store = await createMemoryStore();
+ * // ... populate the store ...
+ * const server = await serveOkf(store, { port: 4321 });
+ * // → http://127.0.0.1:4321/viewer/  renders the graph
+ * // → http://127.0.0.1:4321/api/graph  returns the WikiGraph JSON
+ * ```
+ *
+ * The store is **not** owned by the OKF viewer — `server.stop()` only
+ * shuts down the HTTP server. Closing the store remains the caller's
+ * responsibility (matching the `rawStore` test seam in
+ * `startOkfServe`).
+ */
+export async function serveOkf(
+	store: RawMessageStoreLike,
+	opts: ServeOkfOptions = {},
+): Promise<StartedOkfServe> {
+	return startOkfServe({
+		port: opts.port,
+		host: opts.host,
+		user: opts.user,
+		bot: opts.bot,
+		platform: opts.platform,
+		rawStore: store,
+	});
 }

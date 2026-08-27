@@ -10,7 +10,9 @@ branding and no third-party JS bundled. See
 CDN libraries (force-graph, marked, DOMPurify, mermaid) and their
 licenses.
 
-![viewer overview](./screenshots/viewer-overview.png)
+### Northwind Labs fixture
+
+![viewer overview — Northwind Labs fixture](./screenshots/viewer-northwind.png)
 
 The screenshot above shows the viewer pointed at the five-document
 "Northwind Labs" engineering-team fixture (same domain as
@@ -20,7 +22,7 @@ The screenshot above shows the viewer pointed at the five-document
 5 nodes and 7 edges — `Decision ↔ Reference`, `Decision ↔ Person`,
 `Project ↔ Decision`, `Project ↔ Person`, and `Opinion → Decision`.
 
-![viewer detail](./screenshots/viewer-detail.png)
+![viewer detail — Northwind Labs fixture](./screenshots/viewer-northwind-detail.png)
 
 Clicking a sidebar card (or a node in the graph) loads the markdown
 detail pane on the right. Front-matter is rendered as an eyebrow +
@@ -29,6 +31,29 @@ sanitised by `DOMPurify`; in-page `[redis-deployment]` /
 `[alice]` wikilinks become clickable chips that navigate in-app, and
 the LINKS / BACKLINKS footer surfaces the outgoing and incoming
 edges for the current node.
+
+### OKF self-referential fixture
+
+![viewer overview — OKF self-referential fixture](./screenshots/viewer-okf.png)
+
+Same viewer, six-document "OKF describing OKF" fixture
+(`Decision/okf-v0.2`, `Experience/reading-spec`,
+`Opinion/okf-overview`, `Person/alice`, `Project/okf-adoption`,
+`Reference/acronym`). This fixture is what the screenshot harness
+under `examples/src/simple/21-okf-serve.ts` reaches for when the
+reader wants a doc that introspects on itself — the sidebar counts
+6 types (Decision, Experience, Opinion, Person, Project, Reference),
+the legend chips carry the per‑type swatches, and the force-graph
+renders 6 nodes and 13 edges.
+
+![viewer detail — OKF self-referential fixture](./screenshots/viewer-okf-detail.png)
+
+Clicking `Reference/acronym` in the sidebar loads its detail pane:
+the front-matter eyebrow says `REFERENCE`, the title is
+`Project Acronym`, the tag chips are `ACRONYM` / `OKF` /
+`REFERENCE`, and the body markdown (rendered by `marked` and
+sanitised by `DOMPurify`) explains what OKF stands for and links
+back into the OKF adoption project and the v0.2 decision.
 
 ## File layout
 

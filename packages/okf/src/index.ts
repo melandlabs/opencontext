@@ -79,8 +79,13 @@ export type {
 // It is also published under the dedicated `@melandlabs/okf/serve` subpath for
 // hosts that want a slimmer dependency surface; the root re-export exists so
 // `@melandlabs/opencontext` can hand it through its single-package facade.
-export { startOkfServe } from "./serve.js";
-export type { StartedOkfServe, OkfServeOptions as OkfServeStartOptions } from "./serve.js";
+export { startOkfServe, feedOkfServe, serveOkf } from "./serve.js";
+export type {
+	StartedOkfServe,
+	OkfServeOptions as OkfServeStartOptions,
+	FeedOkfServeOptions,
+	ServeOkfOptions,
+} from "./serve.js";
 
 // Re-export the contracts surface so consumers can build their own
 // zod schemas on top of OKF without a separate install.

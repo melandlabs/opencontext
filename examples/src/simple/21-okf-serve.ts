@@ -1,9 +1,10 @@
 /**
- * demo: @melandlabs/okf — `serve` sub-command (live + frozen).
+ * demo: @melandlabs/okf — `serve` sub-command (live + frozen + serveOkf).
  *
- * Two back-to-back sections exercise both modes of the OKF viewer
- * against a small "Northwind Labs" team fixture (Decision / Project /
- * Person / Reference / Opinion, with cross-folder wikilinks):
+ * Three back-to-back sections exercise every supported path into the
+ * OKF viewer against a small "Northwind Labs" team fixture
+ * (Decision / Project / Person / Reference / Opinion, with
+ * cross-folder wikilinks):
  *
  *   1. Live — fixture RawMessages go into an in-memory SQLite store,
  *      then `startOkfServe({ rawStore })` boots a Hono app on a random
@@ -15,10 +16,14 @@
  *      `startOkfServe({ from: tmpDir })` boots the same Hono app in
  *      frozen mode. `GET /api/graph` re-reads the directory and returns
  *      an equivalent `WikiGraph`.
+ *   3. `serveOkf` — same fixtures, but routed through
+ *      `serveOkf(store, { port })`. This is the most common pattern
+ *      once an app already holds a memory-store handle:
+ *      `await createMemoryStore(); … storeMessages(…); await serveOkf(store)`.
  *
- * Both modes round-trip through the public surface
- * (`startOkfServe`, `fetch`, `startOkf`) and assert on real return
- * values. The demo exits 1 if any check fails.
+ * All three modes round-trip through the public surface
+ * (`startOkfServe`, `serveOkf`, `feedOkfServe`, `fetch`, `startOkf`)
+ * and assert on real return values. The demo exits 1 if any check fails.
  *
  * Symbols are loaded dynamically from `@melandlabs/opencontext` so
  * this demo gracefully skips on published facade versions that
@@ -145,19 +150,21 @@ export default async function demoOkfServe() {
 	await runSection("demo: @melandlabs/okf — serve (live + frozen)", async () => {
 		const { check, skip } = makeCheckWithSkip("demo/okf-serve");
 
-		// Resolve serve export dynamically (same skip pattern as 20-okf).
-		const REQUIRED = ["startOkfServe"] as const;
+		// Resolve serve exports dynamically (same skip pattern as 20-okf).
+		const REQUIRED = ["startOkfServe", "serveOkf", "feedOkfServe"] as const;
 		const facade = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
 		const missing = REQUIRED.filter((name) => typeof facade[name] !== "function");
 		if (missing.length > 0) {
 			skip(
 				"okf serve export",
-				`@melandlabs/opencontext is published without startOkfServe yet — missing: ${missing.join(", ")}`,
+				`@melandlabs/opencontext is published without startOkfServe/serveOkf/feedOkfServe yet — missing: ${missing.join(", ")}`,
 			);
 			return;
 		}
-		const { startOkfServe } = facade as {
+		const { startOkfServe, serveOkf, feedOkfServe } = facade as {
 			startOkfServe: typeof import("@melandlabs/opencontext").startOkfServe;
+			serveOkf: typeof import("@melandlabs/opencontext").serveOkf;
+			feedOkfServe: typeof import("@melandlabs/opencontext").feedOkfServe;
 		};
 
 		await withTmp("okf-serve-demo", async (dir) => {
@@ -218,7 +225,7 @@ export default async function demoOkfServe() {
 				check("GET /viewer/ → 200", viewerRes.status === 200, String(viewerRes.status));
 				check(
 					"viewer HTML includes the OKF title",
-					viewerHtml.includes("<title>opencontext okf serve</title>"),
+					viewerHtml.includes("<title>opencontext · OKF viewer</title>"),
 				);
 				check("viewer HTML references the relative client.js", viewerHtml.includes('src="./client.js"'));
 				check("viewer HTML emits Content-Security-Policy", viewerHtml.includes("Content-Security-Policy"));
@@ -278,6 +285,67 @@ export default async function demoOkfServe() {
 				);
 			} finally {
 				await frozenServer.stop();
+			}
+
+			// Reset the SQLite singleton before Section C so the
+			// serveOkf call gets a fresh manager pointed at the same
+			// scratch DB Section A already populated.
+			await closeRawMessageStore().catch(() => undefined);
+
+			// ─── Section C: serveOkf (attach existing store) ─────────
+			// The most common pattern: the app already holds a memory
+			// store (e.g. from `await createMemoryStore()`), and wants
+			// to attach it to the OKF viewer. `serveOkf(store, …)` is
+			// the ergonomic counterpart to
+			// `startOkfServe({ rawStore: store })` — same semantics,
+			// clearer call shape.
+			const serveStore = createRawMessageStore({});
+			const serveManager = await serveStore.getManager();
+			await serveManager.storeMessages(rawMessages);
+			const servePort = pickPort();
+			const serveServer = await serveOkf(serveStore, { port: servePort });
+			try {
+				check("serveOkf server is in `live` mode", serveServer.mode === "live", serveServer.mode);
+				check(
+					"serveOkf server URL is on the requested port",
+					serveServer.url.endsWith(`:${servePort}`),
+					serveServer.url,
+				);
+
+				const sHealthRes = await fetch(`${serveServer.url}/health`);
+				const sHealth = (await sHealthRes.json()) as { ok: boolean; mode: string };
+				check("serveOkf /health → ok=true", sHealth.ok === true);
+				check("serveOkf /health → mode=live", sHealth.mode === "live", sHealth.mode);
+
+				const sGraphRes = await fetch(`${serveServer.url}/api/graph`);
+				const sGraph = (await sGraphRes.json()) as {
+					nodes: Array<{ id: string }>;
+					edges: Array<{ source: string; target: string }>;
+					types: string[];
+				};
+				// Every fixture message must appear in the graph the
+				// viewer is serving. Assert presence (not count) so the
+				// check survives the auto-populated store.
+				const sIds = new Set(sGraph.nodes.map((n) => n.id));
+				const missing: string[] = [];
+				for (const f of fixtures) {
+					const slug = f.path.replace(/\.md$/, "");
+					if (!sIds.has(slug)) missing.push(slug);
+				}
+				check(
+					`serveOkf /api/graph contains all ${fixtures.length} fixture ids`,
+					missing.length === 0,
+					missing.length === 0 ? "all present" : `missing: ${missing.join(", ")}`,
+				);
+				check(
+					"serveOkf /api/graph carries at least one cross-folder edge",
+					sGraph.edges.length >= 1,
+					String(sGraph.edges.length),
+				);
+				info("demo/okf-serve", `serveOkf: ${sGraph.nodes.length} nodes, ${sGraph.edges.length} edges`);
+			} finally {
+				await serveServer.stop();
+				await serveStore.close().catch(() => undefined);
 			}
 		});
 

@@ -351,6 +351,8 @@ export {
 	parseOkfArgs,
 	startOkf,
 	startOkfServe,
+	feedOkfServe,
+	serveOkf,
 	printOkfHelp,
 	buildGraphFromMessages,
 	buildGraphFromDir,
