@@ -229,11 +229,11 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				authToken: a.authToken,
 				includeArchivedInsights: a.includeArchivedInsights,
 				reasoningStrategy:
-				a.reasoningStrategy === "rewrite" ||
-				a.reasoningStrategy === "iterative" ||
-				a.reasoningStrategy === "union"
-					? a.reasoningStrategy
-					: undefined,
+					a.reasoningStrategy === "rewrite" ||
+					a.reasoningStrategy === "iterative" ||
+					a.reasoningStrategy === "union"
+						? a.reasoningStrategy
+						: undefined,
 				...(a.tiers ? { tiers: a.tiers } : {}),
 				...(wantsSynthesis
 					? {

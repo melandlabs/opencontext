@@ -570,7 +570,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		reasoningInfo?: UnifiedMemoryReasoningInfo,
 		peerPeers: ReadonlyArray<Peer> = [],
 	): Promise<MemorySubQueries> {
-		if ((reasoningStrategy === "iterative" || reasoningStrategy === "union") && !deps.reasoning?.iterativePlanner) {
+		if (
+			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
+			!deps.reasoning?.iterativePlanner
+		) {
 			warnings.push({
 				source: "memory",
 				code: "memory_iterative_planner_not_configured",
