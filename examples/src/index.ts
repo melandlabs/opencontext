@@ -21,6 +21,9 @@
  *     pnpm test
  */
 
+import { mkdir } from "node:fs/promises";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import demoFacade from "./simple/00-facade.ts";
 import demoRagChunk from "./simple/01-rag-chunk.ts";
 import demoRagVectorStore from "./simple/02-rag-vector-store.ts";
@@ -39,15 +42,12 @@ import demoLocalEmbedding from "./simple/14-local-embedding.ts";
 import demoHttpServer from "./simple/15-http-server.ts";
 import demoMcpServer from "./simple/16-mcp-server.ts";
 import demoAiAgent from "./simple/17-ai-agent.ts";
-import { mkdir } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
 
+import { startHttpServer } from "@melandlabs/memory-store/http";
+import { withTmp } from "./_helpers.ts";
 import demoVsa from "./simple/19-vsa.ts";
 import demoOkf from "./simple/20-okf.ts";
 import demoOkfServe from "./simple/21-okf-serve.ts";
-import { startHttpServer } from "@melandlabs/memory-store/http";
-import { withTmp } from "./_helpers.ts";
 import demoHelloMemory from "./tutorials/00-hello-memory.ts";
 import demoRememberExample from "./tutorials/01-remember-example.ts";
 import demoRecallExample from "./tutorials/02-recall-example.ts";
@@ -88,13 +88,13 @@ import demoIntegrationsRuntime from "./tutorials/39-integrations-runtime-example
 import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
 import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
 import demoExtractDerive from "./tutorials/42-extract-derive.ts";
+import demoOkfServeLive from "./tutorials/43-okf-serve-live.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
 import demoPeerRelationshipExplorer from "./tutorials/use-cases/33-peer-relationship-explorer.ts";
 import demoOkfWikiBridge from "./tutorials/use-cases/34-okf-wiki-bridge.ts";
 import demoCustomerHealthScoring from "./tutorials/use-cases/35-customer-health-scoring.ts";
-import demoOkfServeLive from "./tutorials/43-okf-serve-live.ts";
 
 const demos: Array<[string, () => Promise<void>]> = [
 	["demo: opencontext (facade)", demoFacade],
@@ -170,10 +170,7 @@ const demos: Array<[string, () => Promise<void>]> = [
 		"demo: use-case — customer health scoring (distill + derive + per-hit signals)",
 		demoCustomerHealthScoring,
 	],
-	[
-		"demo: tutorial — OKF serve live (Northwind Labs: 5 fixtures → store → /api/graph)",
-		demoOkfServeLive,
-	],
+	["demo: tutorial — OKF serve live (Northwind Labs: 5 fixtures → store → /api/graph)", demoOkfServeLive],
 ];
 
 /**

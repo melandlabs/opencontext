@@ -151,7 +151,11 @@ export default async function demoOkfWikiBridge() {
 					json: true,
 					continueOnError: true,
 				},
-				{ sink: (line) => (ingestEnvelope = line) },
+				{
+					sink: (line) => {
+						ingestEnvelope = line;
+					},
+				},
 			);
 			const ingestSummary = JSON.parse(ingestEnvelope || "{}") as {
 				ok?: boolean;

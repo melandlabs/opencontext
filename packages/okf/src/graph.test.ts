@@ -75,10 +75,10 @@ describe("buildGraphFromMessages", () => {
 		]);
 		// Dedupe collapses the two `[a](...)` references to a single edge.
 		expect(graph.edges).toEqual([{ source: "Reference/src", target: "Reference/a" }]);
-		const src = graph.nodes.find((n) => n.id === "Reference/src")!;
-		const a = graph.nodes.find((n) => n.id === "Reference/a")!;
-		expect(src.links).toEqual(["Reference/a"]);
-		expect(a.backlinks).toEqual(["Reference/src"]);
+		const src = graph.nodes.find((n) => n.id === "Reference/src");
+		const a = graph.nodes.find((n) => n.id === "Reference/a");
+		expect(src?.links).toEqual(["Reference/a"]);
+		expect(a?.backlinks).toEqual(["Reference/src"]);
 	});
 
 	it("drops self-links and links to unknown nodes", () => {
