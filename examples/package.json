@@ -10,10 +10,7 @@
 		"test": "node --experimental-strip-types src/index.ts"
 	},
 	"dependencies": {
-		"@melandlabs/ai": "^0.10.0",
-		"better-sqlite3": "^11.7.0",
-		"drizzle-orm": "^0.44.7",
-		"sqlite-vec": "^0.1.6-alpha.5",
+		"@melandlabs/ai": "^0.10.2",
 		"@melandlabs/ai-rag": "^0.2.9",
 		"@melandlabs/api": "^0.3.0",
 		"@melandlabs/audit": "^0.3.1",
@@ -63,12 +60,20 @@
 		"@melandlabs/ui-runtime": "^0.3.0",
 		"@melandlabs/voice-kokoro": "^0.3.0",
 		"@melandlabs/voice-whisper": "^0.3.0",
-		"@melandlabs/vsa": "^0.3.0"
+		"@melandlabs/vsa": "^0.3.0",
+		"better-sqlite3": "^11.7.0",
+		"drizzle-orm": "^0.44.7",
+		"sqlite-vec": "^0.1.6-alpha.5"
 	},
 	"engines": {
 		"node": ">=22"
 	},
 	"pnpm": {
-		"onlyBuiltDependencies": ["better-sqlite3", "protobufjs", "sqlite-vec", "sqlite3"]
+		"onlyBuiltDependencies": [
+			"better-sqlite3",
+			"protobufjs",
+			"sqlite-vec",
+			"sqlite3"
+		]
 	}
 }
