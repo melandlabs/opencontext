@@ -30,6 +30,7 @@ export type ModelType =
 	| "z-ai/glm-5"
 	| "z-ai/glm-5.1"
 	| "z-ai/glm-5.2"
+	| "z-ai/glm-5.3"
 	| "z-ai/glm-5.3-flash"
 	| "moonshotai/kimi-k2.5"
 	| "moonshotai/kimi-k2.6"
@@ -137,6 +138,12 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		// OpenRouter list price as of 2026-08-27.
 		inputPricePerMillion: 0.5,
 		outputPricePerMillion: 3.15,
+		supportsVision: false,
+	},
+	"z-ai/glm-5.3": {
+		// OpenRouter list price as of 2026-08-27. Reasoning always enabled.
+		inputPricePerMillion: 1.4,
+		outputPricePerMillion: 4.4,
 		supportsVision: false,
 	},
 	"z-ai/glm-5.3-flash": {

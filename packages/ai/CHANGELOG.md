@@ -1,5 +1,15 @@
 # @melandlabs/ai
 
+## 0.10.1
+
+### Patch Changes
+
+- b2bf155: Add OpenRouter pricing for `z-ai/glm-5.3` so it can be selected through `AgentOptions.model`:
+
+  - `z-ai/glm-5.3`: input $1.40/M, output $4.40/M, no vision. Reasoning always enabled.
+
+  Follow-up to 0.10.0 which already shipped pricing for `z-ai/glm-5.2` and `z-ai/glm-5.3-flash`.
+
 ## 0.10.0
 
 ### Minor Changes
