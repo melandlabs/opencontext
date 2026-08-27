@@ -330,11 +330,10 @@ export async function feedOkfServe(opts: FeedOkfServeOptions): Promise<StartedOk
 	// The local `RawMessageManagerLike` interface doesn't enumerate
 	// `storeMessages` (it lives in the live manager exported by
 	// `@melandlabs/memory-store`), so we narrow at runtime.
-	const insert = (
-		manager as unknown as {
-			storeMessages?: (msgs: readonly RawMessage[]) => Promise<unknown>;
-		}
-	).storeMessages;
+	const managerWithInsert = manager as unknown as {
+		storeMessages?: (msgs: readonly RawMessage[]) => Promise<unknown>;
+	};
+	const insert = managerWithInsert.storeMessages;
 	if (typeof insert !== "function") {
 		// Fail fast — without this, the viewer would boot against an
 		// empty store and silently drop the caller's messages.
@@ -345,7 +344,10 @@ export async function feedOkfServe(opts: FeedOkfServeOptions): Promise<StartedOk
 		}
 		throw new Error("feedOkfServe: memory store manager does not expose storeMessages()");
 	}
-	await insert(opts.messages);
+	// `insert` is a method pulled off the manager object — calling it
+	// bare would lose `this`, and the SQLite implementation calls
+	// `this.init()` internally. Bind back to the original manager.
+	await insert.call(manager, opts.messages);
 	const server = await startOkfServe({
 		port: opts.port,
 		host: opts.host,
