@@ -1,0 +1,5 @@
+{
+  "query": "What is the name of the user's cat?",
+  "user_id": "aml-sample-user-001",
+  "top_k": 10
+}

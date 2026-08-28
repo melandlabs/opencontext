@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/search.schema.json",
+  "title": "AML Search request",
+  "description": "Request body for POST /search as implemented by benchmark/aml-local/serve.py.",
+  "type": "object",
+  "required": ["query", "user_id", "top_k"],
+  "additionalProperties": true,
+  "properties": {
+    "query": {
+      "type": "string",
+      "minLength": 1
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Isolation scope; only memories Added under this user_id are searched."
+    },
+    "top_k": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Maximum number of results. The adapter returns at most top_k items, relevance-ordered."
+    },
+    "options": {
+      "type": "object",
+      "description": "Reserved for platform-specific search options; currently ignored by the adapter."
+    }
+  }
+}

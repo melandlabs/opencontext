@@ -73,6 +73,13 @@ Third-party memory and long-context recall benchmarks (numbers current as of 202
 | LoCoMo-V2     | 97.4% | QA over long multimodal conversations                            |
 | BEAM @ 10M    | 67.0% | Factual recall at a 10M-token context window                      |
 
+> Scores above are **opencontext self-evaluations** on the public datasets,
+> produced by our own harnesses under [`benchmark/`](./benchmark). They are
+> not Agent Memory Leaderboard (AML) results — AML evaluates against
+> private refined datasets on its own platform. Official AML scores, once
+> our hosted submission completes, will appear on the leaderboard card; see
+> [`benchmark/aml-local/`](./benchmark/aml-local) for the submission.
+
 ## Quick Start
 
 There are several ways to get opencontext into your project. Pick the one

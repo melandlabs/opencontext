@@ -1,0 +1,17 @@
+{
+  "request_id": "eval-2026-0001-add-0001",
+  "user_id": "aml-sample-user-001",
+  "session_id": "aml-session-001",
+  "messages": [
+    {
+      "role": "user",
+      "content": "I moved to Berlin last month and adopted a cat named Miso.",
+      "timestamp": 1787000000000
+    },
+    {
+      "role": "assistant",
+      "content": "Congrats on the move! How is Miso settling in?",
+      "timestamp": 1787000005000
+    }
+  ]
+}

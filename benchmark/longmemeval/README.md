@@ -1,5 +1,11 @@
 # LongMemEval Benchmark
 
+> **Note:** this directory is opencontext's **own** scoring pipeline (custom
+> BLEU/F1 + custom LLM-judge prompts). Its numbers are **not** comparable to
+> the AML (Agent Memory Leaderboard) binary CORRECT/WRONG scoring. For the
+> AML-comparable LongMemEval-S path, use [`../aml-local/`](../aml-local/),
+> which drives the vendored official AML pipeline.
+
 Benchmark suite for evaluating the OpenContext long-term memory retrieval system using the dataset.
 
 ## Overview

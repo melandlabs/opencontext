@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/add.schema.json",
+  "title": "AML Add request",
+  "description": "Request body for POST /add as implemented by benchmark/aml-local/serve.py. One Add carries one conversation session for one isolated user.",
+  "type": "object",
+  "required": ["request_id", "user_id", "session_id", "messages"],
+  "additionalProperties": true,
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Platform-unique id for this Add call. Drives idempotency: the OpenContext messageId is derived as `aml:<request_id>:<index>`, so retries of the same request_id never duplicate memories."
+    },
+    "user_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Isolation scope. Passed through verbatim as the OpenContext userId; every eval sample stays isolated."
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "messages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["content"],
+        "additionalProperties": true,
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "Speaker role, e.g. \"user\" or \"assistant\". Defaults to \"user\" when omitted."
+          },
+          "content": {
+            "type": ["string", "number", "boolean", "object", "array"],
+            "description": "Message payload; non-string values are stringified before storage."
+          },
+          "timestamp": {
+            "type": "integer",
+            "description": "Unix epoch milliseconds. Defaults to the adapter receive time when omitted."
+          }
+        }
+      }
+    }
+  }
+}

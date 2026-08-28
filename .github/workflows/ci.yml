@@ -40,6 +40,20 @@ jobs:
             exit 1
           fi
 
+  aml-contract:
+    # AML submission guard: fixtures in benchmark/aml-local/fixtures/ must
+    # always validate against contract/*.schema.json, and the adapter must
+    # stay syntax-clean. Pure stdlib Python — no install, no build.
+    name: AML contract (fixtures vs schemas)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m py_compile benchmark/aml-local/serve.py benchmark/aml-local/test_contract.py
+      - run: python benchmark/aml-local/test_contract.py
+
   lint:
     name: Lint (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

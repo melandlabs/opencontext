@@ -185,6 +185,7 @@ benchmark/**/*.egg-info/
 # benchmark datasets and reference binaries (large, re-downloadable — see each benchmark's README)
 benchmark/locomo/dataset/
 benchmark/longmemeval/dataset/
+benchmark/clbench-official/dataset/
 benchmark/clbench-official/CL-bench-*.jsonl
 benchmark/beam/dataset/*.parquet
 benchmark/beam/dataset/beam_1m.json

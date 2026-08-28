@@ -19,7 +19,7 @@ dataset -> retrieve.py -> OpenContext (POST /v1/raw-messages ingest, per-sample 
 ```powershell
 cd benchmark\.opencontext-data
 $env:LOCAL_EMBEDDING_REMOTE_HOST='https://hf-mirror.com'
-node D:\opencontext\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
+node ..\..\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
 ```
 
 - AML pipeline environment (vendored at `benchmark/AML-agent-memory-leaderboard/`):
@@ -113,7 +113,7 @@ $env:LOCAL_EMBEDDING_REMOTE_HOST='https://hf-mirror.com'
 $env:OPENCONTEXT_LLM_API_KEY=$env:OPENROUTER_API_KEY          # any OpenAI-compatible key
 $env:OPENCONTEXT_LLM_BASE_URL='https://openrouter.ai/api/v1'  # this is the default
 $env:OPENCONTEXT_LLM_MODEL='qwen/qwen3-14b'                   # reasoning model (planner/rewriter); any cheap chat model works
-node D:\opencontext\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
+node ..\..\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
 # expect in the log: reasoning wired (model=...; request reasoningStrategy=rewrite|iterative to use it)
 ```
 
@@ -158,9 +158,15 @@ Key properties:
   retries of the same Add request never create duplicate memories
 - **Synchronously searchable**: Add returns only after embeddings are stored,
   satisfying the contract's "200 means searchable" requirement
-- **Auth**: set the `AML_SYSTEM_KEY` env var to require `Authorization: Bearer <key>`
-  or `X-Api-Key: <key>` on /add and /search (this is the Memory System Key from the
-  participation guide — you generate it and share it with the platform)
+- **Dual-key auth**: two distinct keys are supported —
+  `AML_SYSTEM_KEY` (the Memory System Key you generate and share with the platform;
+  accepted as `Authorization: Bearer <key>` or `X-Api-Key: <key>`) and
+  `AML_EVAL_KEY` (the Eval Key the platform issues to you after approval; accepted
+  as `X-Eval-Key: <key>` — adjust `EVAL_KEY_HEADERS` at the top of `serve.py` if the
+  platform's real header differs). With both unset, auth is off (local testing only)
+- **Retry semantics**: 4xx responses are marked non-retriable; transient upstream
+  failures return 502/500 with `retriable: true` and a `Retry-After` header,
+  matching the AML retry contract (Add: 408/409/425/429/5xx, Search: 408/425/429/5xx)
 - **gpt-4o-mini constraint**: this chain calls no LLM at all (local ONNX embeddings),
   so it is compliant by construction
 
@@ -168,14 +174,25 @@ Run:
 
 ```powershell
 $env:AML_SYSTEM_KEY='a-strong-random-key-you-generate'   # optional for local testing
+$env:AML_EVAL_KEY='<issued-by-platform-after-approval>'  # optional until then
 python serve.py                                          # listens on :7422 (override via AML_ADAPTER_PORT)
 ```
 
-For the official evaluation this service must be publicly reachable (deploy to a
-public host or use a tunnel); put the base URL (endpoints are `<base>/add` and
-`<base>/search`) and the Memory System Key in the application. If the official
-contract's endpoint paths or auth header differ from the above once you receive the
-Eval Key, adjust the path mapping at the top of `serve.py`.
+For the official evaluation this service must be publicly reachable — see
+[DEPLOY.md](./DEPLOY.md) for the Docker image, three exposure options
+(Cloudflare Tunnel / fly.io / VPS+Caddy) and the 30-day stability checklist,
+and [SUBMISSION.md](./SUBMISSION.md) for the application materials
+(system name, method description, attribution, Run Label).
+
+Contract artifacts:
+
+- `contract/*.schema.json` — JSON Schemas for the Add/Search request bodies and
+  the Add/Search/Health response bodies
+- `fixtures/*.example.json` — one example payload per schema
+- `python test_contract.py` — offline schema validation of every fixture;
+  `python test_contract.py --live http://127.0.0.1:7422` additionally round-trips
+  the fixtures against a running adapter (use before applying, and again after
+  the Eval Key smoke test)
 
 ## Running the vendored AML pipelines unmodified
 

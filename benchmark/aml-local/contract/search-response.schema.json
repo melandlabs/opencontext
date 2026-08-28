@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/search-response.schema.json",
+  "title": "AML Search response",
+  "description": "Success response body for POST /search. `data` is relevance-ordered and its length never exceeds the request's top_k.",
+  "type": "object",
+  "required": ["data"],
+  "additionalProperties": true,
+  "properties": {
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "content"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string" },
+          "content": { "type": "string" },
+          "score": {
+            "type": "number",
+            "description": "Retrieval score (higher = more relevant). Optional."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "ISO-8601 creation timestamp of the memory. Optional."
+          }
+        }
+      }
+    }
+  }
+}

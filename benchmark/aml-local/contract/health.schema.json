@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/health.schema.json",
+  "title": "AML Health response",
+  "description": "Response body for GET /health as implemented by benchmark/aml-local/serve.py. Must return HTTP 200 with ok=true when the service is ready to accept Add/Search.",
+  "type": "object",
+  "required": ["ok"],
+  "additionalProperties": true,
+  "properties": {
+    "ok": {
+      "type": "boolean",
+      "const": true
+    },
+    "opencontext": {
+      "type": "string",
+      "description": "Base URL of the backing OpenContext daemon (diagnostic only)."
+    }
+  }
+}

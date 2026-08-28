@@ -1,0 +1,28 @@
+# Version control & local state
+.git
+**/.DS_Store
+*.log
+
+# Node — never copy host node_modules into the Linux image
+node_modules
+**/node_modules
+**/dist
+!packages/opencontext/dist
+.pnpm-store
+
+# Benchmark data & run artifacts (large / regenerable)
+benchmark/**/dataset
+benchmark/**/.data
+benchmark/**/checkpoints
+benchmark/.opencontext-data
+benchmark/aml-local/outputs*
+benchmark/AML-agent-memory-leaderboard/.venv
+**/.venv
+
+# Temp scripts
+.tmp-*
+
+# Local env / secrets
+**/.env
+**/.env.*
+!**/.env.example

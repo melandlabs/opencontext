@@ -1,0 +1,57 @@
+name: AML image
+
+# Publishes the AML submission image (root Dockerfile) to ghcr.io.
+# Trigger manually, or push a tag like aml-v1.0.0.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (default: run date + short SHA)"
+        required: false
+        default: ""
+  push:
+    tags:
+      - "aml-v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    name: Build & push ghcr.io/${{ github.repository }}-aml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Resolve tag
+        id: meta
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            if [ "${{ github.event_name }}" = "push" ]; then
+              TAG="${GITHUB_REF_NAME}"
+            else
+              TAG="$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+            fi
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/opencontext-aml:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/opencontext-aml:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
