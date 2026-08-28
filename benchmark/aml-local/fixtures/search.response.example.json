@@ -1,10 +1,10 @@
 {
-  "data": [
-    {
-      "id": "aml:eval-2026-0001-add-0001:0",
-      "content": "I moved to Berlin last month and adopted a cat named Miso.",
-      "score": 0.83,
-      "created_at": "2026-02-17T00:53:20+00:00"
-    }
-  ]
+	"data": [
+		{
+			"id": "aml:eval-2026-0001-add-0001:0",
+			"content": "I moved to Berlin last month and adopted a cat named Miso.",
+			"score": 0.83,
+			"created_at": "2026-02-17T00:53:20+00:00"
+		}
+	]
 }

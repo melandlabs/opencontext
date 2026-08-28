@@ -1,18 +1,18 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/add-response.schema.json",
-  "title": "AML Add response",
-  "description": "Success response body for POST /add. HTTP 200 is returned only once the messages are embedded and searchable (synchronous embedOnInsert).",
-  "type": "object",
-  "required": ["success", "request_id", "user_id", "session_id"],
-  "additionalProperties": true,
-  "properties": {
-    "success": {
-      "type": "boolean",
-      "const": true
-    },
-    "request_id": { "type": "string" },
-    "user_id": { "type": "string" },
-    "session_id": { "type": "string" }
-  }
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://github.com/melandlabs/opencontext/benchmark/aml-local/contract/add-response.schema.json",
+	"title": "AML Add response",
+	"description": "Success response body for POST /add. HTTP 200 is returned only once the messages are embedded and searchable (synchronous embedOnInsert).",
+	"type": "object",
+	"required": ["success", "request_id", "user_id", "session_id"],
+	"additionalProperties": true,
+	"properties": {
+		"success": {
+			"type": "boolean",
+			"const": true
+		},
+		"request_id": { "type": "string" },
+		"user_id": { "type": "string" },
+		"session_id": { "type": "string" }
+	}
 }
