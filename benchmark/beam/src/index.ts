@@ -24,11 +24,7 @@ import {
 } from "../../run-support";
 import { expandBeamSamples, loadBeamDatasetFromJson } from "./dataset";
 import { BeamEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
-import {
-	JUDGE_MODEL,
-	type NuggetCategoryMetrics,
-	calculateNuggetCategoryMetrics,
-} from "./metrics";
+import { JUDGE_MODEL, type NuggetCategoryMetrics, calculateNuggetCategoryMetrics } from "./metrics";
 import {
 	checkOpencontextHealth,
 	getAnswererModelIdentity,
@@ -260,10 +256,7 @@ async function main() {
 	const manifestPath = getManifestPath(args.output, benchmarkDir, startedAt);
 	let conversations: Awaited<ReturnType<typeof loadBeamDatasetFromJson>> = [];
 	let activeSamples: ReturnType<typeof expandBeamSamples> = [];
-	if (
-		args.conversations !== undefined &&
-		(!Number.isInteger(args.conversations) || args.conversations < 1)
-	) {
+	if (args.conversations !== undefined && (!Number.isInteger(args.conversations) || args.conversations < 1)) {
 		args.parameterErrors.push("--conversations must be a positive integer");
 	}
 	if (

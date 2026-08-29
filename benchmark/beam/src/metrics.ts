@@ -8,12 +8,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
-import {
-	tokenUsage,
-	type TokenUsage,
-	unavailableTokenUsage,
-	zeroTokenUsage,
-} from "../../run-support";
+import { tokenUsage, type TokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
 	apiKey: process.env.OPENROUTER_API_KEY,

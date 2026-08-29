@@ -160,7 +160,9 @@ export async function collectPreflightErrors(options: PreflightOptions): Promise
 		try {
 			await checkWritablePath(path);
 		} catch (error) {
-			errors.push(`output/checkpoint path is not writable: ${error instanceof Error ? error.message : String(error)}`);
+			errors.push(
+				`output/checkpoint path is not writable: ${error instanceof Error ? error.message : String(error)}`,
+			);
 		}
 	}
 	return errors;
@@ -168,7 +170,8 @@ export async function collectPreflightErrors(options: PreflightOptions): Promise
 
 export async function runPreflight(options: PreflightOptions): Promise<void> {
 	const errors = await collectPreflightErrors(options);
-	if (errors.length > 0) throw new Error(`Benchmark preflight failed:\n${errors.map((error) => `- ${error}`).join("\n")}`);
+	if (errors.length > 0)
+		throw new Error(`Benchmark preflight failed:\n${errors.map((error) => `- ${error}`).join("\n")}`);
 }
 
 export function getManifestPath(output: string | undefined, benchmarkDir: string, startedAt: string): string {
