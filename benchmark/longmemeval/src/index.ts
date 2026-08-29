@@ -5,9 +5,17 @@
  */
 
 import "dotenv/config";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import {
+	getManifestPath,
+	runPreflight,
+	sumTokenUsage,
+	unavailableTokenUsage,
+	writeRunManifest,
+} from "../../run-support";
 import { loadLongMemEvalDatasetFromJson } from "./dataset";
-import { LongMemEvalEvaluator } from "./evaluator";
+import { LongMemEvalEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
 import { JUDGE_MODEL, calculateCategoryMetrics } from "./metrics";
 import {
 	checkOpencontextHealth,
@@ -117,27 +125,38 @@ async function printEvaluationSummary(resultsByType: Record<string, Prediction[]
 }
 
 async function main() {
+	const startedAt = new Date().toISOString();
 	const args = parseCliArgs();
-
-	// Resolve the OpenContext memory daemon and verify it is up
 	const baseUrl = args.port ? `http://127.0.0.1:${args.port}` : getOpencontextBaseUrl();
-	try {
-		await checkOpencontextHealth(baseUrl);
-	} catch (_error) {
-		process.exit(1);
-	}
-	const entries = await loadLongMemEvalDatasetFromJson(args.dataset);
-
-	// Filter entries if sample_ids provided
-	let filteredEntries = entries;
-	if (args.samples && args.samples.length > 0) {
-		filteredEntries = entries.filter((e) => args.samples?.includes(e.question_id));
+	const benchmarkDir = join(import.meta.dirname, "..");
+	const manifestPath = getManifestPath(args.output, benchmarkDir, startedAt);
+	let filteredEntries: Awaited<ReturnType<typeof loadLongMemEvalDatasetFromJson>> = [];
+	const parameterErrors: string[] = [];
+	if (args.port !== undefined && (!Number.isInteger(args.port) || args.port < 1 || args.port > 65_535)) {
+		parameterErrors.push("--port must be an integer between 1 and 65535");
 	}
 
-	// Apply quick mode (first 5 entries only)
-	if (args.quick) {
-		filteredEntries = filteredEntries.slice(0, 5);
-	}
+	await runPreflight({
+		datasetPath: args.dataset,
+		writablePaths: [
+			manifestPath,
+			join(benchmarkDir, "checkpoints", "longmemeval", ".preflight"),
+			...(args.output ? [args.output] : []),
+		],
+		parameterErrors,
+		validateDataset: async () => {
+			const entries = await loadLongMemEvalDatasetFromJson(args.dataset);
+			filteredEntries =
+				args.samples && args.samples.length > 0
+					? entries.filter((entry) => args.samples?.includes(entry.question_id))
+					: entries;
+			if (args.quick) filteredEntries = filteredEntries.slice(0, 5);
+			if (filteredEntries.length === 0) {
+				throw new Error("no entries remain after applying --samples/--quick");
+			}
+		},
+		checkDaemon: () => checkOpencontextHealth(baseUrl),
+	});
 
 	// Run evaluation
 	const allPredictionsByType: Record<string, Prediction[]> = {};
@@ -170,6 +189,7 @@ async function main() {
 
 			// Record failed prediction
 			const failedPred: Prediction = {
+				token_usage: unavailableTokenUsage(),
 				status: "execution_error",
 				attempt: 1,
 				answerer_model: getAnswererModelIdentity(),
@@ -206,12 +226,29 @@ async function main() {
 
 	// Prepare output
 	const overallAccuracy = total > 0 ? correct / total : 0;
+	const predictions = Object.values(allPredictionsByType).flat();
+	const runTokenUsage = sumTokenUsage(predictions.map((prediction) => prediction.token_usage));
+	const finishedAt = new Date().toISOString();
+	const runManifest = await writeRunManifest(manifestPath, {
+		benchmark: "longmemeval",
+		datasetPath: args.dataset,
+		answerer_model: getAnswererModelIdentity(),
+		judge_model: JUDGE_MODEL,
+		retrieval: { strategy: "memory-search", top_k: RETRIEVAL_LIMIT },
+		resume: args.resume,
+		started_at: startedAt,
+		finished_at: finishedAt,
+		token_usage: runTokenUsage,
+		parameters: { samples: args.samples ?? null, quick: args.quick ?? false },
+	});
 
 	const output = {
 		num_entries: filteredEntries.length,
 		total_questions: total,
 		total_correct: correct,
 		overall_accuracy: overallAccuracy,
+		token_usage: runTokenUsage,
+		run_manifest: runManifest,
 		results_by_type: Object.fromEntries(
 			Object.entries(allPredictionsByType).map(([qtype, preds]) => {
 				const metrics = calculateCategoryMetrics(preds);
@@ -233,15 +270,22 @@ async function main() {
 				];
 			}),
 		),
-		predictions: Object.values(allPredictionsByType).flat(),
+		predictions,
 	};
 
 	// Save output if requested
 	if (args.output) {
+		await mkdir(dirname(resolve(args.output)), { recursive: true });
 		await writeFile(args.output, JSON.stringify(output, null, 2), "utf-8");
 	}
+	// biome-ignore lint/suspicious/noConsole: benchmark CLI reports the manifest artifact path
+	console.log(`Run manifest saved to: ${manifestPath}`);
 
 	return output;
 }
 
-main().catch(console.error);
+main().catch((error) => {
+	// biome-ignore lint/suspicious/noConsole: fatal CLI errors must be visible to the caller
+	console.error(error instanceof Error ? error.message : String(error));
+	process.exitCode = 1;
+});

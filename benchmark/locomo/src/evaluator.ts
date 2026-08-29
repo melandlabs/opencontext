@@ -15,9 +15,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
 import { JUDGE_MODEL, calculateMetrics, evaluateLLMJudge } from "./metrics";
 import {
 	type BenchRawMessage,
+	type GeneratedAnswer,
 	type MemorySearchHit,
 	generateAnswer,
 	getAnswererModelIdentity,
@@ -426,11 +428,7 @@ export class LoCoMoEvaluator {
 				total_questions: sample.qa_pairs.length,
 				correct_answers: 0,
 				accuracy: 0,
-				token_usage: {
-					prompt_tokens: 0,
-					completion_tokens: 0,
-					total_tokens: 0,
-				},
+				token_usage: unavailableTokenUsage(),
 				predictions: [],
 				error: "No records in storage",
 			};
@@ -480,13 +478,19 @@ export class LoCoMoEvaluator {
 				continue;
 			}
 			const attempt = (existing?.attempt ?? 0) + 1;
+			let answerUsage = unavailableTokenUsage();
+			let judgeUsage = unavailableTokenUsage();
 
 			try {
 				// Retrieve relevant memories, then answer using only those excerpts
-				const response = await this.answerQuestion(qa, sample);
+				const answerResult = await this.answerQuestion(qa, sample);
+				const response = answerResult.text;
+				answerUsage = answerResult.token_usage;
 
 				// Evaluate answer correctness using LLM judge
-				const isCorrect = (await evaluateLLMJudge(qa.question, qa.answer, response)) === 1;
+				const judgeResult = await evaluateLLMJudge(qa.question, qa.answer, response);
+				judgeUsage = judgeResult.token_usage;
+				const isCorrect = judgeResult.score === 1;
 				console.log(
 					`[Q${i + 1}] ${isCorrect ? "✓" : "✗"} Q: "${qa.question.substring(0, 60)}..." GT: "${qa.answer}"`,
 				);
@@ -506,6 +510,7 @@ export class LoCoMoEvaluator {
 					attempt,
 					answerer_model: answererModel,
 					judge_model: judgeModel,
+					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 					question: qa.question,
 					answer: qa.answer,
 					response,
@@ -541,6 +546,7 @@ export class LoCoMoEvaluator {
 					answerer_model: answererModel,
 					judge_model: judgeModel,
 					error: errorMessage,
+					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 					question: qa.question,
 					answer: qa.answer,
 					response: `Error: ${errorMessage}`,
@@ -574,11 +580,7 @@ export class LoCoMoEvaluator {
 			total_questions: total,
 			correct_answers: correct,
 			accuracy: total > 0 ? correct / total : 0,
-			token_usage: {
-				prompt_tokens: 0,
-				completion_tokens: 0,
-				total_tokens: 0,
-			},
+			token_usage: sumTokenUsage(predictions.map((prediction) => prediction.token_usage)),
 			predictions,
 		};
 	}
@@ -586,11 +588,11 @@ export class LoCoMoEvaluator {
 	/**
 	 * Answer a question using retrieved memory excerpts.
 	 */
-	private async answerQuestion(qa: QAPair, sample: LoCoMoSample): Promise<string> {
+	private async answerQuestion(qa: QAPair, sample: LoCoMoSample): Promise<GeneratedAnswer> {
 		const hits = await searchMemory(qa.question, RETRIEVAL_LIMIT, this.baseUrl, `locomo_${sample.sample_id}`);
 		const prompt = buildAnswerPrompt(qa, sample, hits);
 		const response = await generateAnswer(prompt);
-		if (!response.trim() || response === "(empty response)") {
+		if (!response.text.trim()) {
 			throw new Error("Answerer returned an empty response");
 		}
 		return response;

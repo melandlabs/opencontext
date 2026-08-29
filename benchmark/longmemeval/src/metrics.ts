@@ -7,6 +7,8 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
+import { tokenUsage, type TokenUsage } from "../../run-support";
+
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -143,6 +145,11 @@ interface LLMJudgeResult {
 
 export const JUDGE_MODEL = "qwen/qwen3.7-max";
 
+export interface LLMJudgeEvaluation {
+	score: number;
+	token_usage: TokenUsage;
+}
+
 export function parseLLMJudgeResponse(text: string): number {
 	const normalized = text.trim();
 	if (!normalized) {
@@ -179,7 +186,7 @@ export async function evaluateLLMJudge(
 	goldAnswer: string,
 	generatedAnswer: string,
 	maxRetries = 3,
-): Promise<number> {
+): Promise<LLMJudgeEvaluation> {
 	const prompt = LLM_JUDGE_PROMPT.replace("{question}", question)
 		.replace("{gold_answer}", goldAnswer)
 		.replace("{generated_answer}", generatedAnswer);
@@ -188,13 +195,16 @@ export async function evaluateLLMJudge(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			const { text } = await generateText({
+			const { text, usage } = await generateText({
 				model: openrouter(JUDGE_MODEL),
 				system: "You are an impartial judge evaluating answers to questions. Always respond with valid JSON.",
 				prompt,
 			});
 
-			return parseLLMJudgeResponse(text);
+			return {
+				score: parseLLMJudgeResponse(text),
+				token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
+			};
 		} catch (error) {
 			_lastError = error instanceof Error ? error : new Error(String(error));
 			if (attempt < maxRetries) {

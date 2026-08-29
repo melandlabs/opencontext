@@ -33,11 +33,10 @@ param(
   [string]$Tag = ""
 )
 
-$ErrorActionPreference = "Stop"
+$startedAt = [DateTimeOffset]::UtcNow
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $amlRepo = Join-Path $here "..\AML-agent-memory-leaderboard"
 $python = Join-Path $amlRepo ".venv\Scripts\python.exe"
-if (-not (Test-Path $python)) { throw "AML venv missing: $python (run: uv venv .venv; uv pip install -r requirements.txt in the AML repo dir)" }
 
 # load .env (OPENROUTER_API_KEY etc.)
 $envFile = Join-Path $here ".env"
@@ -48,15 +47,6 @@ if (Test-Path $envFile) {
     [Environment]::SetEnvironmentVariable($k.Trim(), $v.Trim(), 'Process')
   }
 }
-if (-not $env:OPENROUTER_API_KEY) { throw "OPENROUTER_API_KEY missing — put it in $envFile" }
-
-# AML api_config.py env surface
-$env:ANSWER_API_BASE = "https://openrouter.ai/api/v1"
-$env:ANSWER_API_KEY  = $env:OPENROUTER_API_KEY
-$env:ANSWER_MODEL    = $AnswerModel
-$env:JUDGE_API_BASE  = "https://openrouter.ai/api/v1"
-$env:JUDGE_API_KEY   = $env:OPENROUTER_API_KEY
-$env:JUDGE_MODEL     = $JudgeModel
 
 $dataDir = @{ longmemeval = "longmemeval-s"; locomo = "locomo-refined"; clbench = "clbench"; beam = "beam"; personamem = "personamem"; scriptmem = "scriptmem" }[$Bench]
 $outRoot = if ($Tag) { "outputs-$Tag" } else { "outputs" }
@@ -70,14 +60,110 @@ $pipelineFile = if ($Bench -eq "personamem") { "pipeline_v2.py" } else { "pipeli
 $pipeline = Join-Path $amlRepo "data\$dataDir\$pipelineFile"
 # run pipelines through the runtime shim so the vendored AML repo stays unmodified
 $shim = Join-Path $here "run_pipeline.py"
+$retrieve = Join-Path $here "retrieve.py"
+$datasetPath = switch ($Bench) {
+  "longmemeval" { Join-Path $here "..\longmemeval\dataset\longmemeval_s_cleaned.json" }
+  "locomo" { Join-Path $here "..\locomo\dataset\locomo_v2.json" }
+  "clbench" { Join-Path $here "..\clbench-official\CL-bench-Life.jsonl" }
+  "beam" {
+    if ([IO.Path]::IsPathRooted($Dataset)) { $Dataset } else { Join-Path $here "..\beam\dataset\$Dataset" }
+  }
+  "personamem" { Join-Path $here "..\personamem-v2\dataset\benchmark.csv" }
+  "scriptmem" { Join-Path $here "..\scriptmem\dataset\raw" }
+}
 
-Write-Host "=== [1/3] retrieve ($Bench) ==="
-$retrieveArgs = @((Join-Path $here "retrieve.py"), $Bench)
+$retrieveArgs = @($retrieve, $Bench)
 if ($Limit -gt 0)   { $retrieveArgs += @("--limit", $Limit) }
 if ($Samples)       { $retrieveArgs += @("--samples", $Samples) }
 if ($Bench -eq "beam") { $retrieveArgs += @("--dataset", $Dataset) }
 if ($SkipIngest)    { $retrieveArgs += "--skip-ingest" }
 if ($MaxQuestions -gt 0) { $retrieveArgs += @("--max-questions", $MaxQuestions) }
+
+function Test-WritableTarget([string]$TargetPath) {
+  $candidate = [IO.Path]::GetFullPath($TargetPath)
+  while (-not (Test-Path -LiteralPath $candidate)) {
+    $parent = Split-Path -Parent $candidate
+    if (-not $parent -or $parent -eq $candidate) { return $false }
+    $candidate = $parent
+  }
+  if (-not (Test-Path -LiteralPath $candidate -PathType Container)) { return $false }
+  $probe = Join-Path $candidate (".opencontext-preflight-{0}.tmp" -f [Guid]::NewGuid())
+  try {
+    [IO.File]::WriteAllText($probe, "")
+    return $true
+  } catch {
+    return $false
+  } finally {
+    if (Test-Path -LiteralPath $probe) { Remove-Item -LiteralPath $probe -Force }
+  }
+}
+
+$preflightErrors = [Collections.Generic.List[string]]::new()
+if ($Limit -lt 0) { $preflightErrors.Add("-Limit must be zero or a positive integer") }
+if ($MaxQuestions -lt 0) { $preflightErrors.Add("-MaxQuestions must be zero or a positive integer") }
+if (-not $env:OPENROUTER_API_KEY) { $preflightErrors.Add("OPENROUTER_API_KEY is missing; set it in the process or $envFile") }
+foreach ($requiredFile in @($retrieve, $shim, $pipeline)) {
+  if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
+    $preflightErrors.Add("required AML file is missing: $requiredFile")
+  }
+}
+if (-not (Test-WritableTarget $env:AML_OUT_DIR)) {
+  $preflightErrors.Add("AML output path is not writable: $($env:AML_OUT_DIR)")
+}
+
+$topK = 10
+if ($env:AML_TOP_K) {
+  $parsedTopK = 0
+  if (-not [int]::TryParse($env:AML_TOP_K, [ref]$parsedTopK) -or $parsedTopK -lt 1) {
+    $preflightErrors.Add("AML_TOP_K must be an integer of at least 1")
+    $env:AML_TOP_K = "10"
+  } else {
+    $topK = $parsedTopK
+  }
+}
+
+if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
+  $preflightErrors.Add("AML Python interpreter is missing: $python")
+  if (-not (Test-Path -LiteralPath $datasetPath)) {
+    $preflightErrors.Add("benchmark dataset is missing: $datasetPath")
+  }
+  $daemonUrl = if ($env:OPENCONTEXT_URL) { $env:OPENCONTEXT_URL.TrimEnd("/") } else { "http://127.0.0.1:7421" }
+  try {
+    $null = Invoke-WebRequest "$daemonUrl/health" -TimeoutSec 5
+  } catch {
+    $preflightErrors.Add("OpenContext daemon is unavailable at $daemonUrl")
+  }
+} else {
+  $null = & $python -c "import httpx" 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    $preflightErrors.Add("AML Python dependency is missing: httpx")
+  }
+  $retrievePreflight = @(& $python @retrieveArgs --preflight-only 2>&1)
+  if ($LASTEXITCODE -ne 0) {
+    foreach ($line in $retrievePreflight) {
+      $message = "$line".Trim()
+      if ($message -and $message -ne "AML retrieval preflight failed:") {
+        $preflightErrors.Add($message)
+      }
+    }
+  }
+}
+
+if ($preflightErrors.Count -gt 0) {
+  $uniqueErrors = $preflightErrors | Select-Object -Unique
+  throw "AML benchmark preflight failed:`n$($uniqueErrors | ForEach-Object { "- $_" } | Out-String)"
+}
+
+$ErrorActionPreference = "Stop"
+# AML api_config.py env surface; only set after every preflight check passed.
+$env:ANSWER_API_BASE = "https://openrouter.ai/api/v1"
+$env:ANSWER_API_KEY  = $env:OPENROUTER_API_KEY
+$env:ANSWER_MODEL    = $AnswerModel
+$env:JUDGE_API_BASE  = "https://openrouter.ai/api/v1"
+$env:JUDGE_API_KEY   = $env:OPENROUTER_API_KEY
+$env:JUDGE_MODEL     = $JudgeModel
+
+Write-Host "=== [1/3] retrieve ($Bench) ==="
 & $python @retrieveArgs
 if ($LASTEXITCODE -ne 0) { throw "retrieve failed" }
 
@@ -108,6 +194,62 @@ if ($Bench -eq "personamem") {
   & $python $shim $pipeline evaluate --input $input --answers $answers --output $judged
 }
 if ($LASTEXITCODE -ne 0) { throw "evaluate failed" }
+
+function Get-DatasetIdentity([string]$Path) {
+  $item = Get-Item -LiteralPath $Path
+  if ($item.PSIsContainer) {
+    $files = @(Get-ChildItem -LiteralPath $item.FullName -File -Recurse)
+    $size = ($files | Measure-Object -Property Length -Sum).Sum
+    if ($null -eq $size) { $size = 0 }
+    return [ordered]@{
+      path = $item.FullName
+      size_bytes = [long]$size
+      mtime_ms = ([DateTimeOffset]$item.LastWriteTimeUtc).ToUnixTimeMilliseconds()
+      sha256 = $null
+    }
+  }
+  $hash = if ($item.Length -le 268435456) { (Get-FileHash -LiteralPath $item.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } else { $null }
+  return [ordered]@{
+    path = $item.FullName
+    size_bytes = [long]$item.Length
+    mtime_ms = ([DateTimeOffset]$item.LastWriteTimeUtc).ToUnixTimeMilliseconds()
+    sha256 = $hash
+  }
+}
+
+$finishedAt = [DateTimeOffset]::UtcNow
+$gitCommit = $null
+try {
+  $gitCommit = (& git -C (Join-Path $here "..\..") rev-parse HEAD 2>$null).Trim()
+  if (-not $gitCommit) { $gitCommit = $null }
+} catch {
+  $gitCommit = $null
+}
+$manifest = [ordered]@{
+  schema_version = 1
+  benchmark = "aml-local/$Bench"
+  git_commit = $gitCommit
+  dataset = Get-DatasetIdentity $datasetPath
+  answerer_model = $AnswerModel
+  judge_model = $JudgeModel
+  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK }
+  resume = $false
+  started_at = $startedAt.ToString("o")
+  finished_at = $finishedAt.ToString("o")
+  wall_clock_ms = [long]($finishedAt - $startedAt).TotalMilliseconds
+  token_usage = [ordered]@{ prompt_tokens = $null; completion_tokens = $null; total_tokens = $null }
+  parameters = [ordered]@{
+    limit = if ($Limit -gt 0) { $Limit } else { $null }
+    samples = if ($Samples) { $Samples } else { $null }
+    max_questions = if ($MaxQuestions -gt 0) { $MaxQuestions } else { $null }
+    mode = if ($Bench -eq "personamem") { $Mode } else { $null }
+    skip_ingest = [bool]$SkipIngest
+  }
+}
+$manifestPath = Join-Path $outDir "run-manifest.json"
+New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+$manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $manifestPath -Encoding utf8
+Write-Host "manifest: $manifestPath"
 
 # ---- summary ----
 if ($Bench -eq "scriptmem") {

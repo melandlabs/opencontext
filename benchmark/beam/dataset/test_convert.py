@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import builtins
+import importlib.util
 import json
 import sys
 import tempfile
@@ -20,6 +21,26 @@ EXPECTED_SOURCES = {
 
 
 class BeamSourceMappingTests(unittest.TestCase):
+    def test_non_sample_preflight_reports_all_missing_dependencies_and_bad_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(importlib.util, "find_spec", return_value=None):
+                errors = convert.collect_preflight_errors("1m", Path(temp_dir), 0)
+
+        self.assertIn("--max-conversations must be a positive integer", errors)
+        self.assertTrue(any("datasets" in error for error in errors))
+        self.assertTrue(any("pyarrow" in error for error in errors))
+
+    def test_sample_preflight_does_not_require_hugging_face_dependencies(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.object(
+                importlib.util,
+                "find_spec",
+                side_effect=AssertionError("sample mode must not inspect HF dependencies"),
+            ):
+                errors = convert.collect_preflight_errors("sample", Path(temp_dir), 1)
+
+        self.assertEqual(errors, [])
+
     def test_all_scales_use_the_expected_hugging_face_source(self) -> None:
         fixture = {
             "conversation_id": "fixture-conversation",

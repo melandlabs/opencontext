@@ -15,6 +15,7 @@ import hashlib
 import json
 import os
 import re
+import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
@@ -111,6 +112,81 @@ def selected_ids(raw: str | None) -> set[str] | None:
         return None
     values = {part.strip() for part in raw.split(",") if part.strip()}
     return values or None
+
+
+def dataset_sample_ids(benchmark: str, dataset: Path) -> set[str]:
+    """Read only the identifiers needed to validate a requested sample filter."""
+    if benchmark == "scriptmem":
+        identifiers: set[str] = set()
+        for filename in SCRIPTMEM_FILES:
+            path = dataset / filename
+            for index, entry in enumerate(read_json(path)):
+                identifiers.add(str(entry.get("sample_id") or f"{path.stem}-{index}"))
+        return identifiers
+    if benchmark == "personamem":
+        with dataset.open(newline="", encoding="utf-8") as handle:
+            return {str(row["persona_id"]) for row in csv.DictReader(handle)}
+    if benchmark == "clbench":
+        rows = read_jsonl(dataset) if dataset.suffix == ".jsonl" else read_json(dataset)
+        return {
+            str((row.get("metadata") or {}).get("task_id") or f"cl_{index}")
+            for index, row in enumerate(rows)
+        }
+
+    payload = read_json(dataset)
+    if benchmark == "beam":
+        rows = payload.get("conversations", []) if isinstance(payload, dict) else payload
+        return {str(row.get("entry_id")) for row in rows}
+    key = "question_id" if benchmark == "longmemeval" else "sample_id"
+    return {str(row.get(key)) for row in payload}
+
+
+def check_writable_directory(path: Path) -> bool:
+    candidate = path.resolve()
+    while not candidate.exists() and candidate.parent != candidate:
+        candidate = candidate.parent
+    return candidate.is_dir() and os.access(candidate, os.W_OK)
+
+
+def collect_preflight_errors(
+    benchmark: str,
+    dataset: Path,
+    out_dir: Path,
+    client: "OpenContextClient",
+    *,
+    limit: int | None,
+    samples: set[str] | None,
+    max_questions: int | None,
+) -> list[str]:
+    """Aggregate local retrieval failures before ingest or search side effects."""
+    errors: list[str] = []
+    if limit is not None and limit < 1:
+        errors.append("--limit must be a positive integer")
+    if max_questions is not None and max_questions < 1:
+        errors.append("--max-questions must be a positive integer")
+
+    dataset_readable = dataset.exists() and os.access(dataset, os.R_OK)
+    if not dataset_readable:
+        errors.append(f"dataset is missing or unreadable: {dataset.resolve()}")
+    else:
+        try:
+            available = dataset_sample_ids(benchmark, dataset)
+            if not available:
+                errors.append(f"dataset contains no benchmark samples: {dataset.resolve()}")
+            elif samples:
+                missing = sorted(samples - available)
+                if missing:
+                    errors.append(f"unknown --samples value(s): {', '.join(missing)}")
+        except Exception as error:  # noqa: BLE001 - malformed datasets must join the aggregate report
+            errors.append(f"dataset validation failed: {error}")
+
+    if not check_writable_directory(out_dir):
+        errors.append(f"output path is not writable: {out_dir.resolve()}")
+    try:
+        client.health()
+    except Exception as error:  # noqa: BLE001 - preflight must aggregate connection failures
+        errors.append(f"OpenContext daemon is unavailable at {client.base_url}: {error}")
+    return errors
 
 
 class OpenContextClient:
@@ -644,20 +720,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--skip-ingest", action="store_true", help="reuse an already-ingested sample scope")
     parser.add_argument("--max-questions", type=int, help="cap questions per selected sample")
+    parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="validate local requirements without ingesting, searching, or writing output",
+    )
     return parser
 
 
 def main() -> int:
     args = build_parser().parse_args()
+    parameter_errors: list[str] = []
     reasoning = os.environ.get("AML_REASONING_STRATEGY", "none").strip().lower()
     if reasoning not in {"none", "rewrite", "iterative"}:
-        raise SystemExit("AML_REASONING_STRATEGY must be none, rewrite, or iterative")
+        parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, or iterative")
+        reasoning = "none"
     try:
         top_k = int(os.environ.get("AML_TOP_K", "10"))
-    except ValueError as error:
-        raise SystemExit("AML_TOP_K must be an integer") from error
+    except ValueError:
+        parameter_errors.append("AML_TOP_K must be an integer")
+        top_k = 10
     if top_k < 1:
-        raise SystemExit("AML_TOP_K must be at least 1")
+        parameter_errors.append("AML_TOP_K must be at least 1")
+        top_k = 10
 
     dataset = default_dataset(args.benchmark, args.dataset)
     out_dir = Path(os.environ.get("AML_OUT_DIR", DEFAULT_OUT_DIR)).resolve()
@@ -666,18 +751,35 @@ def main() -> int:
         top_k,
         reasoning,
     )
-    client.health()
+    samples = selected_ids(args.samples)
+    errors = parameter_errors + collect_preflight_errors(
+        args.benchmark,
+        dataset,
+        out_dir,
+        client,
+        limit=args.limit,
+        samples=samples,
+        max_questions=args.max_questions,
+    )
+    if errors:
+        print("AML retrieval preflight failed:", file=sys.stderr)
+        for error in errors:
+            print(f"- {error}", file=sys.stderr)
+        return 2
     print(
         f"[aml-local] daemon={client.base_url} top_k={top_k} "
         f"reasoning={reasoning} benchmark={args.benchmark}"
     )
+    if args.preflight_only:
+        print("[aml-local] preflight passed")
+        return 0
     run_benchmark(
         args.benchmark,
         dataset,
         client,
         out_dir,
         limit=args.limit,
-        samples=selected_ids(args.samples),
+        samples=samples,
         max_questions=args.max_questions,
         skip_ingest=args.skip_ingest,
     )

@@ -5,11 +5,23 @@
  */
 
 import "dotenv/config";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import {
+	getManifestPath,
+	runPreflight,
+	sumTokenUsage,
+	unavailableTokenUsage,
+	writeRunManifest,
+} from "../../run-support";
 import { loadLoCoMoDatasetFromJson } from "./dataset";
-import { LoCoMoEvaluator } from "./evaluator";
-import { calculateCategoryMetrics } from "./metrics";
-import { checkOpencontextHealth, getOpencontextBaseUrl } from "./opencontext-client";
+import { LoCoMoEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
+import { JUDGE_MODEL, calculateCategoryMetrics } from "./metrics";
+import {
+	checkOpencontextHealth,
+	getAnswererModelIdentity,
+	getOpencontextBaseUrl,
+} from "./opencontext-client";
 import { CATEGORY_NAMES } from "./scorer";
 import { RetrievalMode } from "./types";
 import type { EvaluationResult, Prediction } from "./types";
@@ -64,12 +76,6 @@ function parseCliArgs(): CliArgs {
 	}
 
 	const mode = values.mode as RetrievalMode;
-	if (!Object.values(RetrievalMode).includes(mode)) {
-		console.error(
-			`Error: Invalid mode '${mode}'. Must be one of: ${Object.values(RetrievalMode).join(", ")}`,
-		);
-		process.exit(1);
-	}
 
 	let samples: string[] | undefined;
 	if (values.samples) {
@@ -176,25 +182,45 @@ async function printEvaluationSummary(resultsByCategory: Record<string, Predicti
 }
 
 async function main() {
+	const startedAt = new Date().toISOString();
 	const args = parseCliArgs();
-
-	// Resolve the OpenContext memory daemon and verify it is up
 	const baseUrl = args.port ? `http://127.0.0.1:${args.port}` : getOpencontextBaseUrl();
-	try {
-		await checkOpencontextHealth(baseUrl);
-		console.log(`🔌 OpenContext memory daemon: ${baseUrl}`);
-	} catch (error) {
-		console.error(`${error}`);
-		process.exit(1);
+	const benchmarkDir = join(import.meta.dirname, "..");
+	const manifestPath = getManifestPath(args.output, benchmarkDir, startedAt);
+	let filteredSamples: Awaited<ReturnType<typeof loadLoCoMoDatasetFromJson>> = [];
+	const parameterErrors: string[] = [];
+	if (!Object.values(RetrievalMode).includes(args.mode)) {
+		parameterErrors.push(
+			`--mode must be one of: ${Object.values(RetrievalMode).join(", ")} (received: ${args.mode})`,
+		);
+	}
+	if (args.port !== undefined && (!Number.isInteger(args.port) || args.port < 1 || args.port > 65_535)) {
+		parameterErrors.push("--port must be an integer between 1 and 65535");
 	}
 
-	console.log(`\n📁 Loading dataset from: ${args.dataset}`);
-	const samples = await loadLoCoMoDatasetFromJson(args.dataset);
-
-	// Filter samples if sample_ids provided
-	let filteredSamples = samples;
+	await runPreflight({
+		datasetPath: args.dataset,
+		writablePaths: [
+			manifestPath,
+			join(benchmarkDir, "checkpoints", "locomo", ".preflight"),
+			...(args.output ? [args.output] : []),
+		],
+		parameterErrors,
+		validateDataset: async () => {
+			const samples = await loadLoCoMoDatasetFromJson(args.dataset);
+			filteredSamples =
+				args.samples && args.samples.length > 0
+					? samples.filter((sample) => args.samples?.includes(sample.sample_id))
+					: samples;
+			if (filteredSamples.length === 0) {
+				throw new Error("no samples remain after applying --samples");
+			}
+		},
+		checkDaemon: () => checkOpencontextHealth(baseUrl),
+	});
+	console.log(`🔌 OpenContext memory daemon: ${baseUrl}`);
+	console.log(`\n📁 Loaded dataset from: ${args.dataset}`);
 	if (args.samples && args.samples.length > 0) {
-		filteredSamples = samples.filter((s) => args.samples?.includes(s.sample_id));
 		console.log(`🔍 Filtered to ${filteredSamples.length} samples by ID`);
 	}
 
@@ -243,11 +269,7 @@ async function main() {
 				total_questions: sample.qa_pairs.length,
 				correct_answers: 0,
 				accuracy: 0,
-				token_usage: {
-					prompt_tokens: 0,
-					completion_tokens: 0,
-					total_tokens: 0,
-				},
+				token_usage: unavailableTokenUsage(),
 				predictions: [],
 				error: errorMessage,
 			});
@@ -259,19 +281,34 @@ async function main() {
 	const totalCorrect = resultsBySample.reduce((sum, r) => sum + (r.correct_answers || 0), 0);
 	const overallAccuracy = totalQuestions > 0 ? totalCorrect / totalQuestions : 0;
 
-	const totalTokens = resultsBySample.reduce((sum, r) => sum + (r.token_usage?.total_tokens || 0), 0);
+	const runTokenUsage = sumTokenUsage(resultsBySample.map((result) => result.token_usage));
 
 	// Print summary
 	await printEvaluationSummary(allPredictionsByCategory);
 
 	// Prepare output
+	const finishedAt = new Date().toISOString();
+	const runManifest = await writeRunManifest(manifestPath, {
+		benchmark: "locomo",
+		datasetPath: args.dataset,
+		answerer_model: getAnswererModelIdentity(),
+		judge_model: JUDGE_MODEL,
+		retrieval: { strategy: args.mode, top_k: RETRIEVAL_LIMIT },
+		resume: args.resume,
+		started_at: startedAt,
+		finished_at: finishedAt,
+		token_usage: runTokenUsage,
+		parameters: { samples: args.samples ?? null, quick: args.quick ?? false },
+	});
 	const output = {
 		retrieval_mode: args.mode,
 		num_samples: resultsBySample.length,
 		total_questions: totalQuestions,
 		total_correct: totalCorrect,
 		overall_accuracy: overallAccuracy,
-		total_tokens: totalTokens,
+		token_usage: runTokenUsage,
+		total_tokens: runTokenUsage.total_tokens,
+		run_manifest: runManifest,
 		results_by_sample: resultsBySample.map((r) => ({
 			sample_id: r.sample_id,
 			accuracy: r.accuracy,
@@ -285,11 +322,16 @@ async function main() {
 
 	// Save output if requested
 	if (args.output) {
+		await mkdir(dirname(resolve(args.output)), { recursive: true });
 		await writeFile(args.output, JSON.stringify(output, null, 2), "utf-8");
 		console.log(`\n💾 Results saved to: ${args.output}`);
 	}
+	console.log(`🧾 Run manifest saved to: ${manifestPath}`);
 
 	return output;
 }
 
-main().catch(console.error);
+main().catch((error) => {
+	console.error(error instanceof Error ? error.message : String(error));
+	process.exitCode = 1;
+});

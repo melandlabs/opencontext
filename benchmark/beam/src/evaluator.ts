@@ -19,6 +19,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { sumTokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
 import {
 	type NuggetJudgeResult,
 	evaluateNuggetJudge,
@@ -268,17 +269,22 @@ export class BeamEvaluator {
 			return checkpoint;
 		}
 
+		let answerUsage = unavailableTokenUsage();
+		let judgeUsage = unavailableTokenUsage();
 		try {
 			const hits = await searchMemory(question.question, RETRIEVAL_LIMIT, this.baseUrl, beamUserId(conv));
 			const prompt = buildAnswerPrompt(conv, question, hits);
-			const response = await generateAnswer(prompt);
+			const answerResult = await generateAnswer(prompt);
+			answerUsage = answerResult.token_usage;
+			const response = answerResult.text;
+			if (!response.trim()) throw new Error("answerer returned an empty response");
 
 			const abstained = looksLikeAbstention(response);
 
 			let judgeResult: NuggetJudgeResult;
 			if (question.atoms.length === 0) {
 				console.warn(`[BEAM] Question ${question.question_id} has no atoms — using empty judge result`);
-				judgeResult = { scores: [], reasoning: "no atoms" };
+				judgeResult = { scores: [], reasoning: "no atoms", token_usage: zeroTokenUsage() };
 			} else {
 				judgeResult = await evaluateNuggetJudge(
 					question.question,
@@ -287,10 +293,12 @@ export class BeamEvaluator {
 					response,
 				);
 			}
+			judgeUsage = judgeResult.token_usage;
 
 			const { nugget_mean, nugget_pass } = summarizeNuggetScores(judgeResult.scores);
 
 			const pred: Prediction = {
+				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 				question_id: question.question_id,
 				question: question.question,
 				response,
@@ -318,6 +326,7 @@ export class BeamEvaluator {
 
 			const emptyScores: number[] = question.atoms.map(() => 0);
 			const pred: Prediction = {
+				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 				question_id: question.question_id,
 				question: question.question,
 				response: `Error: ${errorMessage}`,

@@ -3,7 +3,7 @@
 	"compilerOptions": {
 		"incremental": false,
 		"outDir": "./dist",
-		"rootDir": "./src"
+		"rootDir": ".."
 	},
 	"include": ["src/**/*"]
 }

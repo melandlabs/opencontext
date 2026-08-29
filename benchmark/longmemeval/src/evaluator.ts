@@ -14,9 +14,11 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
 import { JUDGE_MODEL, calculateMetrics, evaluateLLMJudge } from "./metrics";
 import {
 	type BenchRawMessage,
+	type GeneratedAnswer,
 	type MemorySearchHit,
 	checkOpencontextHealth,
 	generateAnswer,
@@ -263,12 +265,18 @@ export class LongMemEvalEvaluator {
 
 		// Convert answer to string (may be number in dataset)
 		const answerStr = String(entry.answer);
+		let answerUsage = unavailableTokenUsage();
+		let judgeUsage = unavailableTokenUsage();
 
 		try {
-			const response = await this.queryMemory(entry);
+			const answerResult = await this.queryMemory(entry);
+			const response = answerResult.text;
+			answerUsage = answerResult.token_usage;
 
 			// Evaluate answer correctness using LLM judge
-			const isCorrect = (await evaluateLLMJudge(entry.question, answerStr, response)) === 1;
+			const judgeResult = await evaluateLLMJudge(entry.question, answerStr, response);
+			judgeUsage = judgeResult.token_usage;
+			const isCorrect = judgeResult.score === 1;
 
 			// Calculate additional metrics
 			const metrics = calculateMetrics(response, answerStr);
@@ -278,6 +286,7 @@ export class LongMemEvalEvaluator {
 				attempt,
 				answerer_model: answererModel,
 				judge_model: judgeModel,
+				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 				question: entry.question,
 				answer: answerStr,
 				response,
@@ -308,6 +317,7 @@ export class LongMemEvalEvaluator {
 				answerer_model: answererModel,
 				judge_model: judgeModel,
 				error: errorMessage,
+				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 				question: entry.question,
 				answer: answerStr,
 				response: `Error: ${errorMessage}`,
@@ -333,7 +343,7 @@ export class LongMemEvalEvaluator {
 	/**
 	 * Retrieve relevant memories and answer the question with the answerer LLM.
 	 */
-	private async queryMemory(entry: LongMemEvalEntry): Promise<string> {
+	private async queryMemory(entry: LongMemEvalEntry): Promise<GeneratedAnswer> {
 		const hits = await searchMemory(
 			entry.question,
 			RETRIEVAL_LIMIT,
@@ -342,7 +352,7 @@ export class LongMemEvalEvaluator {
 		);
 		const prompt = buildAnswerPrompt(entry, hits);
 		const response = await generateAnswer(prompt);
-		if (!response.trim() || response === "(empty response)") {
+		if (!response.text.trim()) {
 			throw new Error("Answerer returned an empty response");
 		}
 		return response;

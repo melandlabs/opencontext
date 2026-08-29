@@ -21,7 +21,9 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -50,6 +52,31 @@ BEAM_SOURCES: dict[str, dict[str, str]] = {
 }
 
 SCALES = list(BEAM_SOURCES)
+
+
+def collect_preflight_errors(
+    scale: str,
+    out_dir: Path,
+    max_conversations: int | None,
+) -> list[str]:
+    """Check local requirements before creating files or loading Hugging Face data."""
+    errors: list[str] = []
+    if max_conversations is not None and max_conversations < 1:
+        errors.append("--max-conversations must be a positive integer")
+
+    candidate = out_dir.resolve()
+    while not candidate.exists() and candidate.parent != candidate:
+        candidate = candidate.parent
+    if not candidate.is_dir() or not os.access(candidate, os.W_OK):
+        errors.append(f"output directory is not writable: {out_dir.resolve()}")
+
+    if scale != "sample":
+        for dependency in ("datasets", "pyarrow"):
+            if importlib.util.find_spec(dependency) is None:
+                errors.append(
+                    f"Python dependency missing for non-sample conversion: {dependency}"
+                )
+    return errors
 
 
 def get_beam_source(scale: str) -> dict[str, str]:
@@ -229,6 +256,15 @@ def main() -> None:
         help="Cap on conversations to convert (useful for smoke tests).",
     )
     args = parser.parse_args()
+
+    errors = collect_preflight_errors(args.scale, args.out_dir, args.max_conversations)
+    if errors:
+        print("BEAM conversion preflight failed:", file=sys.stderr)
+        for error in errors:
+            print(f"- {error}", file=sys.stderr)
+        raise SystemExit(2)
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
 
     scales = SCALES if args.scale == "all" else [args.scale]
     for scale in scales:

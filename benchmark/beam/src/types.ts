@@ -5,6 +5,8 @@
  * 10 question categories across 4 buckets (128K / 500K / 1M / 10M).
  */
 
+import type { TokenUsage } from "../../run-support";
+
 export type BeamScale = "128k" | "500k" | "1m" | "10m";
 
 export type BeamQuestionCategory =
@@ -105,11 +107,7 @@ export interface EvaluationResult {
 	 * Fraction of questions with nugget_mean >= 0.5.
 	 */
 	nugget_pass_rate: number;
-	token_usage: {
-		prompt_tokens: number;
-		completion_tokens: number;
-		total_tokens: number;
-	};
+	token_usage: TokenUsage;
 	predictions: Prediction[];
 	error?: string;
 }
@@ -118,6 +116,7 @@ export interface EvaluationResult {
  * Prediction result for a single question.
  */
 export interface Prediction {
+	token_usage: TokenUsage;
 	question_id: string;
 	question: string;
 	response: string;

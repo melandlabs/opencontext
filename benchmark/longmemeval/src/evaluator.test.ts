@@ -28,6 +28,11 @@ import type { LongMemEvalEntry } from "./types";
 const originalAuthToken = process.env.ANTHROPIC_AUTH_TOKEN;
 const originalAnswerModel = process.env.ANSWER_MODEL;
 const temporaryDirectories: string[] = [];
+const fixtureUsage = { prompt_tokens: 10, completion_tokens: 5, total_tokens: 15 };
+
+function judgeResult(score: number) {
+	return { score, token_usage: fixtureUsage };
+}
 
 function restoreEnvironment(name: string, value: string | undefined): void {
 	if (value === undefined) delete process.env[name];
@@ -65,7 +70,7 @@ beforeEach(() => {
 	process.env.ANTHROPIC_AUTH_TOKEN = "fixture-token";
 	process.env.ANSWER_MODEL = "answerer-a";
 	vi.mocked(searchMemory).mockResolvedValue([]);
-	vi.mocked(generateAnswer).mockResolvedValue("fixture response");
+	vi.mocked(generateAnswer).mockResolvedValue({ text: "fixture response", token_usage: fixtureUsage });
 });
 
 afterEach(async () => {
@@ -81,12 +86,13 @@ describe("LongMemEval checkpoint resume", () => {
 		const checkpointDir = await createCheckpointDir();
 		const correctEntry = createEntry("correct-entry");
 		const incorrectEntry = createEntry("incorrect-entry");
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(1).mockResolvedValueOnce(0);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(1)).mockResolvedValueOnce(judgeResult(0));
 
 		const firstEvaluator = createEvaluator(checkpointDir);
 		const correct = await firstEvaluator.evaluateQuestion(correctEntry);
 		const incorrect = await firstEvaluator.evaluateQuestion(incorrectEntry);
 		expect([correct.status, incorrect.status]).toEqual(["completed", "completed"]);
+		expect(correct.token_usage).toEqual({ prompt_tokens: 20, completion_tokens: 10, total_tokens: 30 });
 
 		vi.mocked(generateAnswer).mockClear();
 		vi.mocked(evaluateLLMJudge).mockClear();
@@ -115,7 +121,7 @@ describe("LongMemEval checkpoint resume", () => {
 		});
 
 		vi.mocked(generateAnswer).mockClear();
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(0);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(0));
 		const retried = await createEvaluator(checkpointDir).evaluateQuestion(entry);
 
 		expect(generateAnswer).toHaveBeenCalledOnce();
@@ -125,11 +131,11 @@ describe("LongMemEval checkpoint resume", () => {
 	it("ignores existing checkpoints when resume is disabled", async () => {
 		const checkpointDir = await createCheckpointDir();
 		const entry = createEntry("fresh-entry");
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(0);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(0));
 		await createEvaluator(checkpointDir).evaluateQuestion(entry);
 
 		vi.mocked(generateAnswer).mockClear();
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(1);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(1));
 		const fresh = await createEvaluator(checkpointDir, false).evaluateQuestion(entry);
 
 		expect(generateAnswer).toHaveBeenCalledOnce();
@@ -139,12 +145,12 @@ describe("LongMemEval checkpoint resume", () => {
 	it("does not reuse a checkpoint from a different answerer or judge model", async () => {
 		const checkpointDir = await createCheckpointDir();
 		const entry = createEntry("model-entry");
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(0);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(0));
 		await createEvaluator(checkpointDir).evaluateQuestion(entry);
 
 		process.env.ANSWER_MODEL = "answerer-b";
 		vi.mocked(generateAnswer).mockClear();
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(1);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(1));
 		const rerun = await createEvaluator(checkpointDir).evaluateQuestion(entry);
 
 		expect(generateAnswer).toHaveBeenCalledOnce();
@@ -160,7 +166,7 @@ describe("LongMemEval checkpoint resume", () => {
 		await writeFile(checkpointPath, JSON.stringify(checkpoint), "utf-8");
 
 		vi.mocked(generateAnswer).mockClear();
-		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(0);
+		vi.mocked(evaluateLLMJudge).mockResolvedValueOnce(judgeResult(0));
 		const judgeRerun = await createEvaluator(checkpointDir).evaluateQuestion(entry);
 
 		expect(generateAnswer).toHaveBeenCalledOnce();
@@ -173,7 +179,7 @@ describe("LongMemEval checkpoint resume", () => {
 
 	it("records an empty answer as an execution error without calling the judge", async () => {
 		const checkpointDir = await createCheckpointDir();
-		vi.mocked(generateAnswer).mockResolvedValueOnce("");
+		vi.mocked(generateAnswer).mockResolvedValueOnce({ text: "", token_usage: fixtureUsage });
 
 		const result = await createEvaluator(checkpointDir).evaluateQuestion(createEntry("empty-entry"));
 

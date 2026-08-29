@@ -2,6 +2,8 @@
  * Types for LoCoMo benchmark evaluation.
  */
 
+import type { TokenUsage } from "../../run-support";
+
 export enum RetrievalMode {
 	DIALOG = "dialog",
 	OBSERVATION = "observation",
@@ -30,11 +32,7 @@ export interface EvaluationResult {
 	total_questions: number;
 	correct_answers: number;
 	accuracy: number;
-	token_usage: {
-		prompt_tokens: number;
-		completion_tokens: number;
-		total_tokens: number;
-	};
+	token_usage: TokenUsage;
 	predictions: Prediction[];
 	error?: string;
 }
@@ -45,6 +43,7 @@ export interface Prediction {
 	answerer_model: string;
 	judge_model: string;
 	error?: string;
+	token_usage: TokenUsage;
 	question: string;
 	answer: string;
 	response: string;

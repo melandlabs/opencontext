@@ -13,11 +13,27 @@
  */
 
 import "dotenv/config";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import {
+	getManifestPath,
+	runPreflight,
+	sumTokenUsage,
+	unavailableTokenUsage,
+	writeRunManifest,
+} from "../../run-support";
 import { expandBeamSamples, loadBeamDatasetFromJson } from "./dataset";
-import { BeamEvaluator } from "./evaluator";
-import { type NuggetCategoryMetrics, calculateNuggetCategoryMetrics } from "./metrics";
-import { checkOpencontextHealth, getOpencontextBaseUrl } from "./opencontext-client";
+import { BeamEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
+import {
+	JUDGE_MODEL,
+	type NuggetCategoryMetrics,
+	calculateNuggetCategoryMetrics,
+} from "./metrics";
+import {
+	checkOpencontextHealth,
+	getAnswererModelIdentity,
+	getOpencontextBaseUrl,
+} from "./opencontext-client";
 import {
 	OPENCONTEXT_CLAIM_MAP,
 	OPENCONTEXT_HIGHLIGHT_CATEGORIES,
@@ -36,20 +52,25 @@ interface CliArgs {
 	output?: string;
 	port?: number;
 	resume: boolean;
+	parameterErrors: string[];
 }
 
-function parseCsv<T extends string>(raw: string | undefined, valid?: Set<T>): T[] | undefined {
+function parseCsv<T extends string>(
+	raw: string | undefined,
+	valid: Set<T>,
+	option: string,
+	errors: string[],
+): T[] | undefined {
 	if (!raw) return undefined;
 	const parts = raw
 		.split(",")
 		.map((s) => s.trim())
 		.filter((s) => s.length > 0);
 	if (parts.length === 0) return undefined;
-	if (!valid) return parts as T[];
 	const out: T[] = [];
 	for (const part of parts) {
 		if (!valid.has(part as T)) {
-			console.error(`Unknown value: ${part}`);
+			errors.push(`${option} contains an unknown value: ${part}`);
 			continue;
 		}
 		out.push(part as T);
@@ -99,6 +120,7 @@ function parseCliArgs(): CliArgs {
 
 	const typeSet = new Set<BeamQuestionCategory>(QUESTION_TYPES);
 	const scaleSet = new Set<BeamScale>(["128k", "500k", "1m", "10m"]);
+	const parameterErrors: string[] = [];
 
 	const conversations = values.conversations
 		? Number.parseInt(values.conversations as string, 10)
@@ -109,15 +131,15 @@ function parseCliArgs(): CliArgs {
 
 	return {
 		dataset: values.dataset as string,
-		conversations: conversations !== undefined && Number.isFinite(conversations) ? conversations : undefined,
-		questionsPerConv:
-			questionsPerConv !== undefined && Number.isFinite(questionsPerConv) ? questionsPerConv : undefined,
-		types: parseCsv<BeamQuestionCategory>(values.types as string, typeSet),
-		scale: parseCsv<BeamScale>(values.scale as string, scaleSet)?.[0],
+		conversations,
+		questionsPerConv,
+		types: parseCsv<BeamQuestionCategory>(values.types as string, typeSet, "--type", parameterErrors),
+		scale: parseCsv<BeamScale>(values.scale as string, scaleSet, "--scale", parameterErrors)?.[0],
 		quick: values.quick as boolean,
 		output: values.output as string | undefined,
 		port: values.port ? Number.parseInt(values.port as string, 10) : undefined,
 		resume: values.resume !== false,
+		parameterErrors,
 	};
 }
 
@@ -231,32 +253,56 @@ function printSummary(
 }
 
 async function main() {
+	const startedAt = new Date().toISOString();
 	const args = parseCliArgs();
-
-	// Resolve the OpenContext memory daemon and verify it is up
 	const baseUrl = args.port ? `http://127.0.0.1:${args.port}` : getOpencontextBaseUrl();
-	try {
-		await checkOpencontextHealth(baseUrl);
-		console.log(`🔌 OpenContext memory daemon: ${baseUrl}`);
-	} catch (error) {
-		console.error(`${error}`);
-		process.exit(1);
+	const benchmarkDir = join(import.meta.dirname, "..");
+	const manifestPath = getManifestPath(args.output, benchmarkDir, startedAt);
+	let conversations: Awaited<ReturnType<typeof loadBeamDatasetFromJson>> = [];
+	let activeSamples: ReturnType<typeof expandBeamSamples> = [];
+	if (
+		args.conversations !== undefined &&
+		(!Number.isInteger(args.conversations) || args.conversations < 1)
+	) {
+		args.parameterErrors.push("--conversations must be a positive integer");
+	}
+	if (
+		args.questionsPerConv !== undefined &&
+		(!Number.isInteger(args.questionsPerConv) || args.questionsPerConv < 1)
+	) {
+		args.parameterErrors.push("--questions-per-conv must be a positive integer");
+	}
+	if (args.port !== undefined && (!Number.isInteger(args.port) || args.port < 1 || args.port > 65_535)) {
+		args.parameterErrors.push("--port must be an integer between 1 and 65535");
 	}
 
-	console.log(`\n📁 Loading dataset from: ${args.dataset}`);
-	const conversations = await loadBeamDatasetFromJson(args.dataset, {
-		conversations: args.conversations,
-		questionsPerConv: args.questionsPerConv,
-		types: args.types,
-		assertScale: args.scale,
+	await runPreflight({
+		datasetPath: args.dataset,
+		writablePaths: [
+			manifestPath,
+			join(benchmarkDir, "checkpoints", "beam", ".preflight"),
+			...(args.output ? [args.output] : []),
+		],
+		parameterErrors: args.parameterErrors,
+		validateDataset: async () => {
+			conversations = await loadBeamDatasetFromJson(args.dataset, {
+				conversations: args.conversations,
+				questionsPerConv: args.questionsPerConv,
+				types: args.types,
+				assertScale: args.scale,
+			});
+			activeSamples = expandBeamSamples(conversations);
+			if (args.quick) activeSamples = activeSamples.slice(0, 5);
+			if (conversations.length === 0 || activeSamples.length === 0) {
+				throw new Error(
+					"no questions remain after applying --type/--scale/--conversations/--questions-per-conv",
+				);
+			}
+		},
+		checkDaemon: () => checkOpencontextHealth(baseUrl),
 	});
-
-	if (conversations.length === 0) {
-		console.error(
-			"❌ No conversations remaining after filtering. Check your --type / --conversations / --questions-per-conv flags.",
-		);
-		process.exit(1);
-	}
+	console.log(`🔌 OpenContext memory daemon: ${baseUrl}`);
+	console.log(`\n📁 Loaded dataset from: ${args.dataset}`);
 
 	console.log(`📊 Loaded ${conversations.length} BEAM conversations`);
 	if (args.types) {
@@ -264,10 +310,7 @@ async function main() {
 	}
 	console.log();
 
-	const samples = expandBeamSamples(conversations);
-	let activeSamples = samples;
 	if (args.quick) {
-		activeSamples = samples.slice(0, 5);
 		console.log(`⚡ Quick mode: limiting to first ${activeSamples.length} questions`);
 	}
 	console.log(`🎯 Evaluating ${activeSamples.length} questions\n`);
@@ -305,6 +348,7 @@ async function main() {
 			console.error(`Error on ${sample.question.question_id}: ${errorMessage}`);
 
 			const failedPred: Prediction = {
+				token_usage: unavailableTokenUsage(),
 				question_id: sample.question.question_id,
 				question: sample.question.question,
 				response: `Error: ${errorMessage}`,
@@ -341,11 +385,7 @@ async function main() {
 					correct_answers: 0,
 					nugget_mean: 0,
 					nugget_pass_rate: 0,
-					token_usage: {
-						prompt_tokens: 0,
-						completion_tokens: 0,
-						total_tokens: 0,
-					},
+					token_usage: unavailableTokenUsage(),
 					predictions: [],
 				});
 			}
@@ -360,15 +400,39 @@ async function main() {
 		const m = calculateNuggetCategoryMetrics(entry.predictions);
 		entry.nugget_mean = m.nugget_mean;
 		entry.nugget_pass_rate = m.nugget_pass_rate;
+		entry.token_usage = sumTokenUsage(entry.predictions.map((prediction) => prediction.token_usage));
 	}
 
+	const predictions = Object.values(predictionsByCategory).flat();
+	const runTokenUsage = sumTokenUsage(predictions.map((prediction) => prediction.token_usage));
+	const finishedAt = new Date().toISOString();
+	const runManifest = await writeRunManifest(manifestPath, {
+		benchmark: "beam",
+		datasetPath: args.dataset,
+		answerer_model: getAnswererModelIdentity(),
+		judge_model: JUDGE_MODEL,
+		retrieval: { strategy: "memory-search", top_k: RETRIEVAL_LIMIT },
+		resume: args.resume,
+		started_at: startedAt,
+		finished_at: finishedAt,
+		token_usage: runTokenUsage,
+		parameters: {
+			conversations: args.conversations ?? null,
+			questions_per_conversation: args.questionsPerConv ?? null,
+			categories: args.types ?? null,
+			scale: args.scale ?? null,
+			quick: args.quick ?? false,
+		},
+	});
 	const output = {
 		dataset: args.dataset,
 		scale: args.scale,
 		conversations_run: conversations.length,
 		questions_run: activeSamples.length,
 		categories_filter: args.types ?? null,
-		summary: calculateNuggetCategoryMetrics(Object.values(predictionsByCategory).flat()),
+		summary: calculateNuggetCategoryMetrics(predictions),
+		token_usage: runTokenUsage,
+		run_manifest: runManifest,
 		per_category: Object.fromEntries(
 			QUESTION_TYPES.filter((c) => predictionsByCategory[c].length > 0).map((c) => [
 				c,
@@ -379,13 +443,15 @@ async function main() {
 			]),
 		),
 		per_entry: Array.from(perEntry.values()),
-		predictions: Object.values(predictionsByCategory).flat(),
+		predictions,
 	};
 
 	if (args.output) {
+		await mkdir(dirname(resolve(args.output)), { recursive: true });
 		await writeFile(args.output, JSON.stringify(output, null, 2), "utf-8");
 		console.log(`💾 Results saved to: ${args.output}`);
 	}
+	console.log(`🧾 Run manifest saved to: ${manifestPath}`);
 
 	return output;
 }

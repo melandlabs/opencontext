@@ -93,6 +93,45 @@ class RetrieveFixtureTests(unittest.TestCase):
     def setUp(self) -> None:
         self.server.requests.clear()
 
+    def test_preflight_aggregates_parameter_dataset_and_daemon_failures(self) -> None:
+        class FailingClient:
+            base_url = "http://127.0.0.1:1"
+
+            @staticmethod
+            def health() -> None:
+                raise OSError("connection refused")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors = retrieve.collect_preflight_errors(
+                "beam",
+                Path(temp_dir) / "missing.json",
+                Path(temp_dir) / "outputs",
+                FailingClient(),
+                limit=0,
+                samples={"missing-sample"},
+                max_questions=0,
+            )
+
+        self.assertIn("--limit must be a positive integer", errors)
+        self.assertIn("--max-questions must be a positive integer", errors)
+        self.assertTrue(any("dataset is missing or unreadable" in error for error in errors))
+        self.assertTrue(any("daemon is unavailable" in error for error in errors))
+
+    def test_preflight_rejects_unknown_sample_before_retrieval(self) -> None:
+        dataset = HERE.parent / "beam" / "dataset" / "sample_conversation.json"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            errors = retrieve.collect_preflight_errors(
+                "beam",
+                dataset,
+                Path(temp_dir),
+                self.client,
+                limit=1,
+                samples={"not-present"},
+                max_questions=1,
+            )
+
+        self.assertEqual(errors, ["unknown --samples value(s): not-present"])
+
     def fixture_cases(self) -> dict[str, tuple[Path, set[str]]]:
         fixture_root = HERE / "fixtures" / "retrieve"
         return {
