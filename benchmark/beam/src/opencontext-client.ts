@@ -12,6 +12,8 @@
  * (OPENROUTER_API_KEY, OPENROUTER_ANSWER_MODEL).
  */
 
+import { tokenUsage, type TokenUsage } from "../../run-support";
+
 export const DEFAULT_OPENCONTEXT_PORT = 7421;
 
 export function getOpencontextBaseUrl(): string {
@@ -21,6 +23,18 @@ export function getOpencontextBaseUrl(): string {
 }
 
 export const BENCH_USER_ID = "benchmark_user";
+
+export function getAnswererModelIdentity(): string {
+	if (process.env.ANTHROPIC_AUTH_TOKEN) {
+		return `anthropic-compatible:${process.env.ANSWER_MODEL ?? "MiniMax-M3-highspeed"}`;
+	}
+	return `openrouter:${process.env.OPENROUTER_ANSWER_MODEL ?? "deepseek/deepseek-chat"}`;
+}
+
+export interface GeneratedAnswer {
+	text: string;
+	token_usage: TokenUsage;
+}
 
 export async function checkOpencontextHealth(baseUrl = getOpencontextBaseUrl()): Promise<void> {
 	let res: Response;
@@ -136,7 +150,7 @@ export async function searchMemory(
  * Fallback: OpenRouter chat completions:
  *   OPENROUTER_API_KEY / OPENROUTER_ANSWER_MODEL (default deepseek/deepseek-chat)
  */
-export async function generateAnswer(prompt: string, system?: string): Promise<string> {
+export async function generateAnswer(prompt: string, system?: string): Promise<GeneratedAnswer> {
 	const token = process.env.ANTHROPIC_AUTH_TOKEN;
 	if (token) {
 		const base = (process.env.ANTHROPIC_BASE_URL ?? "https://api.minimaxi.com/anthropic").replace(/\/+$/, "");
@@ -161,12 +175,16 @@ export async function generateAnswer(prompt: string, system?: string): Promise<s
 		}
 		const data = (await res.json()) as {
 			content?: Array<{ type: string; text?: string }>;
+			usage?: { input_tokens?: number; output_tokens?: number };
 		};
 		const text = (data.content ?? [])
 			.filter((b) => b.type === "text" && typeof b.text === "string")
 			.map((b) => b.text as string)
 			.join("");
-		return text || "(empty response)";
+		return {
+			text,
+			token_usage: tokenUsage(data.usage?.input_tokens, data.usage?.output_tokens, undefined),
+		};
 	}
 
 	const openrouterKey = process.env.OPENROUTER_API_KEY;
@@ -180,10 +198,13 @@ export async function generateAnswer(prompt: string, system?: string): Promise<s
 		apiKey: openrouterKey,
 		name: "openrouter",
 	});
-	const { text } = await generateText({
+	const { text, usage } = await generateText({
 		model: openrouter(process.env.OPENROUTER_ANSWER_MODEL ?? "deepseek/deepseek-chat"),
 		...(system ? { system } : {}),
 		prompt,
 	});
-	return text;
+	return {
+		text,
+		token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
+	};
 }

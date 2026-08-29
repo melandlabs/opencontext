@@ -95,8 +95,16 @@ pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --output results.
 | `--quick`     | `-q`  | Limit to first 5 entries            | false              |
 | `--output`    | `-o`  | Save results JSON to path           | None               |
 | `--port`      | `-p`  | OpenContext daemon port (env: `OPENCONTEXT_PORT` / `OPENCONTEXT_URL`) | 7421 |
-| `--resume`    |       | Resume from checkpoints             | true               |
-| `--no-resume` |       | Start fresh (don't resume)          | false              |
+| `--resume`    |       | Reuse completed checkpoints for the same models | true    |
+| `--no-resume` |       | Ignore checkpoints and run every selected entry | false   |
+
+Before ingest or model calls, the CLI checks the dataset and selected entries,
+daemon, credentials, output/checkpoint paths, and arguments. It reports all
+detected failures together and never prints credential values. `--help` does not
+run these checks.
+
+With `--resume`, both correct and incorrect completed judge results are reused;
+only execution failures are retried. `--no-resume` always starts a fresh run.
 
 ## Output
 
@@ -105,7 +113,12 @@ The benchmark outputs:
 - **Overall accuracy** - LLM judge accuracy across all question types
 - **Per-type metrics** - F1, BLEU-1, BLEU-4 scores by question type
 - **Per-question predictions** - Individual question results
-- **Token totals** - Combined API token consumption
+- **Token usage** - Real provider usage when available; otherwise `null`
+- **Run manifest** - Git commit, dataset identity, models, retrieval top-k,
+  selection parameters, resume mode, and wall-clock time
+
+With `--output results.json`, the manifest is written to
+`results.json.manifest.json`. Without `--output`, it is written under `results/`.
 
 ### Metrics
 

@@ -12,6 +12,15 @@ dataset -> retrieve.py -> OpenContext (POST /v1/raw-messages ingest, per-sample 
         -> judged.jsonl + aggregate score
 ```
 
+This is the **AML-compatible local evaluation** path. It uses public/local
+datasets with the vendored AML answer and scoring pipelines, so it is distinct
+from both:
+
+- the repository's internal TypeScript evaluations under `benchmark/locomo`,
+  `benchmark/longmemeval`, and `benchmark/beam`; and
+- the hosted AML leaderboard evaluation, which uses the platform's controlled
+  datasets and orchestration through the Add/Search adapter described below.
+
 ## Prerequisites
 
 - The OpenContext daemon is running (`curl http://127.0.0.1:7421/health`):
@@ -54,6 +63,12 @@ Common flags: `-Limit N` (number of samples; for personamem = number of personas
 already-ingested memories, re-retrieve only), `-Dataset beam_1m.json` (switch BEAM
 dataset), `-Mode mcq|generative` (personamem only, default mcq).
 
+Before retrieval, ingest, or model calls, the runner checks the dataset and
+sample filter, daemon, `OPENROUTER_API_KEY`, AML Python interpreter and `httpx`,
+pipeline files, output path, and arguments. All detected failures are reported
+together without printing secret values. `python retrieve.py --help` does not run
+preflight.
+
 PersonaMem-v2 reads `benchmark/personamem-v2/dataset/benchmark.csv` plus the
 per-persona 32k chat histories — fetch them with
 `python benchmark/personamem-v2/dataset/download.py --max-personas 5`. Each
@@ -72,7 +87,10 @@ The evaluate step scores all 457 gold questions; unanswered ones count as wrong,
 so use `-MaxQuestions` only for smoke tests and compare on full runs.
 
 Artifacts land in `outputs/<bench>/`: `input.jsonl` (retrieval results),
-`answers.jsonl` (generated answers), `judged.jsonl` (scoring details).
+`answers.jsonl` (generated answers), `judged.jsonl` (scoring details), and
+`run-manifest.json` (Git commit, dataset identity, models, retrieval settings,
+parameters, and wall-clock time). The vendored AML pipelines do not expose
+provider token usage, so the manifest records those fields as `null`.
 
 ## Local smoke baselines (2026-08-18, daemon: sqlite-vec + local embeddings)
 

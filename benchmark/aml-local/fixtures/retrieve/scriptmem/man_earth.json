@@ -1,0 +1,11 @@
+[
+	{
+		"sample_id": "fixture-1",
+		"conversation": {
+			"speakers": ["John", "Dan"],
+			"session_1": [{ "speaker": "John", "text": "I am moving away." }],
+			"session_1_date_time": "2007-01-01T00:00:00Z"
+		},
+		"qa": [{ "question": "What is John planning to do?", "qa_type": "single", "answer": "D" }]
+	}
+]

@@ -1,0 +1,11 @@
+[
+	{
+		"sample_id": "fixture-1",
+		"conversation": {
+			"speakers": ["Thomas", "Peter"],
+			"session_1": [{ "speaker": "Thomas", "text": "The baths are contaminated." }],
+			"session_1_date_time": "1882-01-01T00:00:00Z"
+		},
+		"qa": [{ "question": "What is wrong with the baths?", "qa_type": "single", "answer": "A" }]
+	}
+]

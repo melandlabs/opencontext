@@ -8,6 +8,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
+import { tokenUsage, type TokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -113,7 +114,10 @@ export function calculateBLEUScores(
 export interface NuggetJudgeResult {
 	scores: number[];
 	reasoning: string;
+	token_usage: TokenUsage;
 }
+
+export const JUDGE_MODEL = "qwen/qwen3.7-max";
 
 /**
  * Normalize a raw judge score into the BEAM rubric's {0.0, 0.5, 1.0} set.
@@ -186,7 +190,7 @@ export async function evaluateNuggetJudge(
 	maxRetries = 3,
 ): Promise<NuggetJudgeResult> {
 	if (atoms.length === 0) {
-		return { scores: [], reasoning: "no atoms" };
+		return { scores: [], reasoning: "no atoms", token_usage: zeroTokenUsage() };
 	}
 
 	const prompt = BEAM_NUGGET_JUDGE_PROMPT.replace("{category}", category)
@@ -198,8 +202,8 @@ export async function evaluateNuggetJudge(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			const { text } = await generateText({
-				model: openrouter("qwen/qwen3.7-max"),
+			const { text, usage } = await generateText({
+				model: openrouter(JUDGE_MODEL),
 				system: "You are an impartial judge scoring answers to questions. Always respond with valid JSON.",
 				prompt,
 			});
@@ -228,6 +232,7 @@ export async function evaluateNuggetJudge(
 				return {
 					scores,
 					reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "(no reasoning)",
+					token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
 				};
 			}
 		} catch (error) {
@@ -243,6 +248,7 @@ export async function evaluateNuggetJudge(
 	return {
 		scores: atoms.map(() => 0),
 		reasoning: `judge failure: ${lastError?.message ?? "unknown"}`,
+		token_usage: unavailableTokenUsage(),
 	};
 }
 

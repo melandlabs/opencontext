@@ -9,17 +9,20 @@
  *   2. evaluateQA: retrieve relevant memories (`POST /v1/search`), then ask
  *      the answerer LLM (see opencontext-client.ts) using only the retrieved
  *      excerpts.
- *   3. Judge unchanged (metrics.ts, OpenRouter).
+ *   3. Judge with the existing metrics.ts model and prompt (OpenRouter).
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { calculateMetrics, evaluateLLMJudge } from "./metrics";
+import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
+import { JUDGE_MODEL, calculateMetrics, evaluateLLMJudge } from "./metrics";
 import {
 	type BenchRawMessage,
+	type GeneratedAnswer,
 	type MemorySearchHit,
 	generateAnswer,
+	getAnswererModelIdentity,
 	getOpencontextBaseUrl,
 	ingestMessages,
 	searchMemory,
@@ -29,6 +32,18 @@ import type { EvaluationResult, LoCoMoSample, Prediction, QAPair } from "./types
 
 /** How many retrieved memories are shown to the answerer. */
 export const RETRIEVAL_LIMIT = 8;
+
+function isReusableCheckpoint(
+	prediction: Prediction | undefined,
+	answererModel: string,
+	judgeModel: string,
+): boolean {
+	return (
+		prediction?.status === "completed" &&
+		prediction.answerer_model === answererModel &&
+		prediction.judge_model === judgeModel
+	);
+}
 
 /**
  * Parse timestamp string to Unix ms.
@@ -413,47 +428,36 @@ export class LoCoMoEvaluator {
 				total_questions: sample.qa_pairs.length,
 				correct_answers: 0,
 				accuracy: 0,
-				token_usage: {
-					prompt_tokens: 0,
-					completion_tokens: 0,
-					total_tokens: 0,
-				},
+				token_usage: unavailableTokenUsage(),
 				predictions: [],
 				error: "No records in storage",
 			};
 		}
 
-		// Load checkpoint for resume support
 		const checkpoint = (await this.loadCheckpoint(sample.sample_id)) || {};
-
-		// Separate passed vs failed questions - only re-evaluate failed ones
-		const passedIndices = new Set<number>();
-		const failedIndices = new Set<number>();
+		const answererModel = getAnswererModelIdentity();
+		const judgeModel = JUDGE_MODEL;
+		const reusableIndices = new Set<number>();
+		let executionErrorsToRetry = 0;
+		let incompatibleCheckpoints = 0;
 
 		for (const [idx, pred] of Object.entries(checkpoint)) {
 			const i = Number(idx);
-			if (pred.correct) {
-				passedIndices.add(i);
+			if (isReusableCheckpoint(pred, answererModel, judgeModel)) {
+				reusableIndices.add(i);
+			} else if (pred?.status === "execution_error") {
+				executionErrorsToRetry++;
 			} else {
-				failedIndices.add(i);
+				incompatibleCheckpoints++;
 			}
 		}
-
-		const skippedCount = passedIndices.size;
-		const retriedCount = failedIndices.size;
 
 		const predictions: Prediction[] = [];
 		let correct = 0;
 
-		// If we have checkpoint data, restore predictions for passed questions
-		if (skippedCount > 0) {
-			for (const i of passedIndices) {
-				const pred = checkpoint[i];
-				predictions.push(pred);
-				correct++;
-			}
+		if (Object.keys(checkpoint).length > 0) {
 			console.log(
-				`[LoCoMo] Resuming from checkpoint: ${skippedCount} passed (skipping), ${retriedCount} failed (retrying)`,
+				`[LoCoMo] Resume: ${reusableIndices.size} completed result(s) reused, ${executionErrorsToRetry} execution error(s) retrying, ${incompatibleCheckpoints} legacy/model-mismatched result(s) re-running`,
 			);
 		}
 
@@ -467,28 +471,31 @@ export class LoCoMoEvaluator {
 		for (let i = 0; i < questionsToEvaluate.length; i++) {
 			const qa = questionsToEvaluate[i];
 
-			// Skip if already passed (from checkpoint) - only re-evaluate failed ones
-			if (passedIndices.has(i)) {
+			const existing = checkpoint[i];
+			if (reusableIndices.has(i)) {
+				predictions.push(existing);
+				if (existing.correct) correct++;
 				continue;
 			}
+			const attempt = (existing?.attempt ?? 0) + 1;
+			let answerUsage = unavailableTokenUsage();
+			let judgeUsage = unavailableTokenUsage();
 
 			try {
 				// Retrieve relevant memories, then answer using only those excerpts
-				const response = await this.answerQuestion(qa, sample);
+				const answerResult = await this.answerQuestion(qa, sample);
+				const response = answerResult.text;
+				answerUsage = answerResult.token_usage;
 
 				// Evaluate answer correctness using LLM judge
-				let isCorrect = false;
-				try {
-					isCorrect = (await evaluateLLMJudge(qa.question, qa.answer, response)) === 1;
-					console.log(
-						`[Q${i + 1}] ${isCorrect ? "✓" : "✗"} Q: "${qa.question.substring(0, 60)}..." GT: "${qa.answer}"`,
-					);
-					if (!isCorrect) {
-						console.log(`    Agent response: "${response.substring(0, 300)}..."`);
-					}
-				} catch (judgeError) {
-					const errMsg = judgeError instanceof Error ? judgeError.message : String(judgeError);
-					console.log(`[Q${i + 1}] ✗ Judge failed: ${errMsg.substring(0, 100)}`);
+				const judgeResult = await evaluateLLMJudge(qa.question, qa.answer, response);
+				judgeUsage = judgeResult.token_usage;
+				const isCorrect = judgeResult.score === 1;
+				console.log(
+					`[Q${i + 1}] ${isCorrect ? "✓" : "✗"} Q: "${qa.question.substring(0, 60)}..." GT: "${qa.answer}"`,
+				);
+				if (!isCorrect) {
+					console.log(`    Agent response: "${response.substring(0, 300)}..."`);
 				}
 
 				if (isCorrect) {
@@ -499,6 +506,11 @@ export class LoCoMoEvaluator {
 				const metrics = calculateMetrics(response, qa.answer);
 
 				const pred: Prediction = {
+					status: "completed",
+					attempt,
+					answerer_model: answererModel,
+					judge_model: judgeModel,
+					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 					question: qa.question,
 					answer: qa.answer,
 					response,
@@ -529,6 +541,12 @@ export class LoCoMoEvaluator {
 				);
 
 				const pred: Prediction = {
+					status: "execution_error",
+					attempt,
+					answerer_model: answererModel,
+					judge_model: judgeModel,
+					error: errorMessage,
+					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
 					question: qa.question,
 					answer: qa.answer,
 					response: `Error: ${errorMessage}`,
@@ -562,11 +580,7 @@ export class LoCoMoEvaluator {
 			total_questions: total,
 			correct_answers: correct,
 			accuracy: total > 0 ? correct / total : 0,
-			token_usage: {
-				prompt_tokens: 0,
-				completion_tokens: 0,
-				total_tokens: 0,
-			},
+			token_usage: sumTokenUsage(predictions.map((prediction) => prediction.token_usage)),
 			predictions,
 		};
 	}
@@ -574,9 +588,13 @@ export class LoCoMoEvaluator {
 	/**
 	 * Answer a question using retrieved memory excerpts.
 	 */
-	private async answerQuestion(qa: QAPair, sample: LoCoMoSample): Promise<string> {
+	private async answerQuestion(qa: QAPair, sample: LoCoMoSample): Promise<GeneratedAnswer> {
 		const hits = await searchMemory(qa.question, RETRIEVAL_LIMIT, this.baseUrl, `locomo_${sample.sample_id}`);
 		const prompt = buildAnswerPrompt(qa, sample, hits);
-		return await generateAnswer(prompt);
+		const response = await generateAnswer(prompt);
+		if (!response.text.trim()) {
+			throw new Error("Answerer returned an empty response");
+		}
+		return response;
 	}
 }

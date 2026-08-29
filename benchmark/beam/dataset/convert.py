@@ -21,12 +21,71 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
 
-SCALES = ["128k", "500k", "1m", "10m"]
+BEAM_SOURCES: dict[str, dict[str, str]] = {
+    "128k": {
+        "repository": "Mohammadta/BEAM",
+        "config": "default",
+        "split": "100K",
+    },
+    "500k": {
+        "repository": "Mohammadta/BEAM",
+        "config": "default",
+        "split": "500K",
+    },
+    "1m": {
+        "repository": "Mohammadta/BEAM",
+        "config": "default",
+        "split": "1M",
+    },
+    "10m": {
+        "repository": "Mohammadta/BEAM-10M",
+        "config": "default",
+        "split": "10M",
+    },
+}
+
+SCALES = list(BEAM_SOURCES)
+
+
+def collect_preflight_errors(
+    scale: str,
+    out_dir: Path,
+    max_conversations: int | None,
+) -> list[str]:
+    """Check local requirements before creating files or loading Hugging Face data."""
+    errors: list[str] = []
+    if max_conversations is not None and max_conversations < 1:
+        errors.append("--max-conversations must be a positive integer")
+
+    candidate = out_dir.resolve()
+    while not candidate.exists() and candidate.parent != candidate:
+        candidate = candidate.parent
+    if not candidate.is_dir() or not os.access(candidate, os.W_OK):
+        errors.append(f"output directory is not writable: {out_dir.resolve()}")
+
+    if scale != "sample":
+        for dependency in ("datasets", "pyarrow"):
+            if importlib.util.find_spec(dependency) is None:
+                errors.append(
+                    f"Python dependency missing for non-sample conversion: {dependency}"
+                )
+    return errors
+
+
+def get_beam_source(scale: str) -> dict[str, str]:
+    """Return the upstream Hugging Face source for a local BEAM scale."""
+    try:
+        return BEAM_SOURCES[scale]
+    except KeyError as error:
+        supported = ", ".join(SCALES)
+        raise ValueError(f"Unknown BEAM scale '{scale}'. Expected one of: {supported}") from error
 
 
 def normalize_turn(turn: dict[str, Any]) -> dict[str, Any]:
@@ -97,17 +156,33 @@ def normalize_conversation(conv: dict[str, Any], idx: int, scale: str) -> dict[s
     }
 
 
-def convert_hf_split(scale: str, out_path: Path, max_conversations: int | None) -> int:
+def convert_hf_split(
+    scale: str,
+    out_path: Path,
+    max_conversations: int | None,
+    load_dataset_fn: Any | None = None,
+) -> int:
     """Download the BEAM parquet for `scale` from HF, normalize, write JSON."""
-    try:
-        from datasets import load_dataset  # type: ignore
-    except ImportError:
-        print("ERROR: `datasets` not installed. Run: pip install datasets pyarrow", file=sys.stderr)
-        sys.exit(1)
+    source = get_beam_source(scale)
+    if load_dataset_fn is None:
+        try:
+            from datasets import load_dataset  # type: ignore
+        except ImportError:
+            print("ERROR: `datasets` not installed. Run: pip install datasets pyarrow", file=sys.stderr)
+            sys.exit(1)
+        load_dataset_fn = load_dataset
 
-    print(f"Loading BEAM/{scale} from HuggingFace…")
-    ds = load_dataset("Mohammadta/BEAM", scale, split="train")
-    print(f"  → {len(ds)} raw rows")
+    print(
+        "Loading "
+        f"{source['repository']} config={source['config']} split={source['split']} "
+        f"for local scale {scale} from HuggingFace..."
+    )
+    ds = load_dataset_fn(
+        source["repository"],
+        source["config"],
+        split=source["split"],
+    )
+    print(f"  -> {len(ds)} raw rows")
 
     out: list[dict[str, Any]] = []
     for i, row in enumerate(ds):
@@ -117,11 +192,11 @@ def convert_hf_split(scale: str, out_path: Path, max_conversations: int | None) 
         if max_conversations is not None and len(out) >= max_conversations:
             break
         if (i + 1) % 50 == 0:
-            print(f"  processed {i + 1} rows, kept {len(out)}…")
+            print(f"  processed {i + 1} rows, kept {len(out)}...")
 
     payload = {"scale": scale, "conversations": out}
     out_path.write_text(json.dumps(payload, ensure_ascii=False))
-    print(f"✅ Wrote {len(out)} conversations → {out_path} ({out_path.stat().st_size / 1_000_000:.1f} MB)")
+    print(f"[ok] Wrote {len(out)} conversations -> {out_path} ({out_path.stat().st_size / 1_000_000:.1f} MB)")
     return len(out)
 
 
@@ -156,12 +231,12 @@ def write_sample(out_path: Path) -> int:
         ],
     }
     out_path.write_text(json.dumps(sample, indent=2, ensure_ascii=False))
-    print(f"✅ Wrote sample → {out_path}")
+    print(f"[ok] Wrote sample -> {out_path}")
     return 1
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Convert BEAM parquet → JSON")
+    parser = argparse.ArgumentParser(description="Convert BEAM parquet to JSON")
     parser.add_argument(
         "--scale",
         choices=SCALES + ["sample", "all"],
@@ -181,6 +256,15 @@ def main() -> None:
         help="Cap on conversations to convert (useful for smoke tests).",
     )
     args = parser.parse_args()
+
+    errors = collect_preflight_errors(args.scale, args.out_dir, args.max_conversations)
+    if errors:
+        print("BEAM conversion preflight failed:", file=sys.stderr)
+        for error in errors:
+            print(f"- {error}", file=sys.stderr)
+        raise SystemExit(2)
+
+    args.out_dir.mkdir(parents=True, exist_ok=True)
 
     scales = SCALES if args.scale == "all" else [args.scale]
     for scale in scales:

@@ -7,6 +7,8 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
+import { tokenUsage, type TokenUsage } from "../../run-support";
+
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -141,18 +143,50 @@ interface LLMJudgeResult {
 	reasoning?: string;
 }
 
+export const JUDGE_MODEL = "qwen/qwen3.7-max";
+
+export interface LLMJudgeEvaluation {
+	score: number;
+	token_usage: TokenUsage;
+}
+
+export function parseLLMJudgeResponse(text: string): number {
+	const normalized = text.trim();
+	if (!normalized) {
+		throw new Error("Judge returned an empty response");
+	}
+
+	try {
+		const result = JSON.parse(normalized) as LLMJudgeResult;
+		const label = result.label?.trim().toUpperCase();
+		if (label === "CORRECT") return 1;
+		if (label === "WRONG") return 0;
+		throw new Error("Judge JSON response is missing a valid CORRECT/WRONG label");
+	} catch (error) {
+		if (error instanceof SyntaxError) {
+			const upper = normalized.toUpperCase();
+			const hasCorrect = upper.includes("CORRECT");
+			const hasWrong = upper.includes("WRONG");
+			if (hasCorrect && !hasWrong) return 1;
+			if (hasWrong && !hasCorrect) return 0;
+			throw new Error("Judge response could not be parsed as CORRECT or WRONG", { cause: error });
+		}
+		throw error;
+	}
+}
+
 /**
  * Evaluate the generated answer against the gold answer using an LLM judge.
  * Includes retry logic for handling unstable API connections.
  *
- * Returns 1 for CORRECT, 0 for WRONG.
+ * Returns 1 for CORRECT and 0 for WRONG; throws if no attempt yields a valid label.
  */
 export async function evaluateLLMJudge(
 	question: string,
 	goldAnswer: string,
 	generatedAnswer: string,
 	maxRetries = 3,
-): Promise<number> {
+): Promise<LLMJudgeEvaluation> {
 	const prompt = LLM_JUDGE_PROMPT.replace("{question}", question)
 		.replace("{gold_answer}", goldAnswer)
 		.replace("{generated_answer}", generatedAnswer);
@@ -161,28 +195,16 @@ export async function evaluateLLMJudge(
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
-			const { text } = await generateText({
-				model: openrouter("qwen/qwen3.7-max"),
+			const { text, usage } = await generateText({
+				model: openrouter(JUDGE_MODEL),
 				system: "You are an impartial judge evaluating answers to questions. Always respond with valid JSON.",
 				prompt,
 			});
 
-			// Parse JSON response
-			let result: LLMJudgeResult;
-			try {
-				result = JSON.parse(text);
-			} catch {
-				// Try to extract label from non-JSON response
-				if (text.toUpperCase().includes("CORRECT") && !text.toUpperCase().includes("WRONG")) {
-					return 1;
-				}
-				return 0;
-			}
-
-			const label = result.label ?? "WRONG";
-			const score = label === "CORRECT" ? 1 : 0;
-
-			return score;
+			return {
+				score: parseLLMJudgeResponse(text),
+				token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
+			};
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
 			console.log(`[Judge] Attempt ${attempt}/${maxRetries} failed: ${lastError.message.substring(0, 80)}`);
@@ -193,8 +215,7 @@ export async function evaluateLLMJudge(
 		}
 	}
 
-	console.error(`[Judge] All ${maxRetries} attempts failed. Last error: ${lastError?.message}`);
-	return 0;
+	throw lastError ?? new Error("Judge failed without returning a result");
 }
 
 /**

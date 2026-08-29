@@ -2,6 +2,8 @@
  * Types for LongMemEval benchmark evaluation.
  */
 
+import type { TokenUsage } from "../../run-support";
+
 /**
  * A single turn in a conversation session.
  */
@@ -34,11 +36,7 @@ export interface EvaluationResult {
 	total_questions: number;
 	correct_answers: number;
 	accuracy: number;
-	token_usage: {
-		prompt_tokens: number;
-		completion_tokens: number;
-		total_tokens: number;
-	};
+	token_usage: TokenUsage;
 	predictions: Prediction[];
 	error?: string;
 }
@@ -47,6 +45,12 @@ export interface EvaluationResult {
  * Prediction result for a single question.
  */
 export interface Prediction {
+	status: "completed" | "execution_error";
+	attempt: number;
+	answerer_model: string;
+	judge_model: string;
+	error?: string;
+	token_usage: TokenUsage;
 	question: string;
 	answer: string;
 	response: string;

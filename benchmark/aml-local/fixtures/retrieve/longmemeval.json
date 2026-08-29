@@ -1,0 +1,16 @@
+[
+	{
+		"question_id": "lme-fixture-1",
+		"question": "Where does the user live?",
+		"question_type": "single-session-user",
+		"answer": "Berlin",
+		"haystack_session_ids": ["session-1"],
+		"haystack_dates": ["2024-05-01T10:00:00Z"],
+		"haystack_sessions": [
+			[
+				{ "role": "user", "content": "I moved to Berlin." },
+				{ "role": "assistant", "content": "I hope the move went well." }
+			]
+		]
+	}
+]

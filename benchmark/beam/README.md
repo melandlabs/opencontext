@@ -77,7 +77,7 @@ benchmark/beam/
 | Scoring            | binary CORRECT/WRONG                  | **nugget 0.0/0.5/1.0 per atom**                   |
 | Judge              | 1 binary prompt                       | **rubric + 1-shot** (`BEAM_NUGGET_JUDGE_PROMPT`)  |
 | Ingest             | 1 memory message per session          | **20 turns per memory message**                   |
-| Resume             | on error or wrong                     | on error only (judge re-runs)                     |
+| Resume             | Reuse all completed results; retry execution failures | Reuse completed judge results; retry errors |
 | Per-question score | `correct: bool`                       | `nugget_mean + nugget_pass (≥0.5)`                |
 
 ## CLI
@@ -86,8 +86,10 @@ benchmark/beam/
 # Show help
 pnpm --filter @melandlabs/benchmark-beam benchmark -- --help
 
-# Smoke test (uses bundled sample, no HF download)
+# Offline data-preparation smoke (no credentials or HF download)
 python dataset/convert.py --scale sample
+
+# Local evaluation smoke (requires daemon + provider credentials; incurs model calls)
 pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json
 
@@ -117,6 +119,12 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
 | `-p, --port <n>`                 | OpenContext memory daemon port (default: 7421, env: `OPENCONTEXT_PORT` / `OPENCONTEXT_URL`) |
 | `-o, --output <path>`            | Write results JSON to this path                     |
 
+Before ingest or model calls, the CLI checks the dataset and filters, daemon,
+credentials, output/checkpoint paths, and arguments. It reports all detected
+failures together and never prints credential values. `--help` does not run
+these checks. `--resume` reuses completed judge results regardless of pass/fail;
+`--no-resume` ignores existing checkpoints.
+
 ## Output JSON shape
 
 ```jsonc
@@ -126,6 +134,8 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   "conversations_run": 35,
   "questions_run": 700,
   "categories_filter": null,
+  "token_usage": { "prompt_tokens": 1000, "completion_tokens": 200, "total_tokens": 1200 },
+  "run_manifest": { "schema_version": 1, "git_commit": "...", "wall_clock_ms": 12345, … },
   "summary": {
     "count": 700,
     "nugget_mean": 0.62,
@@ -158,6 +168,11 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
 }
 ```
 
+Provider usage is recorded when returned; unavailable values are `null`, never a
+fabricated zero. With `--output results.json`, the same manifest is also written
+to `results.json.manifest.json`; without `--output`, it is written under
+`results/`.
+
 ## Smoke-test checklist
 
 ```bash
@@ -172,7 +187,7 @@ node packages/opencontext/dist/cli/opencontext.js http \
 # 3. Generate sample (offline, no HF download)
 python dataset/convert.py --scale sample
 
-# 4. Run smoke test
+# 4. Run the local evaluation smoke (this uses configured paid model providers)
 pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json \
   --output results/sample_run.json
@@ -224,5 +239,6 @@ bounded at 3 attempts.
 
 - Paper: Tavakoli et al., "BEAM: Benchmarking EffecTive Agent Memory",
   ICLR 2026. arXiv:2510.27246.
-- Dataset: <https://huggingface.co/datasets/Mohammadta/BEAM>
+- Datasets: <https://huggingface.co/datasets/Mohammadta/BEAM> (`128k`, `500k`,
+  `1m`) and <https://huggingface.co/datasets/Mohammadta/BEAM-10M> (`10m`)
 - Leaderboard: see paper §6.

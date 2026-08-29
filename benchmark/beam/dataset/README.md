@@ -13,18 +13,36 @@ TypeScript runner expects (one JSON file per scale).
 ## Quickstart
 
 ```bash
-# 1. Install Python deps (one-time)
+# Offline sample conversion: no Hugging Face dependency or network access
+python dataset/convert.py --scale sample
+
+# Non-sample conversion: install dependencies once
 pip install pyarrow datasets
 
-# 2. Convert a scale
+# Convert a published scale
+python dataset/convert.py --scale 128k   # writes dataset/beam_128k.json
+python dataset/convert.py --scale 500k   # writes dataset/beam_500k.json
 python dataset/convert.py --scale 1m     # writes dataset/beam_1m.json
 python dataset/convert.py --scale 10m    # writes dataset/beam_10m.json
-python dataset/convert.py --scale sample # writes sample_conversation.json (no HF download)
 
-# 3. Run the benchmark
+# Run the local TypeScript evaluation (requires daemon and model credentials)
 pnpm --filter @melandlabs/benchmark-beam benchmark -- \
   --dataset dataset/sample_conversation.json
 ```
+
+## Published source mapping
+
+`convert.py` uses an explicit mapping rather than deriving Hugging Face names:
+
+| Local scale | Repository | Config | Split |
+| ----------- | ---------- | ------ | ----- |
+| `128k` | `Mohammadta/BEAM` | `default` | `100K` |
+| `500k` | `Mohammadta/BEAM` | `default` | `500K` |
+| `1m` | `Mohammadta/BEAM` | `default` | `1M` |
+| `10m` | `Mohammadta/BEAM-10M` | `default` | `10M` |
+
+Non-sample conversion checks `datasets`, `pyarrow`, arguments, and the output
+path before calling Hugging Face. `sample` never imports those dependencies.
 
 ## Why Python for the conversion?
 
