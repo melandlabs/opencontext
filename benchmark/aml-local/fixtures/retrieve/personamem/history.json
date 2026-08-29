@@ -1,0 +1,6 @@
+{
+	"chat_history": [
+		{ "role": "user", "content": "Cats are my favorite pets." },
+		{ "role": "assistant", "content": "I will keep that preference in mind." }
+	]
+}

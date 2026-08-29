@@ -1,0 +1,19 @@
+[
+	{
+		"sample_id": "locomo-fixture-1",
+		"conversation": {
+			"session_1": [
+				{ "speaker": "Caroline", "text": "My favorite color is green." },
+				{ "speaker": "Melanie", "text": "I will remember that." }
+			],
+			"session_1_date_time": "2024-01-02T09:00:00Z"
+		},
+		"qa": [
+			{
+				"question": "What is Caroline's favorite color?",
+				"answer": "Green",
+				"category": 1
+			}
+		]
+	}
+]

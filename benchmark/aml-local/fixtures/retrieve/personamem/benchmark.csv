@@ -1,0 +1,2 @@
+persona_id,chat_history_32k_link,user_query,correct_answer,incorrect_answers,preference
+persona-1,history.json,"{'role': 'user', 'content': 'Which pet would suit me?'}",A cat,"['A dog', 'A bird']",Prefers cats

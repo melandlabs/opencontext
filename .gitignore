@@ -193,8 +193,7 @@ benchmark/beam/dataset/beam_10m.json
 benchmark/scriptmem/dataset/raw/
 benchmark/scriptmem/dataset/scripts/
 
-# AML local experiment harness (local-only probes/builders, not for upstream)
-benchmark/aml-local/retrieve.py
+# AML local experiment helpers (local-only probes/builders, not for upstream)
 benchmark/aml-local/_probe_openrouter.py
 benchmark/aml-local/_lme_sample100_ids.txt
 benchmark/aml-local/build_union.py

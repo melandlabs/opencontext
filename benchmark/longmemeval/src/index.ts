@@ -71,7 +71,31 @@ function parseCliArgs(): CliArgs {
 	};
 }
 
-function printHelp(): void {}
+function printHelp(): void {
+	// biome-ignore lint/suspicious/noConsole: CLI help is intentionally written to stdout
+	console.log(`LongMemEval Benchmark CLI
+
+Usage:
+  pnpm benchmark -- --dataset <path.json> [options]
+
+Required:
+  -d, --dataset <path>        Path to LongMemEval JSON dataset
+
+Filter:
+  -s, --samples <csv>         Filter to question IDs (csv)
+  -q, --quick                 Run the first 5 entries
+
+Mode:
+      --resume / --no-resume  Reuse cached judge results (default: resume)
+
+API:
+  -p, --port <n>              OpenContext memory daemon port (default: 7421,
+                              env: OPENCONTEXT_PORT / OPENCONTEXT_URL)
+
+Output:
+  -o, --output <path>         Write results JSON to this path
+`);
+}
 
 async function printEvaluationSummary(resultsByType: Record<string, Prediction[]>): Promise<void> {
 	// Calculate overall metrics

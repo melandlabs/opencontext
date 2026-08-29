@@ -1,0 +1,11 @@
+[
+	{
+		"sample_id": "fixture-1",
+		"conversation": {
+			"speakers": ["Juror 1", "Juror 2"],
+			"session_1": [{ "speaker": "Juror 1", "text": "The vote is not unanimous." }],
+			"session_1_date_time": "1957-01-01T00:00:00Z"
+		},
+		"qa": [{ "question": "Was the vote unanimous?", "qa_type": "single", "answer": "B" }]
+	}
+]

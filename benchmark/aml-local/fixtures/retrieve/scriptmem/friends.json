@@ -1,0 +1,11 @@
+[
+	{
+		"sample_id": "fixture-1",
+		"conversation": {
+			"speakers": ["Rachel", "Monica"],
+			"session_1": [{ "speaker": "Rachel", "text": "I left the wedding." }],
+			"session_1_date_time": "1994-09-22T00:00:00Z"
+		},
+		"qa": [{ "question": "What did Rachel leave?", "qa_type": "single", "answer": "C" }]
+	}
+]

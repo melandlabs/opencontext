@@ -1,0 +1,1 @@
+{"metadata":{"task_id":"clbench-fixture-1"},"messages":[{"role":"user","content":"I use a standing desk."},{"role":"assistant","content":"Understood."},{"role":"user","content":"What kind of desk do I use?"}],"rubrics":[{"rubric_id":"r1","rubric_content":"Mentions a standing desk."}]}

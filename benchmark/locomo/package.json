@@ -5,6 +5,7 @@
 	"scripts": {
 		"dev": "tsx src/index.ts",
 		"benchmark": "tsx src/index.ts",
+		"typecheck": "tsc --noEmit",
 		"lint": "node ../../node_modules/@biomejs/biome/bin/biome lint",
 		"lint:fix": "node ../../node_modules/@biomejs/biome/bin/biome lint --write --unsafe"
 	},
