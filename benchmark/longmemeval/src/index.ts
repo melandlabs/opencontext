@@ -8,8 +8,12 @@ import "dotenv/config";
 import { writeFile } from "node:fs/promises";
 import { loadLongMemEvalDatasetFromJson } from "./dataset";
 import { LongMemEvalEvaluator } from "./evaluator";
-import { calculateCategoryMetrics } from "./metrics";
-import { checkOpencontextHealth, getOpencontextBaseUrl } from "./opencontext-client";
+import { JUDGE_MODEL, calculateCategoryMetrics } from "./metrics";
+import {
+	checkOpencontextHealth,
+	getAnswererModelIdentity,
+	getOpencontextBaseUrl,
+} from "./opencontext-client";
 import { QUESTION_TYPE_NAMES } from "./scorer";
 import type { Prediction } from "./types";
 
@@ -166,6 +170,11 @@ async function main() {
 
 			// Record failed prediction
 			const failedPred: Prediction = {
+				status: "execution_error",
+				attempt: 1,
+				answerer_model: getAnswererModelIdentity(),
+				judge_model: JUDGE_MODEL,
+				error: errorMessage,
 				question: entry.question,
 				answer: entry.answer,
 				response: `Error: ${errorMessage}`,

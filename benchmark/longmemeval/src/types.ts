@@ -47,6 +47,11 @@ export interface EvaluationResult {
  * Prediction result for a single question.
  */
 export interface Prediction {
+	status: "completed" | "execution_error";
+	attempt: number;
+	answerer_model: string;
+	judge_model: string;
+	error?: string;
 	question: string;
 	answer: string;
 	response: string;

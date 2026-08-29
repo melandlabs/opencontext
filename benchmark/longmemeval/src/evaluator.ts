@@ -8,18 +8,19 @@
  *   2. evaluateQuestion: retrieve relevant sessions (`POST /v1/search`),
  *      then ask the answerer LLM (see opencontext-client.ts) using only
  *      the retrieved excerpts.
- *   3. Judge unchanged (metrics.ts, OpenRouter).
+ *   3. Judge with the existing metrics.ts model and prompt (OpenRouter).
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { calculateMetrics, evaluateLLMJudge } from "./metrics";
+import { JUDGE_MODEL, calculateMetrics, evaluateLLMJudge } from "./metrics";
 import {
 	type BenchRawMessage,
 	type MemorySearchHit,
 	checkOpencontextHealth,
 	generateAnswer,
+	getAnswererModelIdentity,
 	getOpencontextBaseUrl,
 	ingestMessages,
 	searchMemory,
@@ -28,6 +29,18 @@ import type { LongMemEvalEntry, Prediction } from "./types";
 
 /** How many retrieved sessions are shown to the answerer. */
 export const RETRIEVAL_LIMIT = 8;
+
+function isReusableCheckpoint(
+	prediction: Prediction | null,
+	answererModel: string,
+	judgeModel: string,
+): boolean {
+	return (
+		prediction?.status === "completed" &&
+		prediction.answerer_model === answererModel &&
+		prediction.judge_model === judgeModel
+	);
+}
 
 /**
  * Parse timestamp string to Unix ms.
@@ -233,11 +246,20 @@ export class LongMemEvalEvaluator {
 	 * Evaluate a single question.
 	 */
 	async evaluateQuestion(entry: LongMemEvalEntry): Promise<Prediction> {
-		// Check for checkpoint (resume support) - skip if error or incorrect
 		const checkpoint = await this.loadCheckpoint(entry.question_id);
-		if (checkpoint?.response && checkpoint.correct && !checkpoint.response.startsWith("Error:")) {
+		const answererModel = getAnswererModelIdentity();
+		const judgeModel = JUDGE_MODEL;
+		if (checkpoint && isReusableCheckpoint(checkpoint, answererModel, judgeModel)) {
 			return checkpoint;
 		}
+		if (checkpoint) {
+			const message =
+				checkpoint.status === "execution_error"
+					? `Retrying ${entry.question_id}: execution error`
+					: `Re-running ${entry.question_id}: legacy/model mismatch`;
+			process.stdout.write(`[LongMemEval] ${message}\n`);
+		}
+		const attempt = (checkpoint?.attempt ?? 0) + 1;
 
 		// Convert answer to string (may be number in dataset)
 		const answerStr = String(entry.answer);
@@ -246,19 +268,16 @@ export class LongMemEvalEvaluator {
 			const response = await this.queryMemory(entry);
 
 			// Evaluate answer correctness using LLM judge
-			let isCorrect = false;
-			try {
-				isCorrect = (await evaluateLLMJudge(entry.question, answerStr, response)) === 1;
-				if (!isCorrect) {
-				}
-			} catch (judgeError) {
-				const _errMsg = judgeError instanceof Error ? judgeError.message : String(judgeError);
-			}
+			const isCorrect = (await evaluateLLMJudge(entry.question, answerStr, response)) === 1;
 
 			// Calculate additional metrics
 			const metrics = calculateMetrics(response, answerStr);
 
 			const pred: Prediction = {
+				status: "completed",
+				attempt,
+				answerer_model: answererModel,
+				judge_model: judgeModel,
 				question: entry.question,
 				answer: answerStr,
 				response,
@@ -284,6 +303,11 @@ export class LongMemEvalEvaluator {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 
 			const pred: Prediction = {
+				status: "execution_error",
+				attempt,
+				answerer_model: answererModel,
+				judge_model: judgeModel,
+				error: errorMessage,
 				question: entry.question,
 				answer: answerStr,
 				response: `Error: ${errorMessage}`,
@@ -317,6 +341,10 @@ export class LongMemEvalEvaluator {
 			`lme_${entry.question_id}`,
 		);
 		const prompt = buildAnswerPrompt(entry, hits);
-		return await generateAnswer(prompt);
+		const response = await generateAnswer(prompt);
+		if (!response.trim() || response === "(empty response)") {
+			throw new Error("Answerer returned an empty response");
+		}
+		return response;
 	}
 }

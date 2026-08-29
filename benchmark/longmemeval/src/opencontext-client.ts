@@ -22,6 +22,13 @@ export function getOpencontextBaseUrl(): string {
 
 export const BENCH_USER_ID = "benchmark_user";
 
+export function getAnswererModelIdentity(): string {
+	if (process.env.ANTHROPIC_AUTH_TOKEN) {
+		return `anthropic-compatible:${process.env.ANSWER_MODEL ?? "MiniMax-M3-highspeed"}`;
+	}
+	return `openrouter:${process.env.OPENROUTER_ANSWER_MODEL ?? "deepseek/deepseek-chat"}`;
+}
+
 export async function checkOpencontextHealth(baseUrl = getOpencontextBaseUrl()): Promise<void> {
 	let res: Response;
 	try {
