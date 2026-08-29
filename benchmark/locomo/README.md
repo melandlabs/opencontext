@@ -97,6 +97,16 @@ pnpm benchmark -- --dataset dataset/locomo_v2.json --mode observation --output r
 | `--quick`   | `-q`  | Limit to first 5 questions per sample               | false              |
 | `--output`  | `-o`  | Save results JSON to path                           | None               |
 | `--port`    | `-p`  | OpenContext daemon port (env: `OPENCONTEXT_PORT` / `OPENCONTEXT_URL`) | 7421 |
+| `--resume`  |       | Reuse completed checkpoints for the same models    | true               |
+| `--no-resume` |     | Ignore checkpoints and run every selected question | false              |
+
+Before ingest or model calls, the CLI checks the dataset and selected samples,
+daemon, credentials, output/checkpoint paths, and arguments. It reports all
+detected failures together and never prints credential values. `--help` does not
+run these checks.
+
+With `--resume`, both correct and incorrect completed judge results are reused;
+only execution failures are retried. `--no-resume` always starts a fresh run.
 
 ## Output
 
@@ -105,7 +115,12 @@ The benchmark outputs:
 - **Overall accuracy** - LLM judge accuracy across all categories
 - **Per-category metrics** - F1, BLEU-1, BLEU-4 scores by category
 - **Per-sample results** - Accuracy and token usage per sample
-- **Token totals** - Combined API token consumption
+- **Token usage** - Real provider usage when available; otherwise `null`
+- **Run manifest** - Git commit, dataset identity, models, retrieval mode/top-k,
+  selection parameters, resume mode, and wall-clock time
+
+With `--output results.json`, the manifest is written to
+`results.json.manifest.json`. Without `--output`, it is written under `results/`.
 
 ### Metrics
 

@@ -54,6 +54,63 @@ jobs:
       - run: python -m py_compile benchmark/aml-local/serve.py benchmark/aml-local/test_contract.py
       - run: python benchmark/aml-local/test_contract.py
 
+  benchmark-smoke:
+    # Offline-only coverage for the supported benchmark entrypoints. This job
+    # must not receive provider credentials, contact paid models, or download
+    # full benchmark datasets.
+    name: Benchmark smoke (offline)
+    runs-on: ubuntu-latest
+    env:
+      ANTHROPIC_AUTH_TOKEN: ""
+      OPENROUTER_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck benchmark CLIs
+        run: |
+          pnpm --filter @melandlabs/benchmark-locomo typecheck
+          pnpm --filter @melandlabs/benchmark-longmemeval typecheck
+          pnpm --filter @melandlabs/benchmark-beam typecheck
+      - name: Lint benchmark CLIs
+        run: |
+          pnpm exec biome lint benchmark/run-support.ts
+          pnpm --filter @melandlabs/benchmark-locomo lint
+          pnpm --filter @melandlabs/benchmark-longmemeval lint
+          pnpm --filter @melandlabs/benchmark-beam lint
+      - name: Check CLI help without preflight
+        run: |
+          pnpm --filter @melandlabs/benchmark-locomo benchmark -- --help
+          pnpm --filter @melandlabs/benchmark-longmemeval benchmark -- --help
+          pnpm --filter @melandlabs/benchmark-beam benchmark -- --help
+          python benchmark/beam/dataset/convert.py --help
+          python benchmark/aml-local/retrieve.py --help
+      - name: Run checkpoint, preflight, mapping, and AML fixture tests
+        run: |
+          pnpm --filter @melandlabs/benchmark-locomo test
+          pnpm --filter @melandlabs/benchmark-longmemeval test
+          (cd benchmark/beam/dataset && python -m unittest test_convert.py)
+          (cd benchmark/aml-local && python -m unittest test_retrieve.py)
+      - name: Convert bundled BEAM sample without Hugging Face dependencies
+        run: python benchmark/beam/dataset/convert.py --scale sample --out-dir "$RUNNER_TEMP/beam-sample"
+      - name: Confirm smoke tests did not change the checkout
+        run: |
+          if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+            git status --short --untracked-files=all
+            exit 1
+          fi
+
   lint:
     name: Lint (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
