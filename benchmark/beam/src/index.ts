@@ -22,9 +22,10 @@ import {
 	unavailableTokenUsage,
 	writeRunManifest,
 } from "../../run-support";
-import { expandBeamSamples, loadBeamDatasetFromJson } from "./dataset";
+import { expandBeamSamples, loadBeamDatasetWithMetadata } from "./dataset";
+import { calculateDiagnosticSummary } from "./diagnostics";
 import { BeamEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
-import { JUDGE_MODEL, type NuggetCategoryMetrics, calculateNuggetCategoryMetrics } from "./metrics";
+import { type NuggetCategoryMetrics, calculateNuggetCategoryMetrics, getJudgeModelIdentity } from "./metrics";
 import {
 	checkOpencontextHealth,
 	getAnswererModelIdentity,
@@ -36,7 +37,14 @@ import {
 	QUESTION_TYPES,
 	QUESTION_TYPE_NAMES,
 } from "./scorer";
-import type { BeamQuestionCategory, BeamScale, EvaluationResult, Prediction } from "./types";
+import {
+	BEAM_TRACE_SCHEMA_VERSION,
+	type BeamDatasetSource,
+	type BeamQuestionCategory,
+	type BeamScale,
+	type EvaluationResult,
+	type Prediction,
+} from "./types";
 
 interface CliArgs {
 	dataset: string;
@@ -187,10 +195,24 @@ Examples:
 `);
 }
 
-function printSummary(
-	predictionsByCategory: Record<BeamQuestionCategory, Prediction[]>,
-	args: CliArgs,
-): void {
+function diagnosticArtifactPath(outputPath: string, suffix: "trace" | "chunks"): string {
+	const resolved = resolve(outputPath);
+	const base = resolved.replace(/\.json$/i, "");
+	return `${base}.${suffix}.jsonl`;
+}
+
+async function writeJsonl(path: string, rows: unknown[]): Promise<void> {
+	await mkdir(dirname(path), { recursive: true });
+	const content = rows.map((row) => JSON.stringify(row)).join("\n");
+	await writeFile(path, content.length > 0 ? `${content}\n` : "", "utf-8");
+}
+
+function withoutDiagnosticTrace(prediction: Prediction): Omit<Prediction, "trace"> {
+	const { trace: _trace, ...result } = prediction;
+	return result;
+}
+
+function printSummary(predictionsByCategory: Record<BeamQuestionCategory, Prediction[]>): void {
 	console.log("=".repeat(80));
 	console.log("BEAM Evaluation Results Summary");
 	console.log("=".repeat(80));
@@ -254,7 +276,10 @@ async function main() {
 	const baseUrl = args.port ? `http://127.0.0.1:${args.port}` : getOpencontextBaseUrl();
 	const benchmarkDir = join(import.meta.dirname, "..");
 	const manifestPath = getManifestPath(args.output, benchmarkDir, startedAt);
-	let conversations: Awaited<ReturnType<typeof loadBeamDatasetFromJson>> = [];
+	const tracePath = args.output ? diagnosticArtifactPath(args.output, "trace") : undefined;
+	const chunksPath = args.output ? diagnosticArtifactPath(args.output, "chunks") : undefined;
+	let conversations: Awaited<ReturnType<typeof loadBeamDatasetWithMetadata>>["conversations"] = [];
+	let datasetSource: BeamDatasetSource | null = null;
 	let activeSamples: ReturnType<typeof expandBeamSamples> = [];
 	if (args.conversations !== undefined && (!Number.isInteger(args.conversations) || args.conversations < 1)) {
 		args.parameterErrors.push("--conversations must be a positive integer");
@@ -268,6 +293,9 @@ async function main() {
 	if (args.port !== undefined && (!Number.isInteger(args.port) || args.port < 1 || args.port > 65_535)) {
 		args.parameterErrors.push("--port must be an integer between 1 and 65535");
 	}
+	if (!process.env.OPENROUTER_JUDGE_MODEL?.trim()) {
+		args.parameterErrors.push("judge model missing: set OPENROUTER_JUDGE_MODEL");
+	}
 
 	await runPreflight({
 		datasetPath: args.dataset,
@@ -275,15 +303,19 @@ async function main() {
 			manifestPath,
 			join(benchmarkDir, "checkpoints", "beam", ".preflight"),
 			...(args.output ? [args.output] : []),
+			...(tracePath ? [tracePath] : []),
+			...(chunksPath ? [chunksPath] : []),
 		],
 		parameterErrors: args.parameterErrors,
 		validateDataset: async () => {
-			conversations = await loadBeamDatasetFromJson(args.dataset, {
+			const loaded = await loadBeamDatasetWithMetadata(args.dataset, {
 				conversations: args.conversations,
 				questionsPerConv: args.questionsPerConv,
 				types: args.types,
 				assertScale: args.scale,
 			});
+			conversations = loaded.conversations;
+			datasetSource = loaded.source;
 			activeSamples = expandBeamSamples(conversations);
 			if (args.quick) activeSamples = activeSamples.slice(0, 5);
 			if (conversations.length === 0 || activeSamples.length === 0) {
@@ -323,10 +355,9 @@ async function main() {
 
 	let lastConvEntryId = "";
 	let chunkCount = 0;
+	const evaluator = new BeamEvaluator(baseUrl, undefined, args.resume);
 
 	for (const sample of activeSamples) {
-		const evaluator = new BeamEvaluator(baseUrl, undefined, args.resume);
-
 		try {
 			// Re-load conversation if we moved to a new one
 			if (sample.conversation.entry_id !== lastConvEntryId) {
@@ -340,26 +371,17 @@ async function main() {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			console.error(`Error on ${sample.question.question_id}: ${errorMessage}`);
 
-			const failedPred: Prediction = {
-				token_usage: unavailableTokenUsage(),
-				question_id: sample.question.question_id,
-				question: sample.question.question,
-				response: `Error: ${errorMessage}`,
-				prediction: `Error: ${errorMessage}`,
-				atoms: sample.question.atoms,
-				category: sample.question.category,
-				scale: sample.conversation.scale,
-				nugget_scores: sample.question.atoms.map(() => 0),
-				nugget_mean: 0,
-				nugget_pass: false,
-				judge_reasoning: `agent failure: ${errorMessage}`,
-				abstained: false,
-			};
+			const failedPred = evaluator.createExecutionErrorPrediction(
+				sample.conversation,
+				sample.question,
+				error,
+				"ingest",
+			);
 			predictionsByCategory[failedPred.category].push(failedPred);
 		}
 	}
 
-	printSummary(predictionsByCategory, args);
+	printSummary(predictionsByCategory);
 
 	// Build per-entry EvaluationResult array for the JSON output
 	const perEntry = new Map<string, EvaluationResult>();
@@ -398,12 +420,13 @@ async function main() {
 
 	const predictions = Object.values(predictionsByCategory).flat();
 	const runTokenUsage = sumTokenUsage(predictions.map((prediction) => prediction.token_usage));
+	const diagnosticSummary = calculateDiagnosticSummary(predictions);
 	const finishedAt = new Date().toISOString();
 	const runManifest = await writeRunManifest(manifestPath, {
 		benchmark: "beam",
 		datasetPath: args.dataset,
 		answerer_model: getAnswererModelIdentity(),
-		judge_model: JUDGE_MODEL,
+		judge_model: getJudgeModelIdentity(),
 		retrieval: { strategy: "memory-search", top_k: RETRIEVAL_LIMIT },
 		resume: args.resume,
 		started_at: startedAt,
@@ -415,6 +438,10 @@ async function main() {
 			categories: args.types ?? null,
 			scale: args.scale ?? null,
 			quick: args.quick ?? false,
+			trace_schema_version: BEAM_TRACE_SCHEMA_VERSION,
+			dataset_source: datasetSource,
+			trace_artifact: tracePath ?? null,
+			chunks_artifact: chunksPath ?? null,
 		},
 	});
 	const output = {
@@ -425,6 +452,12 @@ async function main() {
 		categories_filter: args.types ?? null,
 		summary: calculateNuggetCategoryMetrics(predictions),
 		token_usage: runTokenUsage,
+		diagnostics: diagnosticSummary,
+		diagnostic_artifacts: {
+			trace_schema_version: BEAM_TRACE_SCHEMA_VERSION,
+			trace: tracePath ?? null,
+			chunks: chunksPath ?? null,
+		},
 		run_manifest: runManifest,
 		per_category: Object.fromEntries(
 			QUESTION_TYPES.filter((c) => predictionsByCategory[c].length > 0).map((c) => [
@@ -441,8 +474,46 @@ async function main() {
 
 	if (args.output) {
 		await mkdir(dirname(resolve(args.output)), { recursive: true });
-		await writeFile(args.output, JSON.stringify(output, null, 2), "utf-8");
+		const withoutEmbeddedTraces = {
+			...output,
+			per_entry: output.per_entry.map((entry) => ({
+				...entry,
+				predictions: entry.predictions.map(withoutDiagnosticTrace),
+			})),
+			predictions: output.predictions.map(withoutDiagnosticTrace),
+		};
+		await writeFile(args.output, JSON.stringify(withoutEmbeddedTraces, null, 2), "utf-8");
+		await writeJsonl(
+			tracePath as string,
+			predictions.map((prediction) => ({
+				schema_version: prediction.trace_schema_version,
+				question_id: prediction.question_id,
+				entry_id: prediction.entry_id,
+				conversation_sha256: prediction.conversation_sha256,
+				question_sha256: prediction.question_sha256,
+				question: prediction.question,
+				gold_answer: prediction.gold_answer,
+				atoms: prediction.atoms,
+				source: prediction.source,
+				status: prediction.status,
+				attempt: prediction.attempt,
+				execution_error: prediction.execution_error ?? null,
+				failure_stage: prediction.failure_stage,
+				answerer_model: prediction.answerer_model,
+				judge_model: prediction.judge_model,
+				response: prediction.response,
+				nugget_scores: prediction.nugget_scores,
+				nugget_mean: prediction.nugget_mean,
+				nugget_pass: prediction.nugget_pass,
+				judge_reasoning: prediction.judge_reasoning,
+				token_usage: prediction.token_usage,
+				trace: prediction.trace,
+			})),
+		);
+		await writeJsonl(chunksPath as string, evaluator.getChunkTraces());
 		console.log(`💾 Results saved to: ${args.output}`);
+		console.log(`🔎 Question traces saved to: ${tracePath}`);
+		console.log(`🧩 Chunk manifest saved to: ${chunksPath}`);
 	}
 	console.log(`🧾 Run manifest saved to: ${manifestPath}`);
 

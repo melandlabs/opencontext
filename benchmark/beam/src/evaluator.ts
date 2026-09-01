@@ -19,23 +19,40 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-import { sumTokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
+import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
+import { buildAnswerAttribution, buildRetrievalTrace, deriveFailureStage, sha256Text } from "./diagnostics";
 import {
 	type NuggetJudgeResult,
 	evaluateNuggetJudge,
+	getJudgeModelIdentity,
 	looksLikeAbstention,
 	summarizeNuggetScores,
 } from "./metrics";
 import {
 	type BenchRawMessage,
+	INGEST_BATCH_SIZE,
+	type IngestBatchTrace,
+	IngestMessagesError,
 	type MemorySearchHit,
+	type MemorySearchResponse,
 	checkOpencontextHealth,
 	generateAnswer,
+	getAnswererModelIdentity,
 	getOpencontextBaseUrl,
 	ingestMessages,
 	searchMemory,
 } from "./opencontext-client";
-import type { BeamConversation, BeamProbingQuestion, BeamTurn, Prediction } from "./types";
+import {
+	BEAM_TRACE_SCHEMA_VERSION,
+	type BeamAnswerTrace,
+	type BeamChunkTrace,
+	type BeamConversation,
+	type BeamJudgeTrace,
+	type BeamProbingQuestion,
+	type BeamRetrievalTrace,
+	type BeamTurn,
+	type Prediction,
+} from "./types";
 
 /**
  * How many turns go into a single ingested memory message.
@@ -94,8 +111,12 @@ function buildChunkText(
 /**
  * Convert a BEAM conversation into raw messages for the memory store.
  */
-function buildConversationMessages(conv: BeamConversation): BenchRawMessage[] {
+export function buildConversationMessages(conv: BeamConversation): {
+	messages: BenchRawMessage[];
+	chunks: BeamChunkTrace[];
+} {
 	const messages: BenchRawMessage[] = [];
+	const chunks: BeamChunkTrace[] = [];
 	const now = Date.now();
 
 	let chunkIndex = 0;
@@ -107,9 +128,13 @@ function buildConversationMessages(conv: BeamConversation): BenchRawMessage[] {
 
 		const firstTs = slice[0]?.timestamp;
 		const lastTs = slice[slice.length - 1]?.timestamp;
+		const sourceTurnIds = slice
+			.map((turn) => turn.source_id)
+			.filter((id): id is string => typeof id === "string");
+		const messageId = `beam_${conv.entry_id}__chunk_${chunkIndex}`;
 
 		messages.push({
-			messageId: `beam_${conv.entry_id}__chunk_${chunkIndex}`,
+			messageId,
 			userId: "benchmark_user",
 			platform: "benchmark",
 			botId: "beam",
@@ -123,13 +148,57 @@ function buildConversationMessages(conv: BeamConversation): BenchRawMessage[] {
 				contentType: "beam_chunk",
 				turnStart: startTurn,
 				turnEnd: endTurn,
+				sourceTurnIds,
 			},
+		});
+		chunks.push({
+			schema_version: BEAM_TRACE_SCHEMA_VERSION,
+			entry_id: conv.entry_id,
+			scale: conv.scale,
+			message_id: messageId,
+			chunk_index: chunkIndex,
+			ingest_batch_index: Math.floor(chunkIndex / INGEST_BATCH_SIZE),
+			turn_start: startTurn,
+			turn_end: endTurn,
+			source_turn_ids: sourceTurnIds,
+			content_sha256: sha256Text(text),
+			content_characters: text.length,
+			first_timestamp: firstTs ?? null,
+			last_timestamp: lastTs ?? null,
+			ingest_status: "pending",
+			ingest_latency_ms: null,
+			ingest_warnings: [],
 		});
 
 		chunkIndex++;
 	}
 
-	return messages;
+	return { messages, chunks };
+}
+
+export function fingerprintConversation(conv: BeamConversation): string {
+	return sha256Text(JSON.stringify({ entry_id: conv.entry_id, scale: conv.scale, chat: conv.chat }));
+}
+
+export function fingerprintQuestion(question: BeamProbingQuestion): string {
+	return sha256Text(JSON.stringify(question));
+}
+
+function applyIngestBatchTraces(chunks: BeamChunkTrace[], batches: IngestBatchTrace[]): void {
+	const byMessageId = new Map(
+		batches.flatMap((batch) => batch.message_ids.map((messageId) => [messageId, batch] as const)),
+	);
+	for (const chunk of chunks) {
+		const batch = byMessageId.get(chunk.message_id);
+		if (!batch) {
+			chunk.ingest_status = "not_attempted";
+			continue;
+		}
+		chunk.ingest_status = batch.status;
+		chunk.ingest_latency_ms = batch.latency_ms;
+		chunk.ingest_warnings = batch.warnings;
+		if (batch.error) chunk.error = batch.error;
+	}
 }
 
 function buildAnswerPrompt(
@@ -206,6 +275,8 @@ export class BeamEvaluator {
 	private quickLimit?: number;
 	private checkpointDir: string;
 	private resume: boolean;
+	private chunkTraces = new Map<string, BeamChunkTrace>();
+	private conversationFingerprints = new Map<string, string>();
 
 	constructor(baseUrl?: string, quickLimit?: number, resume = true) {
 		this.baseUrl = baseUrl ?? getOpencontextBaseUrl();
@@ -237,15 +308,87 @@ export class BeamEvaluator {
 		}
 	}
 
+	getChunkTraces(): BeamChunkTrace[] {
+		return [...this.chunkTraces.values()];
+	}
+
+	createExecutionErrorPrediction(
+		conv: BeamConversation,
+		question: BeamProbingQuestion,
+		error: unknown,
+		stage: "ingest" | "retrieval" | "answerer" | "judge" | "provider",
+		attempt = 1,
+		trace: { retrieval?: BeamRetrievalTrace | null; answerer?: BeamAnswerTrace | null } = {},
+	): Prediction {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		return {
+			trace_schema_version: BEAM_TRACE_SCHEMA_VERSION,
+			entry_id: conv.entry_id,
+			conversation_sha256: this.conversationFingerprints.get(conv.entry_id) ?? fingerprintConversation(conv),
+			question_sha256: fingerprintQuestion(question),
+			status: "execution_error",
+			attempt,
+			execution_error: { stage, message: errorMessage },
+			token_usage: unavailableTokenUsage(),
+			answerer_model: getAnswererModelIdentity(),
+			judge_model: getJudgeModelIdentity(),
+			question_id: question.question_id,
+			question: question.question,
+			gold_answer: question.gold_answer ?? null,
+			source: question.source,
+			response: `Error: ${errorMessage}`,
+			prediction: `Error: ${errorMessage}`,
+			atoms: question.atoms,
+			category: question.category,
+			scale: conv.scale,
+			nugget_scores: question.atoms.map(() => 0),
+			nugget_mean: 0,
+			nugget_pass: false,
+			judge_reasoning: `agent failure: ${errorMessage}`,
+			trace: {
+				retrieval: trace.retrieval ?? null,
+				answerer: trace.answerer ?? null,
+				judge: null,
+			},
+			failure_stage: deriveFailureStage({
+				question,
+				retrieval: trace.retrieval ?? null,
+				nuggetPass: false,
+				executionStage: stage,
+			}),
+			abstained: false,
+		};
+	}
+
 	/**
 	 * Ingest a BEAM conversation into the OpenContext memory store.
 	 * Returns the number of ingested chunk messages.
 	 */
 	async loadConversation(conv: BeamConversation): Promise<number> {
-		const messages = buildConversationMessages(conv);
-		const inserted = await ingestMessages(messages, this.baseUrl, beamUserId(conv));
-		console.log(`[BEAM] Ingested ${inserted} chunk messages for ${conv.entry_id} → ${this.baseUrl}`);
-		return messages.length;
+		const { messages, chunks } = buildConversationMessages(conv);
+		this.conversationFingerprints.set(conv.entry_id, fingerprintConversation(conv));
+		for (const chunk of chunks) this.chunkTraces.set(chunk.message_id, chunk);
+		const startedAt = performance.now();
+		try {
+			const ingestResult = await ingestMessages(messages, this.baseUrl, beamUserId(conv));
+			applyIngestBatchTraces(chunks, ingestResult.batches);
+			console.log(
+				`[BEAM] Ingested ${ingestResult.inserted} chunk messages for ${conv.entry_id} → ${this.baseUrl}`,
+			);
+			return messages.length;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (error instanceof IngestMessagesError) applyIngestBatchTraces(chunks, error.result.batches);
+			else {
+				const latencyMs = Math.round(performance.now() - startedAt);
+				for (const chunk of chunks) {
+					chunk.ingest_status = "execution_error";
+					chunk.ingest_latency_ms = latencyMs;
+					chunk.error = message;
+				}
+			}
+			throw error;
+		}
 	}
 
 	/**
@@ -256,11 +399,25 @@ export class BeamEvaluator {
 		question: BeamProbingQuestion,
 		_chunkCount: number,
 	): Promise<Prediction> {
-		// Resume support — but re-judge on resume so a stale judge doesn't
-		// poison the run if we re-run with a new judge model.
+		const answererModel = getAnswererModelIdentity();
+		const judgeModel = getJudgeModelIdentity();
+		const conversationSha256 =
+			this.conversationFingerprints.get(conv.entry_id) ?? fingerprintConversation(conv);
+		const questionSha256 = fingerprintQuestion(question);
+
+		// Reuse only completed results produced by the currently configured models.
 		const checkpoint = await this.loadCheckpoint(question.question_id);
+		const checkpointMatchesContext =
+			checkpoint?.trace_schema_version === BEAM_TRACE_SCHEMA_VERSION &&
+			checkpoint.entry_id === conv.entry_id &&
+			checkpoint.conversation_sha256 === conversationSha256 &&
+			checkpoint.question_sha256 === questionSha256 &&
+			checkpoint.answerer_model === answererModel &&
+			checkpoint.judge_model === judgeModel;
 		if (
 			checkpoint?.response &&
+			checkpointMatchesContext &&
+			checkpoint.status === "completed" &&
 			!checkpoint.response.startsWith("Error:") &&
 			checkpoint.nugget_scores.length === question.atoms.length &&
 			!checkpoint.judge_reasoning.startsWith("judge failure")
@@ -268,39 +425,185 @@ export class BeamEvaluator {
 			console.log(`[BEAM] Resuming from checkpoint for ${question.question_id}`);
 			return checkpoint;
 		}
+		if (
+			checkpoint &&
+			(checkpoint.answerer_model !== answererModel || checkpoint.judge_model !== judgeModel)
+		) {
+			console.log(`[BEAM] Ignoring checkpoint for ${question.question_id}: model configuration changed`);
+		} else if (checkpoint && checkpoint.trace_schema_version !== BEAM_TRACE_SCHEMA_VERSION) {
+			console.log(`[BEAM] Ignoring legacy checkpoint for ${question.question_id}: diagnostic trace missing`);
+		} else if (
+			checkpoint &&
+			(checkpoint.entry_id !== conv.entry_id ||
+				checkpoint.conversation_sha256 !== conversationSha256 ||
+				checkpoint.question_sha256 !== questionSha256)
+		) {
+			console.log(`[BEAM] Ignoring checkpoint for ${question.question_id}: conversation data changed`);
+		} else if (checkpoint?.status === "execution_error") {
+			console.log(`[BEAM] Retrying execution error for ${question.question_id}`);
+		}
 
+		const attempt =
+			checkpointMatchesContext && checkpoint.status === "execution_error" ? (checkpoint.attempt ?? 0) + 1 : 1;
 		let answerUsage = unavailableTokenUsage();
 		let judgeUsage = unavailableTokenUsage();
+		let retrievalTrace: BeamRetrievalTrace | null = null;
+		let answerTrace: BeamAnswerTrace | null = null;
+		let executionStage: "retrieval" | "answerer" | "judge" = "retrieval";
 		try {
-			const hits = await searchMemory(question.question, RETRIEVAL_LIMIT, this.baseUrl, beamUserId(conv));
+			const searchStartedAt = performance.now();
+			let searchResponse: MemorySearchResponse;
+			try {
+				searchResponse = await searchMemory(
+					question.question,
+					RETRIEVAL_LIMIT,
+					this.baseUrl,
+					beamUserId(conv),
+				);
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				const availableSet = new Set(
+					conv.chat.map((turn) => turn.source_id).filter((id): id is string => typeof id === "string"),
+				);
+				const requiredIds = [...new Set(question.source.source_chat_ids)];
+				const availableIds = requiredIds.filter((id) => availableSet.has(id));
+				const missingIds = requiredIds.filter((id) => !availableSet.has(id));
+				retrievalTrace = {
+					status: "execution_error",
+					query: question.question,
+					user_id: beamUserId(conv),
+					top_k: RETRIEVAL_LIMIT,
+					strategy: "daemon-default",
+					latency_ms: Math.round(performance.now() - searchStartedAt),
+					response_query: question.question,
+					response_sources: [],
+					response_count: 0,
+					response_warnings: [],
+					response_reasoning: null,
+					hits: [],
+					retrieval_applicable: question.source.source_chat_ids.length > 0,
+					required_source_turn_ids: requiredIds,
+					available_source_turn_ids: availableIds,
+					missing_source_turn_ids: missingIds,
+					retrieved_source_turn_ids: [],
+					missed_source_turn_ids: requiredIds,
+					dataset_source_coverage: requiredIds.length > 0 ? availableIds.length / requiredIds.length : null,
+					source_recall_at_k: null,
+					retrievable_source_recall_at_k: null,
+					all_required_sources_retrieved: null,
+					hit_at_k: null,
+					first_relevant_rank: null,
+					mrr: null,
+					precision_at_k: null,
+					relevant_hit_precision: null,
+					error: message,
+				};
+				throw error;
+			}
+			retrievalTrace = buildRetrievalTrace({
+				question,
+				response: searchResponse,
+				chunksByMessageId: this.chunkTraces,
+				availableSourceTurnIds: conv.chat
+					.map((turn) => turn.source_id)
+					.filter((id): id is string => typeof id === "string"),
+				userId: beamUserId(conv),
+				topK: RETRIEVAL_LIMIT,
+				latencyMs: Math.round(performance.now() - searchStartedAt),
+			});
+			const hits = searchResponse.results;
 			const prompt = buildAnswerPrompt(conv, question, hits);
-			const answerResult = await generateAnswer(prompt);
-			answerUsage = answerResult.token_usage;
-			const response = answerResult.text;
-			if (!response.trim()) throw new Error("answerer returned an empty response");
+			executionStage = "answerer";
+			const answerStartedAt = performance.now();
+			let response: string;
+			try {
+				const answerResult = await generateAnswer(prompt);
+				answerUsage = answerResult.token_usage;
+				response = answerResult.text;
+				if (!response.trim()) throw new Error("answerer returned an empty response");
+			} catch (error) {
+				const message = error instanceof Error ? error.message : String(error);
+				answerTrace = {
+					model: answererModel,
+					status: "execution_error",
+					attempt: 1,
+					latency_ms: Math.round(performance.now() - answerStartedAt),
+					prompt_version: "beam-answer-v1",
+					prompt_sha256: sha256Text(prompt),
+					prompt_characters: prompt.length,
+					system_prompt: null,
+					prompt,
+					token_usage: answerUsage,
+					included_hit_ids: hits.map((hit) => hit.id),
+					cited_hit_ids: [],
+					cited_relevant_hit_ids: [],
+					attribution_status: retrievalTrace.retrieval_applicable ? "uncited" : "not_applicable",
+					error: message,
+				};
+				throw error;
+			}
+			const attribution = buildAnswerAttribution(response, retrievalTrace);
+			answerTrace = {
+				model: answererModel,
+				status: "completed",
+				attempt: 1,
+				latency_ms: Math.round(performance.now() - answerStartedAt),
+				prompt_version: "beam-answer-v1",
+				prompt_sha256: sha256Text(prompt),
+				prompt_characters: prompt.length,
+				system_prompt: null,
+				prompt,
+				token_usage: answerUsage,
+				included_hit_ids: hits.map((hit) => hit.id),
+				...attribution,
+			};
 
 			const abstained = looksLikeAbstention(response);
 
-			let judgeResult: NuggetJudgeResult;
-			if (question.atoms.length === 0) {
-				console.warn(`[BEAM] Question ${question.question_id} has no atoms — using empty judge result`);
-				judgeResult = { scores: [], reasoning: "no atoms", token_usage: zeroTokenUsage() };
-			} else {
-				judgeResult = await evaluateNuggetJudge(
-					question.question,
-					question.category,
-					question.atoms,
-					response,
-				);
-			}
+			executionStage = "judge";
+			const judgeResult: NuggetJudgeResult = await evaluateNuggetJudge(
+				question.question,
+				question.category,
+				question.atoms,
+				response,
+			);
 			judgeUsage = judgeResult.token_usage;
+			const judgeTrace: BeamJudgeTrace = {
+				model: judgeModel,
+				status: judgeResult.status,
+				attempt: judgeResult.attempt,
+				latency_ms: judgeResult.latency_ms,
+				prompt_version: judgeResult.prompt_version,
+				prompt_sha256: judgeResult.prompt_sha256,
+				prompt_characters: judgeResult.prompt_characters,
+				system_prompt: judgeResult.system_prompt,
+				prompt: judgeResult.prompt,
+				token_usage: judgeResult.token_usage,
+				raw_response: judgeResult.raw_response,
+				parse_status: judgeResult.parse_status,
+				...(judgeResult.error ? { error: judgeResult.error } : {}),
+			};
 
 			const { nugget_mean, nugget_pass } = summarizeNuggetScores(judgeResult.scores);
+			const executionError = judgeResult.status === "execution_error";
 
 			const pred: Prediction = {
+				trace_schema_version: BEAM_TRACE_SCHEMA_VERSION,
+				entry_id: conv.entry_id,
+				conversation_sha256: conversationSha256,
+				question_sha256: questionSha256,
+				status: executionError ? "execution_error" : "completed",
+				attempt,
+				...(executionError
+					? { execution_error: { stage: "judge", message: judgeResult.error ?? "judge failure" } }
+					: {}),
 				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
+				answerer_model: answererModel,
+				judge_model: judgeModel,
 				question_id: question.question_id,
 				question: question.question,
+				gold_answer: question.gold_answer ?? null,
+				source: question.source,
 				response,
 				prediction: response,
 				atoms: question.atoms,
@@ -310,6 +613,13 @@ export class BeamEvaluator {
 				nugget_mean,
 				nugget_pass,
 				judge_reasoning: judgeResult.reasoning,
+				trace: { retrieval: retrievalTrace, answerer: answerTrace, judge: judgeTrace },
+				failure_stage: deriveFailureStage({
+					question,
+					retrieval: retrievalTrace,
+					nuggetPass: nugget_pass,
+					...(executionError ? { executionStage: "judge" as const } : {}),
+				}),
 				abstained,
 			};
 
@@ -323,23 +633,11 @@ export class BeamEvaluator {
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			console.error(`Error evaluating question: ${errorMessage}`);
-
-			const emptyScores: number[] = question.atoms.map(() => 0);
-			const pred: Prediction = {
-				token_usage: sumTokenUsage([answerUsage, judgeUsage]),
-				question_id: question.question_id,
-				question: question.question,
-				response: `Error: ${errorMessage}`,
-				prediction: `Error: ${errorMessage}`,
-				atoms: question.atoms,
-				category: question.category,
-				scale: conv.scale,
-				nugget_scores: emptyScores,
-				nugget_mean: 0,
-				nugget_pass: false,
-				judge_reasoning: `agent failure: ${errorMessage}`,
-				abstained: false,
-			};
+			const pred = this.createExecutionErrorPrediction(conv, question, error, executionStage, attempt, {
+				retrieval: retrievalTrace,
+				answerer: answerTrace,
+			});
+			pred.token_usage = sumTokenUsage([answerUsage, judgeUsage]);
 
 			await this.saveCheckpoint(question.question_id, pred);
 			return pred;

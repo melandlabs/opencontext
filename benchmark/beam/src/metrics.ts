@@ -8,14 +8,19 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
-import { tokenUsage, type TokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
+import { type TokenUsage, tokenUsage, unavailableTokenUsage, zeroTokenUsage } from "../../run-support";
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
 	apiKey: process.env.OPENROUTER_API_KEY,
 	name: "openrouter",
 });
+import { sha256Text } from "./diagnostics";
 import { BEAM_NUGGET_JUDGE_PROMPT } from "./prompts";
 import type { BeamQuestionCategory } from "./types";
+
+const MODEL_REQUEST_TIMEOUT_MS = 300_000;
+const JUDGE_SYSTEM_PROMPT =
+	"You are an impartial judge scoring answers to questions. Always respond with valid JSON.";
 
 /**
  * Calculate F1 score between prediction and ground truth.
@@ -115,9 +120,30 @@ export interface NuggetJudgeResult {
 	scores: number[];
 	reasoning: string;
 	token_usage: TokenUsage;
+	status: "completed" | "skipped" | "execution_error";
+	attempt: number;
+	latency_ms: number;
+	prompt_version: string;
+	prompt_sha256: string | null;
+	prompt_characters: number;
+	system_prompt: string | null;
+	prompt: string | null;
+	raw_response: string | null;
+	parse_status: "parsed" | "skipped" | "failed";
+	error?: string;
 }
 
-export const JUDGE_MODEL = "qwen/qwen3.7-max";
+export function getJudgeModel(): string {
+	const model = process.env.OPENROUTER_JUDGE_MODEL?.trim();
+	if (!model) {
+		throw new Error("Judge model missing: set OPENROUTER_JUDGE_MODEL");
+	}
+	return model;
+}
+
+export function getJudgeModelIdentity(): string {
+	return `openrouter:${getJudgeModel()}`;
+}
 
 /**
  * Normalize a raw judge score into the BEAM rubric's {0.0, 0.5, 1.0} set.
@@ -190,7 +216,21 @@ export async function evaluateNuggetJudge(
 	maxRetries = 3,
 ): Promise<NuggetJudgeResult> {
 	if (atoms.length === 0) {
-		return { scores: [], reasoning: "no atoms", token_usage: zeroTokenUsage() };
+		return {
+			scores: [],
+			reasoning: "no atoms",
+			token_usage: zeroTokenUsage(),
+			status: "skipped",
+			attempt: 0,
+			latency_ms: 0,
+			prompt_version: "beam-nugget-judge-v1",
+			prompt_sha256: null,
+			prompt_characters: 0,
+			system_prompt: null,
+			prompt: null,
+			raw_response: null,
+			parse_status: "skipped",
+		};
 	}
 
 	const prompt = BEAM_NUGGET_JUDGE_PROMPT.replace("{category}", category)
@@ -199,14 +239,18 @@ export async function evaluateNuggetJudge(
 		.replace("{answer}", generatedAnswer);
 
 	let lastError: Error | undefined;
+	let lastRawResponse: string | null = null;
+	const startedAt = performance.now();
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
 			const { text, usage } = await generateText({
-				model: openrouter(JUDGE_MODEL),
-				system: "You are an impartial judge scoring answers to questions. Always respond with valid JSON.",
+				model: openrouter(getJudgeModel()),
+				system: JUDGE_SYSTEM_PROMPT,
 				prompt,
+				abortSignal: AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS),
 			});
+			lastRawResponse = text;
 
 			let parsed: Partial<NuggetJudgeResult> | null = null;
 
@@ -233,8 +277,19 @@ export async function evaluateNuggetJudge(
 					scores,
 					reasoning: typeof parsed.reasoning === "string" ? parsed.reasoning : "(no reasoning)",
 					token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
+					status: "completed",
+					attempt,
+					latency_ms: Math.round(performance.now() - startedAt),
+					prompt_version: "beam-nugget-judge-v1",
+					prompt_sha256: sha256Text(prompt),
+					prompt_characters: prompt.length,
+					system_prompt: JUDGE_SYSTEM_PROMPT,
+					prompt,
+					raw_response: text,
+					parse_status: "parsed",
 				};
 			}
+			lastError = new Error("judge response did not contain a valid scores array");
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
 			console.log(`[Judge] Attempt ${attempt}/${maxRetries} failed: ${lastError.message.substring(0, 80)}`);
@@ -249,6 +304,17 @@ export async function evaluateNuggetJudge(
 		scores: atoms.map(() => 0),
 		reasoning: `judge failure: ${lastError?.message ?? "unknown"}`,
 		token_usage: unavailableTokenUsage(),
+		status: "execution_error",
+		attempt: maxRetries,
+		latency_ms: Math.round(performance.now() - startedAt),
+		prompt_version: "beam-nugget-judge-v1",
+		prompt_sha256: sha256Text(prompt),
+		prompt_characters: prompt.length,
+		system_prompt: JUDGE_SYSTEM_PROMPT,
+		prompt,
+		raw_response: lastRawResponse,
+		parse_status: "failed",
+		error: lastError?.message ?? "unknown judge failure",
 	};
 }
 

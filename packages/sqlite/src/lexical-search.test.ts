@@ -91,4 +91,41 @@ describe("SQLiteRawMessageManager.lexicalSearchMessages", () => {
 
 		await manager.close();
 	});
+
+	it("preserves benchmark provenance metadata in semantic and lexical hits", async () => {
+		const manager = new SQLiteRawMessageManager({
+			dbPath: join(scratchDir, "store.db"),
+			enableVectorSearch: false,
+		});
+		await manager.init();
+
+		await manager.storeMessage(
+			makeMessage({
+				messageId: "beam-conv-1-chunk-0",
+				content: "Berlin provenance marker",
+				embedding: [1, 0, 0],
+				embeddingModel: "fixture",
+				metadata: {
+					entryId: "conv-1",
+					chunkIndex: 0,
+					sourceTurnIds: ["41", "42"],
+				},
+			}),
+		);
+
+		const semanticHits = await manager.searchMessagesSemantically({
+			userId: "u1",
+			queryEmbedding: [1, 0, 0],
+			threshold: 0.9,
+		});
+		const lexicalHits = await manager.lexicalSearchMessages({ userId: "u1", keywords: ["Berlin"] });
+
+		for (const hit of [...semanticHits, ...lexicalHits]) {
+			expect(hit.metadata.entryId).toBe("conv-1");
+			expect(hit.metadata.chunkIndex).toBe(0);
+			expect(hit.metadata.sourceTurnIds).toEqual(["41", "42"]);
+		}
+
+		await manager.close();
+	});
 });
