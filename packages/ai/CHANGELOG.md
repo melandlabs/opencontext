@@ -1,5 +1,12 @@
 # @melandlabs/ai
 
+## 0.10.3
+
+### Patch Changes
+
+- 39fb4eb: Add `agent/structured-call` subpath: `executeStructuredCall`, a single forced-tool LLM call primitive speaking the Anthropic Messages wire format over native fetch, plus the wire-tolerance helpers `extractToolUseInput`, `findShapedObject`, and `extractBalancedJsonObject` generalized from alloomi's digital-employee planner.
+- 140a028: Track the republished 0.10.2 build as the new baseline for workspace tooling.
+
 ## 0.10.2
 
 ### Patch Changes
