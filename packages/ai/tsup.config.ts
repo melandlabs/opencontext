@@ -32,6 +32,7 @@ export default defineConfig({
 		"agent/compaction/index": "src/agent/compaction/index.ts",
 		"agent/compaction/compaction": "src/agent/compaction/compaction.ts",
 		"agent/compaction/compaction-client": "src/agent/compaction/compaction-client.ts",
+		"agent/structured-call/index": "src/agent/structured-call/index.ts",
 		"context/index": "src/context/index.ts",
 		"agent/model/index": "src/agent/model/index.ts",
 		"agent/routing/index": "src/agent/routing/index.ts",

@@ -55,6 +55,33 @@ export type {
 	CompactionResult,
 } from "./agent/compaction";
 
+// Structured call (single forced-tool LLM call primitive)
+// NOT re-exported from the agent barrel — see the NOTE in ./agent/index.ts.
+// Import from `@melandlabs/ai` or `@melandlabs/ai/agent/structured-call`.
+export {
+	DEFAULT_SHAPE_WRAPPER_KEYS,
+	DEFAULT_STRUCTURED_CALL_MAX_TOKENS,
+	DEFAULT_STRUCTURED_CALL_TIMEOUT_MS,
+	executeStructuredCall,
+	extractBalancedJsonObject,
+	extractToolUseInput,
+	findShapedObject,
+} from "./agent/structured-call";
+export type {
+	ExtractedToolUse,
+	ExtractToolUseInputOptions,
+	FindShapedObjectOptions,
+	StructuredCallContentBlock,
+	StructuredCallErrorCode,
+	StructuredCallFailure,
+	StructuredCallOptions,
+	StructuredCallResult,
+	StructuredCallSource,
+	StructuredCallSuccess,
+	StructuredCallTool,
+	StructuredCallUsage,
+} from "./agent/structured-call";
+
 // Context (conversation windows)
 export {
 	DEFAULT_CONVERSATION_WINDOW_CONFIG,

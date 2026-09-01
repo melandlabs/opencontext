@@ -42,6 +42,8 @@
 		"./agent/compaction/index": "./dist/agent/compaction/index.js",
 		"./agent/compaction/compaction": "./dist/agent/compaction/compaction.js",
 		"./agent/compaction/compaction-client": "./dist/agent/compaction/compaction-client.js",
+		"./agent/structured-call": "./dist/agent/structured-call/index.js",
+		"./agent/structured-call/index": "./dist/agent/structured-call/index.js",
 		"./context": "./dist/context/index.js",
 		"./context/index": "./dist/context/index.js",
 		"./agent/model": "./dist/agent/model/index.js",
