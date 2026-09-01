@@ -34,12 +34,16 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
 
 `convert.py` uses an explicit mapping rather than deriving Hugging Face names:
 
-| Local scale | Repository | Config | Split |
-| ----------- | ---------- | ------ | ----- |
-| `128k` | `Mohammadta/BEAM` | `default` | `100K` |
-| `500k` | `Mohammadta/BEAM` | `default` | `500K` |
-| `1m` | `Mohammadta/BEAM` | `default` | `1M` |
-| `10m` | `Mohammadta/BEAM-10M` | `default` | `10M` |
+| Local scale | Repository | Config | Split | Pinned revision |
+| ----------- | ---------- | ------ | ----- | --------------- |
+| `128k` | `Mohammadta/BEAM` | `default` | `100K` | `3205395e897e7318c7b094ef4e6047b9b82dbb03` |
+| `500k` | `Mohammadta/BEAM` | `default` | `500K` | `3205395e897e7318c7b094ef4e6047b9b82dbb03` |
+| `1m` | `Mohammadta/BEAM` | `default` | `1M` | `3205395e897e7318c7b094ef4e6047b9b82dbb03` |
+| `10m` | `Mohammadta/BEAM-10M` | `default` | `10M` | `9b2096193fe74e2837e4713e483351e19817773c` |
+
+The converter writes this source identity and its converter schema version into
+the generated JSON. This gives large datasets a stable upstream identity even
+when the run manifest intentionally skips a full-file SHA256.
 
 Non-sample conversion checks `datasets`, `pyarrow`, arguments, and the output
 path before calling Hugging Face. `sample` never imports those dependencies.

@@ -45,6 +45,26 @@ export interface BeamTurn {
 	speaker: string;
 	text: string;
 	timestamp?: string;
+	/** Stable id from the upstream BEAM chat row, used for provenance only. */
+	source_id?: string;
+	/** Optional upstream display/index label (for example `1,1`). */
+	source_index?: string;
+}
+
+export interface BeamQuestionSource {
+	/** Upstream chat turn ids that contain the evidence for this question. */
+	source_chat_ids: string[];
+	conversation_references: string[];
+	plan_references: string[];
+	why_unanswerable?: string;
+}
+
+export interface BeamDatasetSource {
+	repository: string;
+	config: string;
+	split: string;
+	revision: string;
+	converter_schema_version: string;
 }
 
 /**
@@ -64,6 +84,123 @@ export interface BeamProbingQuestion {
 	 * is nugget-based (atoms), not against this string.
 	 */
 	gold_answer?: string;
+	/** Upstream provenance. Empty ids mean the source did not provide an exact mapping. */
+	source: BeamQuestionSource;
+}
+
+export const BEAM_TRACE_SCHEMA_VERSION = "1.1";
+
+export type BeamExecutionStatus = "completed" | "execution_error";
+
+export type BeamFailureStage =
+	| "none"
+	| "dataset_reference_missing"
+	| "dataset_reference_partial"
+	| "ingest_or_index_error"
+	| "retrieval_error"
+	| "retrieval_miss"
+	| "retrieval_partial"
+	| "answerer_error"
+	| "context_present_answer_failed"
+	| "judge_error"
+	| "provider_error";
+
+export interface BeamChunkTrace {
+	schema_version: string;
+	entry_id: string;
+	scale: BeamScale;
+	message_id: string;
+	chunk_index: number;
+	ingest_batch_index: number;
+	turn_start: number;
+	turn_end: number;
+	source_turn_ids: string[];
+	content_sha256: string;
+	content_characters: number;
+	first_timestamp: string | null;
+	last_timestamp: string | null;
+	ingest_status: "pending" | "not_attempted" | "completed" | "partial" | "execution_error";
+	ingest_latency_ms: number | null;
+	ingest_warnings: unknown[];
+	error?: string;
+}
+
+export interface BeamRetrievalHitTrace {
+	rank: number;
+	id: string;
+	similarity: number;
+	signals: Record<string, unknown> | null;
+	metadata: Record<string, unknown>;
+	content_sha256: string;
+	content_characters: number;
+	content_excerpt: string;
+	content: string;
+	source_turn_ids: string[];
+	matched_source_turn_ids: string[];
+	relevant: boolean | null;
+}
+
+export interface BeamRetrievalTrace {
+	status: "completed" | "execution_error";
+	query: string;
+	user_id: string;
+	top_k: number;
+	strategy: "daemon-default";
+	latency_ms: number;
+	response_query: string;
+	response_sources: string[];
+	response_count: number;
+	response_warnings: unknown[];
+	response_reasoning: unknown | null;
+	hits: BeamRetrievalHitTrace[];
+	retrieval_applicable: boolean;
+	required_source_turn_ids: string[];
+	available_source_turn_ids: string[];
+	missing_source_turn_ids: string[];
+	retrieved_source_turn_ids: string[];
+	missed_source_turn_ids: string[];
+	dataset_source_coverage: number | null;
+	source_recall_at_k: number | null;
+	retrievable_source_recall_at_k: number | null;
+	all_required_sources_retrieved: boolean | null;
+	hit_at_k: number | null;
+	first_relevant_rank: number | null;
+	mrr: number | null;
+	precision_at_k: number | null;
+	relevant_hit_precision: number | null;
+	error?: string;
+}
+
+export interface BeamModelCallTrace {
+	model: string;
+	status: "completed" | "skipped" | "execution_error";
+	attempt: number;
+	latency_ms: number;
+	prompt_version: string;
+	prompt_sha256: string | null;
+	prompt_characters: number;
+	system_prompt: string | null;
+	prompt: string | null;
+	token_usage: TokenUsage;
+	error?: string;
+}
+
+export interface BeamAnswerTrace extends BeamModelCallTrace {
+	included_hit_ids: string[];
+	cited_hit_ids: string[];
+	cited_relevant_hit_ids: string[];
+	attribution_status: "supported" | "unsupported" | "uncited" | "not_applicable";
+}
+
+export interface BeamJudgeTrace extends BeamModelCallTrace {
+	raw_response: string | null;
+	parse_status: "parsed" | "skipped" | "failed";
+}
+
+export interface BeamQuestionTrace {
+	retrieval: BeamRetrievalTrace | null;
+	answerer: BeamAnswerTrace | null;
+	judge: BeamJudgeTrace | null;
 }
 
 /**
@@ -88,6 +225,7 @@ export interface BeamConversation {
  */
 export interface BeamDatasetFile {
 	scale: BeamScale;
+	source?: BeamDatasetSource;
 	conversations: BeamConversation[];
 }
 
@@ -116,9 +254,20 @@ export interface EvaluationResult {
  * Prediction result for a single question.
  */
 export interface Prediction {
+	trace_schema_version: string;
+	entry_id: string;
+	conversation_sha256: string;
+	question_sha256: string;
+	status: BeamExecutionStatus;
+	attempt: number;
+	execution_error?: { stage: string; message: string };
 	token_usage: TokenUsage;
+	answerer_model: string;
+	judge_model: string;
 	question_id: string;
 	question: string;
+	gold_answer: string | null;
+	source: BeamQuestionSource;
 	response: string;
 	prediction: string;
 	/**
@@ -142,6 +291,8 @@ export interface Prediction {
 	 */
 	nugget_pass: boolean;
 	judge_reasoning: string;
+	trace: BeamQuestionTrace;
+	failure_stage: BeamFailureStage;
 	/**
 	 * True if the agent produced a refusal/abstention for abstention-category
 	 * questions (recorded separately for debugging).

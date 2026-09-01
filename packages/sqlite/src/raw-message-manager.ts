@@ -104,7 +104,7 @@ export interface SQLiteRawMessageSemanticSearchResult {
 	id: string;
 	content: string;
 	similarity: number;
-	metadata: {
+	metadata: Record<string, unknown> & {
 		userId: string;
 		platform: string;
 		botId: string;
@@ -142,7 +142,7 @@ export interface SQLiteRawMessageLexicalSearchResult {
 	content: string;
 	similarity: number;
 	bm25Rank: number;
-	metadata: {
+	metadata: Record<string, unknown> & {
 		userId: string;
 		platform: string;
 		botId: string;
@@ -1145,6 +1145,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				similarity: sqliteDistanceToScore(-row.bm25_rank),
 				bm25Rank: row.bm25_rank,
 				metadata: {
+					...(message.metadata ?? {}),
 					userId: message.userId,
 					platform: message.platform,
 					botId: message.botId,
@@ -1483,6 +1484,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			content: message.archivedAt ? "" : message.content,
 			similarity,
 			metadata: {
+				...(message.metadata ?? {}),
 				userId: message.userId,
 				platform: message.platform,
 				botId: message.botId,

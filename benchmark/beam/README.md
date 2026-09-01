@@ -57,6 +57,7 @@ benchmark/beam/
 │   ├── dataset.ts              # JSON loader + scale/type/conversation filtering
 │   ├── prompts.ts              # BEAM_NUGGET_JUDGE_PROMPT (rubric + 1-shot)
 │   ├── metrics.ts              # evaluateNuggetJudge + calculateNuggetCategoryMetrics
+│   ├── diagnostics.ts          # source/chunk/retrieval/model-call diagnostic chain
 │   ├── scorer.ts               # 10-type map + OPENCONTEXT_CLAIM_MAP
 │   ├── opencontext-client.ts   # VERBATIM copy of longmemeval/src/opencontext-client.ts
 │   ├── evaluator.ts            # BeamEvaluator — chunked ingest (20 turns) + nugget judge
@@ -81,6 +82,20 @@ benchmark/beam/
 | Per-question score | `correct: bool`                       | `nugget_mean + nugget_pass (≥0.5)`                |
 
 ## CLI
+
+Copy `.env.example` to `.env` and configure the provider before running a paid
+evaluation. A low-cost domestic Flash pairing is:
+
+```dotenv
+ANTHROPIC_AUTH_TOKEN=
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_ANSWER_MODEL=deepseek/deepseek-v4-flash-0731
+OPENROUTER_JUDGE_MODEL=qwen/qwen3.7-flash
+```
+
+`OPENROUTER_JUDGE_MODEL` is required and controls the actual nugget-judge call;
+it is not fixed in code. If `ANTHROPIC_AUTH_TOKEN` is set, the Answerer instead
+uses `ANTHROPIC_BASE_URL` and `ANSWER_MODEL`.
 
 ```bash
 # Show help
@@ -122,8 +137,15 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
 Before ingest or model calls, the CLI checks the dataset and filters, daemon,
 credentials, output/checkpoint paths, and arguments. It reports all detected
 failures together and never prints credential values. `--help` does not run
-these checks. `--resume` reuses completed judge results regardless of pass/fail;
+these checks. `--resume` reuses completed judge results regardless of pass/fail
+only when the Answerer/Judge identities and normalized conversation fingerprint
+match the current run;
 `--no-resume` ignores existing checkpoints.
+
+Converted datasets must be regenerated after this diagnostic-chain change so
+the JSON retains upstream turn ids and `source_chat_ids`. Legacy checkpoints
+with an older `trace_schema_version` are ignored because they cannot provide the
+same evidence chain.
 
 ## Output JSON shape
 
@@ -136,6 +158,18 @@ these checks. `--resume` reuses completed judge results regardless of pass/fail;
   "categories_filter": null,
   "token_usage": { "prompt_tokens": 1000, "completion_tokens": 200, "total_tokens": 1200 },
   "run_manifest": { "schema_version": 1, "git_commit": "...", "wall_clock_ms": 12345, … },
+  "diagnostics": {
+    "mean_source_recall_at_k": 0.71,
+    "mean_retrievable_source_recall_at_k": 0.74,
+    "hit_at_k_rate": 0.82,
+    "mean_reciprocal_rank": 0.64,
+    "failure_stages": { "retrieval_miss": 12, "context_present_answer_failed": 8 }
+  },
+  "diagnostic_artifacts": {
+    "trace_schema_version": "1.1",
+    "trace": "results/beam_1m.trace.jsonl",
+    "chunks": "results/beam_1m.chunks.jsonl"
+  },
   "summary": {
     "count": 700,
     "nugget_mean": 0.62,
@@ -172,6 +206,24 @@ Provider usage is recorded when returned; unavailable values are `null`, never a
 fabricated zero. With `--output results.json`, the same manifest is also written
 to `results.json.manifest.json`; without `--output`, it is written under
 `results/`.
+
+When `--output` is set, the runner also writes:
+
+- `*.chunks.jsonl`: upstream turn ids → deterministic chunk/message id → exact
+  ingest batch and status.
+- `*.trace.jsonl`: conversation id/fingerprint, gold source ids (required,
+  available, missing, retrieved and missed), full ranked Top-K contents and
+  daemon score signals, exact Answerer/Judge prompts, model responses, timing,
+  usage, Judge raw/parse status, answer attribution, and a conservative failure
+  stage.
+
+The source mapping is diagnostic only. Questions without an upstream source id
+remain scoreable, but retrieval metrics are marked unavailable rather than
+inventing a gold mapping. Dataset-source coverage is reported separately so a
+bad upstream reference is not silently blamed on OpenContext retrieval.
+
+The diagnostic fields do not participate in scoring. Existing
+`nugget_scores`, `nugget_mean`, and `nugget_pass >= 0.5` behavior is unchanged.
 
 ## Smoke-test checklist
 
@@ -215,10 +267,10 @@ pnpm --filter @melandlabs/benchmark-beam benchmark -- \
 | 1m     |     35 | 700 |      5–9 h |   ~$25 |
 | 10m    |     10 | 200 |     8–15 h |   ~$40 |
 
-Estimate uses `qwen/qwen3.7-max` as judge + the configured answerer LLM
-(Anthropic-compatible endpoint, e.g. MiniMax-M3-highspeed; falls back to
-OpenRouter when `ANTHROPIC_AUTH_TOKEN` is unset). Judge retries are
-bounded at 3 attempts.
+Actual cost depends on `OPENROUTER_JUDGE_MODEL` and the configured Answerer
+(Anthropic-compatible endpoint when `ANTHROPIC_AUTH_TOKEN` is set; otherwise
+`OPENROUTER_ANSWER_MODEL`). The table is only a rough planning estimate. Judge
+retries are bounded at 3 attempts.
 
 ## Critical risks (acknowledged in design)
 

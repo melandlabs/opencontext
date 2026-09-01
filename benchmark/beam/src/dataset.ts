@@ -11,6 +11,7 @@ import { readFile } from "node:fs/promises";
 import type {
 	BeamConversation,
 	BeamDatasetFile,
+	BeamDatasetSource,
 	BeamProbingQuestion,
 	BeamQuestionCategory,
 	BeamScale,
@@ -56,6 +57,11 @@ interface RawBeamTurn {
 	text?: string;
 	content?: string;
 	timestamp?: string;
+	time_anchor?: string;
+	source_id?: string | number;
+	id?: string | number;
+	source_index?: string | number;
+	index?: string | number;
 }
 
 interface RawBeamQuestion {
@@ -67,6 +73,12 @@ interface RawBeamQuestion {
 	nuggets?: string[];
 	gold_answer?: string;
 	answer?: string;
+	source?: Partial<BeamProbingQuestion["source"]>;
+	source_chat_ids?: unknown;
+	conversation_reference?: unknown;
+	conversation_references?: unknown;
+	plan_reference?: unknown;
+	why_unanswerable?: string;
 }
 
 interface RawBeamConversation {
@@ -81,7 +93,13 @@ interface RawBeamConversation {
 
 interface RawBeamDataset {
 	scale?: string;
+	source?: BeamDatasetSource;
 	conversations?: RawBeamConversation[];
+}
+
+export interface LoadedBeamDataset {
+	conversations: BeamConversation[];
+	source: BeamDatasetSource | null;
 }
 
 const VALID_CATEGORIES = new Set<BeamQuestionCategory>([
@@ -107,11 +125,27 @@ function normalizeCategory(raw: string | undefined): BeamQuestionCategory | null
 }
 
 function normalizeTurn(raw: RawBeamTurn): BeamTurn {
+	const sourceId = raw.source_id ?? raw.id;
+	const sourceIndex = raw.source_index ?? raw.index;
 	return {
 		speaker: raw.speaker ?? raw.role ?? "user",
 		text: raw.text ?? raw.content ?? "",
-		timestamp: raw.timestamp,
+		timestamp: raw.timestamp ?? raw.time_anchor,
+		source_id: sourceId === undefined ? undefined : String(sourceId),
+		source_index: sourceIndex === undefined ? undefined : String(sourceIndex),
 	};
+}
+
+function flattenScalarValues(value: unknown): string[] {
+	if (value === null || value === undefined) return [];
+	if (Array.isArray(value)) return value.flatMap(flattenScalarValues);
+	if (typeof value === "object") return Object.values(value).flatMap(flattenScalarValues);
+	return [String(value)];
+}
+
+function normalizeSourceChatIds(value: unknown): string[] {
+	const placeholders = new Set(["", "--", "none", "null", "n/a"]);
+	return flattenScalarValues(value).filter((item) => !placeholders.has(item.trim().toLowerCase()));
 }
 
 function normalizeQuestion(
@@ -135,6 +169,14 @@ function normalizeQuestion(
 		question: text,
 		atoms,
 		gold_answer: raw.gold_answer ?? raw.answer,
+		source: {
+			source_chat_ids: normalizeSourceChatIds(raw.source?.source_chat_ids ?? raw.source_chat_ids),
+			conversation_references: flattenScalarValues(
+				raw.source?.conversation_references ?? raw.conversation_references ?? raw.conversation_reference,
+			),
+			plan_references: flattenScalarValues(raw.source?.plan_references ?? raw.plan_reference),
+			why_unanswerable: raw.source?.why_unanswerable ?? raw.why_unanswerable,
+		},
 	};
 }
 
@@ -170,10 +212,10 @@ function normalizeConversation(
  * Parse + lightly validate a BEAM dataset JSON file.
  * Throws if the file shape is wrong; returns the typed object otherwise.
  */
-export async function loadBeamDatasetFromJson(
+export async function loadBeamDatasetWithMetadata(
 	jsonPath: string,
 	opts: LoadBeamOptions = {},
-): Promise<BeamConversation[]> {
+): Promise<LoadedBeamDataset> {
 	const content = await readFile(jsonPath, "utf-8");
 	let raw: RawBeamDataset | BeamConversation[];
 	try {
@@ -222,7 +264,17 @@ export async function loadBeamDatasetFromJson(
 		conversations = conversations.filter((c) => c.probing_questions.length > 0);
 	}
 
-	return conversations;
+	return {
+		conversations,
+		source: Array.isArray(raw) ? null : (raw.source ?? null),
+	};
+}
+
+export async function loadBeamDatasetFromJson(
+	jsonPath: string,
+	opts: LoadBeamOptions = {},
+): Promise<BeamConversation[]> {
+	return (await loadBeamDatasetWithMetadata(jsonPath, opts)).conversations;
 }
 
 /**

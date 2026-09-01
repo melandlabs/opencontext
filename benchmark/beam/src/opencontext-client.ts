@@ -12,9 +12,10 @@
  * (OPENROUTER_API_KEY, OPENROUTER_ANSWER_MODEL).
  */
 
-import { tokenUsage, type TokenUsage } from "../../run-support";
+import { type TokenUsage, tokenUsage } from "../../run-support";
 
 export const DEFAULT_OPENCONTEXT_PORT = 7421;
+const MODEL_REQUEST_TIMEOUT_MS = 300_000;
 
 export function getOpencontextBaseUrl(): string {
 	if (process.env.OPENCONTEXT_URL) return process.env.OPENCONTEXT_URL;
@@ -61,7 +62,34 @@ export interface BenchRawMessage {
 	metadata?: Record<string, unknown>;
 }
 
-const INGEST_BATCH_SIZE = 25;
+export const INGEST_BATCH_SIZE = 25;
+
+export interface IngestMessagesResult {
+	inserted: number;
+	warnings: unknown[];
+	batches: IngestBatchTrace[];
+}
+
+export interface IngestBatchTrace {
+	batch_index: number;
+	message_ids: string[];
+	requested: number;
+	inserted: number;
+	status: "completed" | "partial" | "execution_error";
+	latency_ms: number;
+	warnings: unknown[];
+	error?: string;
+}
+
+export class IngestMessagesError extends Error {
+	constructor(
+		message: string,
+		readonly result: IngestMessagesResult,
+	) {
+		super(message);
+		this.name = "IngestMessagesError";
+	}
+}
 
 /**
  * Ingest messages into the OpenContext memory store. `embedOnInsert: true`
@@ -72,30 +100,69 @@ export async function ingestMessages(
 	messages: BenchRawMessage[],
 	baseUrl = getOpencontextBaseUrl(),
 	userId = BENCH_USER_ID,
-): Promise<number> {
+): Promise<IngestMessagesResult> {
 	let inserted = 0;
+	const warnings: unknown[] = [];
+	const batches: IngestBatchTrace[] = [];
 	for (let i = 0; i < messages.length; i += INGEST_BATCH_SIZE) {
 		const batch = messages.slice(i, i + INGEST_BATCH_SIZE).map((m) => ({
 			...m,
 			userId,
 		}));
-		const res = await fetch(`${baseUrl}/v1/raw-messages`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				userId,
-				messages: batch,
-				embedOnInsert: true,
-			}),
-			signal: AbortSignal.timeout(600_000),
-		});
-		if (!res.ok) {
-			throw new Error(`ingest /v1/raw-messages failed: ${res.status} ${await res.text()}`);
+		const batchIndex = i / INGEST_BATCH_SIZE;
+		const startedAt = performance.now();
+		try {
+			const res = await fetch(`${baseUrl}/v1/raw-messages`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					userId,
+					messages: batch,
+					embedOnInsert: true,
+				}),
+				signal: AbortSignal.timeout(600_000),
+			});
+			if (!res.ok) {
+				throw new Error(`ingest /v1/raw-messages failed: ${res.status} ${await res.text()}`);
+			}
+			const data = (await res.json()) as { count?: number; warnings?: unknown[] };
+			const batchInserted = data.count ?? batch.length;
+			const batchWarnings = data.warnings ?? [];
+			inserted += batchInserted;
+			warnings.push(...batchWarnings);
+			const status = batchInserted === batch.length ? "completed" : "partial";
+			batches.push({
+				batch_index: batchIndex,
+				message_ids: batch.map((message) => message.messageId),
+				requested: batch.length,
+				inserted: batchInserted,
+				status,
+				latency_ms: Math.round(performance.now() - startedAt),
+				warnings: batchWarnings,
+			});
+			if (status === "partial") {
+				throw new IngestMessagesError(
+					`ingest inserted ${batchInserted} of ${batch.length} messages in batch ${batchIndex}`,
+					{ inserted, warnings, batches },
+				);
+			}
+		} catch (error) {
+			if (error instanceof IngestMessagesError) throw error;
+			const message = error instanceof Error ? error.message : String(error);
+			batches.push({
+				batch_index: batchIndex,
+				message_ids: batch.map((item) => item.messageId),
+				requested: batch.length,
+				inserted: 0,
+				status: "execution_error",
+				latency_ms: Math.round(performance.now() - startedAt),
+				warnings: [],
+				error: message,
+			});
+			throw new IngestMessagesError(message, { inserted, warnings, batches });
 		}
-		const data = (await res.json()) as { count?: number };
-		inserted += data.count ?? batch.length;
 	}
-	return inserted;
+	return { inserted, warnings, batches };
 }
 
 export interface MemorySearchHit {
@@ -103,6 +170,16 @@ export interface MemorySearchHit {
 	content: string;
 	similarity: number;
 	metadata: Record<string, unknown>;
+	signals?: Record<string, unknown>;
+}
+
+export interface MemorySearchResponse {
+	query: string;
+	sources: string[];
+	results: MemorySearchHit[];
+	count: number;
+	warnings: unknown[];
+	reasoning?: unknown;
 }
 
 /** Retrieve relevant memories for a question. */
@@ -111,7 +188,7 @@ export async function searchMemory(
 	limit = 8,
 	baseUrl = getOpencontextBaseUrl(),
 	userId = BENCH_USER_ID,
-): Promise<MemorySearchHit[]> {
+): Promise<MemorySearchResponse> {
 	const res = await fetch(`${baseUrl}/v1/search`, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
@@ -127,19 +204,34 @@ export async function searchMemory(
 		throw new Error(`search /v1/search failed: ${res.status} ${await res.text()}`);
 	}
 	const data = (await res.json()) as {
+		query?: string;
+		sources?: string[];
+		count?: number;
+		warnings?: unknown[];
+		reasoning?: unknown;
 		results?: Array<{
 			id: string;
 			content: string;
 			similarity: number;
 			metadata?: Record<string, unknown>;
+			signals?: Record<string, unknown>;
 		}>;
 	};
-	return (data.results ?? []).map((r) => ({
+	const results = (data.results ?? []).map((r) => ({
 		id: r.id,
 		content: r.content,
 		similarity: r.similarity,
 		metadata: r.metadata ?? {},
+		...(r.signals ? { signals: r.signals } : {}),
 	}));
+	return {
+		query: data.query ?? query,
+		sources: data.sources ?? [],
+		results,
+		count: data.count ?? results.length,
+		warnings: data.warnings ?? [],
+		...(data.reasoning === undefined ? {} : { reasoning: data.reasoning }),
+	};
 }
 
 /**
@@ -202,6 +294,7 @@ export async function generateAnswer(prompt: string, system?: string): Promise<G
 		model: openrouter(process.env.OPENROUTER_ANSWER_MODEL ?? "deepseek/deepseek-chat"),
 		...(system ? { system } : {}),
 		prompt,
+		abortSignal: AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS),
 	});
 	return {
 		text,

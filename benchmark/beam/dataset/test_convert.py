@@ -13,14 +13,134 @@ import convert
 
 
 EXPECTED_SOURCES = {
-    "128k": ("Mohammadta/BEAM", "default", "100K"),
-    "500k": ("Mohammadta/BEAM", "default", "500K"),
-    "1m": ("Mohammadta/BEAM", "default", "1M"),
-    "10m": ("Mohammadta/BEAM-10M", "default", "10M"),
+    "128k": ("Mohammadta/BEAM", "default", "100K", "3205395e897e7318c7b094ef4e6047b9b82dbb03"),
+    "500k": ("Mohammadta/BEAM", "default", "500K", "3205395e897e7318c7b094ef4e6047b9b82dbb03"),
+    "1m": ("Mohammadta/BEAM", "default", "1M", "3205395e897e7318c7b094ef4e6047b9b82dbb03"),
+    "10m": ("Mohammadta/BEAM-10M", "default", "10M", "9b2096193fe74e2837e4713e483351e19817773c"),
 }
 
 
 class BeamSourceMappingTests(unittest.TestCase):
+    def test_normalizes_the_published_nested_chat_and_serialized_questions(self) -> None:
+        fixture = {
+            "conversation_id": "real-shape",
+            "chat": [
+                [
+                    {
+                        "role": "user",
+                        "content": "Remember Berlin.",
+                        "time_anchor": "March-15-2024",
+                        "id": 41,
+                        "index": "1,1",
+                    }
+                ],
+                [
+                    {
+                        "role": "assistant",
+                        "content": "I will remember that.",
+                        "time_anchor": "March-16-2024",
+                    }
+                ],
+            ],
+            "probing_questions": repr(
+                {
+                    "information_extraction": [
+                        {
+                            "question": "Which city?",
+                            "answer": "Berlin",
+                            "rubric": ["The answer identifies Berlin"],
+                            "source_chat_ids": {"answer": [41]},
+                            "conversation_reference": "chat_id: 41",
+                        }
+                    ],
+                    "abstention": [
+                        {
+                            "question": "Which university?",
+                            "ideal_response": "The conversation does not say.",
+                            "rubric": ["The answer abstains"],
+                            "why_unanswerable": "No university is mentioned.",
+                            "plan_reference": "Batch 1, Bullet 2",
+                        }
+                    ],
+                }
+            ),
+        }
+
+        conversation = convert.normalize_conversation(fixture, 0, "128k")
+
+        self.assertIsNotNone(conversation)
+        assert conversation is not None
+        self.assertEqual(conversation["entry_id"], "real-shape")
+        self.assertEqual(len(conversation["chat"]), 2)
+        self.assertEqual(conversation["chat"][0]["timestamp"], "March-15-2024")
+        self.assertEqual(conversation["chat"][0]["source_id"], "41")
+        self.assertEqual(conversation["chat"][0]["source_index"], "1,1")
+        self.assertEqual(
+            [question["question_id"] for question in conversation["probing_questions"]],
+            ["128k_real-shape_q_0", "128k_real-shape_q_1"],
+        )
+        self.assertEqual(
+            conversation["probing_questions"][0],
+            {
+                "question_id": "128k_real-shape_q_0",
+                "category": "information_extraction",
+                "question": "Which city?",
+                "atoms": ["The answer identifies Berlin"],
+                "gold_answer": "Berlin",
+                "source": {
+                    "source_chat_ids": ["41"],
+                    "conversation_references": ["chat_id: 41"],
+                    "plan_references": [],
+                    "why_unanswerable": None,
+                },
+            },
+        )
+        self.assertEqual(
+            conversation["probing_questions"][1]["gold_answer"],
+            "The conversation does not say.",
+        )
+        self.assertEqual(
+            conversation["probing_questions"][1]["source"],
+            {
+                "source_chat_ids": [],
+                "conversation_references": [],
+                "plan_references": ["Batch 1, Bullet 2"],
+                "why_unanswerable": "No university is mentioned.",
+            },
+        )
+
+    def test_flattens_the_published_10m_plan_batches(self) -> None:
+        chat = [
+            {
+                "plan-1": [
+                    {
+                        "batch_number": 1,
+                        "time_anchor": None,
+                        "turns": [
+                            [
+                                {"role": "user", "content": "First"},
+                                {"role": "assistant", "content": "Second"},
+                            ]
+                        ],
+                    }
+                ]
+            },
+            {
+                "plan-2": [
+                    {
+                        "batch_number": 2,
+                        "time_anchor": None,
+                        "turns": [[{"role": "user", "content": "Third"}]],
+                    }
+                ]
+            },
+        ]
+
+        self.assertEqual(
+            [turn["content"] for turn in convert.flatten_chat_turns(chat)],
+            ["First", "Second", "Third"],
+        )
+
     def test_non_sample_preflight_reports_all_missing_dependencies_and_bad_limit(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             with patch.object(importlib.util, "find_spec", return_value=None):
@@ -44,7 +164,7 @@ class BeamSourceMappingTests(unittest.TestCase):
     def test_all_scales_use_the_expected_hugging_face_source(self) -> None:
         fixture = {
             "conversation_id": "fixture-conversation",
-            "chat": [{"role": "user", "content": "Remember Berlin."}],
+            "chat": [{"role": "user", "content": "Remember the 10 m² Berlin office."}],
             "probing_questions": [
                 {
                     "id": "fixture-question",
@@ -58,15 +178,16 @@ class BeamSourceMappingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             for scale, expected_source in EXPECTED_SOURCES.items():
                 with self.subTest(scale=scale):
-                    calls: list[tuple[str, str, str]] = []
+                    calls: list[tuple[str, str, str, str]] = []
 
                     def fake_load_dataset(
                         repository: str,
                         config: str,
                         *,
                         split: str,
+                        revision: str,
                     ) -> list[dict[str, object]]:
-                        calls.append((repository, config, split))
+                        calls.append((repository, config, split, revision))
                         return [fixture]
 
                     output = Path(temp_dir) / f"beam_{scale}.json"
@@ -79,9 +200,16 @@ class BeamSourceMappingTests(unittest.TestCase):
 
                     self.assertEqual(calls, [expected_source])
                     self.assertEqual(converted, 1)
-                    payload = json.loads(output.read_text())
+                    payload = json.loads(output.read_text(encoding="utf-8"))
                     self.assertEqual(payload["scale"], scale)
+                    self.assertEqual(payload["source"]["revision"], expected_source[3])
                     self.assertEqual(payload["conversations"][0]["scale"], scale)
+
+    def test_source_chat_id_placeholders_are_not_treated_as_gold_ids(self) -> None:
+        self.assertEqual(
+            convert.normalize_source_chat_ids([41, "--", None, "N/A", "  "]),
+            ["41"],
+        )
 
     def test_unknown_scale_fails_before_loading_a_dataset(self) -> None:
         calls = 0
@@ -122,7 +250,7 @@ class BeamSourceMappingTests(unittest.TestCase):
                 convert.main()
 
             payload = json.loads(
-                (Path(temp_dir) / "sample_conversation.json").read_text()
+                (Path(temp_dir) / "sample_conversation.json").read_text(encoding="utf-8")
             )
             self.assertEqual(payload["scale"], "sample")
             self.assertEqual(len(payload["conversations"]), 1)
