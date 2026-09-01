@@ -139,6 +139,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
+# macOS
+.DS_Store
+
 # opencontext-specific
 .turbo
 .vercel
