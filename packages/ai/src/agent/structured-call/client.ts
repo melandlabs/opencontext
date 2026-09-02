@@ -4,8 +4,7 @@
  * One Messages round-trip with `tool_choice` pinned to a specific tool, so
  * the host gets a machine-readable payload from a single LLM invocation.
  * Uses plain `fetch` against the Anthropic Messages wire format (no SDK) so
- * the primitive works against any compatible gateway — alloomi's metered
- * `/api/ai` front, OpenRouter, or Anthropic direct.
+ * the primitive works against any compatible gateway.
  */
 
 import { extractToolUseInput } from "./decode";

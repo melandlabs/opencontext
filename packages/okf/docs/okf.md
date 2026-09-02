@@ -249,5 +249,3 @@ const { manifest, written } = await writeOkfPackage("/tmp/out", messages, {
   WikiGraph adapter, live vs. frozen mode, shutdown ordering.
 - [`viewer.md`](./viewer.md) — the `/viewer/` SPA: file layout, graph
   data flow, persisted UI state, theme customisation.
-- [`alloomi-graph.md`](./alloomi-graph.md) — Mermaid diagrams rendered
-  from a real DingTalk export ingested through `okf ingest`.

@@ -27,7 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // getOpenContextDir() prefers OPENCONTEXT_HOME over HOME, and LOOP_HOME is
 // captured at import time below. vi.hoisted runs before any module-load-time
 // path resolution, so a host with OPENCONTEXT_HOME pre-set doesn't leak its
-// real ~/.alloomi/loop/ into the assertions or the child-process spawns.
+// real ~/.opencontext/loop/ into the assertions or the child-process spawns.
 vi.hoisted(() => {
 	// getOpenContextDir() treats any non-empty override as authoritative,
 	// so explicitly clearing it (vs. setting it to the string "undefined")

@@ -655,13 +655,6 @@ export function parseAsOf(asOf: string | undefined, now = Date.now()): number {
 	return Number.isFinite(ms) ? ms : now;
 }
 
-// ============================================================================
-// Legacy helpers from alloomi/packages/ai/memory-consolidation (pre-npm).
-// Restored so callers migrating from the workspace link to the npm tarball
-// still resolve `applicabilityContains`, `DefaultGraphAwareRetriever`, and
-// the relevance scoring helpers without changing call sites.
-// ============================================================================
-
 const DEFAULT_RELEVANCE_THRESHOLD = 0.3;
 
 function clamp01(value: number): number {

@@ -27,7 +27,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // re-reads it on every call, so just clearing it in beforeEach would work —
 // but vi.hoisted also protects any module-load-time path resolution that may
 // be added later. A host with OPENCONTEXT_HOME pre-set (e.g. pointing at
-// ~/.alloomi) would otherwise leak its real dir into the home-dir-default
+// ~/.opencontext) would otherwise leak its real dir into the home-dir-default
 // assertions below.
 vi.hoisted(() => {
 	// getOpenContextDir() treats any non-empty override as authoritative,

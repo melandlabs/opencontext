@@ -77,8 +77,7 @@ export interface NativeAgentRequest {
 	/**
 	 * Caller-supplied HTTP headers for cross-process requests made on behalf
 	 * of this agent run (embeddings, compaction, etc.). Typical use is
-	 * first-party billing attribution, e.g.
-	 * `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 * first-party billing attribution.
 	 *
 	 * **Passive holder — the runtime does not auto-forward.** Callers invoking
 	 * `getConfiguredEmbeddingProvider({ extraHeaders })` or
