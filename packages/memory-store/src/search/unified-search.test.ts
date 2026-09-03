@@ -12,6 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { UnifiedSearchDeps } from "../config";
 import { createIterativeRecallPlanner } from "./iterative-recall";
 import { type QueryRewriter, createUserVoiceRewriter } from "./query-rewriter";
+import type { RerankerInput } from "./reranker";
 import { createUnifiedSearch } from "./unified-search";
 
 vi.mock("../storage/chroma-memory-index", () => ({
@@ -21,6 +22,7 @@ vi.mock("../storage/chroma-memory-index", () => ({
 
 vi.mock("../storage/raw-message-store", () => ({
 	isRawMessageStorageAvailable: () => true,
+	getRawMessageManager: async () => ({}),
 }));
 
 const baseDeps: UnifiedSearchDeps = {
@@ -82,11 +84,11 @@ afterEach(() => {
 });
 
 describe("createUnifiedSearch", () => {
-	it("uses similarity merge by default and dedupes by (type,id)", async () => {
+	it("uses RRF merge by default and dedupes by (type,id)", async () => {
 		const search = createUnifiedSearch(baseDeps);
 		const out = await search.search({ userId: "u1", query: "anything here" });
 		expect(out.warnings).toEqual([]);
-		// m2 appears in both semantic and lexical; similarity wins.
+		// m2 appears in both semantic and lexical and remains a single hit.
 		const ids = out.results.map((r) => `${r.type}:${r.id}`);
 		expect(ids).toContain("memory:m1");
 		expect(ids).toContain("memory:m2");
@@ -105,6 +107,175 @@ describe("createUnifiedSearch", () => {
 		const top = out.results.find((r) => r.type === "memory" && r.id === "m2");
 		expect(top).toBeDefined();
 		expect(top?.metadata.rrfScore).toBeGreaterThan(0);
+	});
+
+	it("overfetches per channel and exposes pre-fusion candidates only when requested", async () => {
+		const searchRawMessagesAnn = vi.fn(baseDeps.searchRawMessagesAnn);
+		const searchRawMessagesLexical = vi.fn(baseDeps.searchRawMessagesLexical);
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn,
+			searchRawMessagesLexical,
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			limit: 2,
+			mergeStrategy: "rrf",
+			includeRetrievalDiagnostics: true,
+		});
+
+		expect(searchRawMessagesAnn).toHaveBeenCalledWith(expect.objectContaining({ limit: 8 }));
+		expect(searchRawMessagesLexical).toHaveBeenCalledWith(expect.objectContaining({ limit: 8 }));
+		expect(out.results).toHaveLength(2);
+		expect(out.retrievalDiagnostics?.mergeStrategy).toBe("rrf");
+		expect(out.retrievalDiagnostics?.candidateLimit).toBe(8);
+		expect(out.retrievalDiagnostics?.channels.semantic.map((hit) => hit.id)).toEqual(["m1", "m2"]);
+		expect(out.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["m2", "m3"]);
+		expect(out.retrievalDiagnostics?.fusedBeforeRerank).toHaveLength(3);
+	});
+
+	it("uses an unfiltered semantic candidate window for default RRF, while respecting explicit thresholds", async () => {
+		const searchRawMessagesAnn = vi.fn(baseDeps.searchRawMessagesAnn);
+		const search = createUnifiedSearch({ ...baseDeps, searchRawMessagesAnn });
+		await search.search({ userId: "u1", query: "anything here", sources: ["memory"], limit: 2 });
+		expect(searchRawMessagesAnn).toHaveBeenLastCalledWith(
+			expect.objectContaining({ limit: 8, threshold: Number.NEGATIVE_INFINITY }),
+		);
+
+		await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			limit: 2,
+			threshold: 0.55,
+		});
+		expect(searchRawMessagesAnn).toHaveBeenLastCalledWith(
+			expect.objectContaining({ limit: 8, threshold: 0.55 }),
+		);
+	});
+
+	it("reports semantic unavailable when only lexical retrieval can run", async () => {
+		const search = createUnifiedSearch({ searchRawMessagesLexical: baseDeps.searchRawMessagesLexical });
+		const out = await search.search({ userId: "u1", query: "anything here", sources: ["memory"] });
+
+		expect(out.warnings).toContainEqual(expect.objectContaining({ code: "semantic_unavailable" }));
+		expect(out.results.length).toBeGreaterThan(0);
+	});
+
+	it.each([
+		{
+			name: "empty semantic candidates",
+			status: {
+				backend: "sqlite-vec",
+				childCount: 2,
+				embeddedChildCount: 2,
+				indexedDimensions: [4],
+				embeddingDimensions: 4,
+				semanticReady: true,
+				lexicalReady: true,
+			},
+			code: "semantic_candidates_empty",
+		},
+		{
+			name: "embedding dimension mismatch",
+			status: {
+				backend: "sqlite-vec",
+				childCount: 2,
+				embeddedChildCount: 2,
+				indexedDimensions: [3],
+				embeddingDimensions: 4,
+				semanticReady: false,
+				lexicalReady: true,
+			},
+			code: "semantic_dimension_mismatch",
+		},
+	])("reports $name instead of silently returning lexical-only results", async ({ status, code }) => {
+		const search = createUnifiedSearch({
+			embedQuery: baseDeps.embedQuery,
+			searchRawMessagesAnn: async () => [],
+			searchRawMessagesLexical: baseDeps.searchRawMessagesLexical,
+			getRawMessageRetrievalStatus: async () => status,
+		});
+		const out = await search.search({ userId: "u1", query: "anything here", sources: ["memory"] });
+
+		expect(out.warnings).toContainEqual(expect.objectContaining({ code }));
+		expect(out.results.length).toBeGreaterThan(0);
+	});
+
+	it("uses native hybrid for default RRF but honors an explicit threshold through dense candidates", async () => {
+		const searchRawMessagesHybrid = vi.fn(async () => [
+			{ id: "hybrid", content: "hybrid", similarity: 0.03, metadata: {} },
+		]);
+		const searchRawMessagesAnn = vi.fn(baseDeps.searchRawMessagesAnn);
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn,
+			searchRawMessagesHybrid,
+		});
+
+		const defaultOut = await search.search({ userId: "u1", query: "anything here", sources: ["memory"] });
+		expect(defaultOut.results.map((hit) => hit.id)).toEqual(["hybrid"]);
+		expect(searchRawMessagesHybrid).toHaveBeenCalledOnce();
+		expect(searchRawMessagesAnn).not.toHaveBeenCalled();
+
+		await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			threshold: 0.8,
+		});
+		expect(searchRawMessagesAnn).toHaveBeenCalledWith(expect.objectContaining({ threshold: 0.8 }));
+	});
+
+	it("reranks the overfetched window before applying the final limit", async () => {
+		const rerank = vi.fn(async (_input: RerankerInput) => [{ id: "m3", score: 1 }]);
+		const search = createUnifiedSearch({
+			...baseDeps,
+			reranker: { rerank },
+			rerankerInfo: { provider: "local", model: "test-reranker", ready: true },
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			limit: 1,
+			includeRetrievalDiagnostics: true,
+		});
+		expect(rerank).toHaveBeenCalledWith(
+			expect.objectContaining({
+				candidates: expect.arrayContaining([expect.objectContaining({ id: "m3" })]),
+			}),
+		);
+		expect((rerank.mock.calls[0]?.[0] as { candidates: unknown[] }).candidates).toHaveLength(3);
+		expect(out.results.map((hit) => hit.id)).toEqual(["m3"]);
+		expect(out.retrievalDiagnostics?.reranker).toMatchObject({
+			enabled: true,
+			provider: "local",
+			model: "test-reranker",
+			inputCount: 3,
+			outputCount: 3,
+			orderChanged: true,
+		});
+	});
+
+	it("uses the retrieved child window directly as evidence", async () => {
+		const content = "The renewal deadline is 30 September.";
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn: async () => [{ id: "long", content, similarity: 0.8, metadata: {} }],
+			searchRawMessagesLexical: async () => [],
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "What is the renewal deadline?",
+			sources: ["memory"],
+			limit: 1,
+		});
+
+		expect(out.results[0]?.content).toBe(content);
+		expect(out.evidence[0]?.snippet).toBe(content);
 	});
 
 	it("emits a warning when rrf is requested but lexical is not configured", async () => {

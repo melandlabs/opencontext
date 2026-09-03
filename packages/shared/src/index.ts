@@ -5,5 +5,6 @@ export * from "./constants";
 export * from "./ref";
 export * from "./soul";
 export * from "./tokens";
+export * from "./text-chunking";
 export * from "./locale/user-locale";
 export * from "./platform";

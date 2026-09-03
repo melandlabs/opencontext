@@ -24,6 +24,7 @@ import type { Peer } from "@melandlabs/contracts/peer";
 import type { MemorySummaryHit, UnifiedSearchDeps } from "../config";
 import { applyReranker } from "./reranker";
 import type {
+	SearchEvidence,
 	SearchInput,
 	SearchOutput,
 	SearchTier,
@@ -40,7 +41,6 @@ import {
 } from "./utilities";
 
 const DEFAULT_TIERS: SearchTier[] = ["summary", "raw", "insight", "knowledge"];
-const MAX_EVIDENCE_CHARS = 600;
 
 export interface GatherOptions {
 	input: SearchInput;
@@ -389,13 +389,6 @@ export async function gatherEvidence(opts: GatherOptions): Promise<GatherResult>
 	return { hits: ranked, warnings, reasoning };
 }
 
-function truncate(input: string, max: number = MAX_EVIDENCE_CHARS): string {
-	if (input.length <= max) {
-		return input;
-	}
-	return `${input.slice(0, max - 1)}…`;
-}
-
 /**
  * Build the prompt the LLM receives when `synthesize: true` is set.
  * Mirrors the legacy `reflect.ts` prompt format so callers see identical
@@ -505,17 +498,17 @@ function coerceAnswer(text: string, schema: Record<string, unknown> | undefined)
  */
 export async function synthesizeAnswer(input: {
 	query: string;
-	hits: UnifiedMemorySearchResult[];
+	evidence: SearchEvidence[];
 	responseSchema?: Record<string, unknown>;
 	deps: UnifiedSearchDeps;
 	logger: Pick<Console, "log" | "warn">;
 }): Promise<{ answer: string; warnings: UnifiedMemorySearchWarning[] }> {
-	const { query, hits, responseSchema, deps, logger } = input;
-	const evidence = hits.map((hit) => ({
-		id: hit.id,
-		source: mapHitToTier(hit),
-		snippet: truncate(hit.content),
-		score: hit.similarity,
+	const { query, responseSchema, deps, logger } = input;
+	const evidence = input.evidence.map((item) => ({
+		id: item.id,
+		source: mapEvidenceSourceToTier(item.source),
+		snippet: item.snippet,
+		score: item.score,
 	}));
 	const warnings: UnifiedMemorySearchWarning[] = [];
 
@@ -551,26 +544,10 @@ export async function synthesizeAnswer(input: {
 	}
 }
 
-/**
- * Map a search hit onto the synthesis tier vocabulary. Summaries carry
- * a `metadata.tier === "summary"` marker; everything else falls back to
- * the hit's `type` field.
- */
-function mapHitToTier(hit: UnifiedMemorySearchResult): SearchTier {
-	const tierMarker = (hit.metadata as Record<string, unknown> | undefined)?.tier;
-	if (tierMarker === "summary") {
-		return "summary";
-	}
-	if (hit.type === "memory") {
-		return "raw";
-	}
-	if (hit.type === "insight") {
-		return "insight";
-	}
-	if (hit.type === "knowledge") {
-		return "knowledge";
-	}
-	return hit.type as SearchTier;
+function mapEvidenceSourceToTier(source: SearchEvidence["source"]): SearchTier {
+	if (source === "memory") return "raw";
+	if (source === "insights") return "insight";
+	return source;
 }
 
 /**

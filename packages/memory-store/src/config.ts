@@ -16,7 +16,7 @@
  *   - `db.getDb()` — returns a Drizzle DB handle (Postgres path only)
  *
  * Required for vector indexing:
- *   - one of `vector.sqlite-vec.dbPath` or `vector.chroma.url`
+ *   - configuration for the selected sqlite-vec, Chroma, LanceDB, or Milvus backend
  *
  * Required for unified semantic search:
  *   - `unified.embedQuery` — the embedding provider's query embedder
@@ -34,6 +34,7 @@ import type { FactType } from "@melandlabs/contracts";
 import type { DerivedFact } from "@melandlabs/contracts/derived-fact";
 import type { EntityEdge } from "@melandlabs/contracts/entity-edge";
 import type { Peer } from "@melandlabs/contracts/peer";
+import type { RawMessage as IndexedRawMessage, RawMessageSearchChunk } from "@melandlabs/indexeddb";
 import type { RawMessage } from "./contracts";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
@@ -69,7 +70,7 @@ export interface MemoryStoreDb {
 // biome-ignore lint/suspicious/noEmptyInterface: intentionally empty — kept as a named type so existing `env?: MemoryStoreEnv` params still type-check.
 export interface MemoryStoreEnv {}
 
-export type VectorBackend = "sqlite-vec" | "chroma";
+export type VectorBackend = "sqlite-vec" | "chroma" | "lancedb" | "milvus";
 
 export interface MemoryStoreVectorConfig {
 	/** Active backend selector. Defaults to env-based detection. */
@@ -85,6 +86,19 @@ export interface MemoryStoreVectorConfig {
 		rawMessagesCollection?: string;
 		insightsCollection?: string;
 	};
+	/** LanceDB options (used when backend === "lancedb"). */
+	lancedb?: {
+		uri: string;
+		table?: string;
+	};
+	/** Milvus options (used when backend === "milvus"). */
+	milvus?: {
+		address: string;
+		token?: string;
+		database?: string;
+		collection?: string;
+		dimension?: number;
+	};
 }
 
 export type EmbedQueryFn = (input: {
@@ -92,6 +106,12 @@ export type EmbedQueryFn = (input: {
 	query: string;
 	authToken?: string;
 }) => Promise<number[]>;
+
+export type EmbedDocumentsFn = (input: {
+	userId: string;
+	texts: string[];
+	authToken?: string;
+}) => Promise<number[][]>;
 
 export interface UnifiedSearchKnowledgeResult {
 	chunkId: string;
@@ -140,11 +160,39 @@ export interface MemorySummaryHit {
 export interface UnifiedSearchDeps {
 	/** Embed a query string using the active user's provider. */
 	embedQuery?: EmbedQueryFn;
+	/** Batch document embedding used by child indexing when the provider supports it. */
+	embedDocuments?: EmbedDocumentsFn;
+	/** Safe, non-secret identity used by health checks and child-index metadata. */
+	embeddingInfo?: {
+		provider?: string;
+		model?: string;
+		dimensions?: number;
+		maxTokens?: number;
+	};
+	/** Runtime-safe retrieval readiness used by health and diagnostics. */
+	getRawMessageRetrievalStatus?: () => Promise<{
+		backend: string;
+		embeddingProvider?: string;
+		embeddingModel?: string;
+		embeddingDimensions?: number;
+		childCount: number;
+		embeddedChildCount: number;
+		indexedDimensions: number[];
+		semanticReady: boolean;
+		lexicalReady: boolean;
+		semanticDegradedReason?: string;
+		rerankerProvider?: string;
+		rerankerModel?: string;
+		rerankerReady?: boolean;
+	}>;
+	/** Optional external child-vector index used by the shared write path. */
+	rawMessageChildIndex?: {
+		replaceMessages(messages: IndexedRawMessage[], chunks: RawMessageSearchChunk[]): Promise<void>;
+	};
 	/**
-	 * Postgres-side ANN search over `raw_messages`. Used when chroma is
-	 * not enabled but the host has a postgres-backed manager. If both
-	 * chroma and this are absent, the memory source will return empty
-	 * (with a warning) in standalone mode.
+	 * Dense raw-message search supplied by the selected child-vector backend.
+	 * External Postgres hosts may also provide their legacy parent-level
+	 * implementation here; Postgres schema changes are outside this package.
 	 */
 	searchRawMessagesAnn?: (input: {
 		userId: string;
@@ -156,6 +204,21 @@ export interface UnifiedSearchDeps {
 		peers?: ReadonlyArray<Peer>;
 		/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
 		factTypes?: FactType[];
+	}) => Promise<
+		Array<{
+			id: string;
+			content: string;
+			similarity: number;
+			metadata: Record<string, unknown>;
+		}>
+	>;
+	/** Native dense+BM25 path for backends such as LanceDB and Milvus. */
+	searchRawMessagesHybrid?: (input: {
+		userId: string;
+		query: string;
+		queryEmbedding: number[];
+		limit: number;
+		botId?: string;
 	}) => Promise<
 		Array<{
 			id: string;
@@ -295,6 +358,13 @@ export interface UnifiedSearchDeps {
 	 * is preserved.
 	 */
 	reranker?: import("./search/reranker").Reranker;
+	/** Safe, non-secret reranker identity surfaced by health and diagnostics. */
+	rerankerInfo?: {
+		provider: string;
+		model?: string;
+		maxTokens?: number;
+		ready: boolean;
+	};
 	/**
 	 * Optional logger. When set (e.g. via `MemoryStoreConfig.logger`),
 	 * `reflect` / `consolidate` log through it instead of `console`.

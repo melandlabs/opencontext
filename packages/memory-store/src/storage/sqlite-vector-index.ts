@@ -59,7 +59,9 @@ function resolveEnv(_env?: MemoryStoreEnv): MemoryStoreEnv {
 
 async function getInsightSQLiteVecStore(_env: MemoryStoreEnv) {
 	const dbPath = resolveSQLiteRawMessageDbPath();
-	const { getSQLiteVecStore } = await import("@melandlabs/rag/sqlite-vec-store");
+	// Insights still use the generic, dimension-aware AI-RAG collection.
+	// The core raw-message child index uses @melandlabs/rag directly.
+	const { getSQLiteVecStore } = await import("@melandlabs/ai-rag/sqlite-vec-store");
 	return await getSQLiteVecStore(dbPath, undefined, {
 		collectionName: process.env.SQLITE_VEC_INSIGHTS_COLLECTION || "opencontext_insights",
 	});

@@ -26,7 +26,7 @@ export interface RunManifest {
 	dataset: DatasetIdentity;
 	answerer_model: string;
 	judge_model: string;
-	retrieval: { strategy: string; top_k: number };
+	retrieval: { strategy: string; top_k: number; [key: string]: unknown };
 	resume: boolean;
 	started_at: string;
 	finished_at: string;

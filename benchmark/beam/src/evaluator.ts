@@ -2,7 +2,8 @@
  * BEAM Evaluator for the OpenContext memory store.
  *
  * Flow (no agent, no filesystem — pure memory-store HTTP):
- *   1. loadConversation: chunk the conversation and POST the chunks to the
+ *   1. loadConversation: preserve every source turn as one complete
+ *      RawMessage and POST those messages to the
  *      OpenContext daemon (`POST /v1/raw-messages`, embedOnInsert).
  *   2. evaluateQuestion: retrieve relevant chunks (`POST /v1/search`),
  *      then ask the answerer LLM (see opencontext-client.ts) using only
@@ -11,13 +12,12 @@
  *
  * Differences from the LongMemEval evaluator:
  *   - Conversations can be enormous (1M avg 842 turns, 10M avg 7,757 turns).
- *     We chunk by `CHUNK_TURNS` and ingest one memory message per chunk.
- *   - Each chunk keeps its timestamp range in the text header so
- *     date-aware questions can reason about time.
+ *     Each source turn remains independently retrievable while core storage
+ *     owns any child chunking needed for embedding and retrieval.
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
 import { buildAnswerAttribution, buildRetrievalTrace, deriveFailureStage, sha256Text } from "./diagnostics";
@@ -50,20 +50,15 @@ import {
 	type BeamJudgeTrace,
 	type BeamProbingQuestion,
 	type BeamRetrievalTrace,
-	type BeamTurn,
 	type Prediction,
 } from "./types";
 
-/**
- * How many turns go into a single ingested memory message.
- *
- * 20 ≈ 1 LongMemEval session. Smaller chunks explode the message count for
- * the 10M bucket; larger chunks hurt retrieval precision.
- */
-export const CHUNK_TURNS = 20;
-
 /** How many retrieved chunks are shown to the answerer. */
-export const RETRIEVAL_LIMIT = 8;
+const configuredRetrievalLimit = Number.parseInt(process.env.BEAM_TOP_K ?? "8", 10);
+export const RETRIEVAL_LIMIT =
+	Number.isInteger(configuredRetrievalLimit) && configuredRetrievalLimit > 0
+		? Math.min(50, configuredRetrievalLimit)
+		: 8;
 
 function parseTimestampMs(ts: string | undefined): number | undefined {
 	if (!ts) return undefined;
@@ -73,39 +68,6 @@ function parseTimestampMs(ts: string | undefined): number | undefined {
 	} catch {
 		return undefined;
 	}
-}
-
-function formatTimestamp(ts: string | undefined): string {
-	if (!ts) return "(unknown)";
-	try {
-		return new Date(ts).toISOString();
-	} catch {
-		return ts;
-	}
-}
-
-function buildChunkText(
-	conv: BeamConversation,
-	chunkIndex: number,
-	startTurn: number,
-	endTurn: number,
-	turns: BeamTurn[],
-): string {
-	const header =
-		`# ${conv.entry_id} — chunk ${chunkIndex}\n` +
-		`# Turns ${startTurn}..${endTurn} of ${conv.chat.length}\n` +
-		`# Scale: ${conv.scale}\n` +
-		`# First turn: ${formatTimestamp(turns[0]?.timestamp)}\n` +
-		`# Last turn:  ${formatTimestamp(turns[turns.length - 1]?.timestamp)}\n\n`;
-
-	const body = turns
-		.map((turn) => {
-			const ts = turn.timestamp ? ` (${turn.timestamp})` : "";
-			return `**${turn.speaker}${ts}:** ${turn.text}`;
-		})
-		.join("\n\n");
-
-	return `${header}${body}\n`;
 }
 
 /**
@@ -119,36 +81,28 @@ export function buildConversationMessages(conv: BeamConversation): {
 	const chunks: BeamChunkTrace[] = [];
 	const now = Date.now();
 
-	let chunkIndex = 0;
-	for (let i = 0; i < conv.chat.length; i += CHUNK_TURNS) {
-		const slice = conv.chat.slice(i, i + CHUNK_TURNS);
-		const startTurn = i;
-		const endTurn = i + slice.length - 1;
-		const text = buildChunkText(conv, chunkIndex, startTurn, endTurn, slice);
-
-		const firstTs = slice[0]?.timestamp;
-		const lastTs = slice[slice.length - 1]?.timestamp;
-		const sourceTurnIds = slice
-			.map((turn) => turn.source_id)
-			.filter((id): id is string => typeof id === "string");
-		const messageId = `beam_${conv.entry_id}__chunk_${chunkIndex}`;
+	for (let turnIndex = 0; turnIndex < conv.chat.length; turnIndex++) {
+		const turn = conv.chat[turnIndex];
+		if (!turn) continue;
+		const messageId = `beam_${conv.entry_id}__turn_${turnIndex}`;
+		const sourceTurnIds = turn.source_id ? [turn.source_id] : [];
 
 		messages.push({
 			messageId,
 			userId: "benchmark_user",
 			platform: "benchmark",
 			botId: "beam",
-			timestamp: parseTimestampMs(firstTs) ?? parseTimestampMs(lastTs) ?? now,
-			content: text,
+			timestamp: parseTimestampMs(turn.timestamp) ?? now,
+			content: turn.text,
 			createdAt: now,
 			metadata: {
 				entryId: conv.entry_id,
-				chunkIndex,
+				conversationId: `beam_${conv.entry_id}`,
+				speaker: turn.speaker,
+				timestamp: turn.timestamp ?? null,
+				sequence: turnIndex,
 				scale: conv.scale,
-				contentType: "beam_chunk",
-				turnStart: startTurn,
-				turnEnd: endTurn,
-				sourceTurnIds,
+				sourceTurnId: turn.source_id ?? null,
 			},
 		});
 		chunks.push({
@@ -156,21 +110,19 @@ export function buildConversationMessages(conv: BeamConversation): {
 			entry_id: conv.entry_id,
 			scale: conv.scale,
 			message_id: messageId,
-			chunk_index: chunkIndex,
-			ingest_batch_index: Math.floor(chunkIndex / INGEST_BATCH_SIZE),
-			turn_start: startTurn,
-			turn_end: endTurn,
+			chunk_index: turnIndex,
+			ingest_batch_index: Math.floor(turnIndex / INGEST_BATCH_SIZE),
+			turn_start: turnIndex,
+			turn_end: turnIndex,
 			source_turn_ids: sourceTurnIds,
-			content_sha256: sha256Text(text),
-			content_characters: text.length,
-			first_timestamp: firstTs ?? null,
-			last_timestamp: lastTs ?? null,
+			content_sha256: sha256Text(turn.text),
+			content_characters: turn.text.length,
+			first_timestamp: turn.timestamp ?? null,
+			last_timestamp: turn.timestamp ?? null,
 			ingest_status: "pending",
 			ingest_latency_ms: null,
 			ingest_warnings: [],
 		});
-
-		chunkIndex++;
 	}
 
 	return { messages, chunks };
@@ -267,7 +219,13 @@ export { checkOpencontextHealth, getOpencontextBaseUrl };
 
 /** Per-conversation user id so retrieval only sees this conversation's chunks. */
 function beamUserId(conv: BeamConversation): string {
-	return `beam_${conv.entry_id}`;
+	return `beam_v13_${conv.entry_id}`;
+}
+
+/** Resolve the checkpoint namespace without touching any existing run. */
+export function getBeamCheckpointDir(): string {
+	const configured = process.env.BEAM_CHECKPOINT_DIR?.trim();
+	return configured ? resolve(configured) : join(import.meta.dirname, "..", "checkpoints", "beam");
 }
 
 export class BeamEvaluator {
@@ -282,7 +240,7 @@ export class BeamEvaluator {
 		this.baseUrl = baseUrl ?? getOpencontextBaseUrl();
 		this.quickLimit = quickLimit;
 		this.resume = resume;
-		this.checkpointDir = join(import.meta.dirname, "..", "checkpoints", "beam");
+		this.checkpointDir = getBeamCheckpointDir();
 	}
 
 	private getCheckpointPath(questionId: string): string {
@@ -459,6 +417,7 @@ export class BeamEvaluator {
 					RETRIEVAL_LIMIT,
 					this.baseUrl,
 					beamUserId(conv),
+					{ includeRetrievalDiagnostics: true },
 				);
 			} catch (error) {
 				const message = error instanceof Error ? error.message : String(error);
@@ -473,13 +432,26 @@ export class BeamEvaluator {
 					query: question.question,
 					user_id: beamUserId(conv),
 					top_k: RETRIEVAL_LIMIT,
+					candidate_k: null,
 					strategy: "daemon-default",
+					merge_strategy: null,
+					threshold: null,
+					backend: null,
+					semantic_degraded_reason: null,
+					candidate_counts: null,
 					latency_ms: Math.round(performance.now() - searchStartedAt),
 					response_query: question.question,
 					response_sources: [],
 					response_count: 0,
 					response_warnings: [],
 					response_reasoning: null,
+					premerge_diagnostics_available: false,
+					candidate_channels: { semantic: [], lexical: [], hybrid: [], entity: [] },
+					fused_before_rerank: [],
+					reranker: null,
+					semantic_source_recall_at_candidate_k: null,
+					lexical_source_recall_at_candidate_k: null,
+					hybrid_source_recall_at_candidate_k: null,
 					hits: [],
 					retrieval_applicable: question.source.source_chat_ids.length > 0,
 					required_source_turn_ids: requiredIds,
@@ -512,6 +484,7 @@ export class BeamEvaluator {
 				latencyMs: Math.round(performance.now() - searchStartedAt),
 			});
 			const hits = searchResponse.results;
+			const contextCharacters = hits.reduce((sum, hit) => sum + hit.content.length, 0);
 			const prompt = buildAnswerPrompt(conv, question, hits);
 			executionStage = "answerer";
 			const answerStartedAt = performance.now();
@@ -535,6 +508,7 @@ export class BeamEvaluator {
 					prompt,
 					token_usage: answerUsage,
 					included_hit_ids: hits.map((hit) => hit.id),
+					included_context_characters: contextCharacters,
 					cited_hit_ids: [],
 					cited_relevant_hit_ids: [],
 					attribution_status: retrievalTrace.retrieval_applicable ? "uncited" : "not_applicable",
@@ -555,6 +529,7 @@ export class BeamEvaluator {
 				prompt,
 				token_usage: answerUsage,
 				included_hit_ids: hits.map((hit) => hit.id),
+				included_context_characters: contextCharacters,
 				...attribution,
 			};
 

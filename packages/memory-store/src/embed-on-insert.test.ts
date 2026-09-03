@@ -14,7 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RawMessage } from "@melandlabs/indexeddb";
 
 import type { UnifiedSearchDeps } from "./config";
-import { applyEmbedOnInsertPolicy, embedMissingMessages } from "./embed-on-insert";
+import { applyEmbedOnInsertPolicy, embedMissingMessages, prepareRawMessageIngest } from "./embed-on-insert";
 
 const baseMessage = (overrides: Partial<RawMessage> = {}): RawMessage => ({
 	messageId: "m-1",
@@ -66,12 +66,12 @@ describe("applyEmbedOnInsertPolicy", () => {
 		expect(out.warnings[0]?.code).toBe("embed_on_insert_auto_applied");
 	});
 
-	it("path (c) — caller falsy, embedder NOT wired → rows verbatim, no warnings", async () => {
+	it("path (c) — caller falsy, embedder NOT wired → lexical-only warning", async () => {
 		const incoming = [baseMessage()];
 		const out = await applyEmbedOnInsertPolicy(incoming, false, {});
 
-		expect(out.messages).toBe(incoming);
-		expect(out.warnings).toHaveLength(0);
+		expect(out.messages).toEqual(incoming);
+		expect(out.warnings).toEqual([expect.objectContaining({ code: "semantic_index_unavailable" })]);
 	});
 
 	it("path (c) — caller falsy, rows already have embeddings → rows verbatim, no warnings", async () => {
@@ -114,7 +114,7 @@ describe("applyEmbedOnInsertPolicy", () => {
 		const out = await applyEmbedOnInsertPolicy(incoming, true, undefined);
 
 		expect(out.messages).toEqual(incoming);
-		expect(out.warnings).toHaveLength(0);
+		expect(out.warnings).toEqual([expect.objectContaining({ code: "semantic_index_unavailable" })]);
 	});
 });
 
@@ -139,5 +139,51 @@ describe("embedMissingMessages", () => {
 		const out = await embedMissingMessages([empty], { embedQuery });
 		expect(embedQuery).not.toHaveBeenCalled();
 		expect(out[0]).toBe(empty);
+	});
+
+	it("embeds every long-message child independently without changing the parent content", async () => {
+		const embedQuery = vi.fn(async () => [0.1, 0.2]);
+		const message = baseMessage({
+			content: Array.from({ length: 300 }, (_, index) => `sentence-${index}`).join(" "),
+		});
+		const out = await prepareRawMessageIngest([message], true, { embedQuery });
+
+		expect(out.chunks.length).toBeGreaterThan(1);
+		expect(embedQuery).toHaveBeenCalledTimes(out.chunks.length);
+		expect(out.messages[0]?.content).toBe(message.content);
+		expect(out.messages[0]?.embedding).toBeUndefined();
+		expect(out.chunks.every((chunk) => chunk.embedding?.length === 2)).toBe(true);
+	});
+
+	it("batches child embeddings across an ingest request when the provider supports it", async () => {
+		const embedQuery = vi.fn(async () => [9, 9]);
+		const embedDocuments = vi.fn(async ({ texts }: { texts: string[] }) =>
+			texts.map((_, index) => [index + 1, index + 2]),
+		);
+		const messages = [
+			baseMessage({
+				content: Array.from({ length: 300 }, (_, index) => `alpha-${index}`).join(" "),
+			}),
+			baseMessage({ messageId: "m-2", content: "short message" }),
+		];
+
+		const out = await prepareRawMessageIngest(messages, true, {
+			embedQuery,
+			embedDocuments,
+		});
+
+		expect(embedDocuments).toHaveBeenCalledTimes(1);
+		expect(embedDocuments.mock.calls[0]?.[0].texts).toHaveLength(out.chunks.length);
+		expect(embedQuery).not.toHaveBeenCalled();
+		expect(out.chunks.every((chunk) => chunk.embedding?.length === 2)).toBe(true);
+	});
+
+	it("does not index an all-zero provider vector as a semantic child", async () => {
+		const out = await prepareRawMessageIngest([baseMessage()], true, {
+			embedQuery: async () => [0, 0, 0],
+		});
+
+		expect(out.chunks[0]?.embedding).toBeUndefined();
+		expect(out.warnings).toEqual([expect.objectContaining({ code: "semantic_index_unavailable" })]);
 	});
 });

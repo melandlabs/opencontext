@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-export const RAW_MESSAGES_SCHEMA_VERSION = 4;
+export const RAW_MESSAGES_SCHEMA_VERSION = 5;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -19,6 +19,7 @@ function addColumnIfMissing(db: Database.Database, table: string, column: string
 export function initializeRawMessageSchema(db: Database.Database): void {
 	db.pragma("journal_mode = WAL");
 	db.pragma("busy_timeout = 30000");
+	db.pragma("foreign_keys = ON");
 
 	db.exec(`
     CREATE TABLE IF NOT EXISTS raw_messages (
@@ -146,6 +147,59 @@ export function initializeRawMessageSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_raw_messages_fact_type
       ON raw_messages(user_id, fact_type)
       WHERE fact_type IS NOT NULL;
+  `);
+
+	// --- v5: search-only child chunks ---
+	// RawMessage remains the source of truth. Children only carry bounded text,
+	// exact parent offsets, and their own optional embedding.
+	db.exec(`
+    CREATE TABLE IF NOT EXISTS raw_message_chunks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chunk_id TEXT UNIQUE NOT NULL,
+      message_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      chunk_index INTEGER NOT NULL,
+      chunk_count INTEGER NOT NULL,
+      start_position INTEGER NOT NULL,
+      end_position INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      content_hash TEXT NOT NULL,
+      embedding BLOB,
+      embedding_model TEXT,
+      embedding_dimensions INTEGER,
+      embedding_updated_at INTEGER,
+      FOREIGN KEY(message_id) REFERENCES raw_messages(message_id) ON DELETE CASCADE,
+      UNIQUE(message_id, chunk_index)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_raw_message_chunks_user
+      ON raw_message_chunks(user_id);
+    CREATE INDEX IF NOT EXISTS idx_raw_message_chunks_message
+      ON raw_message_chunks(message_id, chunk_index);
+    CREATE INDEX IF NOT EXISTS idx_raw_message_chunks_embedding_dimensions
+      ON raw_message_chunks(embedding_dimensions)
+      WHERE embedding IS NOT NULL;
+
+    CREATE VIRTUAL TABLE IF NOT EXISTS raw_message_chunks_fts USING fts5(
+      content,
+      content='raw_message_chunks',
+      content_rowid='id'
+    );
+
+    CREATE TRIGGER IF NOT EXISTS raw_message_chunks_ai AFTER INSERT ON raw_message_chunks BEGIN
+      INSERT INTO raw_message_chunks_fts(rowid, content) VALUES (new.id, new.content);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS raw_message_chunks_ad AFTER DELETE ON raw_message_chunks BEGIN
+      INSERT INTO raw_message_chunks_fts(raw_message_chunks_fts, rowid, content)
+      VALUES('delete', old.id, old.content);
+    END;
+
+    CREATE TRIGGER IF NOT EXISTS raw_message_chunks_au AFTER UPDATE ON raw_message_chunks BEGIN
+      INSERT INTO raw_message_chunks_fts(raw_message_chunks_fts, rowid, content)
+      VALUES('delete', old.id, old.content);
+      INSERT INTO raw_message_chunks_fts(rowid, content) VALUES (new.id, new.content);
+    END;
   `);
 
 	// --- VSA: (role, filler) bindings for `store.vsa*` verbs ---
