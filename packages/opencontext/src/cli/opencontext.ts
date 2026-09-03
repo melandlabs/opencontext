@@ -55,8 +55,7 @@ function unifiedFromEnv(env: NodeJS.ProcessEnv): UnifiedArgs {
 		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
 		embeddingModel: env.EMBEDDING_MODEL,
 		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
-		rerankerProvider:
-			(env.RERANKER_PROVIDER as UnifiedArgs["rerankerProvider"] | undefined) ?? "none",
+		rerankerProvider: (env.RERANKER_PROVIDER as UnifiedArgs["rerankerProvider"] | undefined) ?? "none",
 		rerankerModel: env.LOCAL_RERANKER_MODEL,
 		rerankerCacheDir: env.LOCAL_RERANKER_CACHE_DIR,
 		rerankerBatchSize: env.LOCAL_RERANKER_BATCH_SIZE

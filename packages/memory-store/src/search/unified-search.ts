@@ -1117,8 +1117,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		const reranked = await applyReranker(deps.reranker, input.query, merged);
 		const rerankerLatencyMs = deps.reranker ? Date.now() - rerankerStartedAt : 0;
 		const rerankerOrderChanged =
-			Boolean(deps.reranker) &&
-			merged.some((hit, index) => hit.id !== reranked[index]?.id);
+			Boolean(deps.reranker) && merged.some((hit, index) => hit.id !== reranked[index]?.id);
 		const ranked = reranked.slice(0, limit);
 
 		const output: UnifiedMemorySearchOutput = {
