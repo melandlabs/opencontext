@@ -42,12 +42,17 @@ function applicabilityIsActive(applicability: MemoryApplicabilityContext | undef
 }
 
 /**
- * Retrieval is directional: global candidates are always eligible, while a
- * narrower candidate requires an exact trusted request scope/key match.
+ * Canonical applicability matcher for trusted retrieval contexts.
+ *
+ * Missing applicability is treated as global. Global candidates remain
+ * eligible for every explicit context list (including an empty list), while
+ * scoped candidates require an active context with an exact scope/key match.
+ * Candidate and matching-context validity windows are inclusive and evaluated
+ * at the caller-supplied `now` instant.
  */
 export function applicabilityMatchesTrustedContexts(
 	candidate: MemoryApplicabilityContext | undefined,
-	trustedContexts: MemoryApplicabilityContext[] | undefined,
+	trustedContexts: readonly MemoryApplicabilityContext[] | undefined,
 	now: number,
 ): boolean {
 	if (!applicabilityIsActive(candidate, now)) return false;
@@ -65,7 +70,7 @@ export function applicabilityMatchesTrustedContexts(
 function scopedNodesById(
 	nodes: MemoryGraphNode[],
 	ownerScope: OwnerScope,
-	applicabilityContexts: MemoryApplicabilityContext[] | undefined,
+	applicabilityContexts: readonly MemoryApplicabilityContext[] | undefined,
 	now: number,
 ): Map<string, MemoryGraphNode> {
 	return new Map(
@@ -83,7 +88,7 @@ function scopedEdges(
 	edges: MemoryGraphEdge[],
 	ownerScope: OwnerScope,
 	includeHistorical = false,
-	applicabilityContexts?: MemoryApplicabilityContext[],
+	applicabilityContexts?: readonly MemoryApplicabilityContext[],
 	now = Date.now(),
 ): MemoryGraphEdge[] {
 	return edges.filter(
@@ -98,7 +103,7 @@ function scopedEdges(
 function scopedClusters(
 	clusters: MemoryGraphClusterSnapshot[],
 	ownerScope: OwnerScope,
-	applicabilityContexts: MemoryApplicabilityContext[] | undefined,
+	applicabilityContexts: readonly MemoryApplicabilityContext[] | undefined,
 	now: number,
 ): MemoryGraphClusterSnapshot[] {
 	return clusters.filter(
@@ -483,7 +488,7 @@ export function buildGraphAwareRetrievalDryRun(
 	const includeDeprecated = input.includeDeprecated === true;
 	const auditMode = input.visibilityMode === "audit";
 	const conflictMode = input.visibilityMode === "conflict";
-	const applicabilityNow = input.snapshot.capturedAt ?? Date.now();
+	const applicabilityNow = parseAsOf(input.asOf, input.snapshot.capturedAt);
 	const nodesById = scopedNodesById(
 		input.snapshot.nodes,
 		input.ownerScope,
@@ -679,30 +684,6 @@ export function applicabilityContains(
 	return true;
 }
 
-function isApplicable(
-	applicability: MemoryApplicabilityContext | undefined,
-	contexts: MemoryApplicabilityContext[] | undefined,
-	asOfMs: number,
-): boolean {
-	if (!applicability) return true;
-	if (typeof applicability.validFrom === "number" && asOfMs < applicability.validFrom) {
-		return false;
-	}
-	if (typeof applicability.validUntil === "number" && asOfMs > applicability.validUntil) {
-		return false;
-	}
-	if (!contexts || contexts.length === 0) {
-		return applicability.scope === "global";
-	}
-	return contexts.some((ctx) => {
-		if (ctx.scope !== applicability.scope) return false;
-		if (applicability.key && ctx.key && applicability.key !== ctx.key) {
-			return false;
-		}
-		return true;
-	});
-}
-
 export class DefaultGraphAwareRetriever implements GraphAwareRetriever {
 	async compare(input: GraphAwareRetrievalInput): Promise<GraphAwareRetrievalResult> {
 		const reasonCodes: string[] = [];
@@ -718,7 +699,7 @@ export class DefaultGraphAwareRetriever implements GraphAwareRetriever {
 			if (node.visibility === "audit-only" && input.visibilityMode !== "audit") {
 				continue;
 			}
-			if (!isApplicable(node.applicability, input.applicabilityContexts, asOfMs)) {
+			if (!applicabilityMatchesTrustedContexts(node.applicability, input.applicabilityContexts, asOfMs)) {
 				continue;
 			}
 			applicableNodeIds.add(node.id);
@@ -731,13 +712,17 @@ export class DefaultGraphAwareRetriever implements GraphAwareRetriever {
 			if (!applicableNodeIds.has(edge.fromNodeId) || !applicableNodeIds.has(edge.toNodeId)) {
 				continue;
 			}
-			if (!applicabilityContains(edge.applicability, asOfMs)) {
+			if (!applicabilityMatchesTrustedContexts(edge.applicability, input.applicabilityContexts, asOfMs)) {
 				continue;
 			}
 			if (baselineSet.has(edge.fromNodeId) || baselineSet.has(edge.toNodeId)) {
 				for (const cluster of input.snapshot.clusters) {
 					if (
-						!applicabilityContains(cluster.applicability, asOfMs) ||
+						!applicabilityMatchesTrustedContexts(
+							cluster.applicability,
+							input.applicabilityContexts,
+							asOfMs,
+						) ||
 						!cluster.nodeIds.includes(edge.fromNodeId) ||
 						!cluster.nodeIds.includes(edge.toNodeId)
 					) {
@@ -749,7 +734,9 @@ export class DefaultGraphAwareRetriever implements GraphAwareRetriever {
 		}
 
 		for (const cluster of input.snapshot.clusters) {
-			if (!applicabilityContains(cluster.applicability, asOfMs)) continue;
+			if (!applicabilityMatchesTrustedContexts(cluster.applicability, input.applicabilityContexts, asOfMs)) {
+				continue;
+			}
 			if (cluster.nodeIds.some((id) => baselineSet.has(id))) {
 				expandedClusterIds.add(cluster.clusterId);
 			}
