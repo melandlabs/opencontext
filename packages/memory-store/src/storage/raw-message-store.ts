@@ -14,7 +14,11 @@
  * a typed `searchMessagesSemantically` extension when present.
  */
 
-import type { RawMessageStorageManager } from "@melandlabs/indexeddb";
+import type {
+	RawMessageSearchChunk,
+	RawMessageSearchIndexStats,
+	RawMessageStorageManager,
+} from "@melandlabs/indexeddb";
 import type { MemoryStoreConfig, MemoryStoreEnv } from "../config";
 import { hasPostgresFactory, resolvePostgresFactory } from "./postgres-raw-message-factory";
 import { closeSQLiteRawMessageManager, getSQLiteRawMessageManager } from "./sqlite-raw-message-store";
@@ -22,6 +26,12 @@ import { closeSQLiteRawMessageManager, getSQLiteRawMessageManager } from "./sqli
 export type RawMessageStorageBackend = "sqlite" | "postgres";
 
 export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
+	getRawMessageSearchChunks?: (input: {
+		chunkIds?: string[];
+		messageIds?: string[];
+		userId?: string;
+	}) => Promise<RawMessageSearchChunk[]>;
+	getRawMessageSearchIndexStats?: () => Promise<RawMessageSearchIndexStats>;
 	searchMessagesSemantically?: (input: {
 		userId: string;
 		queryEmbedding: number[];

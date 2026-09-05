@@ -87,6 +87,25 @@ opencontext-memory-mcp \
   --memory-backend sqlite-vec
 ```
 
+Local cross-encoder reranking is also opt-in and runs after RRF/source
+fusion but before the public Top-K limit:
+
+```bash
+opencontext-memory-http \
+  --embedding-provider local \
+  --memory-backend sqlite-vec \
+  --reranker-provider local \
+  --reranker-model Xenova/ms-marco-MiniLM-L-6-v2
+```
+
+The equivalent environment variables are `RERANKER_PROVIDER=local`,
+`LOCAL_RERANKER_MODEL`, `LOCAL_RERANKER_CACHE_DIR`,
+`LOCAL_RERANKER_BATCH_SIZE`, and `LOCAL_RERANKER_MAX_TOKENS`. Optional
+`LOCAL_RERANKER_DTYPE=q8` selects the quantized CPU model and
+`LOCAL_RERANKER_LOCAL_ONLY=true` requires all weights to exist in the cache.
+A configured reranker is warmed up at startup; model download or runtime
+errors fail startup instead of silently falling back to RRF-only ordering.
+
 Once the daemon is up, `POST /v1/search` (HTTP) and `memory.search` (MCP)
 honor a `reasoningStrategy` field:
 
@@ -108,9 +127,11 @@ programmatic equivalents.
 | `db.getDb()`                                          | yes for postgres backend        | Drizzle DB handle factory                                 |
 | `db.tables.rawMessages` / `db.tables.memorySummaries` | when using postgres backend     | Drizzle table references owned by the host                |
 | `dbPath`                                              | optional                        | SQLite path override (also reads `MEMORY_STORE_DB_PATH`)  |
-| `vector.backend`                                      | one of `sqlite-vec` or `chroma` | vector index backend (auto-detected if omitted)           |
+| `vector.backend`                                      | `sqlite-vec`, `chroma`, `lancedb`, or `milvus` | raw-message child vector backend                |
 | `vector.sqliteVec.dbPath`                             | when backend = sqlite-vec       | sqlite-vec DB path                                        |
 | `vector.chroma.url`                                   | when backend = chroma           | chroma server URL                                         |
+| `vector.lancedb.uri`                                  | when backend = lancedb          | LanceDB local directory or URI                            |
+| `vector.milvus.address`                               | when backend = milvus           | Milvus endpoint                                           |
 | `unified.embedQuery`                                  | yes for unified search          | query embedder                                            |
 | `unified.searchKnowledge`                             | optional                        | RAG over uploaded documents                               |
 | `unified.searchInsights`                              | optional                        | semantic search over extracted insights                   |
@@ -133,9 +154,9 @@ SQLite at `~/.opencontext/memory/store.db`; set
 registered Postgres factory (call `registerPostgresFactory` at startup).
 
 If any of `unified.embedQuery`, `unified.searchKnowledge`, `unified.searchInsights`,
-or `unified.searchRawMessagesAnn` are absent, the corresponding source in
+or the configured raw-message search provider are absent, the corresponding source in
 `searchUnifiedMemory` returns empty results with a warning. The SDK still
-works — fine for a read-only memory daemon or a chroma-only deployment.
+works and lexical child search remains available when the SQLite catalog is present.
 
 See `src/config.ts` for the full type surface.
 
@@ -214,9 +235,8 @@ const store = await createMemoryStore({
 });
 ```
 
-When chroma is reachable and the host's postgres manager exposes
-`searchMessagesSemantically`, chroma wins and the database path becomes
-the fallback — same semantics as the web app.
+Chroma stores only child chunks for dense retrieval. SQLite child FTS5 provides
+the lexical channel, and the full parent text remains in the raw-message store.
 
 ### 4. Cross-source search wiring
 
@@ -475,8 +495,8 @@ Endpoints:
 
 | Method + path                          | Body                                                                                                |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `GET  /health`                         | —                                                                                                   |
-| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, sources?, botIds?, documentIds?, factTypes?, synthesize?, reasoningStrategy? }` |
+| `GET  /health`                         | — (includes safe retrieval backend/readiness details when configured)                               |
+| `POST /v1/search`                      | `{ userId, query, limit?, threshold?, mergeStrategy?, includeRetrievalDiagnostics?, sources?, botIds?, documentIds?, factTypes?, synthesize?, reasoningStrategy? }` |
 | `POST /v1/consolidate:apply`           | `{ userId, query, ownerScope, tiers?, limit?, threshold?, dryRun?, expectedVersion?, llmPlanReview? }` |
 | `POST /v1/raw-messages`                | `{ userId, messages: RawMessage[] }`                                                                |
 | `GET  /v1/raw-messages/:id?userId=...` | —                                                                                                   |
@@ -525,8 +545,8 @@ Tools exposed over stdio:
 
 | Tool                     | Required args                                                                                                                                                                                  |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `memory.health`          | —                                                                                                                                                                                              |
-| `memory.search`          | `userId`, `query`, optional `limit`, `threshold`, `sources`, `botIds`, `documentIds`, `factTypes`, `synthesize`, `tiers`, **`reasoningStrategy`** (`"none" \| "rewrite" \| "iterative"`)        |
+| `memory.health`          | — (returns safe backend, embedding identity/dimensions, child counts, and readiness)                                                                                                            |
+| `memory.search`          | `userId`, `query`, optional `limit`, `threshold`, `mergeStrategy`, `includeRetrievalDiagnostics`, `sources`, `botIds`, `documentIds`, `factTypes`, `synthesize`, `tiers`, **`reasoningStrategy`** (`"none" \| "rewrite" \| "iterative"`) |
 | `memory.writeRawMessage` | `userId`, `message: { role, content, platform?, botId?, factType?, peer?, ... }`                                                                                                               |
 | `memory.getRawMessage`   | `userId`, `messageId`                                                                                                                                                                          |
 | `memory.consolidate`     | `userId`, `query`, `ownerScope`, optional `tiers`, `dryRun`, `expectedVersion`, `llmPlanReview`, `plan`                                                                                        |
@@ -602,16 +622,27 @@ editor. Tool calls appear in the chat like any other MCP tool.
   `{ query, sources, results: [], count: 0, warnings: [] }` without
   touching any backend.
 - If `isRawMessageStorageAvailable()` returns `false`, the memory source
-  emits a `raw_message_storage_unavailable` warning instead of running
-  Chroma / postgres search.
+  emits a `raw_message_storage_unavailable` warning instead of searching.
 - When `botIds` is provided, the memory source fans out across each
   `botId` filter in parallel (`Promise.all(filters.map(...))`) and
   flattens the results. If `botIds` is empty, a single unfiltered query
   is sent.
-- `limit` is passed straight through to each underlying backend — no
-  silent inflation. `threshold` is clamped to `[-1, 1]`.
-- Chroma failures fall back to `unified.searchRawMessagesAnn` when both
-  are configured; otherwise the memory source returns empty.
+- `limit` caps final results. Internally, each channel gathers
+  `min(50, max(limit, 4 × limit))` candidates so RRF and a configured reranker
+  operate on a useful window. RRF is the default merge strategy; when its
+  threshold is omitted, the full ranked candidate window is fused. Explicit
+  `threshold` values are clamped to `[-1, 1]`.
+- `retrievalDiagnostics.reranker` reports whether reranking was enabled, its
+  non-secret provider/model identity, input/output counts, latency, and whether
+  it changed candidate order. Health reports the same configured model and
+  readiness state.
+- `RawMessage.content` remains the complete parent text. Search indexing uses
+  400-estimated-token child chunks with 80-token overlap. Short-message hits
+  return the complete parent; long-message hits return the matched child plus
+  its same-parent predecessor and successor as one continuous source slice.
+- SQLite uses child sqlite-vec plus child FTS5; Chroma uses dense child search
+  plus SQLite FTS5; LanceDB and Milvus use their native dense/BM25 hybrid path.
+  All four return the parent `messageId` and the same bounded content semantics.
 - `reflect()` and `consolidate()` reuse the same evidence pipeline;
   `reflect()` is read-only, `consolidate()` additionally persists
   via the graph store + storage adapter.

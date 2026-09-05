@@ -16,6 +16,7 @@
 		"./parsers": "./dist/parsers.js",
 		"./universal-embeddings": "./dist/universal-embeddings.js",
 		"./sqlite-vec-store": "./dist/sqlite-vec-store.js",
+		"./chroma-vector-store": "./dist/chroma-vector-store.js",
 		"./pgvector-store": "./dist/pgvector-store.js",
 		"./hybrid-search": "./dist/hybrid-search.js",
 		"./lancedb-store": "./dist/lancedb-store.js",

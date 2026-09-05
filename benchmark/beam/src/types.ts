@@ -88,7 +88,7 @@ export interface BeamProbingQuestion {
 	source: BeamQuestionSource;
 }
 
-export const BEAM_TRACE_SCHEMA_VERSION = "1.1";
+export const BEAM_TRACE_SCHEMA_VERSION = "1.3";
 
 export type BeamExecutionStatus = "completed" | "execution_error";
 
@@ -134,7 +134,8 @@ export interface BeamRetrievalHitTrace {
 	content_sha256: string;
 	content_characters: number;
 	content_excerpt: string;
-	content: string;
+	/** Full text is retained for final Top-K hits; candidate channels keep hash/excerpt only. */
+	content?: string;
 	source_turn_ids: string[];
 	matched_source_turn_ids: string[];
 	relevant: boolean | null;
@@ -145,13 +146,46 @@ export interface BeamRetrievalTrace {
 	query: string;
 	user_id: string;
 	top_k: number;
+	candidate_k: number | null;
 	strategy: "daemon-default";
+	merge_strategy: "rrf" | "similarity" | null;
+	threshold: null;
+	backend: string | null;
+	semantic_degraded_reason: string | null;
+	candidate_counts: {
+		semantic: number;
+		lexical: number;
+		hybrid: number;
+		entity: number;
+		fused: number;
+		final: number;
+	} | null;
 	latency_ms: number;
 	response_query: string;
 	response_sources: string[];
 	response_count: number;
 	response_warnings: unknown[];
 	response_reasoning: unknown | null;
+	premerge_diagnostics_available: boolean;
+	candidate_channels: {
+		semantic: BeamRetrievalHitTrace[];
+		lexical: BeamRetrievalHitTrace[];
+		hybrid: BeamRetrievalHitTrace[];
+		entity: BeamRetrievalHitTrace[];
+	};
+	fused_before_rerank: BeamRetrievalHitTrace[];
+	reranker: {
+		enabled: boolean;
+		provider: string | null;
+		model: string | null;
+		input_count: number;
+		output_count: number;
+		latency_ms: number;
+		order_changed: boolean;
+	} | null;
+	semantic_source_recall_at_candidate_k: number | null;
+	lexical_source_recall_at_candidate_k: number | null;
+	hybrid_source_recall_at_candidate_k: number | null;
 	hits: BeamRetrievalHitTrace[];
 	retrieval_applicable: boolean;
 	required_source_turn_ids: string[];
@@ -187,6 +221,7 @@ export interface BeamModelCallTrace {
 
 export interface BeamAnswerTrace extends BeamModelCallTrace {
 	included_hit_ids: string[];
+	included_context_characters: number;
 	cited_hit_ids: string[];
 	cited_relevant_hit_ids: string[];
 	attribution_status: "supported" | "unsupported" | "uncited" | "not_applicable";

@@ -22,7 +22,7 @@ export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
  *   - `entity`   — entity-link match supplied by the host's
  *     `entitySearch` dep.
  */
-export type HitChannel = "semantic" | "lexical" | "entity";
+export type HitChannel = "semantic" | "lexical" | "hybrid" | "entity";
 
 /**
  * Per-hit score breakdown. Always emitted by `search()` (default merge
@@ -42,6 +42,8 @@ export interface HitSignals {
 	semantic?: number;
 	/** Lexical sub-query BM25 score (undefined when absent). */
 	lexical?: number;
+	/** Native backend dense+BM25 fused score (undefined when absent). */
+	hybrid?: number;
 	/** Entity sub-query match score (undefined when absent). */
 	entity?: number;
 	/** RRF-fused score (only when mergeStrategy === "rrf"). */
@@ -55,7 +57,7 @@ export interface HitSignals {
  * list. Order is intentional — it matches the declaration order
  * used by `materializeSignals` when populating `signals.channels`.
  */
-export const HIT_CHANNELS: readonly HitChannel[] = ["semantic", "lexical", "entity"] as const;
+export const HIT_CHANNELS: readonly HitChannel[] = ["semantic", "lexical", "hybrid", "entity"] as const;
 
 /**
  * Derive simple lexical keywords from a query string. Splits on any
@@ -141,10 +143,8 @@ export interface UnifiedMemorySearchInput {
 	 */
 	dateTo?: string;
 	/**
-	 * How to merge per-source result lists. Defaults to `"similarity"` —
-	 * the legacy global sort by similarity, then type/id tie-break. The
-	 * alternate value `"rrf"` invokes reciprocal-rank fusion across the
-	 * lists fed via the (internal) `rankedLists` option.
+	 * How to merge per-source result lists. Defaults to `"rrf"` reciprocal-rank
+	 * fusion. `"similarity"` preserves the legacy global similarity sort.
 	 */
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
 	/**
@@ -169,6 +169,8 @@ export interface UnifiedMemorySearchInput {
 	 * callers can pass `searchInput.factTypes ?? []` without surprises.
 	 */
 	factTypes?: FactType[];
+	/** Include pre-fusion channel candidates in the response for diagnostics. */
+	includeRetrievalDiagnostics?: boolean;
 }
 
 export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
@@ -205,12 +207,47 @@ export interface UnifiedMemorySearchOutput {
 	results: UnifiedMemorySearchResult[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	/**
 	 * Diagnostic information about reasoning and date filtering. Present
 	 * when (a) a non-`"none"` reasoning strategy was requested, or (b) a
 	 * `dateFrom` / `dateTo` filter was applied to the memory source.
 	 */
 	reasoning?: UnifiedMemoryReasoningInfo;
+}
+
+export interface UnifiedMemoryRetrievalDiagnostics {
+	mergeStrategy: UnifiedMemoryMergeStrategy;
+	candidateLimit: number;
+	backend?: string;
+	semanticDegradedReason?: string;
+	candidateCounts?: {
+		semantic: number;
+		lexical: number;
+		hybrid: number;
+		entity: number;
+		fused: number;
+		final: number;
+	};
+	channels: {
+		semantic: UnifiedMemorySearchResult[];
+		lexical: UnifiedMemorySearchResult[];
+		hybrid?: UnifiedMemorySearchResult[];
+		entity?: UnifiedMemorySearchResult[];
+	};
+	/** Results after channel/source fusion and before an optional host reranker. */
+	fusedBeforeRerank: UnifiedMemorySearchResult[];
+	reranker?: {
+		enabled: boolean;
+		provider?: string;
+		model?: string;
+		inputCount: number;
+		outputCount: number;
+		latencyMs: number;
+		orderChanged: boolean;
+	};
+	/** Final results after optional reranking and Top-K truncation. */
+	final: UnifiedMemorySearchResult[];
 }
 
 // ─── Unified `store.search()` public surface ──────────────────────────────────
@@ -282,6 +319,8 @@ export interface SearchInput {
 	 * `includeArchivedInsights` to the read-only search.
 	 */
 	includeArchivedInsights?: boolean;
+	/** Include pre-fusion retrieval candidates; intended for evaluation/debugging. */
+	includeRetrievalDiagnostics?: boolean;
 }
 
 export interface SearchEvidence {
@@ -300,6 +339,7 @@ export interface SearchOutput {
 	evidence: SearchEvidence[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	reasoning?: UnifiedMemoryReasoningInfo;
 	/** Only present when `synthesize` was truthy. */
 	answer?: string;
@@ -539,6 +579,7 @@ export function materializeSignals(
 export function listNameToChannel(name: string): HitChannel | undefined {
 	if (name === "memory-semantic") return "semantic";
 	if (name === "memory-bm25" || name === "memory-lexical") return "lexical";
+	if (name === "memory-hybrid") return "hybrid";
 	if (name === "memory-entity") return "entity";
 	return undefined;
 }

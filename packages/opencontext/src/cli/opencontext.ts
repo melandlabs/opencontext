@@ -8,10 +8,8 @@
  *
  * The HTTP subcommand accepts the same flag surface as the standalone
  * `opencontext-memory-http` bin in `@melandlabs/memory-store`. The bin
- * imports `LocalTransformersEmbeddingProvider` and `ChromaVectorStore`
- * from `@melandlabs/ai-rag` (bundled into the facade) for the local /
- * openrouter / chroma paths, and uses the memory-store's own
- * `searchMessagesSemantically` for the sqlite-vec memory path.
+ * delegates embedding, child indexing, retrieval backend, and reasoning
+ * wiring to the same shared builder as the standalone memory-store bins.
  *
  * Usage:
  *   opencontext                  # default → MCP on stdio
@@ -29,13 +27,10 @@
  * canonical copy of the runtime code.
  */
 
-import { ChromaVectorStore } from "@melandlabs/ai-rag/chroma-store";
-import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import {
-	createIterativeRecallPlanner,
-	createRawMessageStore,
-	createUserVoiceRewriter,
-} from "@melandlabs/memory-store";
+	type UnifiedArgs,
+	buildUnified as buildMemoryStoreUnified,
+} from "@melandlabs/memory-store/cli-shared";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import { startHttpServer, startMcpServer } from "../index.js";
@@ -44,74 +39,6 @@ import { parseDoctorArgs, runDoctor } from "./doctor.js";
 import { parseListArgs, runList } from "./list.js";
 import { parseSearchArgs, runSearch } from "./search.js";
 import { parseStatsArgs, runStats } from "./stats.js";
-
-// Shape that satisfies the `unified` field of `MemoryStoreConfig` (which
-// is what `startHttpServer` accepts). Kept local to this bin so we don't
-// depend on the internal `UnifiedSearchDeps` type.
-interface UnifiedConfig {
-	embedQuery?: (input: { userId: string; query: string; authToken?: string }) => Promise<number[]>;
-	searchRawMessagesAnn?: (input: {
-		userId: string;
-		queryEmbedding: number[];
-		limit: number;
-		threshold: number;
-		botId?: string;
-	}) => Promise<
-		Array<{ id: string; content: string; similarity: number; metadata: Record<string, unknown> }>
-	>;
-	searchInsights?: (input: {
-		userId: string;
-		query: string;
-		limit: number;
-		threshold: number;
-		botIds?: string[];
-		includeArchived?: boolean;
-		authToken?: string;
-	}) => Promise<
-		Array<{ id: string; content: string; similarity: number; metadata: Record<string, unknown> }>
-	>;
-	searchKnowledge?: (input: {
-		userId: string;
-		query: string;
-		options: { limit: number; threshold: number; documentIds?: string[] };
-		authToken?: string;
-	}) => Promise<
-		Array<{
-			chunkId: string;
-			documentId: string;
-			documentName: string;
-			content: string;
-			similarity: number;
-			chunkIndex: number;
-		}>
-	>;
-	reasoning?: {
-		queryRewriter?: ReturnType<typeof createUserVoiceRewriter>;
-		iterativePlanner?: ReturnType<typeof createIterativeRecallPlanner>;
-		defaultStrategy?: "none" | "rewrite" | "iterative";
-	};
-}
-
-interface UnifiedArgs {
-	embeddingProvider: "local" | "openrouter" | "none";
-	embeddingModel?: string;
-	embeddingCacheDir?: string;
-	chromaUrl?: string;
-	memoryBackend: "sqlite-vec" | "chroma" | "none";
-	insightsBackend: "sqlite-vec" | "chroma" | "none";
-	insightsCollection: string;
-	knowledgeBackend: "chroma" | "none";
-	knowledgeCollection: string;
-	/**
-	 * Wire `unified.reasoning.{queryRewriter, iterativePlanner}` from the
-	 * `OPENCONTEXT_LLM_*` env vars. Off by default — opt in via
-	 * `--reasoning` or `REASONING=1`.
-	 */
-	reasoning: boolean;
-	reasoningBaseUrl?: string;
-	reasoningModel?: string;
-	reasoningTimeoutMs?: number;
-}
 
 interface HttpArgs extends UnifiedArgs {
 	port: number;
@@ -123,15 +50,29 @@ interface McpArgs extends UnifiedArgs {
 	version?: string;
 }
 
-const ALLOWED_UNIFIED_VALUES = ["local", "openrouter", "none", "chroma", "sqlite-vec"] as const;
-
 function unifiedFromEnv(env: NodeJS.ProcessEnv): UnifiedArgs {
 	return {
 		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
 		embeddingModel: env.EMBEDDING_MODEL,
 		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
+		rerankerProvider: (env.RERANKER_PROVIDER as UnifiedArgs["rerankerProvider"] | undefined) ?? "none",
+		rerankerModel: env.LOCAL_RERANKER_MODEL,
+		rerankerCacheDir: env.LOCAL_RERANKER_CACHE_DIR,
+		rerankerBatchSize: env.LOCAL_RERANKER_BATCH_SIZE
+			? Number.parseInt(env.LOCAL_RERANKER_BATCH_SIZE, 10)
+			: undefined,
+		rerankerMaxTokens: env.LOCAL_RERANKER_MAX_TOKENS
+			? Number.parseInt(env.LOCAL_RERANKER_MAX_TOKENS, 10)
+			: undefined,
 		chromaUrl: env.CHROMA_URL,
 		memoryBackend: (env.MEMORY_BACKEND as UnifiedArgs["memoryBackend"] | undefined) ?? "none",
+		lancedbUri: env.LANCEDB_URI,
+		lancedbTable: env.LANCEDB_TABLE,
+		milvusAddress: env.MILVUS_ADDRESS,
+		milvusToken: env.MILVUS_TOKEN,
+		milvusDatabase: env.MILVUS_DATABASE,
+		milvusCollection: env.MILVUS_COLLECTION,
+		milvusDimension: env.MILVUS_DIMENSION ? Number.parseInt(env.MILVUS_DIMENSION, 10) : undefined,
 		insightsBackend: (env.INSIGHTS_BACKEND as UnifiedArgs["insightsBackend"] | undefined) ?? "none",
 		insightsCollection: env.INSIGHTS_COLLECTION ?? "opencontext_insights",
 		knowledgeBackend: (env.KNOWLEDGE_BACKEND as UnifiedArgs["knowledgeBackend"] | undefined) ?? "none",
@@ -156,11 +97,47 @@ function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => strin
 		case "--embedding-cache-dir":
 			args.embeddingCacheDir = takeValue();
 			break;
+		case "--reranker-provider":
+			args.rerankerProvider = takeValue() as UnifiedArgs["rerankerProvider"];
+			break;
+		case "--reranker-model":
+			args.rerankerModel = takeValue();
+			break;
+		case "--reranker-cache-dir":
+			args.rerankerCacheDir = takeValue();
+			break;
+		case "--reranker-batch-size":
+			args.rerankerBatchSize = Number.parseInt(takeValue(), 10);
+			break;
+		case "--reranker-max-tokens":
+			args.rerankerMaxTokens = Number.parseInt(takeValue(), 10);
+			break;
 		case "--chroma-url":
 			args.chromaUrl = takeValue();
 			break;
 		case "--memory-backend":
 			args.memoryBackend = takeValue() as UnifiedArgs["memoryBackend"];
+			break;
+		case "--lancedb-uri":
+			args.lancedbUri = takeValue();
+			break;
+		case "--lancedb-table":
+			args.lancedbTable = takeValue();
+			break;
+		case "--milvus-address":
+			args.milvusAddress = takeValue();
+			break;
+		case "--milvus-token":
+			args.milvusToken = takeValue();
+			break;
+		case "--milvus-database":
+			args.milvusDatabase = takeValue();
+			break;
+		case "--milvus-collection":
+			args.milvusCollection = takeValue();
+			break;
+		case "--milvus-dimension":
+			args.milvusDimension = Number.parseInt(takeValue(), 10);
 			break;
 		case "--insights-backend":
 			args.insightsBackend = takeValue() as UnifiedArgs["insightsBackend"];
@@ -195,16 +172,28 @@ function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => strin
 }
 
 function validateUnifiedArgs(args: UnifiedArgs, logPrefix: string): void {
+	const validate = (name: string, value: string, allowed: string[]) => {
+		if (!allowed.includes(value)) {
+			throw new Error(`${logPrefix} ${name} must be one of: ${allowed.join(", ")} (got "${value}")`);
+		}
+	};
+	validate("--embedding-provider", args.embeddingProvider, ["local", "openrouter", "none"]);
+	validate("--reranker-provider", args.rerankerProvider, ["local", "none"]);
+	validate("--memory-backend", args.memoryBackend, ["sqlite-vec", "chroma", "lancedb", "milvus", "none"]);
+	validate("--insights-backend", args.insightsBackend, ["sqlite-vec", "chroma", "none"]);
+	validate("--knowledge-backend", args.knowledgeBackend, ["chroma", "none"]);
+	if (
+		args.milvusDimension !== undefined &&
+		(!Number.isInteger(args.milvusDimension) || args.milvusDimension <= 0)
+	) {
+		throw new Error(`${logPrefix} --milvus-dimension must be a positive integer`);
+	}
 	for (const [name, value] of [
-		["--embedding-provider", args.embeddingProvider],
-		["--memory-backend", args.memoryBackend],
-		["--insights-backend", args.insightsBackend],
-		["--knowledge-backend", args.knowledgeBackend],
+		["--reranker-batch-size", args.rerankerBatchSize],
+		["--reranker-max-tokens", args.rerankerMaxTokens],
 	] as const) {
-		if (!(ALLOWED_UNIFIED_VALUES as readonly string[]).includes(value)) {
-			throw new Error(
-				`${logPrefix} ${name} must be one of: ${ALLOWED_UNIFIED_VALUES.join(", ")} (got "${value}")`,
-			);
+		if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
+			throw new Error(`${logPrefix} ${name} must be a positive integer`);
 		}
 	}
 }
@@ -284,199 +273,8 @@ function parseMcpArgs(argv: string[]): McpArgs {
 	return args;
 }
 
-async function buildUnified(args: UnifiedArgs): Promise<UnifiedConfig> {
-	const unified: UnifiedConfig = {};
-	const log = (msg: string) => console.warn(`[opencontext/http] ${msg}`);
-
-	// ── 1. Wire the embedder (if any) — must happen before any backend
-	//      that consults it.
-	if (args.embeddingProvider === "local") {
-		try {
-			const provider = new LocalTransformersEmbeddingProvider({
-				modelName: args.embeddingModel,
-				cacheDir: args.embeddingCacheDir,
-			});
-			unified.embedQuery = async ({ query }) => provider.embedQuery(query);
-			log(
-				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
-			);
-		} catch (error) {
-			log(`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`);
-			log("Semantic search will be disabled. The server will continue with keyword-only search.");
-			log("To fix: Ensure the model is downloaded or check your network connection to huggingface.co");
-			// Don't set unified.embedQuery - the system will fall back to lexical search
-		}
-	} else if (args.embeddingProvider === "openrouter") {
-		const apiKey = process.env.OPENROUTER_API_KEY;
-		if (!apiKey) {
-			throw new Error("--embedding-provider openrouter requires OPENROUTER_API_KEY in the environment");
-		}
-		const model = args.embeddingModel ?? "text-embedding-3-small";
-		const baseURL = "https://openrouter.ai/api/v1";
-		unified.embedQuery = async ({ query }) => {
-			const res = await fetch(`${baseURL}/embeddings`, {
-				method: "POST",
-				headers: {
-					"content-type": "application/json",
-					authorization: `Bearer ${apiKey}`,
-					"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://opencontext.ai",
-					"X-Title": "opencontext AI",
-				},
-				body: JSON.stringify({ model, input: query }),
-			});
-			if (!res.ok) {
-				throw new Error(`openrouter embeddings ${res.status}: ${await res.text()}`);
-			}
-			const body = (await res.json()) as { data: Array<{ embedding: number[] }> };
-			const embedding = body.data?.[0]?.embedding;
-			if (!embedding) throw new Error("openrouter embeddings response missing data[0].embedding");
-			return embedding;
-		};
-		log(`embedQuery wired via openrouter (model=${model})`);
-	}
-
-	// ── 2. Wire the memory source backend.
-	if (args.memoryBackend === "sqlite-vec") {
-		const store = createRawMessageStore({ env: undefined });
-		const manager = await store.getManager();
-		if (typeof manager.searchMessagesSemantically !== "function") {
-			throw new Error(
-				"the active raw-message manager does not implement searchMessagesSemantically; " +
-					"sqlite-vec ANN for the memory source is unavailable in this build",
-			);
-		}
-		unified.searchRawMessagesAnn = async ({ userId, queryEmbedding, limit, threshold, botId }) => {
-			// biome-ignore lint/style/noNonNullAssertion: checked above that manager.searchMessagesSemantically is a function.
-			const rows = (await manager.searchMessagesSemantically!({
-				userId,
-				queryEmbedding,
-				limit,
-				threshold,
-				botId,
-			})) as Array<{ id: string; content: string; similarity: number; metadata?: Record<string, unknown> }>;
-			return rows.map((r) => ({
-				id: r.id,
-				content: r.content,
-				similarity: r.similarity,
-				metadata: r.metadata ?? {},
-			}));
-		};
-		log("memory backend wired via sqlite-vec (uses the manager's searchMessagesSemantically)");
-	} else if (args.memoryBackend === "chroma") {
-		if (!args.chromaUrl)
-			throw new Error("--memory-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
-		const store = new ChromaVectorStore({ url: args.chromaUrl, collectionName: "opencontext_raw_messages" });
-		unified.searchRawMessagesAnn = async ({ queryEmbedding, limit, threshold }) => {
-			const results = await store.similaritySearchWithOptions(queryEmbedding, { limit: limit + 1 });
-			return results
-				.filter((r) => r.score >= threshold)
-				.map((r) => ({ id: r.id, content: r.content, similarity: r.score, metadata: r.metadata ?? {} }));
-		};
-		log("memory backend wired via chroma (collection=opencontext_raw_messages)");
-	}
-
-	// ── 3. Wire the insights source backend.
-	if (args.insightsBackend === "chroma") {
-		if (!args.chromaUrl)
-			throw new Error("--insights-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
-		if (!unified.embedQuery)
-			throw new Error("--insights-backend=chroma requires --embedding-provider local|openrouter");
-		const store = new ChromaVectorStore({ url: args.chromaUrl, collectionName: args.insightsCollection });
-		const embedQuery = unified.embedQuery;
-		unified.searchInsights = async ({ query, limit, threshold }) => {
-			const emb = await embedQuery({ userId: "", query });
-			const results = await store.similaritySearchWithOptions(emb, { limit: limit + 1 });
-			return results
-				.filter((r) => r.score >= threshold)
-				.map((r) => ({ id: r.id, content: r.content, similarity: r.score, metadata: r.metadata ?? {} }));
-		};
-		log(`insights backend wired via chroma (collection=${args.insightsCollection})`);
-	}
-
-	// ── 4. Wire the knowledge source backend.
-	if (args.knowledgeBackend === "chroma") {
-		if (!args.chromaUrl)
-			throw new Error("--knowledge-backend=chroma requires --chroma-url <url> (or CHROMA_URL env)");
-		if (!unified.embedQuery)
-			throw new Error("--knowledge-backend=chroma requires --embedding-provider local|openrouter");
-		const store = new ChromaVectorStore({ url: args.chromaUrl, collectionName: args.knowledgeCollection });
-		const embedQuery = unified.embedQuery;
-		unified.searchKnowledge = async ({ query, options }) => {
-			const emb = await embedQuery({ userId: "", query });
-			const results = await store.similaritySearchWithOptions(emb, { limit: options.limit + 1 });
-			return results
-				.filter((r) => r.score >= options.threshold)
-				.map((r, i) => ({
-					chunkId: r.id,
-					documentId: r.documentId || String(r.metadata?.documentId ?? r.id),
-					documentName: String(r.metadata?.documentName ?? ""),
-					content: r.content,
-					similarity: r.score,
-					chunkIndex: i,
-				}));
-		};
-		log(`knowledge backend wired via chroma (collection=${args.knowledgeCollection})`);
-	}
-
-	// ── 5. Wire the reasoning providers (query rewriter + iterative
-	//      planner). Off by default — opt in via `--reasoning` or
-	//      `REASONING=1`. Reads `OPENCONTEXT_LLM_*` env vars (same names as
-	//      `cli-shared.ts` and the `createMemoryReasoningProviders` helper
-	//      the SDK exposes) so the existing `.env` works as-is.
-	if (args.reasoning) {
-		const apiKey = process.env.OPENCONTEXT_LLM_API_KEY;
-		if (!apiKey) {
-			throw new Error(
-				"--reasoning requires OPENCONTEXT_LLM_API_KEY (and ideally OPENCONTEXT_LLM_BASE_URL / OPENCONTEXT_LLM_MODEL) in the environment",
-			);
-		}
-		const baseUrl =
-			args.reasoningBaseUrl ?? process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
-		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
-		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
-
-		const complete = async (prompt: string): Promise<string> => {
-			const controller = new AbortController();
-			const timer = setTimeout(() => controller.abort(), timeoutMs);
-			timer.unref?.();
-			try {
-				const res = await fetch(`${baseUrl}/chat/completions`, {
-					method: "POST",
-					headers: {
-						"content-type": "application/json",
-						authorization: `Bearer ${apiKey}`,
-						"HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL ?? "https://opencontext.ai",
-						"X-Title": "opencontext AI",
-					},
-					body: JSON.stringify({
-						model,
-						messages: [{ role: "user", content: prompt }],
-						temperature: 0,
-					}),
-					signal: controller.signal,
-				});
-				if (!res.ok) throw new Error(`reasoning LLM ${res.status}: ${await res.text()}`);
-				const body = (await res.json()) as {
-					choices?: Array<{ message?: { content?: string } }>;
-				};
-				const text = body.choices?.[0]?.message?.content?.trim();
-				if (!text) throw new Error("reasoning LLM response missing choices[0].message.content");
-				return text;
-			} finally {
-				clearTimeout(timer);
-			}
-		};
-
-		const queryRewriter = createUserVoiceRewriter({ complete });
-		const iterativePlanner = createIterativeRecallPlanner({ complete });
-
-		if (!unified.reasoning) unified.reasoning = {};
-		unified.reasoning.queryRewriter = queryRewriter;
-		unified.reasoning.iterativePlanner = iterativePlanner;
-		log(`reasoning wired (model=${model}, baseUrl=${baseUrl})`);
-	}
-
-	return unified;
+async function buildUnified(args: UnifiedArgs) {
+	return buildMemoryStoreUnified(args);
 }
 
 function printTopHelp(): void {
@@ -535,11 +333,27 @@ Embedding (wires unified.embedQuery):
                                   (env: LOCAL_EMBEDDING_CACHE_DIR; default:
                                   ~/.cache/opencontext/local-embeddings)
 
+Reranking (after RRF/source fusion, before final Top-K):
+  --reranker-provider <name>      local | none (env: RERANKER_PROVIDER)
+  --reranker-model <name>         Sequence-classification model
+                                  (env: LOCAL_RERANKER_MODEL)
+  --reranker-cache-dir <path>     Persistent model cache
+                                  (env: LOCAL_RERANKER_CACHE_DIR)
+  --reranker-batch-size <int>     Pair scoring batch size (default: 8)
+  --reranker-max-tokens <int>     Query/document pair token limit (default: 512)
+
 Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
   --chroma-url <url>              Chroma server URL
                                   (env: CHROMA_URL; required when any *-backend=chroma)
-  --memory-backend <name>         sqlite-vec | chroma | none
+  --memory-backend <name>         sqlite-vec | chroma | lancedb | milvus | none
                                   (env: MEMORY_BACKEND, default: none)
+  --lancedb-uri <uri>             LanceDB directory or URI (env: LANCEDB_URI)
+  --lancedb-table <name>          Optional table name (env: LANCEDB_TABLE)
+  --milvus-address <address>      Milvus endpoint (env: MILVUS_ADDRESS)
+  --milvus-token <token>          Optional Milvus token (env: MILVUS_TOKEN)
+  --milvus-database <name>        Optional database (env: MILVUS_DATABASE)
+  --milvus-collection <name>      Optional collection (env: MILVUS_COLLECTION)
+  --milvus-dimension <int>        Optional vector dimension (env: MILVUS_DIMENSION)
   --insights-backend <name>       sqlite-vec | chroma | none
                                   (env: INSIGHTS_BACKEND, default: none)
   --insights-collection <name>    Chroma collection (default: opencontext_insights)
@@ -611,11 +425,27 @@ Embedding (wires unified.embedQuery):
                                   (env: LOCAL_EMBEDDING_CACHE_DIR; default:
                                   ~/.cache/opencontext/local-embeddings)
 
+Reranking (after RRF/source fusion, before final Top-K):
+  --reranker-provider <name>      local | none (env: RERANKER_PROVIDER)
+  --reranker-model <name>         Sequence-classification model
+                                  (env: LOCAL_RERANKER_MODEL)
+  --reranker-cache-dir <path>     Persistent model cache
+                                  (env: LOCAL_RERANKER_CACHE_DIR)
+  --reranker-batch-size <int>     Pair scoring batch size (default: 8)
+  --reranker-max-tokens <int>     Query/document pair token limit (default: 512)
+
 Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
   --chroma-url <url>              Chroma server URL
                                   (env: CHROMA_URL; required when any *-backend=chroma)
-  --memory-backend <name>         sqlite-vec | chroma | none
+  --memory-backend <name>         sqlite-vec | chroma | lancedb | milvus | none
                                   (env: MEMORY_BACKEND, default: none)
+  --lancedb-uri <uri>             LanceDB directory or URI (env: LANCEDB_URI)
+  --lancedb-table <name>          Optional table name (env: LANCEDB_TABLE)
+  --milvus-address <address>      Milvus endpoint (env: MILVUS_ADDRESS)
+  --milvus-token <token>          Optional Milvus token (env: MILVUS_TOKEN)
+  --milvus-database <name>        Optional database (env: MILVUS_DATABASE)
+  --milvus-collection <name>      Optional collection (env: MILVUS_COLLECTION)
+  --milvus-dimension <int>        Optional vector dimension (env: MILVUS_DIMENSION)
   --insights-backend <name>       sqlite-vec | chroma | none
                                   (env: INSIGHTS_BACKEND, default: none)
   --insights-collection <name>    Chroma collection (default: opencontext_insights)

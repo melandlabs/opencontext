@@ -173,13 +173,59 @@ export interface MemorySearchHit {
 	signals?: Record<string, unknown>;
 }
 
+export interface MemorySearchEvidence {
+	id: string;
+	snippet: string;
+	score: number;
+	originalCharacters?: number;
+	startCharacter?: number;
+	endCharacter?: number;
+	truncated?: boolean;
+}
+
 export interface MemorySearchResponse {
 	query: string;
 	sources: string[];
 	results: MemorySearchHit[];
+	evidence?: MemorySearchEvidence[];
 	count: number;
 	warnings: unknown[];
 	reasoning?: unknown;
+	retrievalDiagnostics?: {
+		mergeStrategy: "rrf" | "similarity";
+		candidateLimit: number;
+		backend?: string;
+		semanticDegradedReason?: string;
+		candidateCounts?: {
+			semantic: number;
+			lexical: number;
+			hybrid: number;
+			entity: number;
+			fused: number;
+			final: number;
+		};
+		channels: {
+			semantic: MemorySearchHit[];
+			lexical: MemorySearchHit[];
+			hybrid?: MemorySearchHit[];
+			entity?: MemorySearchHit[];
+		};
+		fusedBeforeRerank: MemorySearchHit[];
+		reranker?: {
+			enabled: boolean;
+			provider?: string;
+			model?: string;
+			inputCount: number;
+			outputCount: number;
+			latencyMs: number;
+			orderChanged: boolean;
+		};
+		final?: MemorySearchHit[];
+	};
+}
+
+export interface MemorySearchOptions {
+	includeRetrievalDiagnostics?: boolean;
 }
 
 /** Retrieve relevant memories for a question. */
@@ -188,6 +234,7 @@ export async function searchMemory(
 	limit = 8,
 	baseUrl = getOpencontextBaseUrl(),
 	userId = BENCH_USER_ID,
+	options: MemorySearchOptions = {},
 ): Promise<MemorySearchResponse> {
 	const res = await fetch(`${baseUrl}/v1/search`, {
 		method: "POST",
@@ -196,6 +243,9 @@ export async function searchMemory(
 			userId,
 			query,
 			limit,
+			...(options.includeRetrievalDiagnostics === undefined
+				? {}
+				: { includeRetrievalDiagnostics: options.includeRetrievalDiagnostics }),
 			sources: ["memory"],
 		}),
 		signal: AbortSignal.timeout(120_000),
@@ -209,6 +259,8 @@ export async function searchMemory(
 		count?: number;
 		warnings?: unknown[];
 		reasoning?: unknown;
+		retrievalDiagnostics?: MemorySearchResponse["retrievalDiagnostics"];
+		evidence?: MemorySearchEvidence[];
 		results?: Array<{
 			id: string;
 			content: string;
@@ -228,9 +280,11 @@ export async function searchMemory(
 		query: data.query ?? query,
 		sources: data.sources ?? [],
 		results,
+		evidence: data.evidence ?? [],
 		count: data.count ?? results.length,
 		warnings: data.warnings ?? [],
 		...(data.reasoning === undefined ? {} : { reasoning: data.reasoning }),
+		...(data.retrievalDiagnostics === undefined ? {} : { retrievalDiagnostics: data.retrievalDiagnostics }),
 	};
 }
 

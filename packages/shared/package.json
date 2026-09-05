@@ -14,6 +14,7 @@
 		"./errors": "./dist/errors.js",
 		"./ref": "./dist/ref.js",
 		"./soul": "./dist/soul.js",
+		"./text-chunking": "./dist/text-chunking.js",
 		"./utils": "./dist/utils.js"
 	},
 	"repository": {

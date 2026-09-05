@@ -9,6 +9,7 @@ export default defineConfig({
 		parsers: "src/parsers.ts",
 		"universal-embeddings": "src/universal-embeddings.ts",
 		"sqlite-vec-store": "src/sqlite-vec-store.ts",
+		"chroma-vector-store": "src/chroma-vector-store.ts",
 		"pgvector-store": "src/pgvector-store.ts",
 		"hybrid-search": "src/hybrid-search.ts",
 		"lancedb-store": "src/lancedb-store.ts",

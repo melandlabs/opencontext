@@ -19,6 +19,10 @@ function stringArray(value: unknown): string[] {
 	return value.filter((item): item is string => typeof item === "string");
 }
 
+function optionalString(value: unknown): string[] {
+	return typeof value === "string" ? [value] : [];
+}
+
 function unique(values: string[]): string[] {
 	return [...new Set(values)];
 }
@@ -39,33 +43,52 @@ export function buildRetrievalTrace(input: {
 	const missingSourceIds = requiredIds.filter((id) => !availableSet.has(id));
 	const retrievedRequiredIds = new Set<string>();
 
-	const hits = input.response.results.map((hit, index) => {
-		const localChunk = input.chunksByMessageId.get(hit.id);
-		const sourceTurnIds = unique([
-			...stringArray(hit.metadata.sourceTurnIds),
-			...stringArray(hit.metadata.source_turn_ids),
-			...(localChunk?.source_turn_ids ?? []),
-		]);
-		for (const sourceId of sourceTurnIds) {
-			if (requiredSet.has(sourceId)) retrievedRequiredIds.add(sourceId);
-		}
-		const matchedSourceTurnIds = sourceTurnIds.filter((id) => requiredSet.has(id));
-		const relevant = requiredIds.length === 0 ? null : matchedSourceTurnIds.length > 0;
-		return {
-			rank: index + 1,
-			id: hit.id,
-			similarity: hit.similarity,
-			signals: hit.signals ?? null,
-			metadata: hit.metadata,
-			content_sha256: sha256Text(hit.content),
-			content_characters: hit.content.length,
-			content_excerpt: hit.content.replace(/\s+/g, " ").trim().slice(0, 240),
-			content: hit.content,
-			source_turn_ids: sourceTurnIds,
-			matched_source_turn_ids: matchedSourceTurnIds,
-			relevant,
-		};
-	});
+	const mapHits = (sourceHits: MemorySearchResponse["results"], trackRetrieved: boolean) =>
+		sourceHits.map((hit, index) => {
+			const localChunk = input.chunksByMessageId.get(hit.id);
+			const sourceTurnIds = unique([
+				...optionalString(hit.metadata.sourceTurnId),
+				...optionalString(hit.metadata.source_turn_id),
+				...stringArray(hit.metadata.sourceTurnIds),
+				...stringArray(hit.metadata.source_turn_ids),
+				...(localChunk?.source_turn_ids ?? []),
+			]);
+			if (trackRetrieved) {
+				for (const sourceId of sourceTurnIds) {
+					if (requiredSet.has(sourceId)) retrievedRequiredIds.add(sourceId);
+				}
+			}
+			const matchedSourceTurnIds = sourceTurnIds.filter((id) => requiredSet.has(id));
+			const relevant = requiredIds.length === 0 ? null : matchedSourceTurnIds.length > 0;
+			return {
+				rank: index + 1,
+				id: hit.id,
+				similarity: hit.similarity,
+				signals: hit.signals ?? null,
+				metadata: hit.metadata,
+				content_sha256: sha256Text(hit.content),
+				content_characters: hit.content.length,
+				content_excerpt: hit.content.replace(/\s+/g, " ").trim().slice(0, 240),
+				...(trackRetrieved ? { content: hit.content } : {}),
+				source_turn_ids: sourceTurnIds,
+				matched_source_turn_ids: matchedSourceTurnIds,
+				relevant,
+			};
+		});
+	const hits = mapHits(input.response.results, true);
+	const retrievalDiagnostics = input.response.retrievalDiagnostics;
+	const candidateChannels = {
+		semantic: mapHits(retrievalDiagnostics?.channels.semantic ?? [], false),
+		lexical: mapHits(retrievalDiagnostics?.channels.lexical ?? [], false),
+		hybrid: mapHits(retrievalDiagnostics?.channels.hybrid ?? [], false),
+		entity: mapHits(retrievalDiagnostics?.channels.entity ?? [], false),
+	};
+	const fusedBeforeRerank = mapHits(retrievalDiagnostics?.fusedBeforeRerank ?? [], false);
+	const channelRecall = (channelHits: typeof candidateChannels.semantic): number | null => {
+		if (requiredIds.length === 0) return null;
+		const matched = new Set(channelHits.flatMap((hit) => hit.matched_source_turn_ids));
+		return matched.size / requiredIds.length;
+	};
 
 	const relevantHits = hits.filter((hit) => hit.relevant === true);
 	const firstRelevantRank = relevantHits[0]?.rank ?? null;
@@ -78,13 +101,36 @@ export function buildRetrievalTrace(input: {
 		query: input.question.question,
 		user_id: input.userId,
 		top_k: input.topK,
+		candidate_k: retrievalDiagnostics?.candidateLimit ?? null,
 		strategy: "daemon-default",
+		merge_strategy: retrievalDiagnostics?.mergeStrategy ?? null,
+		threshold: null,
+		backend: retrievalDiagnostics?.backend ?? null,
+		semantic_degraded_reason: retrievalDiagnostics?.semanticDegradedReason ?? null,
+		candidate_counts: retrievalDiagnostics?.candidateCounts ?? null,
 		latency_ms: input.latencyMs,
 		response_query: input.response.query,
 		response_sources: input.response.sources,
 		response_count: input.response.count,
 		response_warnings: input.response.warnings,
 		response_reasoning: input.response.reasoning ?? null,
+		premerge_diagnostics_available: retrievalDiagnostics !== undefined,
+		candidate_channels: candidateChannels,
+		fused_before_rerank: fusedBeforeRerank,
+		reranker: retrievalDiagnostics?.reranker
+			? {
+					enabled: retrievalDiagnostics.reranker.enabled,
+					provider: retrievalDiagnostics.reranker.provider ?? null,
+					model: retrievalDiagnostics.reranker.model ?? null,
+					input_count: retrievalDiagnostics.reranker.inputCount,
+					output_count: retrievalDiagnostics.reranker.outputCount,
+					latency_ms: retrievalDiagnostics.reranker.latencyMs,
+					order_changed: retrievalDiagnostics.reranker.orderChanged,
+				}
+			: null,
+		semantic_source_recall_at_candidate_k: channelRecall(candidateChannels.semantic),
+		lexical_source_recall_at_candidate_k: channelRecall(candidateChannels.lexical),
+		hybrid_source_recall_at_candidate_k: channelRecall(candidateChannels.hybrid),
 		hits,
 		retrieval_applicable: retrievalApplicable,
 		required_source_turn_ids: requiredIds,
@@ -170,16 +216,29 @@ export function calculateDiagnosticSummary(predictions: Prediction[]): Record<st
 	const sourceCoverages: number[] = [];
 	const hitAtK: number[] = [];
 	const precisionAtK: number[] = [];
+	const semanticCandidateRecalls: number[] = [];
+	const lexicalCandidateRecalls: number[] = [];
+	const hybridCandidateRecalls: number[] = [];
 	let completed = 0;
 	let executionErrors = 0;
 	let retrievalApplicable = 0;
 	let allSourcesRetrieved = 0;
+	let premergeDiagnostics = 0;
+	let semanticCandidateQuestions = 0;
+	let lexicalCandidateQuestions = 0;
+	let hybridCandidateQuestions = 0;
 
 	for (const prediction of predictions) {
 		failureStages[prediction.failure_stage] = (failureStages[prediction.failure_stage] ?? 0) + 1;
 		if (prediction.status === "completed") completed++;
 		else executionErrors++;
 		const retrieval = prediction.trace.retrieval;
+		if (retrieval?.premerge_diagnostics_available) {
+			premergeDiagnostics++;
+			if (retrieval.candidate_channels.semantic.length > 0) semanticCandidateQuestions++;
+			if (retrieval.candidate_channels.lexical.length > 0) lexicalCandidateQuestions++;
+			if (retrieval.candidate_channels.hybrid.length > 0) hybridCandidateQuestions++;
+		}
 		if (retrieval?.retrieval_applicable) {
 			retrievalApplicable++;
 			if (retrieval.all_required_sources_retrieved) allSourcesRetrieved++;
@@ -190,6 +249,12 @@ export function calculateDiagnosticSummary(predictions: Prediction[]): Record<st
 			if (retrieval.hit_at_k !== null) hitAtK.push(retrieval.hit_at_k);
 			if (retrieval.precision_at_k !== null) precisionAtK.push(retrieval.precision_at_k);
 			if (retrieval.mrr !== null) reciprocalRanks.push(retrieval.mrr);
+			if (retrieval.semantic_source_recall_at_candidate_k !== null)
+				semanticCandidateRecalls.push(retrieval.semantic_source_recall_at_candidate_k);
+			if (retrieval.lexical_source_recall_at_candidate_k !== null)
+				lexicalCandidateRecalls.push(retrieval.lexical_source_recall_at_candidate_k);
+			if (retrieval.hybrid_source_recall_at_candidate_k !== null)
+				hybridCandidateRecalls.push(retrieval.hybrid_source_recall_at_candidate_k);
 		}
 	}
 
@@ -200,6 +265,13 @@ export function calculateDiagnosticSummary(predictions: Prediction[]): Record<st
 		execution_errors: executionErrors,
 		failure_stages: failureStages,
 		retrieval_applicable_questions: retrievalApplicable,
+		premerge_diagnostics_questions: premergeDiagnostics,
+		semantic_candidate_questions: semanticCandidateQuestions,
+		lexical_candidate_questions: lexicalCandidateQuestions,
+		hybrid_candidate_questions: hybridCandidateQuestions,
+		mean_semantic_source_recall_at_candidate_k: mean(semanticCandidateRecalls),
+		mean_lexical_source_recall_at_candidate_k: mean(lexicalCandidateRecalls),
+		mean_hybrid_source_recall_at_candidate_k: mean(hybridCandidateRecalls),
 		mean_source_recall_at_k: mean(retrievalRecalls),
 		mean_retrievable_source_recall_at_k: mean(retrievableRecalls),
 		mean_dataset_source_coverage: mean(sourceCoverages),

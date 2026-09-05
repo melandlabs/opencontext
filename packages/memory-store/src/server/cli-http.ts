@@ -17,15 +17,14 @@
  *   --host <host>                          MEMORY_HTTP_HOST  (default 127.0.0.1)
  *
  * `cli-shared.ts` owns the rest of the flag surface — see
- * `parseUnifiedArgs()` / `buildUnified()`. The `local` embedder and
- * every `chroma` backend dynamically import `@melandlabs/ai-rag` (a
- * peer install — pulling it in adds `@huggingface/transformers`,
- * `chromadb`, and ~30 MB of ONNX weights on first run). The bin errors
- * with a clear remediation message if the package is missing.
+ * `parseUnifiedArgs()` / `buildUnified()`. The local embedder and
+ * insight/knowledge Chroma integrations dynamically import
+ * `@melandlabs/ai-rag`; raw-message Chroma, LanceDB, and Milvus use the
+ * existing `@melandlabs/rag` stores. Missing optional integrations fail
+ * with an actionable startup error.
  *
- * For sqlite-vec to actually return hits, the messages you POST must
- * carry an `embedding` (or use `POST /v1/raw-messages` with
- * `embedOnInsert: true` plus an `--embedding-provider`).
+ * With an embedding provider, raw-message child chunks are embedded on
+ * insert. Without one, the child catalog and lexical FTS remain available.
  */
 
 import type { UnifiedSearchDeps } from "../config";
