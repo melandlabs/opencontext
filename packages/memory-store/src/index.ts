@@ -9,6 +9,7 @@
 
 import { type SQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import type { MemoryStoreConfig } from "./config";
+import type { SearchRuntimeContext } from "./search/applicability";
 import type { ApplyConsolidateInput, ApplyConsolidateOutput } from "./search/apply-reflect";
 import { type UnifiedSearch, createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput, SearchOutput } from "./search/utilities";
@@ -31,9 +32,13 @@ export interface MemoryStore {
 	 * lexical fallback. Set `synthesize: true` to opt into the LLM
 	 * synthesis path (formerly `reflect()`).
 	 *
+	 * The optional second argument is trusted in-process context. Omitting it
+	 * preserves legacy unscoped behaviour; an explicit empty applicability list
+	 * requests global-only retrieval.
+	 *
 	 * Use `store.consolidate()` for the agentic write-back loop.
 	 */
-	search(input: SearchInput): Promise<SearchOutput>;
+	search(input: SearchInput, runtimeContext?: SearchRuntimeContext): Promise<SearchOutput>;
 	/** Resolve the active raw-message manager. */
 	getRawMessageManager: typeof getRawMessageManager;
 	/**
@@ -157,6 +162,7 @@ export async function createMemoryStore(config: MemoryStoreConfig = {}): Promise
 }
 
 export type { MemoryStoreConfig };
+export type { SearchRuntimeContext } from "./search/applicability";
 export {
 	createRawMessageStore,
 	getRawMessageManager,
@@ -269,6 +275,7 @@ export type {
 	UnifiedSearchKnowledgeResult,
 	UnifiedSearchInsightsResult,
 	UnifiedSearchReasoningDeps,
+	SearchProviderApplicabilityInput,
 } from "./config";
 export type { RawMessage } from "./config";
 export {

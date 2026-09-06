@@ -22,6 +22,7 @@
 
 import type { Peer } from "@melandlabs/contracts/peer";
 import type { MemorySummaryHit, UnifiedSearchDeps } from "../config";
+import type { ResolvedSearchRuntimeContext } from "./applicability";
 import { applyReranker } from "./reranker";
 import type {
 	SearchInput,
@@ -106,6 +107,7 @@ export async function gatherSummaries(
 	threshold: number,
 	logger: Pick<Console, "warn">,
 	peerPeers: ReadonlyArray<Peer>,
+	runtimeContext?: ResolvedSearchRuntimeContext,
 ): Promise<GatheredEvidence> {
 	if (typeof deps.searchSummaries !== "function") {
 		return { hits: [], warnings: [] };
@@ -126,6 +128,7 @@ export async function gatherSummaries(
 			threshold,
 			authToken: input.authToken,
 			...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
+			...(runtimeContext ?? {}),
 		});
 		const hits = rows.map(toSummaryResult);
 		return { hits, warnings: [] };

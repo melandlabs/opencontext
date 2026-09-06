@@ -34,6 +34,7 @@ import type { FactType } from "@melandlabs/contracts";
 import type { DerivedFact } from "@melandlabs/contracts/derived-fact";
 import type { EntityEdge } from "@melandlabs/contracts/entity-edge";
 import type { Peer } from "@melandlabs/contracts/peer";
+import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import type { RawMessage } from "./contracts";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
@@ -137,6 +138,19 @@ export interface MemorySummaryHit {
 	endTimestamp?: number;
 }
 
+/**
+ * Trusted applicability fields forwarded together to retrieval providers.
+ * They are absent for legacy unscoped searches and always present together
+ * for scoped searches. Providers must enforce the canonical applicability
+ * contract at `applicabilityAt`; these values must not be derived from public
+ * request payloads.
+ */
+export interface SearchProviderApplicabilityInput {
+	applicabilityContexts?: readonly MemoryApplicabilityContext[];
+	/** Epoch milliseconds resolved once at the `search()` boundary. */
+	applicabilityAt?: number;
+}
+
 export interface UnifiedSearchDeps {
 	/** Embed a query string using the active user's provider. */
 	embedQuery?: EmbedQueryFn;
@@ -146,17 +160,19 @@ export interface UnifiedSearchDeps {
 	 * chroma and this are absent, the memory source will return empty
 	 * (with a warning) in standalone mode.
 	 */
-	searchRawMessagesAnn?: (input: {
-		userId: string;
-		queryEmbedding: number[];
-		limit: number;
-		threshold: number;
-		botId?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-		/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
-		factTypes?: FactType[];
-	}) => Promise<
+	searchRawMessagesAnn?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			queryEmbedding: number[];
+			limit: number;
+			threshold: number;
+			botId?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
+			factTypes?: FactType[];
+		},
+	) => Promise<
 		Array<{
 			id: string;
 			content: string;
@@ -165,42 +181,48 @@ export interface UnifiedSearchDeps {
 		}>
 	>;
 	/** RAG over uploaded knowledge documents. Returns a list of chunk hits. */
-	searchKnowledge?: (input: {
-		userId: string;
-		query: string;
-		options: { limit: number; threshold: number; documentIds?: string[] };
-		authToken?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-	}) => Promise<UnifiedSearchKnowledgeResult[]>;
+	searchKnowledge?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			query: string;
+			options: { limit: number; threshold: number; documentIds?: string[] };
+			authToken?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+		},
+	) => Promise<UnifiedSearchKnowledgeResult[]>;
 	/** Semantic search over extracted insights. */
-	searchInsights?: (input: {
-		userId: string;
-		query: string;
-		limit: number;
-		threshold: number;
-		botIds?: string[];
-		includeArchived?: boolean;
-		authToken?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-	}) => Promise<UnifiedSearchInsightsResult[]>;
+	searchInsights?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			query: string;
+			limit: number;
+			threshold: number;
+			botIds?: string[];
+			includeArchived?: boolean;
+			authToken?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+		},
+	) => Promise<UnifiedSearchInsightsResult[]>;
 	/**
 	 * Optional BM25 (lexical) sub-query for the memory source. Mirrors the
 	 * `searchRawMessagesAnn` shape but operates on FTS5 keywords instead of
 	 * dense embeddings. When absent, the unified pipeline skips the lexical
 	 * path and emits a `memory_lexical_search_not_configured` warning.
 	 */
-	searchRawMessagesLexical?: (input: {
-		userId: string;
-		keywords: string[];
-		limit: number;
-		botId?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-		/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
-		factTypes?: FactType[];
-	}) => Promise<
+	searchRawMessagesLexical?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			keywords: string[];
+			limit: number;
+			botId?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
+			factTypes?: FactType[];
+		},
+	) => Promise<
 		Array<{
 			id: string;
 			content: string;
@@ -213,18 +235,20 @@ export interface UnifiedSearchDeps {
 	 * summary tier alongside raw messages and emits a
 	 * `reflect_summaries_unavailable` warning if the call fails.
 	 */
-	searchSummaries?: (input: {
-		userId: string;
-		query: string;
-		keywords: string[];
-		limit: number;
-		threshold: number;
-		dateFrom?: string;
-		dateTo?: string;
-		authToken?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-	}) => Promise<MemorySummaryHit[]>;
+	searchSummaries?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			query: string;
+			keywords: string[];
+			limit: number;
+			threshold: number;
+			dateFrom?: string;
+			dateTo?: string;
+			authToken?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+		},
+	) => Promise<MemorySummaryHit[]>;
 	/**
 	 * Optional entity sub-query provider. Hosts wire this in to opt
 	 * into the `entity` channel of unified search: matches are
@@ -238,14 +262,16 @@ export interface UnifiedSearchDeps {
 	 * own entity store (graph nodes, separate SQLite table, etc.) —
 	 * the SDK never persists entity edges itself.
 	 */
-	entitySearch?: (input: {
-		userId: string;
-		keywords: string[];
-		limit: number;
-		botId?: string;
-		/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
-		peers?: ReadonlyArray<Peer>;
-	}) => Promise<Array<{ messageId: string; label: string; score: number }>>;
+	entitySearch?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			keywords: string[];
+			limit: number;
+			botId?: string;
+			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
+			peers?: ReadonlyArray<Peer>;
+		},
+	) => Promise<Array<{ messageId: string; label: string; score: number }>>;
 	/**
 	 * Optional entity extractor wired into the `distill` primitive. The
 	 * extractor receives the raw message text and returns a batch of
