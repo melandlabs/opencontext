@@ -6,13 +6,19 @@
  * dependencies via `UnifiedSearchDeps` so this module stays
  * framework-agnostic.
  *
- * The public entry point is `search(input)` — a single method. Set
+ * The public entry point is `search(input, runtimeContext?)` — a single method. Set
  * `synthesize: true` to opt into the LLM synthesis step.
  */
 
 import type { Peer } from "@melandlabs/contracts/peer";
 import type { UnifiedSearchDeps } from "../config";
+import { isRawMessageChromaEnabled, searchRawMessagesWithChroma } from "../storage/chroma-memory-index";
 import { isRawMessageStorageAvailable } from "../storage/raw-message-store";
+import {
+	type ResolvedSearchRuntimeContext,
+	type SearchRuntimeContext,
+	resolveSearchRuntimeContext,
+} from "./applicability";
 import { type ApplyConsolidateInput, type ApplyConsolidateOutput, applyReflectedPlan } from "./apply-reflect";
 import { gatherSummaries, resolveSearchScopePeers, synthesizeAnswer } from "./gather-evidence";
 import type {
@@ -68,6 +74,7 @@ export type {
 	SearchTier,
 	SearchEvidence,
 } from "./utilities";
+export type { SearchRuntimeContext } from "./applicability";
 
 export {
 	clampUnifiedMemorySearchLimit,
@@ -88,9 +95,10 @@ export {
 export interface UnifiedSearch {
 	/**
 	 * Single unified read entry point. Set `synthesize: true` to opt into
-	 * LLM synthesis.
+	 * LLM synthesis. The optional second argument is trusted in-process
+	 * applicability context and is intentionally separate from `SearchInput`.
 	 */
-	search(input: SearchInput): Promise<SearchOutput>;
+	search(input: SearchInput, runtimeContext?: SearchRuntimeContext): Promise<SearchOutput>;
 	/**
 	 * @deprecated Use `search(input)` instead. Forwarding shim kept for
 	 * one release window.
@@ -150,6 +158,7 @@ async function runEntitySearchForQuery(
 	limit: number,
 	logger: Pick<Console, "warn">,
 	peerPeers: ReadonlyArray<Peer> = [],
+	runtimeContext?: ResolvedSearchRuntimeContext,
 ): Promise<UnifiedMemorySearchResult[]> {
 	if (typeof deps.entitySearch !== "function") {
 		return [];
@@ -170,6 +179,7 @@ async function runEntitySearchForQuery(
 						limit: Math.ceil(limit / filters.length),
 						botId,
 						...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
+						...(runtimeContext ?? {}),
 					}),
 				),
 			)
@@ -277,6 +287,18 @@ function filterByDateRange<T extends { metadata: Record<string, unknown> }>(
 	});
 }
 
+function warnApplicabilityNotEnforced(warnings: UnifiedMemorySearchWarning[]): void {
+	if (warnings.some((warning) => warning.code === "memory_applicability_not_enforced")) {
+		return;
+	}
+	warnings.push({
+		source: "memory",
+		code: "memory_applicability_not_enforced",
+		message:
+			"Built-in raw-message retrieval was skipped because it cannot enforce the supplied applicability context. Configure an applicability-aware raw-message provider.",
+	});
+}
+
 async function embedQueryVariant(
 	embedQuery: NonNullable<UnifiedSearchDeps["embedQuery"]>,
 	input: UnifiedMemorySearchInput,
@@ -296,7 +318,9 @@ async function runSemanticSearchForEmbedding(
 	limit: number,
 	threshold: number,
 	logger: Pick<Console, "log" | "warn">,
-	peerPeers: ReadonlyArray<Peer> = [],
+	peerPeers: ReadonlyArray<Peer>,
+	warnings: UnifiedMemorySearchWarning[],
+	runtimeContext?: ResolvedSearchRuntimeContext,
 ): Promise<UnifiedMemorySearchResult[]> {
 	const filters = input.botIds && input.botIds.length > 0 ? input.botIds.map((botId) => ({ botId })) : [{}];
 	let semantic: UnifiedMemorySearchResult[] = [];
@@ -315,6 +339,7 @@ async function runSemanticSearchForEmbedding(
 						botId: "botId" in filter ? filter.botId : undefined,
 						...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 						...(factTypes ? { factTypes } : {}),
+						...(runtimeContext ?? {}),
 					}),
 				),
 			)
@@ -322,6 +347,40 @@ async function runSemanticSearchForEmbedding(
 			.flat()
 			.filter(isRawMemorySemanticResult)
 			.map(toMemoryResult);
+	} else if (runtimeContext === undefined && isRawMessageChromaEnabled()) {
+		try {
+			semantic = (
+				await Promise.all(
+					filters.map((filter) => {
+						const botId = "botId" in filter ? filter.botId : undefined;
+						return searchRawMessagesWithChroma({
+							userId: input.userId,
+							queryEmbedding,
+							limit,
+							threshold,
+							botId,
+						});
+					}),
+				)
+			)
+				.flat()
+				.map(toMemoryResult);
+			logger.log?.("[memory-store] Raw message semantic search completed", {
+				backend: "chroma",
+				dimensions: queryEmbedding.length,
+				count: semantic.length,
+			});
+		} catch (error) {
+			logger.warn?.(
+				"[memory-store] Chroma raw message search failed; falling back to database search:",
+				error,
+			);
+		}
+	}
+
+	if (semantic.length === 0 && runtimeContext !== undefined) {
+		warnApplicabilityNotEnforced(warnings);
+		return [];
 	}
 
 	if (semantic.length === 0 && typeof deps.searchRawMessagesAnn !== "function") {
@@ -409,7 +468,9 @@ async function runLexicalSearchForKeywords(
 	keywords: string[],
 	limit: number,
 	logger: Pick<Console, "warn">,
-	peerPeers: ReadonlyArray<Peer> = [],
+	peerPeers: ReadonlyArray<Peer>,
+	warnings: UnifiedMemorySearchWarning[],
+	runtimeContext?: ResolvedSearchRuntimeContext,
 ): Promise<UnifiedMemorySearchResult[]> {
 	if (keywords.length === 0) {
 		return [];
@@ -430,6 +491,7 @@ async function runLexicalSearchForKeywords(
 							botId,
 							...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 							...(factTypes ? { factTypes } : {}),
+							...(runtimeContext ?? {}),
 						}),
 					),
 				)
@@ -443,6 +505,10 @@ async function runLexicalSearchForKeywords(
 		} catch (error) {
 			logger.warn?.("[memory-store] lexical memory search failed:", error);
 		}
+	}
+	if (runtimeContext !== undefined) {
+		warnApplicabilityNotEnforced(warnings);
+		return [];
 	}
 
 	try {
@@ -555,6 +621,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		reasoningStrategy: UnifiedMemoryReasoningStrategy = "none",
 		reasoningInfo?: UnifiedMemoryReasoningInfo,
 		peerPeers: ReadonlyArray<Peer> = [],
+		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<MemorySubQueries> {
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
@@ -606,6 +673,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 							limit,
 							logger,
 							peerPeers,
+							warnings,
+							runtimeContext,
 						);
 
 						let semanticHits: UnifiedMemorySearchResult[] = [];
@@ -621,6 +690,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 									threshold,
 									logger,
 									peerPeers,
+									warnings,
+									runtimeContext,
 								);
 							} catch (error) {
 								logger.warn?.(
@@ -686,7 +757,16 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 
 			const keywords = deriveLexicalKeywords(input.query);
 			const lexical = filterByDateRange(
-				await runLexicalSearchForKeywords(deps, input, keywords, limit, logger, peerPeers),
+				await runLexicalSearchForKeywords(
+					deps,
+					input,
+					keywords,
+					limit,
+					logger,
+					peerPeers,
+					warnings,
+					runtimeContext,
+				),
 				input.dateFrom,
 				input.dateTo,
 			);
@@ -719,6 +799,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 							queryEmbedding,
 							limit: Math.ceil(limit / filters.length),
 							botId,
+							...(runtimeContext ?? {}),
 						}),
 					),
 				)
@@ -753,7 +834,17 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				);
 				const lists = await Promise.all(
 					embeddings.map((embedding) =>
-						runSemanticSearchForEmbedding(deps, input, embedding, limit, threshold, logger, peerPeers),
+						runSemanticSearchForEmbedding(
+							deps,
+							input,
+							embedding,
+							limit,
+							threshold,
+							logger,
+							peerPeers,
+							warnings,
+							runtimeContext,
+						),
 					),
 				);
 				semantic = mergeByMaxScore(lists);
@@ -779,6 +870,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				threshold,
 				logger,
 				peerPeers,
+				warnings,
+				runtimeContext,
 			);
 		}
 
@@ -805,6 +898,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 									botId,
 									...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 									...(factTypes ? { factTypes } : {}),
+									...(runtimeContext ?? {}),
 								}),
 							),
 						)
@@ -841,7 +935,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		let entity: UnifiedMemorySearchResult[] | undefined;
 		if (typeof deps.entitySearch === "function") {
 			entity = filterByDateRange(
-				await runEntitySearchForQuery(deps, input, limit, logger, peerPeers),
+				await runEntitySearchForQuery(deps, input, limit, logger, peerPeers, runtimeContext),
 				input.dateFrom,
 				input.dateTo,
 			);
@@ -919,7 +1013,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		return out;
 	}
 
-	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
+	async function searchUnifiedMemoryWithRuntime(
+		input: UnifiedMemorySearchInput,
+		runtimeContext?: ResolvedSearchRuntimeContext,
+	): Promise<UnifiedMemorySearchOutput> {
 		const query = input.query.trim();
 		const sources = normalizeUnifiedMemorySearchSources(input.sources);
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
@@ -991,6 +1088,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						reasoningStrategy,
 						reasoningInfo,
 						peerPeers,
+						runtimeContext,
 					);
 					memorySubs = {
 						semantic: dedupeChannelByParent(memorySubs.semantic),
@@ -1050,6 +1148,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					includeArchived: input.includeArchivedInsights,
 					authToken: input.authToken,
 					...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
+					...(runtimeContext ?? {}),
 				});
 				for (const hit of hits) {
 					insightHits.push({
@@ -1086,6 +1185,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					},
 					authToken: input.authToken,
 					...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
+					...(runtimeContext ?? {}),
 				});
 				for (const hit of hits) {
 					knowledgeHits.push(toKnowledgeResult(hit));
@@ -1113,9 +1213,9 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 
 		// The optional host reranker sees the complete overfetched window. Only
 		// after reranking do we truncate to the public Top-K.
-		const rerankerStartedAt = Date.now();
+		const rerankerStartedAt = deps.reranker ? Date.now() : undefined;
 		const reranked = await applyReranker(deps.reranker, input.query, merged);
-		const rerankerLatencyMs = deps.reranker ? Date.now() - rerankerStartedAt : 0;
+		const rerankerLatencyMs = rerankerStartedAt === undefined ? 0 : Date.now() - rerankerStartedAt;
 		const rerankerOrderChanged =
 			Boolean(deps.reranker) && merged.some((hit, index) => hit.id !== reranked[index]?.id);
 		const ranked = reranked.slice(0, limit);
@@ -1168,6 +1268,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		return output;
 	}
 
+	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
+		return searchUnifiedMemoryWithRuntime(input);
+	}
+
 	/**
 	 * @deprecated Use `search({ ...input, sources: ["memory"] })` and
 	 * read `.results` instead. Thin shim around `searchUnifiedMemory`.
@@ -1188,7 +1292,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 	// tiers surface in the synthesis prompt. Read-only callers that don't
 	// ask for synthesis skip the summary gather entirely.
 
-	async function search(input: SearchInput): Promise<SearchOutput> {
+	async function searchWithResolvedRuntime(
+		input: SearchInput,
+		runtimeContext: ResolvedSearchRuntimeContext | undefined,
+	): Promise<SearchOutput> {
 		const query = input.query.trim();
 		const wantsSynthesis =
 			typeof input.synthesize === "boolean"
@@ -1254,10 +1361,13 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 							...(wantsInsightTier ? (["insights"] as const) : []),
 							...(wantsKnowledgeTier ? (["knowledge"] as const) : []),
 						];
-			const unified = await searchUnifiedMemory({
-				...searchInputToUnified(input),
-				sources: inferredSources.length > 0 ? inferredSources : undefined,
-			});
+			const unified = await searchUnifiedMemoryWithRuntime(
+				{
+					...searchInputToUnified(input),
+					sources: inferredSources.length > 0 ? inferredSources : undefined,
+				},
+				runtimeContext,
+			);
 			unifiedHits = unified.results;
 			sources = unified.sources;
 			unifiedReasoning = unified.reasoning;
@@ -1276,6 +1386,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				threshold,
 				logger,
 				peerScope.peers,
+				runtimeContext,
 			);
 			warnings.push(...summaryBucket.warnings);
 			summaryHits = summaryBucket.hits;
@@ -1335,6 +1446,11 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		base.answer = answer;
 		base.warnings = [...base.warnings, ...synthWarnings];
 		return base;
+	}
+
+	async function search(input: SearchInput, runtimeContext?: SearchRuntimeContext): Promise<SearchOutput> {
+		const resolvedRuntime = resolveSearchRuntimeContext(input, runtimeContext);
+		return searchWithResolvedRuntime(input, resolvedRuntime);
 	}
 
 	// ─── Deprecated shims ─────────────────────────────────────────────────────

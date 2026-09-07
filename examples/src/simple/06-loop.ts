@@ -81,7 +81,7 @@ export default async function demoLoop() {
 					cwd: process.cwd(),
 					// Also clear OPENCONTEXT_HOME so getOpenContextDir() falls
 					// through to the sandboxed HOME we just set — otherwise a
-					// host with OPENCONTEXT_HOME pre-set (e.g. ~/.alloomi)
+					// host with OPENCONTEXT_HOME pre-set
 					// leaks its real dir into the child and the assertions
 					// below.
 					env: { ...process.env, HOME: dir, OPENCONTEXT_HOME: "" },

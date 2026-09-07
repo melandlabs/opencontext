@@ -18,7 +18,7 @@ import { describe, expect, it, vi } from "vitest";
 // getOpenContextDir() prefers OPENCONTEXT_HOME over HOME, and the facade
 // transitively imports LOOP_PATHS whose home string is captured at module
 // load time. Clear OPENCONTEXT_HOME before any module-load-time path
-// resolution so a host with OPENCONTEXT_HOME pre-set (e.g. ~/.alloomi)
+// resolution so a host with OPENCONTEXT_HOME pre-set
 // doesn't leak its real dir into the re-exports assertion below.
 vi.hoisted(() => {
 	// getOpenContextDir() treats any non-empty override as authoritative,

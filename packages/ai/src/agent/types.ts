@@ -693,7 +693,7 @@ export interface AgentOptions {
 	 * Caller-supplied HTTP headers intended for cross-process requests made
 	 * on behalf of this agent execution (embeddings, compaction, etc.).
 	 * Typical use is cross-cutting concerns like first-party billing
-	 * attribution, e.g. `{ "x-alloomi-usage-task": "my-task-code" }`.
+	 * attribution.
 	 *
 	 * **This field is a passive holder, not an auto-forwarder.** The agent
 	 * runtime does NOT inject these into outbound requests. Callers that

@@ -1,11 +1,5 @@
 /**
  * Structured Call — response decoding with wire tolerance.
- *
- * Generalized from alloomi's digital-employee planner: providers reached
- * through routing layers (OpenRouter, Bedrock fronts, ...) regularly deviate
- * from the Anthropic Messages contract even when `tool_choice` forces a
- * single tool call. These helpers recover the intended payload without
- * binding callers to any product schema.
  */
 
 import { extractBalancedJsonObject } from "./json";

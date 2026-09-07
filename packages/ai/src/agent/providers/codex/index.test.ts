@@ -10,6 +10,7 @@ import {
 	buildCodexRunCommand,
 	normalizeCodexProviderConfig,
 	resolveCodexSandboxMode,
+	runCodexCli,
 } from "./command";
 import {
 	CodexAgent,
@@ -127,6 +128,19 @@ describe("Codex command builder", () => {
 			expect.arrayContaining(["--image", "/tmp/one.png", "--image", "/tmp/two.jpg"]),
 		);
 		expect(command.stdin).toBe("describe the attached image");
+	});
+
+	it("allows successful short-lived commands to ignore empty stdin", async () => {
+		const events = [];
+
+		for await (const event of runCodexCli(process.execPath, ["--version"], {
+			cwd: process.cwd(),
+			stdin: "",
+		})) {
+			events.push(event);
+		}
+
+		expect(events.at(-1)).toEqual(expect.objectContaining({ type: "close", exitCode: 0 }));
 	});
 
 	it("rejects unsafe sandbox/approval values and ignores unsafe extraArgs", () => {

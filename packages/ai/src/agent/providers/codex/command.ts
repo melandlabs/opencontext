@@ -275,10 +275,22 @@ export async function* runCodexCli(
 		// path, which truncates multiline argv values at the first newline.
 		// Attach an error listener before writing so a failed prompt delivery
 		// cannot surface as an unhandled EPIPE.
+		const hasStdinPayload = options.stdin.length > 0;
 		proc.stdin.on("error", (error: Error) => {
-			stdinError = error;
+			// Short-lived commands used by runtime preflight (for example
+			// `codex --version`) do not consume stdin. On macOS they can close
+			// the pipe before Node finishes an empty end(), which is harmless:
+			// no prompt was expected to be delivered. Preserve the fail-fast
+			// behaviour for real, non-empty prompt payloads.
+			if (hasStdinPayload) {
+				stdinError = error;
+			}
 		});
-		proc.stdin.end(options.stdin, "utf8");
+		if (hasStdinPayload) {
+			proc.stdin.end(options.stdin, "utf8");
+		} else {
+			proc.stdin.end();
+		}
 	} catch (error) {
 		const err = error instanceof Error ? error : new Error(String(error));
 		if (isCommandNotFoundError(err)) {
