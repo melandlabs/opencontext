@@ -95,7 +95,11 @@ beforeEach(() => {
 	process.env.ANSWER_MODEL = "answerer-a";
 	process.env.OPENROUTER_JUDGE_MODEL = "judge-a";
 	vi.mocked(searchMemory).mockResolvedValue(searchResponse());
-	vi.mocked(generateAnswer).mockResolvedValue({ text: "fixture response", token_usage: fixtureUsage, attempt: 1 });
+	vi.mocked(generateAnswer).mockResolvedValue({
+		text: "fixture response",
+		token_usage: fixtureUsage,
+		attempt: 1,
+	});
 });
 
 afterEach(async () => {

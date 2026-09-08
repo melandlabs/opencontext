@@ -69,9 +69,7 @@ export async function retryAnswererOperation<T>(
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
 			if (attempt < maxAttempts) {
-				process.stderr.write(
-					`[Answerer] Attempt ${attempt}/${maxAttempts} failed: ${lastError.message}\n`,
-				);
+				process.stderr.write(`[Answerer] Attempt ${attempt}/${maxAttempts} failed: ${lastError.message}\n`);
 				await wait(1000 * attempt);
 			}
 		}
@@ -342,7 +340,10 @@ export async function searchMemory(
  * Fallback: OpenRouter chat completions:
  *   OPENROUTER_API_KEY / OPENROUTER_ANSWER_MODEL (default deepseek/deepseek-chat)
  */
-async function generateAnswerOnce(prompt: string, system?: string): Promise<Omit<GeneratedAnswer, "attempt">> {
+async function generateAnswerOnce(
+	prompt: string,
+	system?: string,
+): Promise<Omit<GeneratedAnswer, "attempt">> {
 	const token = process.env.ANTHROPIC_AUTH_TOKEN;
 	if (token) {
 		const base = (process.env.ANTHROPIC_BASE_URL ?? "https://api.minimaxi.com/anthropic").replace(/\/+$/, "");
