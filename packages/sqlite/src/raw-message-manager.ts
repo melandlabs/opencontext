@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import {
@@ -15,9 +16,12 @@ import type {
 	RawMessage,
 	RawMessageEmbeddingUpdate,
 	RawMessageQuery,
+	RawMessageSearchChunk,
+	RawMessageSearchIndexStats,
 	RawMessageStats,
 	RawMessageStorageManager,
 } from "../../indexeddb/src/storage";
+import { chunkTextByEstimatedTokens } from "../../shared/src/text-chunking";
 import { initializeRawMessageSchema } from "./schema";
 
 type DatabaseLike = Database.Database;
@@ -52,6 +56,23 @@ interface RawMessageRow {
 	superseded_by_summary_id: string | null;
 	source_episode_id: string | null;
 	fact_type: string | null;
+}
+
+interface RawMessageSearchChunkRow {
+	id: number;
+	chunk_id: string;
+	message_id: string;
+	user_id: string;
+	chunk_index: number;
+	chunk_count: number;
+	start_position: number;
+	end_position: number;
+	content: string;
+	content_hash: string;
+	embedding: Buffer | null;
+	embedding_model: string | null;
+	embedding_dimensions: number | null;
+	embedding_updated_at: number | null;
 }
 
 interface MemorySummaryRow {
@@ -172,6 +193,59 @@ function parseJson<T>(value: string | null | undefined, fallback: T): T {
 	} catch {
 		return fallback;
 	}
+}
+
+function sha256(value: string): string {
+	return createHash("sha256").update(value).digest("hex");
+}
+
+function isUsableEmbedding(embedding: number[] | undefined): embedding is number[] {
+	return Boolean(
+		embedding?.length && embedding.every(Number.isFinite) && embedding.some((value) => value !== 0),
+	);
+}
+
+function toSearchChunk(row: RawMessageSearchChunkRow): RawMessageSearchChunk {
+	return {
+		chunkId: row.chunk_id,
+		messageId: row.message_id,
+		userId: row.user_id,
+		chunkIndex: row.chunk_index,
+		chunkCount: row.chunk_count,
+		startPosition: row.start_position,
+		endPosition: row.end_position,
+		content: row.content,
+		contentHash: row.content_hash,
+		embedding: row.embedding ? bufferToFloatArray(row.embedding) : undefined,
+		embeddingModel: row.embedding_model ?? undefined,
+		embeddingDimensions: row.embedding_dimensions ?? undefined,
+		embeddingUpdatedAt: row.embedding_updated_at ?? undefined,
+	};
+}
+
+function buildSearchChunks(message: RawMessage): RawMessageSearchChunk[] {
+	const pieces = chunkTextByEstimatedTokens(message.content);
+	return pieces.map((piece) => {
+		const contentHash = sha256(piece.content);
+		const canReuseParentEmbedding = pieces.length === 1 && isUsableEmbedding(message.embedding);
+		return {
+			chunkId: `${message.messageId}:chunk:${piece.chunkIndex}:${contentHash.slice(0, 16)}`,
+			messageId: message.messageId,
+			userId: message.userId,
+			chunkIndex: piece.chunkIndex,
+			chunkCount: pieces.length,
+			startPosition: piece.startPosition,
+			endPosition: piece.endPosition,
+			content: piece.content,
+			contentHash,
+			embedding: canReuseParentEmbedding ? message.embedding : undefined,
+			embeddingModel: canReuseParentEmbedding ? message.embeddingModel : undefined,
+			embeddingDimensions: canReuseParentEmbedding
+				? (message.embeddingDimensions ?? message.embedding?.length)
+				: undefined,
+			embeddingUpdatedAt: canReuseParentEmbedding ? message.embeddingUpdatedAt : undefined,
+		};
+	});
 }
 
 export function floatArrayToBuffer(values: number[] | undefined): Buffer | null {
@@ -362,16 +436,98 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 	}
 
 	async storeMessages(messages: RawMessage[]): Promise<number[]> {
+		return this.storeMessagesWithSearchChunks(
+			messages,
+			messages.flatMap((message) => buildSearchChunks(message)),
+		);
+	}
+
+	async storeMessagesWithSearchChunks(
+		messages: RawMessage[],
+		chunks: RawMessageSearchChunk[],
+	): Promise<number[]> {
 		await this.init();
 		const ids: number[] = [];
+		const chunksByMessage = new Map<string, RawMessageSearchChunk[]>();
+		for (const chunk of chunks) {
+			const group = chunksByMessage.get(chunk.messageId) ?? [];
+			group.push(chunk);
+			chunksByMessage.set(chunk.messageId, group);
+		}
 		const insertMany = this.db.transaction((items: RawMessage[]) => {
 			for (const message of items) {
 				const existing = this.storeMessageSync(message);
 				ids.push(existing);
+				this.replaceSearchChunksSync(
+					message,
+					chunksByMessage.get(message.messageId) ?? buildSearchChunks(message),
+				);
 			}
 		});
 		insertMany.immediate(messages);
 		return ids;
+	}
+
+	async getRawMessageSearchChunks(input: {
+		chunkIds?: string[];
+		messageIds?: string[];
+		userId?: string;
+	}): Promise<RawMessageSearchChunk[]> {
+		await this.init();
+		const where: string[] = [];
+		const params: Record<string, unknown> = {};
+		const addList = (column: string, prefix: string, values: string[] | undefined) => {
+			const unique = Array.from(new Set(values?.filter(Boolean) ?? []));
+			if (unique.length === 0) return;
+			const placeholders = unique.map((value, index) => {
+				params[`${prefix}${index}`] = value;
+				return `@${prefix}${index}`;
+			});
+			where.push(`${column} IN (${placeholders.join(", ")})`);
+		};
+		addList("chunk_id", "chunkId", input.chunkIds);
+		addList("message_id", "messageId", input.messageIds);
+		if (input.userId) {
+			where.push("user_id = @userId");
+			params.userId = input.userId;
+		}
+		if (where.length === 0) return [];
+		return (
+			this.db
+				.prepare(
+					`SELECT * FROM raw_message_chunks WHERE ${where.join(" AND ")} ORDER BY message_id, chunk_index`,
+				)
+				.all(params) as RawMessageSearchChunkRow[]
+		).map(toSearchChunk);
+	}
+
+	async getRawMessageSearchIndexStats(): Promise<RawMessageSearchIndexStats> {
+		await this.init();
+		const counts = this.db
+			.prepare(`
+        SELECT
+          COUNT(DISTINCT message_id) AS message_count,
+          COUNT(*) AS chunk_count,
+          SUM(CASE WHEN embedding IS NOT NULL THEN 1 ELSE 0 END) AS embedded_chunk_count
+        FROM raw_message_chunks
+      `)
+			.get() as { message_count: number; chunk_count: number; embedded_chunk_count: number | null };
+		const dimensions = (
+			this.db
+				.prepare(
+					"SELECT DISTINCT embedding_dimensions AS dimensions FROM raw_message_chunks WHERE embedding_dimensions IS NOT NULL ORDER BY dimensions",
+				)
+				.all() as Array<{ dimensions: number }>
+		).map((row) => row.dimensions);
+		return {
+			messageCount: counts.message_count,
+			chunkCount: counts.chunk_count,
+			embeddedChunkCount: counts.embedded_chunk_count ?? 0,
+			embeddingDimensions: dimensions,
+			lexicalReady: this.tableExists("raw_message_chunks_fts"),
+			semanticReady:
+				(counts.embedded_chunk_count ?? 0) > 0 && dimensions.some((d) => this.childVectorTableExists(d)),
+		};
 	}
 
 	async compareAndSwapGraphLedger(
@@ -586,8 +742,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
       DELETE FROM raw_messages;
       DELETE FROM memory_summaries;
       INSERT INTO raw_messages_fts(raw_messages_fts) VALUES('rebuild');
+      INSERT INTO raw_message_chunks_fts(raw_message_chunks_fts) VALUES('rebuild');
     `);
 		this.clearVectorTable();
+		this.clearChildVectorTables();
 	}
 
 	async upsertSummaries(summaries: MemorySummaryRecord[]): Promise<void> {
@@ -937,6 +1095,29 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					userId,
 				}).changes;
 				this.upsertVectorForMessage(update.messageId, update.embedding);
+				const child = this.db
+					.prepare(
+						"SELECT chunk_id, chunk_count, content_hash FROM raw_message_chunks WHERE message_id = ? AND chunk_index = 0",
+					)
+					.get(update.messageId) as
+					| { chunk_id: string; chunk_count: number; content_hash: string }
+					| undefined;
+				if (child?.chunk_count === 1 && child.content_hash === update.embeddingContentHash) {
+					this.db
+						.prepare(`
+              UPDATE raw_message_chunks
+              SET embedding = ?, embedding_model = ?, embedding_dimensions = ?, embedding_updated_at = ?
+              WHERE chunk_id = ?
+            `)
+						.run(
+							floatArrayToBuffer(update.embedding),
+							update.embeddingModel,
+							update.embeddingDimensions ?? update.embedding.length,
+							update.embeddingUpdatedAt ?? Date.now(),
+							child.chunk_id,
+						);
+					this.upsertVectorForSearchChunk(child.chunk_id, update.embedding);
+				}
 			}
 		});
 		updateMany(updates.filter((update) => update.messageId));
@@ -1047,6 +1228,62 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return row.id;
 	}
 
+	private replaceSearchChunksSync(message: RawMessage, chunks: RawMessageSearchChunk[]): void {
+		const ordered = [...chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+		for (const chunk of ordered) {
+			if (chunk.messageId !== message.messageId || chunk.userId !== message.userId) {
+				throw new Error(`raw_message_chunk_scope_conflict:${chunk.chunkId}`);
+			}
+			if (
+				chunk.chunkIndex < 0 ||
+				chunk.chunkCount !== ordered.length ||
+				chunk.endPosition <= chunk.startPosition ||
+				chunk.content !== message.content.slice(chunk.startPosition, chunk.endPosition) ||
+				chunk.contentHash !== sha256(chunk.content)
+			) {
+				throw new Error(`invalid_raw_message_chunk:${chunk.chunkId}`);
+			}
+		}
+		this.deleteSearchChunksForMessage(message.messageId);
+		const insert = this.db.prepare(`
+      INSERT INTO raw_message_chunks (
+        chunk_id, message_id, user_id, chunk_index, chunk_count,
+        start_position, end_position, content, content_hash, embedding,
+        embedding_model, embedding_dimensions, embedding_updated_at
+      ) VALUES (
+        @chunkId, @messageId, @userId, @chunkIndex, @chunkCount,
+        @startPosition, @endPosition, @content, @contentHash, @embedding,
+        @embeddingModel, @embeddingDimensions, @embeddingUpdatedAt
+      )
+    `);
+		for (const chunk of ordered) {
+			const dimensions = chunk.embeddingDimensions ?? chunk.embedding?.length;
+			if (chunk.embedding && dimensions !== chunk.embedding.length) {
+				throw new Error(`raw_message_chunk_embedding_dimension_mismatch:${chunk.chunkId}`);
+			}
+			const embedding = isUsableEmbedding(chunk.embedding) ? chunk.embedding : undefined;
+			insert.run({
+				...chunk,
+				embedding: floatArrayToBuffer(embedding),
+				embeddingModel: embedding ? (chunk.embeddingModel ?? null) : null,
+				embeddingDimensions: embedding ? (dimensions ?? null) : null,
+				embeddingUpdatedAt: embedding ? (chunk.embeddingUpdatedAt ?? null) : null,
+			});
+			this.upsertVectorForSearchChunk(chunk.chunkId, embedding);
+		}
+	}
+
+	private deleteSearchChunksForMessage(messageId: string): void {
+		for (const tableName of this.listChildVectorTables()) {
+			this.db
+				.prepare(
+					`DELETE FROM ${tableName} WHERE chunk_id IN (SELECT chunk_id FROM raw_message_chunks WHERE message_id = ?)`,
+				)
+				.run(messageId);
+		}
+		this.db.prepare("DELETE FROM raw_message_chunks WHERE message_id = ?").run(messageId);
+	}
+
 	async searchMessagesSemantically(
 		input: SQLiteRawMessageSemanticSearchInput,
 	): Promise<SQLiteRawMessageSemanticSearchResult[]> {
@@ -1056,13 +1293,17 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			return [];
 		}
 
-		if (this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length)) {
-			const results = this.searchMessagesWithVectorTable(input);
-			return results;
-		}
-
-		const results = this.searchMessagesWithStoredEmbeddings(input);
-		return results;
+		const limit = Math.max(1, Math.floor(input.limit ?? 10));
+		const childResults =
+			this.vectorSearchAvailable && this.childVectorTableExists(input.queryEmbedding.length)
+				? this.searchChunksWithVectorTable(input)
+				: this.searchChunksWithStoredEmbeddings(input);
+		const legacyResults = (
+			this.vectorSearchAvailable && this.vectorTableExists(input.queryEmbedding.length)
+				? this.searchMessagesWithVectorTable(input)
+				: this.searchMessagesWithStoredEmbeddings(input)
+		).filter((hit) => !this.messageHasSearchChunks(hit.id));
+		return [...childResults, ...legacyResults].sort((a, b) => b.similarity - a.similarity).slice(0, limit);
 	}
 
 	/**
@@ -1090,8 +1331,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		}
 
 		const where: string[] = [
-			"raw_messages_fts MATCH @ftsQuery",
-			"raw_messages.id = raw_messages_fts.rowid",
+			"raw_message_chunks_fts MATCH @ftsQuery",
+			"raw_message_chunks.id = raw_message_chunks_fts.rowid",
+			"raw_messages.message_id = raw_message_chunks.message_id",
 			"raw_messages.user_id = @userId",
 		];
 		const params: Record<string, unknown> = {
@@ -1122,26 +1364,273 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			});
 		}
 
-		const limit = input.limit ?? 10;
-		params.limit = limit;
+		const limit = Math.max(1, Math.floor(input.limit ?? 10));
+		params.limit = Math.min(4096, Math.max(limit, limit * 4));
 
 		const sql = `
-			SELECT raw_messages.*, raw_messages_fts.rank AS bm25_rank
-			FROM raw_messages_fts, raw_messages
+			SELECT raw_message_chunks.*, raw_message_chunks_fts.rank AS bm25_rank
+			FROM raw_message_chunks_fts, raw_message_chunks, raw_messages
 			WHERE ${where.join(" AND ")}
 			ORDER BY bm25_rank ASC
 			LIMIT @limit
 		`;
 
-		const rows = this.db.prepare(sql).all(params) as Array<RawMessageRow & { bm25_rank: number }>;
+		const rows = this.db.prepare(sql).all(params) as Array<RawMessageSearchChunkRow & { bm25_rank: number }>;
+		const childResults = this.hydrateLexicalChunkRows(rows, input).slice(0, limit);
+		if (childResults.length >= limit) return childResults;
+		const legacyResults = this.searchLegacyMessagesLexically(input, ftsQuery, limit).filter(
+			(hit) => !this.messageHasSearchChunks(hit.id),
+		);
+		return [...childResults, ...legacyResults].sort((a, b) => a.bm25Rank - b.bm25Rank).slice(0, limit);
+	}
+
+	private searchChunksWithVectorTable(
+		input: SQLiteRawMessageSemanticSearchInput,
+	): SQLiteRawMessageSemanticSearchResult[] {
+		const limit = Math.max(1, Math.floor(input.limit ?? 10));
+		const scanLimit = Math.min(4096, Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10)));
+		const threshold = input.threshold ?? 0.7;
+		const rows = this.db
+			.prepare(`
+        SELECT chunk_id, distance
+        FROM ${this.getChildVectorTableName(input.queryEmbedding.length)}
+        WHERE embedding MATCH ?
+        ORDER BY distance
+        LIMIT ?
+      `)
+			.all(floatArrayToBuffer(input.queryEmbedding), scanLimit) as Array<{
+			chunk_id: string;
+			distance: number;
+		}>;
+		const distances = new Map(rows.map((row) => [row.chunk_id, row.distance]));
+		const chunks = this.getSearchChunkRowsByIds(rows.map((row) => row.chunk_id));
+		return this.hydrateSemanticChunkRows(
+			chunks.map((chunk) => ({
+				chunk,
+				similarity: sqliteVectorDistanceToCosineSimilarity(
+					distances.get(chunk.chunk_id) ?? Number.POSITIVE_INFINITY,
+				),
+			})),
+			input,
+		)
+			.filter((result) => result.similarity >= threshold)
+			.slice(0, limit);
+	}
+
+	private searchChunksWithStoredEmbeddings(
+		input: SQLiteRawMessageSemanticSearchInput,
+	): SQLiteRawMessageSemanticSearchResult[] {
+		const limit = Math.max(1, Math.floor(input.limit ?? 10));
+		const scanLimit = Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10));
+		const threshold = input.threshold ?? 0.7;
+		const rows = this.db
+			.prepare(`
+        SELECT raw_message_chunks.*
+        FROM raw_message_chunks
+        JOIN raw_messages ON raw_messages.message_id = raw_message_chunks.message_id
+        WHERE raw_message_chunks.user_id = @userId
+          AND raw_message_chunks.embedding IS NOT NULL
+          AND raw_message_chunks.embedding_dimensions = @dimensions
+          ${input.includeArchived ? "" : "AND raw_messages.archived_at IS NULL"}
+          ${input.includeDeprecated ? "" : "AND raw_messages.deprecated_at IS NULL"}
+        ORDER BY raw_messages.timestamp DESC
+        LIMIT @scanLimit
+      `)
+			.all({
+				userId: input.userId,
+				dimensions: input.queryEmbedding.length,
+				scanLimit,
+			}) as RawMessageSearchChunkRow[];
+		return this.hydrateSemanticChunkRows(
+			rows
+				.filter(
+					(row) =>
+						!input.embeddingModel || !row.embedding_model || row.embedding_model === input.embeddingModel,
+				)
+				.map((chunk) => ({
+					chunk,
+					similarity: cosineSimilarity(
+						input.queryEmbedding,
+						bufferToFloatArray(chunk.embedding ?? Buffer.alloc(0)) ?? [],
+					),
+				})),
+			input,
+		)
+			.filter((result) => Number.isFinite(result.similarity) && result.similarity >= threshold)
+			.slice(0, limit);
+	}
+
+	private hydrateSemanticChunkRows(
+		rows: Array<{ chunk: RawMessageSearchChunkRow; similarity: number }>,
+		input: SQLiteRawMessageSemanticSearchInput,
+	): SQLiteRawMessageSemanticSearchResult[] {
+		const strongestByParent = new Map<string, { chunk: RawMessageSearchChunkRow; similarity: number }>();
+		for (const row of rows.sort((a, b) => b.similarity - a.similarity)) {
+			if (!strongestByParent.has(row.chunk.message_id)) strongestByParent.set(row.chunk.message_id, row);
+		}
+		const parents = new Map(
+			this.getRowsByMessageIds([...strongestByParent.keys()]).map((row) => [
+				row.message_id,
+				toRawMessage(row),
+			]),
+		);
+		return [...strongestByParent.values()]
+			.map(({ chunk, similarity }) => {
+				const message = parents.get(chunk.message_id);
+				if (!message || !this.matchesSemanticFilters(message, { ...input, embeddingModel: undefined }))
+					return null;
+				return this.toChildSemanticSearchResult(message, chunk, similarity);
+			})
+			.filter((result): result is SQLiteRawMessageSemanticSearchResult => result !== null)
+			.sort((a, b) => b.similarity - a.similarity);
+	}
+
+	private hydrateLexicalChunkRows(
+		rows: Array<RawMessageSearchChunkRow & { bm25_rank: number }>,
+		_input: SQLiteRawMessageLexicalSearchInput,
+	): SQLiteRawMessageLexicalSearchResult[] {
+		const strongestByParent = new Map<string, RawMessageSearchChunkRow & { bm25_rank: number }>();
+		for (const row of rows) {
+			if (!strongestByParent.has(row.message_id)) strongestByParent.set(row.message_id, row);
+		}
+		const parents = new Map(
+			this.getRowsByMessageIds([...strongestByParent.keys()]).map((row) => [
+				row.message_id,
+				toRawMessage(row),
+			]),
+		);
+		return [...strongestByParent.values()]
+			.map((chunk) => {
+				const message = parents.get(chunk.message_id);
+				if (!message) return null;
+				const content = this.searchResultContent(message, chunk);
+				return {
+					type: "memory" as const,
+					id: message.messageId,
+					content: message.archivedAt ? "" : content,
+					similarity: sqliteDistanceToScore(-chunk.bm25_rank),
+					bm25Rank: chunk.bm25_rank,
+					metadata: {
+						...(message.metadata ?? {}),
+						userId: message.userId,
+						platform: message.platform,
+						botId: message.botId,
+						channel: message.channel,
+						person: message.person,
+						timestamp: normalizeTimestampToMs(message.timestamp),
+						memoryStage: message.memoryStage,
+						factType: message.factType,
+						scoring: "bm25" as const,
+						sourceMessageId: message.messageId,
+						sourceChunkId: chunk.chunk_id,
+						sourceChunkIndex: chunk.chunk_index,
+						sourceChunkCount: chunk.chunk_count,
+					},
+					message: { ...message, content },
+				};
+			})
+			.filter(Boolean) as SQLiteRawMessageLexicalSearchResult[];
+	}
+
+	private toChildSemanticSearchResult(
+		message: RawMessage,
+		chunk: RawMessageSearchChunkRow,
+		similarity: number,
+	): SQLiteRawMessageSemanticSearchResult {
+		const content = this.searchResultContent(message, chunk);
+		return {
+			type: "memory",
+			id: message.messageId,
+			content: message.archivedAt ? "" : content,
+			similarity,
+			metadata: {
+				...(message.metadata ?? {}),
+				userId: message.userId,
+				platform: message.platform,
+				botId: message.botId,
+				channel: message.channel,
+				person: message.person,
+				timestamp: normalizeTimestampToMs(message.timestamp),
+				memoryStage: message.memoryStage,
+				embeddingModel: chunk.embedding_model ?? undefined,
+				factType: message.factType,
+				sourceMessageId: message.messageId,
+				sourceChunkId: chunk.chunk_id,
+				sourceChunkIndex: chunk.chunk_index,
+				sourceChunkCount: chunk.chunk_count,
+			},
+			message: { ...message, content },
+		};
+	}
+
+	private searchResultContent(message: RawMessage, hit: RawMessageSearchChunkRow): string {
+		if (hit.chunk_count <= 1) return message.content;
+		const window = this.db
+			.prepare(`
+        SELECT MIN(start_position) AS start_position, MAX(end_position) AS end_position
+        FROM raw_message_chunks
+        WHERE message_id = @messageId
+          AND chunk_index BETWEEN @startIndex AND @endIndex
+      `)
+			.get({
+				messageId: message.messageId,
+				startIndex: Math.max(0, hit.chunk_index - 1),
+				endIndex: Math.min(hit.chunk_count - 1, hit.chunk_index + 1),
+			}) as { start_position: number | null; end_position: number | null };
+		return message.content.slice(
+			window.start_position ?? hit.start_position,
+			window.end_position ?? hit.end_position,
+		);
+	}
+
+	private getSearchChunkRowsByIds(chunkIds: string[]): RawMessageSearchChunkRow[] {
+		const ids = Array.from(new Set(chunkIds.filter(Boolean)));
+		if (ids.length === 0) return [];
+		const params: Record<string, string> = {};
+		const placeholders = ids.map((id, index) => {
+			params[`id${index}`] = id;
+			return `@id${index}`;
+		});
+		return this.db
+			.prepare(`SELECT * FROM raw_message_chunks WHERE chunk_id IN (${placeholders.join(", ")})`)
+			.all(params) as RawMessageSearchChunkRow[];
+	}
+
+	private messageHasSearchChunks(messageId: string): boolean {
+		return Boolean(
+			this.db.prepare("SELECT 1 FROM raw_message_chunks WHERE message_id = ? LIMIT 1").get(messageId),
+		);
+	}
+
+	private searchLegacyMessagesLexically(
+		input: SQLiteRawMessageLexicalSearchInput,
+		ftsQuery: string,
+		limit: number,
+	): SQLiteRawMessageLexicalSearchResult[] {
+		const rows = this.db
+			.prepare(`
+        SELECT raw_messages.*, raw_messages_fts.rank AS bm25_rank
+        FROM raw_messages_fts, raw_messages
+        WHERE raw_messages_fts MATCH @ftsQuery
+          AND raw_messages.id = raw_messages_fts.rowid
+          AND raw_messages.user_id = @userId
+          AND NOT EXISTS (SELECT 1 FROM raw_message_chunks WHERE raw_message_chunks.message_id = raw_messages.message_id)
+          ${input.includeArchived ? "" : "AND raw_messages.archived_at IS NULL"}
+          ${input.includeDeprecated ? "" : "AND raw_messages.deprecated_at IS NULL"}
+          ${input.platform ? "AND raw_messages.platform = @platform" : ""}
+          ${input.botId ? "AND raw_messages.bot_id = @botId" : ""}
+        ORDER BY bm25_rank ASC
+        LIMIT @limit
+      `)
+			.all({ ftsQuery, userId: input.userId, platform: input.platform, botId: input.botId, limit }) as Array<
+			RawMessageRow & { bm25_rank: number }
+		>;
 		return rows.map((row) => {
 			const message = toRawMessage(row);
 			return {
-				type: "memory" as const,
+				type: "memory",
 				id: message.messageId,
 				content: message.content,
-				// FTS5 rank is a negative BM25 score; lower (more negative) is
-				// better. Normalise to [0, 1] for downstream similarity scoring.
 				similarity: sqliteDistanceToScore(-row.bm25_rank),
 				bm25Rank: row.bm25_rank,
 				metadata: {
@@ -1151,10 +1640,10 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					botId: message.botId,
 					channel: message.channel,
 					person: message.person,
-					timestamp: message.timestamp,
+					timestamp: normalizeTimestampToMs(message.timestamp),
 					memoryStage: message.memoryStage,
 					factType: message.factType,
-					scoring: "bm25" as const,
+					scoring: "bm25",
 				},
 				message,
 			};
@@ -1199,6 +1688,20 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			.run(floatArrayToBuffer(embedding), messageId);
 	}
 
+	private upsertVectorForSearchChunk(chunkId: string, embedding: number[] | undefined): void {
+		if (!this.vectorSearchAvailable) return;
+		for (const tableName of this.listChildVectorTables()) {
+			this.db.prepare(`DELETE FROM ${tableName} WHERE chunk_id = ?`).run(chunkId);
+		}
+		if (!embedding || embedding.length === 0 || embedding.every((value) => value === 0)) return;
+		this.ensureChildVectorTable(embedding.length);
+		this.db
+			.prepare(
+				`INSERT INTO ${this.getChildVectorTableName(embedding.length)} (embedding, chunk_id) VALUES (?, ?)`,
+			)
+			.run(floatArrayToBuffer(embedding), chunkId);
+	}
+
 	private rebuildVectorTables(): void {
 		if (!this.vectorSearchAvailable) {
 			return;
@@ -1211,6 +1714,12 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			this.db.exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
 		}
 		for (const tableName of this.listVectorTables()) {
+			this.db.exec(`DROP TABLE IF EXISTS ${tableName}`);
+		}
+		for (const triggerName of this.listChildVectorDeleteTriggers()) {
+			this.db.exec(`DROP TRIGGER IF EXISTS ${triggerName}`);
+		}
+		for (const tableName of this.listChildVectorTables()) {
 			this.db.exec(`DROP TABLE IF EXISTS ${tableName}`);
 		}
 
@@ -1255,6 +1764,31 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			},
 		);
 		insertMany(rows);
+
+		const chunkRows = this.db
+			.prepare(`
+        SELECT chunk_id, embedding, embedding_dimensions
+        FROM raw_message_chunks
+        WHERE embedding IS NOT NULL
+          AND embedding_dimensions IS NOT NULL
+          AND embedding_dimensions > 0
+      `)
+			.all() as Array<{ chunk_id: string; embedding: Buffer; embedding_dimensions: number }>;
+		const insertChunks = this.db.transaction(
+			(items: Array<{ chunk_id: string; embedding: Buffer; embedding_dimensions: number }>) => {
+				for (const row of items) {
+					if (row.embedding.length !== row.embedding_dimensions * 4) continue;
+					if ((bufferToFloatArray(row.embedding) ?? []).every((value) => value === 0)) continue;
+					this.ensureChildVectorTable(row.embedding_dimensions);
+					this.db
+						.prepare(
+							`INSERT INTO ${this.getChildVectorTableName(row.embedding_dimensions)} (embedding, chunk_id) VALUES (?, ?)`,
+						)
+						.run(row.embedding, row.chunk_id);
+				}
+			},
+		);
+		insertChunks(chunkRows);
 	}
 
 	private clearVectorTable(): void {
@@ -1262,6 +1796,13 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			return;
 		}
 		for (const tableName of this.listVectorTables()) {
+			this.db.prepare(`DELETE FROM ${tableName}`).run();
+		}
+	}
+
+	private clearChildVectorTables(): void {
+		if (!this.vectorSearchAvailable) return;
+		for (const tableName of this.listChildVectorTables()) {
 			this.db.prepare(`DELETE FROM ${tableName}`).run();
 		}
 	}
@@ -1285,11 +1826,38 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
     `);
 	}
 
+	private ensureChildVectorTable(dimensions: number): void {
+		const tableName = this.getChildVectorTableName(dimensions);
+		this.db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS ${tableName}
+      USING vec0(
+        embedding float[${dimensions}],
+        chunk_id TEXT PRIMARY KEY
+      );
+
+      CREATE TRIGGER IF NOT EXISTS ${this.getChildVectorDeleteTriggerName(dimensions)}
+      AFTER DELETE ON raw_message_chunks
+      BEGIN
+        DELETE FROM ${tableName} WHERE chunk_id = OLD.chunk_id;
+      END;
+    `);
+	}
+
 	private vectorTableExists(dimensions: number): boolean {
 		return Boolean(
 			this.db
 				.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
 				.get(this.getVectorTableName(dimensions)),
+		);
+	}
+
+	private childVectorTableExists(dimensions: number): boolean {
+		return this.tableExists(this.getChildVectorTableName(dimensions));
+	}
+
+	private tableExists(name: string): boolean {
+		return Boolean(
+			this.db.prepare("SELECT 1 FROM sqlite_master WHERE type IN ('table', 'view') AND name = ?").get(name),
 		);
 	}
 
@@ -1300,8 +1868,19 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		return `raw_messages_vec_d${dimensions}`;
 	}
 
+	private getChildVectorTableName(dimensions: number): string {
+		if (!Number.isInteger(dimensions) || dimensions <= 0) {
+			throw new Error(`Invalid raw message child embedding dimensions: ${dimensions}`);
+		}
+		return `raw_message_chunks_vec_d${dimensions}`;
+	}
+
 	private getVectorDeleteTriggerName(dimensions: number): string {
 		return `${this.getVectorTableName(dimensions)}_delete`;
+	}
+
+	private getChildVectorDeleteTriggerName(dimensions: number): string {
+		return `${this.getChildVectorTableName(dimensions)}_delete`;
 	}
 
 	private listVectorTables(): string[] {
@@ -1324,6 +1903,30 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		)
 			.map((row) => row.name)
 			.filter((name) => /^raw_messages_vec_d\d+_delete$/.test(name));
+	}
+
+	private listChildVectorTables(): string[] {
+		return (
+			this.db
+				.prepare(
+					"SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'raw_message_chunks_vec_d%'",
+				)
+				.all() as Array<{ name: string }>
+		)
+			.map((row) => row.name)
+			.filter((name) => /^raw_message_chunks_vec_d\d+$/.test(name));
+	}
+
+	private listChildVectorDeleteTriggers(): string[] {
+		return (
+			this.db
+				.prepare(
+					"SELECT name FROM sqlite_master WHERE type = 'trigger' AND name LIKE 'raw_message_chunks_vec_d%_delete'",
+				)
+				.all() as Array<{ name: string }>
+		)
+			.map((row) => row.name)
+			.filter((name) => /^raw_message_chunks_vec_d\d+_delete$/.test(name));
 	}
 
 	private deleteMessageFromVectorTables(messageId: string): void {

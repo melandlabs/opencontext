@@ -43,7 +43,11 @@ interface RawMessageManagerLike {
  * responsible for `app.listen()`; this function only adds the three
  * POST handlers.
  */
-export function registerOkfRoutes(app: Hono, rawStore: RawMessageStoreLike): void {
+export function registerOkfRoutes(
+	app: Hono,
+	rawStore: RawMessageStoreLike,
+	options: { writeMessages?: (userId: string, messages: RawMessage[]) => Promise<void> } = {},
+): void {
 	app.post("/v1/okf/import", async (c) => {
 		const body = await readJson(c);
 		if (!body) return c.json({ error: "invalid JSON body" }, 400);
@@ -66,7 +70,9 @@ export function registerOkfRoutes(app: Hono, rawStore: RawMessageStoreLike): voi
 		const manager = await rawStore.getManager();
 		const messages = [codec.rawMessage];
 		try {
-			if (typeof manager.upsertRawMessages === "function") {
+			if (options.writeMessages) {
+				await options.writeMessages(userId, messages);
+			} else if (typeof manager.upsertRawMessages === "function") {
 				await manager.upsertRawMessages({ userId, messages });
 			} else if (typeof manager.storeMessages === "function") {
 				await manager.storeMessages(messages);
@@ -171,7 +177,9 @@ export function registerOkfRoutes(app: Hono, rawStore: RawMessageStoreLike): voi
 		}
 		if (messages.length > 0) {
 			try {
-				if (typeof manager.upsertRawMessages === "function") {
+				if (options.writeMessages) {
+					await options.writeMessages(userId, messages);
+				} else if (typeof manager.upsertRawMessages === "function") {
 					await manager.upsertRawMessages({ userId, messages });
 				} else if (typeof manager.storeMessages === "function") {
 					await manager.storeMessages(messages);

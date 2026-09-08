@@ -17,6 +17,7 @@
 		"./parsers": "./dist/parsers.js",
 		"./embedding-provider": "./dist/embedding-provider.js",
 		"./local-transformers-embedding-provider": "./dist/local-transformers-embedding-provider.js",
+		"./local-transformers-reranker": "./dist/local-transformers-reranker.js",
 		"./universal-embeddings": "./dist/universal-embeddings.js",
 		"./chroma-store": "./dist/chroma-store.js",
 		"./sqlite-vec-store": "./dist/sqlite-vec-store.js",

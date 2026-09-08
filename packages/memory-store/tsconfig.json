@@ -12,8 +12,10 @@
 			"@melandlabs/sqlite/*": ["../../packages/sqlite/src/*"],
 			"@melandlabs/ai": ["../../packages/ai/src/index.ts"],
 			"@melandlabs/ai/*": ["../../packages/ai/src/*"],
-			"@melandlabs/rag": ["../../packages/ai/rag/src/index.ts"],
-			"@melandlabs/rag/*": ["../../packages/ai/rag/src/*"],
+			"@melandlabs/ai-rag": ["../../packages/ai/rag/src/index.ts"],
+			"@melandlabs/ai-rag/*": ["../../packages/ai/rag/src/*"],
+			"@melandlabs/rag": ["../../packages/rag/src/index.ts"],
+			"@melandlabs/rag/*": ["../../packages/rag/src/*"],
 			"@melandlabs/shared": ["../../packages/shared/src/index.ts"],
 			"@melandlabs/shared/*": ["../../packages/shared/src/*"]
 		}

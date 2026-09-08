@@ -135,6 +135,34 @@ describe("search applicability propagation", () => {
 		}
 	});
 
+	it("forwards trusted applicability to the native hybrid provider", async () => {
+		const hybridInputs: Array<Parameters<NonNullable<UnifiedSearchDeps["searchRawMessagesHybrid"]>>[0]> = [];
+		const contexts = [{ scope: "project" as const, key: "project-a" }] as const;
+		const asOf = "2026-01-20T00:00:00.000Z";
+		const search = createUnifiedSearch({
+			embedQuery: async () => [0.1, 0.2],
+			searchRawMessagesHybrid: async (input) => {
+				hybridInputs.push(input);
+				return [{ id: "raw-hybrid", content: "hybrid", similarity: 0.9, metadata: {} }];
+			},
+		});
+
+		await search.search(
+			{
+				userId: "u1",
+				query: "Alpha project details",
+				tiers: ["raw"],
+				sources: ["memory"],
+				asOf,
+			},
+			{ applicabilityContexts: contexts },
+		);
+
+		expect(hybridInputs).toHaveLength(1);
+		expect(hybridInputs[0]?.applicabilityContexts).toBe(contexts);
+		expect(hybridInputs[0]?.applicabilityAt).toBe(Date.parse(asOf));
+	});
+
 	it("captures one timestamp when asOf is omitted and shares it across all providers", async () => {
 		const calls = createProviderCalls();
 		const contexts: readonly MemoryApplicabilityContext[] = [];

@@ -24,7 +24,7 @@ import {
 } from "../../run-support";
 import { expandBeamSamples, loadBeamDatasetWithMetadata } from "./dataset";
 import { calculateDiagnosticSummary } from "./diagnostics";
-import { BeamEvaluator, RETRIEVAL_LIMIT } from "./evaluator";
+import { BeamEvaluator, RETRIEVAL_LIMIT, getBeamCheckpointDir } from "./evaluator";
 import { type NuggetCategoryMetrics, calculateNuggetCategoryMetrics, getJudgeModelIdentity } from "./metrics";
 import {
 	checkOpencontextHealth,
@@ -301,7 +301,7 @@ async function main() {
 		datasetPath: args.dataset,
 		writablePaths: [
 			manifestPath,
-			join(benchmarkDir, "checkpoints", "beam", ".preflight"),
+			join(getBeamCheckpointDir(), ".preflight"),
 			...(args.output ? [args.output] : []),
 			...(tracePath ? [tracePath] : []),
 			...(chunksPath ? [chunksPath] : []),
@@ -427,7 +427,7 @@ async function main() {
 		datasetPath: args.dataset,
 		answerer_model: getAnswererModelIdentity(),
 		judge_model: getJudgeModelIdentity(),
-		retrieval: { strategy: "memory-search", top_k: RETRIEVAL_LIMIT },
+		retrieval: { strategy: "daemon-default", top_k: RETRIEVAL_LIMIT, diagnostics: true },
 		resume: args.resume,
 		started_at: startedAt,
 		finished_at: finishedAt,

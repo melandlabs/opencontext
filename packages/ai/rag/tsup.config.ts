@@ -10,6 +10,7 @@ export default defineConfig({
 		parsers: "src/parsers.ts",
 		"embedding-provider": "src/embedding-provider.ts",
 		"local-transformers-embedding-provider": "src/local-transformers-embedding-provider.ts",
+		"local-transformers-reranker": "src/local-transformers-reranker.ts",
 		"universal-embeddings": "src/universal-embeddings.ts",
 		"chroma-store": "src/chroma-store.ts",
 		"sqlite-vec-store": "src/sqlite-vec-store.ts",

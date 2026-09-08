@@ -15,9 +15,10 @@
  *   --name <name>                          Server name surfaced to MCP clients (env: MEMORY_MCP_NAME)
  *   --version <version>                    Server version surfaced to MCP clients (env: MEMORY_MCP_VERSION)
  *
- * The `local` embedder and every `chroma` backend dynamically import
- * `@melandlabs/ai-rag` (a peer install) — see `cli-shared.ts` for the
- * full unified-flag surface.
+ * The local embedder and insight/knowledge Chroma integrations dynamically
+ * import `@melandlabs/ai-rag`; raw-message Chroma, LanceDB, and Milvus use
+ * the existing `@melandlabs/rag` stores. See `cli-shared.ts` for the full
+ * unified-flag surface.
  */
 
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";

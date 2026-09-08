@@ -42,5 +42,12 @@ export default defineConfig({
 		"@melandlabs/ai-rag",
 		"@melandlabs/ai-rag/local-transformers-embedding-provider",
 		"@melandlabs/ai-rag/chroma-store",
+		// Keep native/vector backends as optional runtime imports. Bundling the
+		// LanceDB package would make tsup traverse every platform-specific .node
+		// artifact instead of selecting the host platform at runtime.
+		"@melandlabs/rag/lancedb-store",
+		"@melandlabs/rag/milvus-store",
+		"@lancedb/lancedb",
+		"@zilliz/milvus2-sdk-node",
 	],
 });

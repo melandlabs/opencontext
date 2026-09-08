@@ -92,7 +92,7 @@ describe("SQLiteRawMessageManager.lexicalSearchMessages", () => {
 		await manager.close();
 	});
 
-	it("preserves benchmark provenance metadata in semantic and lexical hits", async () => {
+	it("preserves parent metadata in semantic and lexical child hits", async () => {
 		const manager = new SQLiteRawMessageManager({
 			dbPath: join(scratchDir, "store.db"),
 			enableVectorSearch: false,
@@ -101,14 +101,14 @@ describe("SQLiteRawMessageManager.lexicalSearchMessages", () => {
 
 		await manager.storeMessage(
 			makeMessage({
-				messageId: "beam-conv-1-chunk-0",
+				messageId: "message-with-provenance",
 				content: "Berlin provenance marker",
 				embedding: [1, 0, 0],
 				embeddingModel: "fixture",
 				metadata: {
-					entryId: "conv-1",
-					chunkIndex: 0,
-					sourceTurnIds: ["41", "42"],
+					conversationId: "conversation-1",
+					sequence: 7,
+					sourceId: "upstream-41",
 				},
 			}),
 		);
@@ -121,9 +121,9 @@ describe("SQLiteRawMessageManager.lexicalSearchMessages", () => {
 		const lexicalHits = await manager.lexicalSearchMessages({ userId: "u1", keywords: ["Berlin"] });
 
 		for (const hit of [...semanticHits, ...lexicalHits]) {
-			expect(hit.metadata.entryId).toBe("conv-1");
-			expect(hit.metadata.chunkIndex).toBe(0);
-			expect(hit.metadata.sourceTurnIds).toEqual(["41", "42"]);
+			expect(hit.metadata.conversationId).toBe("conversation-1");
+			expect(hit.metadata.sequence).toBe(7);
+			expect(hit.metadata.sourceId).toBe("upstream-41");
 		}
 
 		await manager.close();

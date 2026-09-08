@@ -29,7 +29,11 @@ interface RawMessageManagerLike {
 	queryMessagesGrouped?: (input: Record<string, unknown>) => Promise<Record<string, RawMessage[]>>;
 }
 
-export function registerOkfTools(server: McpServer, rawStore: RawMessageStoreLike): void {
+export function registerOkfTools(
+	server: McpServer,
+	rawStore: RawMessageStoreLike,
+	options: { writeMessages?: (userId: string, messages: RawMessage[]) => Promise<void> } = {},
+): void {
 	const importSchema: ZodRawShape = {
 		userId: z.string(),
 		botId: z.string().optional(),
@@ -83,7 +87,9 @@ export function registerOkfTools(server: McpServer, rawStore: RawMessageStoreLik
 				}
 				const manager = await rawStore.getManager();
 				try {
-					if (typeof manager.upsertRawMessages === "function") {
+					if (options.writeMessages) {
+						await options.writeMessages(a.userId, [codec.rawMessage]);
+					} else if (typeof manager.upsertRawMessages === "function") {
 						await manager.upsertRawMessages({ userId: a.userId, messages: [codec.rawMessage] });
 					} else if (typeof manager.storeMessages === "function") {
 						await manager.storeMessages([codec.rawMessage]);

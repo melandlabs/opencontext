@@ -30,7 +30,7 @@ const question: BeamProbingQuestion = {
 	},
 };
 
-test("chunk manifest preserves upstream turn ids", () => {
+test("adapter preserves one complete RawMessage per upstream turn", () => {
 	const built = buildConversationMessages({
 		entry_id: "conv-1",
 		scale: "128k",
@@ -41,9 +41,13 @@ test("chunk manifest preserves upstream turn ids", () => {
 		probing_questions: [question],
 	});
 
-	assert.equal(built.messages.length, 1);
-	assert.deepEqual(built.messages[0]?.metadata?.sourceTurnIds, ["41", "42"]);
-	assert.deepEqual(built.chunks[0]?.source_turn_ids, ["41", "42"]);
+	assert.equal(built.messages.length, 2);
+	assert.equal(built.messages[0]?.content, "Berlin");
+	assert.equal(built.messages[1]?.content, "Noted");
+	assert.equal(built.messages[0]?.metadata?.sourceTurnId, "41");
+	assert.equal(built.messages[1]?.metadata?.sourceTurnId, "42");
+	assert.deepEqual(built.chunks[0]?.source_turn_ids, ["41"]);
+	assert.deepEqual(built.chunks[1]?.source_turn_ids, ["42"]);
 	assert.equal(built.chunks[0]?.content_sha256.length, 64);
 });
 
@@ -104,6 +108,36 @@ test("retrieval diagnostics map ranked hits back to required source turns", () =
 				{ id: "noise", content: "Paris", similarity: 0.82, metadata: {} },
 				{ id: "chunk-3", content: "Germany", similarity: 0.75, metadata: {} },
 			],
+			retrievalDiagnostics: {
+				mergeStrategy: "rrf",
+				candidateLimit: 32,
+				backend: "sqlite-vec",
+				candidateCounts: { semantic: 1, lexical: 0, hybrid: 0, entity: 0, fused: 1, final: 1 },
+				channels: {
+					semantic: [
+						{
+							id: "chunk-1",
+							content: "Berlin",
+							similarity: 0.91,
+							metadata: { sourceTurnId: "41" },
+						},
+					],
+					lexical: [],
+					hybrid: [],
+				},
+				fusedBeforeRerank: [
+					{ id: "chunk-1", content: "Berlin", similarity: 0.03, metadata: { sourceTurnId: "41" } },
+				],
+				reranker: {
+					enabled: true,
+					provider: "local",
+					model: "test-reranker",
+					inputCount: 1,
+					outputCount: 1,
+					latencyMs: 7,
+					orderChanged: false,
+				},
+			},
 		},
 		chunksByMessageId: chunks,
 		availableSourceTurnIds: ["41", "80"],
@@ -122,6 +156,20 @@ test("retrieval diagnostics map ranked hits back to required source turns", () =
 	assert.deepEqual(retrieval.missing_source_turn_ids, []);
 	assert.equal(retrieval.hit_at_k, 1);
 	assert.equal(retrieval.hits[0]?.content, "Berlin");
+	assert.equal(retrieval.candidate_channels.semantic[0]?.content, undefined);
+	assert.equal(retrieval.candidate_channels.semantic[0]?.content_excerpt, "Berlin");
+	assert.equal(retrieval.backend, "sqlite-vec");
+	assert.equal(retrieval.merge_strategy, "rrf");
+	assert.equal(retrieval.fused_before_rerank[0]?.id, "chunk-1");
+	assert.deepEqual(retrieval.reranker, {
+		enabled: true,
+		provider: "local",
+		model: "test-reranker",
+		input_count: 1,
+		output_count: 1,
+		latency_ms: 7,
+		order_changed: false,
+	});
 	assert.deepEqual(retrieval.hits[0]?.matched_source_turn_ids, ["41"]);
 	assert.deepEqual(buildAnswerAttribution("See Memory excerpt 3 and [1].", retrieval), {
 		cited_hit_ids: ["chunk-1", "chunk-3"],
@@ -162,13 +210,26 @@ test("diagnostics classify failures without changing nugget scoring", () => {
 				query: question.question,
 				user_id: "beam_conv-1",
 				top_k: 8,
+				candidate_k: 32,
 				strategy: "daemon-default",
+				merge_strategy: "rrf",
+				threshold: null,
+				backend: "sqlite-vec",
+				semantic_degraded_reason: null,
+				candidate_counts: { semantic: 0, lexical: 0, hybrid: 0, entity: 0, fused: 0, final: 0 },
 				latency_ms: 1,
 				response_query: question.question,
 				response_sources: ["memory"],
 				response_count: 0,
 				response_warnings: [],
 				response_reasoning: null,
+				premerge_diagnostics_available: false,
+				candidate_channels: { semantic: [], lexical: [], hybrid: [], entity: [] },
+				fused_before_rerank: [],
+				reranker: null,
+				semantic_source_recall_at_candidate_k: null,
+				lexical_source_recall_at_candidate_k: null,
+				hybrid_source_recall_at_candidate_k: null,
 				hits: [],
 				retrieval_applicable: true,
 				required_source_turn_ids: ["41", "80"],
@@ -214,6 +275,13 @@ test("diagnostics classify failures without changing nugget scoring", () => {
 		execution_errors: 1,
 		failure_stages: { judge_error: 1 },
 		retrieval_applicable_questions: 0,
+		premerge_diagnostics_questions: 0,
+		semantic_candidate_questions: 0,
+		lexical_candidate_questions: 0,
+		hybrid_candidate_questions: 0,
+		mean_semantic_source_recall_at_candidate_k: null,
+		mean_lexical_source_recall_at_candidate_k: null,
+		mean_hybrid_source_recall_at_candidate_k: null,
 		mean_source_recall_at_k: null,
 		mean_retrievable_source_recall_at_k: null,
 		mean_dataset_source_coverage: null,
@@ -224,10 +292,12 @@ test("diagnostics classify failures without changing nugget scoring", () => {
 	});
 });
 
-test("search client preserves daemon diagnostics and per-hit signals", async () => {
+test("search client requests diagnostics without overriding daemon retrieval policy", async () => {
 	const originalFetch = globalThis.fetch;
-	globalThis.fetch = (async () =>
-		new Response(
+	let requestBody: Record<string, unknown> = {};
+	globalThis.fetch = (async (_url, init) => {
+		requestBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+		return new Response(
 			JSON.stringify({
 				query: "rewritten query",
 				sources: ["memory"],
@@ -239,19 +309,27 @@ test("search client preserves daemon diagnostics and per-hit signals", async () 
 						id: "chunk-1",
 						content: "Berlin",
 						similarity: 0.9,
-						metadata: { sourceTurnIds: ["41"] },
+						metadata: { sourceTurnId: "41" },
 						signals: { semantic: 0.9, rrf: 0.03 },
 					},
 				],
 			}),
 			{ status: 200, headers: { "Content-Type": "application/json" } },
-		)) as typeof fetch;
+		);
+	}) as typeof fetch;
 	try {
-		const response = await searchMemory("Which city?", 8, "http://fixture", "beam_conv-1");
+		const response = await searchMemory("Which city?", 8, "http://fixture", "beam_conv-1", {
+			includeRetrievalDiagnostics: true,
+		});
 		assert.equal(response.query, "rewritten query");
 		assert.deepEqual(response.warnings, [{ code: "fixture_warning" }]);
 		assert.deepEqual(response.reasoning, { strategy: "none" });
 		assert.deepEqual(response.results[0]?.signals, { semantic: 0.9, rrf: 0.03 });
+		assert.equal(requestBody.limit, 8);
+		assert.equal(requestBody.includeRetrievalDiagnostics, true);
+		assert.equal("candidateLimit" in requestBody, false);
+		assert.equal("threshold" in requestBody, false);
+		assert.equal("mergeStrategy" in requestBody, false);
 	} finally {
 		globalThis.fetch = originalFetch;
 	}

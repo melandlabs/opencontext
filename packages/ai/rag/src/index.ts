@@ -78,6 +78,10 @@ export {
 	LocalTransformersEmbeddingProvider,
 	type LocalTransformersEmbeddingProviderOptions,
 } from "./local-transformers-embedding-provider";
+export {
+	LocalTransformersReranker,
+	type LocalTransformersRerankerOptions,
+} from "./local-transformers-reranker";
 
 export {
 	TextLoader,

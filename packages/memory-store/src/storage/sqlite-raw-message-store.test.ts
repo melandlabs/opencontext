@@ -19,7 +19,7 @@
 
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, normalize } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -92,13 +92,13 @@ describe("resolveSQLiteRawMessageDbPath", () => {
 		// biome-ignore lint/performance/noDelete: the var must be absent, not the string "undefined".
 		delete process.env.MEMORY_STORE_DB_PATH;
 		const resolved = resolveSQLiteRawMessageDbPath();
-		expect(resolved.endsWith("/.opencontext/memory/store.db")).toBe(true);
+		expect(normalize(resolved).endsWith(normalize("/.opencontext/memory/store.db"))).toBe(true);
 	});
 
 	it("treats an empty MEMORY_STORE_DB_PATH as unset", () => {
 		process.env.MEMORY_STORE_DB_PATH = "";
 		const resolved = resolveSQLiteRawMessageDbPath();
-		expect(resolved.endsWith("/.opencontext/memory/store.db")).toBe(true);
+		expect(normalize(resolved).endsWith(normalize("/.opencontext/memory/store.db"))).toBe(true);
 	});
 
 	it("ignores TAURI_DB_PATH — Tauri hosts must set MEMORY_STORE_DB_PATH", () => {

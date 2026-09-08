@@ -66,6 +66,36 @@ export interface RawMessage {
 	factType?: FactType;
 }
 
+/**
+ * Search-only child derived from a complete RawMessage. Character offsets
+ * always reference RawMessage.content; callers must continue to expose the
+ * parent messageId as the public search-result identity.
+ */
+export interface RawMessageSearchChunk {
+	chunkId: string;
+	messageId: string;
+	userId: string;
+	chunkIndex: number;
+	chunkCount: number;
+	startPosition: number;
+	endPosition: number;
+	content: string;
+	contentHash: string;
+	embedding?: number[];
+	embeddingModel?: string;
+	embeddingDimensions?: number;
+	embeddingUpdatedAt?: number;
+}
+
+export interface RawMessageSearchIndexStats {
+	messageCount: number;
+	chunkCount: number;
+	embeddedChunkCount: number;
+	embeddingDimensions: number[];
+	lexicalReady: boolean;
+	semanticReady: boolean;
+}
+
 export const CHAT_MEMORY_EVIDENCE_ID_PREFIX = "opencontext-chat:";
 
 export function mergeStoredChatMemoryEvidence(existing: RawMessage, incoming: RawMessage): RawMessage {
@@ -246,6 +276,13 @@ export interface RawMessageStats {
 export interface RawMessageStorage {
 	storeMessage(message: RawMessage): Promise<number>;
 	storeMessages(messages: RawMessage[]): Promise<number[]>;
+	storeMessagesWithSearchChunks?(messages: RawMessage[], chunks: RawMessageSearchChunk[]): Promise<number[]>;
+	getRawMessageSearchChunks?(input: {
+		chunkIds?: string[];
+		messageIds?: string[];
+		userId?: string;
+	}): Promise<RawMessageSearchChunk[]>;
+	getRawMessageSearchIndexStats?(): Promise<RawMessageSearchIndexStats>;
 	queryMessages(query: RawMessageQuery): Promise<RawMessage[]>;
 	queryMessagesGrouped(query: RawMessageQuery): Promise<Record<string, RawMessage[]>>;
 	getStats(): Promise<RawMessageStats>;

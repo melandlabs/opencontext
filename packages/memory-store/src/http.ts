@@ -57,7 +57,6 @@ import { isFactType } from "@melandlabs/contracts";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { closeSQLiteVsaStore, getSQLiteVsaStore } from "@melandlabs/sqlite";
 import { Hono } from "hono";
-import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { type DeriveInput, deriveFacts } from "./search/derive";
@@ -65,7 +64,7 @@ import { type DistillInput, distillRawMessage } from "./search/distill";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
-import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
+import { type RawMessageIngestManager, persistRawMessages } from "./storage/raw-message-ingest";
 import { createRawMessageStore } from "./storage/raw-message-store";
 import { resolveSQLiteRawMessageDbPath } from "./storage/sqlite-raw-message-store";
 
@@ -89,6 +88,7 @@ type RawMessageGetFn = (messageId: string) => Promise<RawMessage | null | undefi
 interface RawMessageManagerLike {
 	upsertRawMessages?: RawMessageUpsertFn;
 	storeMessages?: RawMessageStoreFn;
+	storeMessagesWithSearchChunks?: RawMessageIngestManager["storeMessagesWithSearchChunks"];
 	getMessageById?: RawMessageGetFn;
 	upsertVectorForMessage?(messageId: string, embedding: number[] | undefined): void;
 	lexicalSearchMessages?(input: {
@@ -146,7 +146,20 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 
 	const app = new Hono();
 
-	app.get("/health", (c) => c.json({ ok: true, store: "memory", ts: Date.now() }));
+	app.get("/health", async (c) => {
+		const retrieval = options.unified?.getRawMessageRetrievalStatus
+			? await options.unified.getRawMessageRetrievalStatus().catch(() => ({
+					backend: "unknown",
+					childCount: 0,
+					embeddedChildCount: 0,
+					indexedDimensions: [],
+					semanticReady: false,
+					lexicalReady: false,
+					semanticDegradedReason: "health_check_failed",
+				}))
+			: undefined;
+		return c.json({ ok: true, store: "memory", ts: Date.now(), retrieval });
+	});
 
 	app.post("/v1/search", async (c) => {
 		const body = (await c.req.json().catch(() => ({}))) as Record<string, unknown>;
@@ -187,6 +200,9 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 				body.reasoningStrategy === "union"
 					? body.reasoningStrategy
 					: undefined,
+			mergeStrategy:
+				body.mergeStrategy === "rrf" || body.mergeStrategy === "similarity" ? body.mergeStrategy : undefined,
+			includeRetrievalDiagnostics: body.includeRetrievalDiagnostics === true,
 			...(wantsSynthesis
 				? {
 						synthesize: {
@@ -318,75 +334,23 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 			userId: m.userId ?? body.userId,
 		}));
 
-		// ── 1. Apply the embed-on-insert policy. See embed-on-insert.ts for the
-		//      three-path contract: caller opt-in, auto-apply with warning, or
-		//      leave pre-embedded rows verbatim.
-		const { messages, warnings } = await applyEmbedOnInsertPolicy(
-			incoming,
-			body.embedOnInsert,
-			options.unified,
-		);
-
-		// ── 2. Insert into the active backend. Host-supplied Postgres
-		//      factories take precedence (their `upsertRawMessages` is a
-		//      richer upsert); the default SQLite manager falls through
-		//      to `storeMessages`, which is an idempotent INSERT … ON
-		//      CONFLICT(message_id) DO UPDATE.
-		let result: unknown;
-		if (typeof manager.upsertRawMessages === "function") {
-			result = await manager.upsertRawMessages({
-				userId: body.userId,
-				messages,
-			});
-		} else if (typeof manager.storeMessages === "function") {
-			const ids = await manager.storeMessages(messages);
-			result = { inserted: ids.length, ids };
-		} else {
-			return c.json(
-				{
-					error: "active raw-message manager exposes neither upsertRawMessages nor storeMessages",
-				},
-				500,
-			);
-		}
-
-		// ── 3. Parallel chroma upsert, best-effort. The legacy
-		//      `isRawMessageChromaEnabled()` env path still applies.
-		try {
-			await upsertRawMessagesToChroma(messages as never);
-		} catch (error) {
-			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
-			console.warn("[memory-store/http] chroma upsert failed:", error);
-		}
-
-		// ── 4. sqlite-vec vector table update (for messages with embeddings)
-		try {
-			const messagesWithEmbeddings = messages.filter(
-				(m) => Array.isArray(m.embedding) && m.embedding.length > 0,
-			);
-			if (messagesWithEmbeddings.length > 0) {
-				for (const message of messagesWithEmbeddings) {
-					if (typeof manager.upsertVectorForMessage === "function") {
-						manager.upsertVectorForMessage(message.messageId, message.embedding);
-					}
-				}
-				// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
-				console.log(
-					"[memory-store/http] Updated sqlite-vec vector table for",
-					messagesWithEmbeddings.length,
-					"message(s)",
-				);
-			}
-		} catch (error) {
-			// biome-ignore lint/suspicious/noConsole: intentional server/CLI logging
-			console.warn("[memory-store/http] sqlite-vec vector update failed:", error);
-		}
+		const persisted = await persistRawMessages({
+			manager,
+			userId: body.userId,
+			messages: incoming,
+			embedOnInsert: body.embedOnInsert,
+			unified: options.unified,
+			externalIndex: options.unified?.rawMessageChildIndex,
+		});
+		const result = persisted.ids
+			? { inserted: persisted.ids.length, ids: persisted.ids }
+			: { inserted: persisted.count };
 
 		return c.json({
 			ok: true,
-			count: messages.length,
+			count: persisted.count,
 			result,
-			...(warnings.length > 0 ? { warnings } : {}),
+			...(persisted.warnings.length > 0 ? { warnings: persisted.warnings } : {}),
 		});
 	});
 
@@ -511,7 +475,17 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 	// order without a type-level cycle.
 	const okfHttpSpecifier: string = "@melandlabs/okf/http";
 	const { registerOkfRoutes } = await import(okfHttpSpecifier);
-	registerOkfRoutes(app, rawStore);
+	registerOkfRoutes(app, rawStore, {
+		writeMessages: async (userId: string, messages: RawMessage[]) => {
+			await persistRawMessages({
+				manager,
+				userId,
+				messages,
+				unified: options.unified,
+				externalIndex: options.unified?.rawMessageChildIndex,
+			});
+		},
+	});
 
 	const server = serve({ fetch: app.fetch, port, hostname: host });
 

@@ -7,7 +7,7 @@
 
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { RawMessage } from "@melandlabs/indexeddb";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildGraphFromDir, buildGraphFromMessages } from "./graph.js";
@@ -215,6 +215,6 @@ generated: { by: "demo", at: "2026-08-19T10:00:00Z" }
 x`,
 		);
 		const graph = await buildGraphFromDir(tmpDir);
-		expect(graph.root).toBe(tmpDir.split("/").pop());
+		expect(graph.root).toBe(basename(tmpDir));
 	});
 });

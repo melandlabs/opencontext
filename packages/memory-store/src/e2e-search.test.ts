@@ -15,10 +15,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { LocalTransformersEmbeddingProvider } from "@melandlabs/ai-rag/local-transformers-embedding-provider";
 import type { RawMessage } from "@melandlabs/indexeddb";
+import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import { SQLiteRawMessageManager } from "@melandlabs/sqlite/raw-message-manager";
 import { createMemoryStore } from "./index";
 import { createRawMessageStore } from "./storage/raw-message-store";
-import { __resetSQLiteRawMessageManagerForTests } from "./storage/sqlite-raw-message-store";
+import {
+	__resetSQLiteRawMessageManagerForTests,
+	closeSQLiteRawMessageManager,
+} from "./storage/sqlite-raw-message-store";
 
 let scratchDir: string;
 
@@ -28,7 +32,10 @@ beforeEach(() => {
 	__resetSQLiteRawMessageManagerForTests();
 });
 
-afterEach(() => {
+afterEach(async () => {
+	await closeSQLiteRawMessageManager().catch(() => {});
+	await closeSQLiteVsaStore().catch(() => {});
+	__resetSQLiteRawMessageManagerForTests();
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 

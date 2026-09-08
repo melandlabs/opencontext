@@ -36,7 +36,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import type { ZodRawShape } from "zod";
-import { applyEmbedOnInsertPolicy } from "./embed-on-insert";
 import type { MemoryStoreConfig } from "./index";
 import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-reflect";
 import { type DeriveInput, deriveFacts } from "./search/derive";
@@ -44,7 +43,7 @@ import { type DistillInput, distillRawMessage } from "./search/distill";
 import { createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput } from "./search/utilities";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
-import { upsertRawMessagesToChroma } from "./storage/chroma-memory-index";
+import { type RawMessageIngestManager, persistRawMessages } from "./storage/raw-message-ingest";
 import { createRawMessageStore } from "./storage/raw-message-store";
 import { resolveSQLiteRawMessageDbPath } from "./storage/sqlite-raw-message-store";
 
@@ -64,7 +63,14 @@ type RawMessageGetFn = (messageId: string) => Promise<RawMessage | null | undefi
 interface RawMessageManagerLike {
 	upsertRawMessages?: (input: { userId: string; messages: RawMessage[] }) => Promise<unknown>;
 	storeMessages?: RawMessageStoreFn;
+	storeMessagesWithSearchChunks?: RawMessageIngestManager["storeMessagesWithSearchChunks"];
 	getMessageById?: RawMessageGetFn;
+	lexicalSearchMessages?(input: {
+		userId: string;
+		keywords: string[];
+		limit?: number;
+		botId?: string;
+	}): Promise<unknown[]>;
 }
 
 export async function startMcpServer(options: StartMcpServerOptions = {}): Promise<McpServer> {
@@ -76,7 +82,25 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 	const rawStore = createRawMessageStore({
 		env: options.env,
 	});
-	const search = createUnifiedSearch(options.unified);
+	const rawMessageManager = (await rawStore.getManager()) as RawMessageManagerLike;
+	const search = createUnifiedSearch({
+		...options.unified,
+		searchRawMessagesLexical: async (input) => {
+			if (typeof rawMessageManager.lexicalSearchMessages !== "function") return [];
+			const results = (await rawMessageManager.lexicalSearchMessages(input)) as Array<{
+				id: string;
+				content: string;
+				similarity: number;
+				metadata?: Record<string, unknown>;
+			}>;
+			return results.filter(Boolean).map((result) => ({
+				id: result.id,
+				content: result.content,
+				similarity: result.similarity,
+				metadata: result.metadata ?? {},
+			}));
+		},
+	});
 
 	// VSA facade — shares the SQLite DB with the raw-message store so
 	// `vsa_facts` lives next to the rest of the user data. The MCP
@@ -87,9 +111,22 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 	const vsa: VsaRecallFacade = createVsaRecall(vsaStorage);
 	void closeSQLiteVsaStore; // re-exported for completeness; stdio never calls it.
 
-	server.tool("memory.health", "Returns the health status of the memory store.", async () => ({
-		content: [{ type: "text" as const, text: JSON.stringify({ ok: true }) }],
-	}));
+	server.tool("memory.health", "Returns the health status of the memory store.", async () => {
+		const retrieval = options.unified?.getRawMessageRetrievalStatus
+			? await options.unified.getRawMessageRetrievalStatus().catch(() => ({
+					backend: "unknown",
+					childCount: 0,
+					embeddedChildCount: 0,
+					indexedDimensions: [],
+					semanticReady: false,
+					lexicalReady: false,
+					semanticDegradedReason: "health_check_failed",
+				}))
+			: undefined;
+		return {
+			content: [{ type: "text" as const, text: JSON.stringify({ ok: true, retrieval }) }],
+		};
+	});
 
 	const searchSchema: ZodRawShape = {
 		userId: z.string(),
@@ -120,7 +157,16 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		// coerces it into `synthesize.responseSchema` when present.
 		responseSchema: z.record(z.string(), z.unknown()).optional(),
 		limit: z.number().int().min(1).max(50).default(10),
-		threshold: z.number().min(-1).max(1).default(0.7),
+		threshold: z
+			.number()
+			.min(-1)
+			.max(1)
+			.optional()
+			.describe(
+				"Optional similarity floor. Omit it to let the default RRF pipeline fuse the full candidate window.",
+			),
+		mergeStrategy: z.enum(["rrf", "similarity"]).optional(),
+		includeRetrievalDiagnostics: z.boolean().optional(),
 		botIds: z.array(z.string()).optional(),
 		documentIds: z.array(z.string()).optional(),
 		includeArchivedInsights: z.boolean().default(false),
@@ -205,6 +251,8 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				responseSchema?: Record<string, unknown>;
 				limit?: number;
 				threshold?: number;
+				mergeStrategy?: "rrf" | "similarity";
+				includeRetrievalDiagnostics?: boolean;
 				botIds?: string[];
 				documentIds?: string[];
 				includeArchivedInsights?: boolean;
@@ -224,6 +272,8 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				sources: a.sources,
 				limit: a.limit,
 				threshold: a.threshold,
+				mergeStrategy: a.mergeStrategy,
+				includeRetrievalDiagnostics: a.includeRetrievalDiagnostics,
 				botIds: a.botIds,
 				documentIds: a.documentIds,
 				authToken: a.authToken,
@@ -268,41 +318,26 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			const manager = (await rawStore.getManager()) as RawMessageManagerLike;
 			const incoming = [a.message as RawMessage].map((m) => ({ ...m, userId: m.userId ?? a.userId }));
 
-			// Same three-path embed-on-insert policy as the HTTP handler — keep
-			// the implementations in sync via `embed-on-insert.ts`.
-			const { messages, warnings } = await applyEmbedOnInsertPolicy(
-				incoming,
-				a.embedOnInsert,
-				options.unified,
-			);
-
-			let result: unknown;
-			if (typeof manager.upsertRawMessages === "function") {
-				result = await manager.upsertRawMessages({
-					userId: a.userId,
-					messages,
-				});
-			} else if (typeof manager.storeMessages === "function") {
-				const ids = await manager.storeMessages(messages);
-				result = { inserted: ids.length, ids };
-			} else {
-				throw new Error("active raw-message manager exposes neither upsertRawMessages nor storeMessages");
-			}
-			try {
-				await upsertRawMessagesToChroma(messages as never);
-			} catch (error) {
-				// biome-ignore lint/suspicious/noConsole: intentional server logging
-				console.warn("[memory-store/mcp] chroma upsert failed:", error);
-			}
+			const persisted = await persistRawMessages({
+				manager,
+				userId: a.userId,
+				messages: incoming,
+				embedOnInsert: a.embedOnInsert,
+				unified: options.unified,
+				externalIndex: options.unified?.rawMessageChildIndex,
+			});
+			const result = persisted.ids
+				? { inserted: persisted.ids.length, ids: persisted.ids }
+				: { inserted: persisted.count };
 			return {
 				content: [
 					{
 						type: "text" as const,
 						text: JSON.stringify({
 							ok: true,
-							count: messages.length,
+							count: persisted.count,
 							result,
-							...(warnings.length > 0 ? { warnings } : {}),
+							...(persisted.warnings.length > 0 ? { warnings: persisted.warnings } : {}),
 						}),
 					},
 				],
@@ -759,7 +794,17 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 	// in topological order without a type-level cycle.
 	const okfMcpSpecifier: string = "@melandlabs/okf/mcp";
 	const { registerOkfTools } = await import(okfMcpSpecifier);
-	registerOkfTools(server, rawStore);
+	registerOkfTools(server, rawStore, {
+		writeMessages: async (userId: string, messages: RawMessage[]) => {
+			await persistRawMessages({
+				manager: rawMessageManager,
+				userId,
+				messages,
+				unified: options.unified,
+				externalIndex: options.unified?.rawMessageChildIndex,
+			});
+		},
+	});
 
 	// Wire format on stdio is NDJSON — one JSON-RPC object per line.
 	// This is the default set by `@modelcontextprotocol/sdk` v1.25.x's
