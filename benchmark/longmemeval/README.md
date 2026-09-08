@@ -48,6 +48,18 @@ opencontext http
 # → serves http://127.0.0.1:7421, no auth
 ```
 
+On Windows, after building the workspace dependencies, the bundled launcher
+starts the same local SQLite + dense/FTS + local-reranker configuration in a
+new timestamped database and writes its PID/database/log metadata under the
+ignored `runtime/` directory:
+
+```powershell
+pnpm --filter @melandlabs/ai-rag build
+pnpm --filter @melandlabs/memory-store build
+pnpm --filter @melandlabs/opencontext build
+./benchmark/longmemeval/start-daemon.ps1
+```
+
 Edit `.env` to add your API keys:
 
 ```env
@@ -58,6 +70,9 @@ ANSWER_MODEL=MiniMax-M3-highspeed
 
 # Judge LLM (OpenRouter); also the answerer fallback if ANTHROPIC_AUTH_TOKEN is unset
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_ANSWER_MODEL=deepseek/deepseek-v4-flash-0731
+OPENROUTER_JUDGE_MODEL=qwen/qwen3.8-flash
+LONGMEMEVAL_TOP_K=8
 ```
 
 ## Dataset Download
@@ -83,7 +98,8 @@ pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --quick
 pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --samples qid1,qid2,qid3
 
 # Save results to file
-pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --output results.json
+pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json \
+  --output results/longmemeval.json --no-resume
 ```
 
 ### CLI Options
@@ -97,6 +113,12 @@ pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json --output results.
 | `--port`      | `-p`  | OpenContext daemon port (env: `OPENCONTEXT_PORT` / `OPENCONTEXT_URL`) | 7421 |
 | `--resume`    |       | Reuse completed checkpoints for the same models | true    |
 | `--no-resume` |       | Ignore checkpoints and run every selected entry | false   |
+| `--preflight-only` |  | Validate readiness without ingest/model calls | false |
+
+`LONGMEMEVAL_TOP_K` controls the final number of daemon-ranked hits passed to
+the answerer (default 8, maximum 50). It does not configure chunking, candidate
+generation, channel fusion, or reranking; those remain daemon-owned. Set
+`LONGMEMEVAL_CHECKPOINT_DIR` to isolate checkpoints for a specific run.
 
 Before ingest or model calls, the CLI checks the dataset and selected entries,
 daemon, credentials, output/checkpoint paths, and arguments. It reports all
@@ -114,11 +136,39 @@ The benchmark outputs:
 - **Per-type metrics** - F1, BLEU-1, BLEU-4 scores by question type
 - **Per-question predictions** - Individual question results
 - **Token usage** - Real provider usage when available; otherwise `null`
-- **Run manifest** - Git commit, dataset identity, models, retrieval top-k,
-  selection parameters, resume mode, and wall-clock time
+- **Run manifest** - Git commit and dirty/status evidence, full dataset identity
+  (including SHA-256), models, retrieval top-k, selection parameters, resume
+  mode, and wall-clock time
+- **Question trace JSONL** - query, final ranked Top-K with full content,
+  semantic/lexical/hybrid candidates, fused-before-rerank order, reranker
+  identity/timing, answer and judge prompts/responses, token usage, and failure stage
+- **Session ingest JSONL** - deterministic raw-message/session mapping, content
+  hashes, batch status, latency, warnings, and errors
+- **Retrieval diagnostics** - answer-session Recall@K, Hit@K, MRR,
+  Precision@K, dataset-source coverage, and candidate-channel recall
 
 With `--output results.json`, the manifest is written to
-`results.json.manifest.json`. Without `--output`, it is written under `results/`.
+`results.json.manifest.json`, question traces to `results.trace.jsonl`, and
+session ingestion evidence to `results.sessions.jsonl`. Without `--output`, the
+run manifest is still written under `results/`, but the two diagnostic JSONL
+artifacts are not emitted.
+
+The benchmark maps each upstream LongMemEval session to exactly one
+`RawMessage`. The daemon owns all child chunking, embedding, indexing,
+retrieval, fusion, and reranking. The benchmark only preserves source session
+IDs for provenance, calls `/v1/search`, passes the daemon's final Top-K results
+to the existing answer prompt, and scores the answer.
+
+For a formal run, start the daemon with a fresh database and use
+`--no-resume`. A successful local smoke test or a resumed checkpoint set is not
+a comparable full benchmark result.
+
+Readiness check without paid model calls:
+
+```bash
+pnpm benchmark -- --dataset dataset/longmemeval_s_cleaned.json \
+  --output results/longmemeval.json --no-resume --preflight-only
+```
 
 ### Metrics
 

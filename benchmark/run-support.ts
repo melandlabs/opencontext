@@ -4,7 +4,7 @@ import { constants, createReadStream } from "node:fs";
 import { access, mkdir, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
-const MAX_HASH_BYTES = 256 * 1024 * 1024;
+const MAX_HASH_BYTES = 512 * 1024 * 1024;
 
 export interface TokenUsage {
 	prompt_tokens: number | null;
@@ -23,6 +23,8 @@ export interface RunManifest {
 	schema_version: 1;
 	benchmark: string;
 	git_commit: string | null;
+	git_dirty: boolean | null;
+	git_status: string[];
 	dataset: DatasetIdentity;
 	answerer_model: string;
 	judge_model: string;
@@ -97,11 +99,17 @@ export async function getDatasetIdentity(path: string): Promise<DatasetIdentity>
 	};
 }
 
-function getGitCommit(): string | null {
+function getGitState(): { commit: string | null; dirty: boolean | null; status: string[] } {
 	try {
-		return execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).trim() || null;
+		const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf-8" }).trim() || null;
+		const status = execFileSync("git", ["status", "--porcelain=v1", "--untracked-files=all"], {
+			encoding: "utf-8",
+		})
+			.split(/\r?\n/)
+			.filter((line) => line.length > 0);
+		return { commit, dirty: status.length > 0, status };
 	} catch {
-		return null;
+		return { commit: null, dirty: null, status: [] };
 	}
 }
 
@@ -182,16 +190,22 @@ export function getManifestPath(output: string | undefined, benchmarkDir: string
 
 export async function writeRunManifest(
 	path: string,
-	input: Omit<RunManifest, "schema_version" | "git_commit" | "dataset" | "wall_clock_ms"> & {
+	input: Omit<
+		RunManifest,
+		"schema_version" | "git_commit" | "git_dirty" | "git_status" | "dataset" | "wall_clock_ms"
+	> & {
 		datasetPath: string;
 	},
 ): Promise<RunManifest> {
 	const started = Date.parse(input.started_at);
 	const finished = Date.parse(input.finished_at);
+	const git = getGitState();
 	const manifest: RunManifest = {
 		schema_version: 1,
 		benchmark: input.benchmark,
-		git_commit: getGitCommit(),
+		git_commit: git.commit,
+		git_dirty: git.dirty,
+		git_status: git.status,
 		dataset: await getDatasetIdentity(input.datasetPath),
 		answerer_model: input.answerer_model,
 		judge_model: input.judge_model,
