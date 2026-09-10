@@ -1,153 +1,156 @@
 # LoCoMo Benchmark
 
-> **Note:** this directory is opencontext's **own** scoring pipeline (custom
-> BLEU/F1 + custom LLM-judge prompts). Its numbers are **not** comparable to
-> the AML (Agent Memory Leaderboard) binary CORRECT/WRONG scoring. For the
-> AML-comparable LoCoMo path, use [`../aml-local/`](../aml-local/), which
-> drives the vendored official AML pipeline.
+OpenContext's local LoCoMo V2 evaluation harness. It measures answer quality with
+the existing LoCoMo answer prompt, token-overlap metrics, and an LLM judge while
+preserving a question-level evidence trail for ingestion, retrieval, answerer,
+and judge stages.
 
-Benchmark suite for evaluating the OpenContext long-term memory retrieval system using the [LoCoMo](https://github.com/StonyBrookUniversity/LoCoMo) dataset.
+This is an OpenContext-specific evaluation pipeline. Its scores are not directly
+comparable to the Agent Memory Leaderboard's official CORRECT/WRONG pipeline.
 
-## Overview
+## Evaluation boundary
 
-This benchmark evaluates how well the memory system answers questions from conversation history across different retrieval modes. It tests temporal reasoning, multi-hop inference, and single-hop fact retrieval capabilities.
+For the recommended `dialog` mode, the benchmark converts each upstream LoCoMo
+conversation session into exactly one `RawMessage` and sends it to
+`POST /v1/raw-messages` with `embedOnInsert: true`. Dialog-turn identifiers such
+as `D1:3` remain in the raw text for later evidence attribution.
+
+After that boundary, the daemon owns all core memory behavior:
+
+- chunking and parent-child relationships;
+- embedding and indexing;
+- semantic/lexical retrieval, fusion, and reranking;
+- the final Top-K returned by `POST /v1/search`.
+
+The benchmark does not pre-chunk, embed, insert derived retrieval records, alter
+rankings, or replace daemon results. It only formats the returned Top-K with the
+existing benchmark prompt, calls the configured answer model, and scores that
+answer.
+
+`observation` and `session_summary` remain available for exploratory comparisons,
+but a formal raw-conversation run should use `dialog`.
 
 ## Dataset
 
-This benchmark uses [LoCoMo V2](https://github.com/BrianV1981/locomo-v2) (the `locomo_v2_minicpm.json` variant — text-only with MiniCPM-V OCR baked in) instead of the original V1. V2 fixes V1's 99 score-corrupting ground-truth hallucinations and ~75 dead image URLs, and is drop-in compatible with the loader (no `evidence` field on QA items, plus a new category 5 "abstention" set that the loader skips automatically).
+Use the text-only `locomo_v2_minicpm.json` file from
+[LoCoMo V2](https://github.com/BrianV1981/locomo-v2). Put it under `dataset/`
+(dataset JSON files are intentionally ignored by Git).
 
-The dataset contains 10 conversation samples (`conv-26`, `conv-30`, `conv-41`–`conv-50`) with 1,922 total QA pairs. The loader drops category-5 items without an answer (430 of 438) and keeps the 8 category-5 items that do have an answer, so the effective question set is **1,492 questions**.
+The downloaded V2 MiniCPM file contains 10 conversation samples and 1,922 raw
+QA rows. The harness retains 1,492 rows with usable `answer` values, including
+the eight answerable category-5 rows; its remaining category-5 rows use the
+separate adversarial-answer format and are outside this answer-and-judge path.
+Its 834 image descriptions are stored beside their dialog turns as
+`minicpm_caption`; the dialog mapper includes those descriptions in the same
+source RawMessage as the corresponding text and turn ID. The loader validates
+sample IDs, conversation objects, QA fields, category, and any optional evidence
+arrays before ingestion.
 
-Each sample includes:
+LoCoMo V2 does not provide a QA-level `evidence` field. Consequently, exact gold
+dialog-turn Recall@K, Hit@K, MRR, and Precision@K are recorded as `null` for V2;
+they must not be inferred from the answer string. The complete daemon retrieval
+trace is still retained. If an evidence-bearing LoCoMo-compatible file is used,
+gold metrics are computed only from exact turn IDs present in the returned child
+chunk text; parent metadata alone does not count as a hit.
 
-- **Conversation history** - Raw dialog between speakers
-- **Observations** - Summarized observations with dialog references
-- **Session summaries** - High-level summaries of each session
-- **QA pairs** - Questions with ground truth answers across 5 categories
+## Configuration
 
-### Question Categories
-
-| Category | Name        | Description                                |
-| -------- | ----------- | ------------------------------------------ |
-| 1        | single_hop  | Simple factual recall from a single memory |
-| 2        | temporal    | Questions requiring date/time reasoning    |
-| 3        | multi_hop   | Multi-step inference across sessions       |
-| 4        | open_domain | Open-ended questions requiring synthesis   |
-| 5        | abstention  | Questions without an answer (loader skips) |
-
-## Retrieval Modes
-
-| Mode              | Description                                    |
-| ----------------- | ---------------------------------------------- |
-| `dialog`          | Raw conversation history                       |
-| `observation`     | Summarized observations with dialog references |
-| `session_summary` | Session-level summaries only                   |
-
-## Setup
-
-```bash
-# Install dependencies
-pnpm install
-
-# Copy environment file
-cp .env.example .env
-
-# Start the OpenContext memory daemon (from repo root, after build)
-node packages/opencontext/dist/cli/opencontext.js http --embedding-provider local --memory-backend sqlite-vec
-# or, if the global bin is installed:
-opencontext http
-# → serves http://127.0.0.1:7421, no auth
-```
-
-Edit `.env` to add your API keys:
+From `benchmark/locomo`, copy `.env.example` to `.env` and configure the models:
 
 ```env
-# Answerer LLM (Anthropic-compatible endpoint, e.g. MiniMax)
-ANTHROPIC_AUTH_TOKEN=your_anthropic_token_here
-ANTHROPIC_BASE_URL=https://api.minimaxi.com/anthropic
-ANSWER_MODEL=MiniMax-M3-highspeed
-
-# Judge LLM (OpenRouter); also the answerer fallback if ANTHROPIC_AUTH_TOKEN is unset
 OPENROUTER_API_KEY=your_openrouter_api_key_here
+OPENROUTER_ANSWER_MODEL=deepseek/deepseek-v4-flash-0731
+OPENROUTER_JUDGE_MODEL=qwen/qwen3.8-flash
+LOCOMO_TOP_K=8
 ```
 
-## Usage
+An Anthropic-compatible answer endpoint remains supported through
+`ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, and `ANSWER_MODEL`. When that token
+is absent, the answerer uses OpenRouter. The judge always uses OpenRouter and
+requires `OPENROUTER_JUDGE_MODEL`; no judge model is hard-coded.
 
-```bash
-# Run full benchmark with observation mode
-pnpm benchmark -- --dataset dataset/locomo_v2.json --mode observation
+## Start a clean daemon
 
-# Quick mode (first 5 questions per sample)
-pnpm benchmark -- --dataset dataset/locomo_v2.json --mode observation --quick
+Build the repository once, then start the benchmark-owned local daemon:
 
-# Run with specific samples
-pnpm benchmark -- --dataset dataset/locomo_v2.json --mode dialog --samples conv-26,conv-30
-
-# Save results to file
-pnpm benchmark -- --dataset dataset/locomo_v2.json --mode observation --output results.json
+```powershell
+pnpm build
+./benchmark/locomo/start-daemon.ps1 -Port 7421
 ```
 
-### CLI Options
+Without `-DatabasePath`, every launch creates a timestamped fresh SQLite database
+under `benchmark/locomo/runtime/`. The script refuses to replace an existing port
+listener, waits for `/health`, and writes `daemon.json` plus stdout/stderr logs.
+To resume the exact same database deliberately:
 
-| Flag        | Short | Description                                         | Default            |
-| ----------- | ----- | --------------------------------------------------- | ------------------ |
-| `--dataset` | `-d`  | Path to LoCoMo JSON dataset                         | Required           |
-| `--mode`    | `-m`  | Retrieval mode (dialog/observation/session_summary) | observation        |
-| `--samples` | `-s`  | Comma-separated sample IDs to run                   | All                |
-| `--quick`   | `-q`  | Limit to first 5 questions per sample               | false              |
-| `--output`  | `-o`  | Save results JSON to path                           | None               |
-| `--port`    | `-p`  | OpenContext daemon port (env: `OPENCONTEXT_PORT` / `OPENCONTEXT_URL`) | 7421 |
-| `--resume`  |       | Reuse completed checkpoints for the same models    | true               |
-| `--no-resume` |     | Ignore checkpoints and run every selected question | false              |
-
-Before ingest or model calls, the CLI checks the dataset and selected samples,
-daemon, credentials, output/checkpoint paths, and arguments. It reports all
-detected failures together and never prints credential values. `--help` does not
-run these checks.
-
-With `--resume`, both correct and incorrect completed judge results are reused;
-only execution failures are retried. `--no-resume` always starts a fresh run.
-
-## Output
-
-The benchmark outputs:
-
-- **Overall accuracy** - LLM judge accuracy across all categories
-- **Per-category metrics** - F1, BLEU-1, BLEU-4 scores by category
-- **Per-sample results** - Accuracy and token usage per sample
-- **Token usage** - Real provider usage when available; otherwise `null`
-- **Run manifest** - Git commit, dataset identity, models, retrieval mode/top-k,
-  selection parameters, resume mode, and wall-clock time
-
-With `--output results.json`, the manifest is written to
-`results.json.manifest.json`. Without `--output`, it is written under `results/`.
-
-### Metrics
-
-- **LLM Judge Accuracy** - Whether the LLM judge considers the answer correct
-- **F1 Score** - Token-level precision/recall
-- **BLEU-1/4** - N-gram overlap with brevity penalty
-
-## Architecture
-
-```
-src/
-├── index.ts           # CLI entry point
-├── evaluator.ts       # LoCoMoEvaluator - loads samples, runs QA evaluation
-├── opencontext-client.ts  # OpenContext daemon client + answerer LLM calls
-├── dataset.ts         # LoCoMo JSON parsing
-├── metrics.ts         # BLEU, F1, LLM judge evaluation
-├── scorer.ts          # Category name mapping
-├── prompts.ts         # LLM judge prompt template
-├── contracts.ts       # MemoryStorageAdapter interface
-├── types.ts           # TypeScript types
-└── prompts.ts         # Evaluation prompts
+```powershell
+./benchmark/locomo/start-daemon.ps1 -Port 7421 -DatabasePath D:\path\to\store.db
 ```
 
-## Requirements
+The launcher uses local MiniLM embeddings, `sqlite-vec`, and the local MiniLM
+reranker. The returned `daemon.json` freezes those settings for the run record.
 
-- Node.js 18+
-- pnpm
-- OpenContext memory daemon running on localhost (default http://127.0.0.1:7421, no auth; override with `--port` / `OPENCONTEXT_URL`)
-- Anthropic-compatible API token for the answerer (or OpenRouter as fallback)
-- OpenRouter API key (for LLM judge evaluation)
+## Preflight and run
+
+Run commands from `benchmark/locomo`:
+
+```powershell
+# Validate dataset, daemon, credentials, arguments, and writable artifacts.
+pnpm benchmark -- --dataset dataset/locomo_v2_minicpm.json --mode dialog --preflight-only
+
+# Small smoke run: first five answerable questions per sample.
+pnpm benchmark -- --dataset dataset/locomo_v2_minicpm.json --mode dialog --quick --no-resume --output results/smoke.json
+
+# Formal full run against a fresh daemon database.
+pnpm benchmark -- --dataset dataset/locomo_v2_minicpm.json --mode dialog --no-resume --output results/locomo-v2-dialog.json
+```
+
+Useful options:
+
+- `--samples conv-26,conv-30` selects sample IDs.
+- `--port 7421` overrides `OPENCONTEXT_PORT`/`OPENCONTEXT_URL`.
+- `--resume` reuses only completed checkpoints whose schema, dataset, question,
+  retrieval mode/Top-K, answer model, and judge model all match.
+- `--no-resume` reruns every selected question. Use it with a fresh database for
+  comparable formal results.
+- `LOCOMO_CHECKPOINT_DIR` moves the checkpoint directory.
+- `LOCOMO_MODEL_REQUEST_TIMEOUT_MS` configures answer/judge request timeout.
+
+Execution failures are checkpointed separately and retried on a resumed run;
+they are never counted as completed judge failures or retrieval-metric misses.
+
+## Evidence artifacts
+
+With `--output results/run.json`, the harness writes:
+
+- `run.json`: compact results, category metrics, completed-only accuracy,
+  execution-error rate, diagnostic summary, and run manifest reference;
+- `run.trace.jsonl`: one complete record per QA, including exact dataset/question
+  hashes, final Top-K full text, candidate channels, fused pre-rerank order,
+  reranker metadata, answer prompt/response, raw judge output, attempts, latency,
+  token usage, and failure-stage classification;
+- `run.sessions.jsonl`: one record per mapped source session, including message ID,
+  source evidence IDs, content hash/size, ingest batch, status, latency, warnings,
+  and error details;
+- `run.json.manifest.json`: Git state, dataset path/hash/size, models, retrieval
+  configuration, selection flags, resume mode, timestamps, and token usage.
+
+Candidate hits keep hashes and excerpts to limit artifact size; final Top-K hits
+keep the full text actually supplied to the answer prompt. When the daemon does
+not return pre-merge diagnostics, the trace says so explicitly instead of
+inventing candidate-stage evidence.
+
+## Metrics and failure attribution
+
+The primary answer metric is LLM-judge accuracy. F1 and BLEU-1/4 are also
+reported. Diagnostics keep these cases separate:
+
+- ingestion/indexing, retrieval, answerer, judge, and provider execution errors;
+- missing or partial dataset evidence references;
+- retrieval miss or partial retrieval when exact gold evidence exists;
+- answer failure despite complete retrieved evidence;
+- answer failure with V2 gold evidence unavailable.
+
+This separation prevents provider outages from being reported as retrieval
+failures and prevents session-level or parent-level metadata from being promoted
+to child-chunk recall evidence.

@@ -1,2 +1,6 @@
 # Evaluation checkpoints (resume cache)
 checkpoints/
+dataset/*.json
+results/
+results.json
+runtime/
