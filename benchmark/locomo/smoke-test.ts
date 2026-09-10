@@ -15,7 +15,7 @@ function assert(condition: boolean, message: string): void {
 	console.log(`✓ ${message}`);
 }
 
-const datasetPath = "./dataset/locomo_v2.json";
+const datasetPath = "./dataset/locomo_v2_minicpm.json";
 console.log(`Loading ${datasetPath}...\n`);
 
 const samples = await loadLoCoMoDatasetFromJson(datasetPath);

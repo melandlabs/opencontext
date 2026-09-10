@@ -1,289 +1,375 @@
 /**
- * LoCoMo Evaluator for the OpenContext memory store.
- *
- * Flow (no agent, no filesystem — pure memory-store HTTP):
- *   1. loadSample: convert the sample's sessions into raw messages and POST
- *      them to the OpenContext daemon (`POST /v1/raw-messages`, embedOnInsert).
- *      Granularity is unchanged: one memory message per session record
- *      (dialog / observation / session_summary, depending on retrieval mode).
- *   2. evaluateQA: retrieve relevant memories (`POST /v1/search`), then ask
- *      the answerer LLM (see opencontext-client.ts) using only the retrieved
- *      excerpts.
- *   3. Judge with the existing metrics.ts model and prompt (OpenRouter).
+ * LoCoMo evaluator. The benchmark maps one upstream session to one RawMessage;
+ * OpenContext owns chunking, indexing, retrieval, fusion, and reranking.
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
-import { sumTokenUsage, unavailableTokenUsage } from "../../run-support";
-import { JUDGE_MODEL, calculateMetrics, evaluateLLMJudge } from "./metrics";
+import { sumTokenUsage, type TokenUsage, unavailableTokenUsage } from "../../run-support";
 import {
+	buildRetrievalErrorTrace,
+	buildRetrievalTrace,
+	deriveFailureStage,
+	extractEvidenceIds,
+	sha256Text,
+} from "./diagnostics";
+import { calculateMetrics, evaluateLLMJudge, getJudgeModelIdentity } from "./metrics";
+import {
+	AnswererGenerationError,
 	type BenchRawMessage,
-	type GeneratedAnswer,
+	INGEST_BATCH_SIZE,
+	type IngestBatchTrace,
+	IngestMessagesError,
 	type MemorySearchHit,
+	type MemorySearchResponse,
+	checkOpencontextHealth,
 	generateAnswer,
 	getAnswererModelIdentity,
 	getOpencontextBaseUrl,
 	ingestMessages,
 	searchMemory,
 } from "./opencontext-client";
-import { RetrievalMode } from "./types";
-import type { EvaluationResult, LoCoMoSample, Prediction, QAPair } from "./types";
+import {
+	LOCOMO_TRACE_SCHEMA_VERSION,
+	type EvaluationResult,
+	type LoCoMoAnswerTrace,
+	type LoCoMoJudgeTrace,
+	type LoCoMoRetrievalTrace,
+	type LoCoMoSample,
+	type LoCoMoSessionTrace,
+	type Prediction,
+	type QAPair,
+	RetrievalMode,
+} from "./types";
 
-/** How many retrieved memories are shown to the answerer. */
-export const RETRIEVAL_LIMIT = 8;
+const configuredRetrievalLimit = Number.parseInt(process.env.LOCOMO_TOP_K ?? "8", 10);
+export const RETRIEVAL_LIMIT =
+	Number.isInteger(configuredRetrievalLimit) && configuredRetrievalLimit > 0
+		? Math.min(50, configuredRetrievalLimit)
+		: 8;
 
-function isReusableCheckpoint(
-	prediction: Prediction | undefined,
-	answererModel: string,
-	judgeModel: string,
-): boolean {
-	return (
-		prediction?.status === "completed" &&
-		prediction.answerer_model === answererModel &&
-		prediction.judge_model === judgeModel
+interface DialogTurn {
+	speaker?: string;
+	dia_id?: string;
+	text?: string;
+	minicpm_caption?: string;
+}
+
+function unique(values: string[]): string[] {
+	return [...new Set(values)];
+}
+
+function parseTimestamp(timestamp: string): number | undefined {
+	if (!timestamp) return undefined;
+	const locomoDate = timestamp.match(
+		/^(\d{1,2}):(\d{2})\s*(am|pm)\s+on\s+(\d{1,2})\s+([A-Za-z]+),?\s+(\d{4})$/i,
+	);
+	if (locomoDate) {
+		const [, hourText, minuteText, meridiem, dayText, monthText, yearText] = locomoDate;
+		const months = [
+			"january",
+			"february",
+			"march",
+			"april",
+			"may",
+			"june",
+			"july",
+			"august",
+			"september",
+			"october",
+			"november",
+			"december",
+		];
+		const month = months.indexOf(monthText.toLowerCase());
+		let hour = Number.parseInt(hourText, 10) % 12;
+		if (meridiem.toLowerCase() === "pm") hour += 12;
+		if (month >= 0) {
+			return Date.UTC(
+				Number.parseInt(yearText, 10),
+				month,
+				Number.parseInt(dayText, 10),
+				hour,
+				Number.parseInt(minuteText, 10),
+			);
+		}
+	}
+	const parsed = Date.parse(timestamp);
+	return Number.isNaN(parsed) ? undefined : parsed;
+}
+
+function normalizedSessionId(value: string): string {
+	return value.replace(/^session_/, "");
+}
+
+function sessionSortValue(value: string): [number, string] {
+	const match = value.match(/(\d+)/);
+	return [match ? Number.parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER, value];
+}
+
+function sortSessionKeys(keys: string[]): string[] {
+	return keys.sort((left, right) => {
+		const [leftNumber, leftText] = sessionSortValue(left);
+		const [rightNumber, rightText] = sessionSortValue(right);
+		return leftNumber - rightNumber || leftText.localeCompare(rightText);
+	});
+}
+
+function conversationDate(sample: LoCoMoSample, sessionId: string): string {
+	return String(sample.conversation[`session_${sessionId}_date_time`] ?? "");
+}
+
+function conversationTurns(sample: LoCoMoSample, sessionId: string): unknown[] {
+	const value = sample.conversation[`session_${sessionId}`];
+	return Array.isArray(value) ? value : [];
+}
+
+function dialogTurn(value: unknown): DialogTurn | null {
+	return typeof value === "object" && value !== null ? (value as DialogTurn) : null;
+}
+
+function formatDialogTurn(value: unknown, timestamp: string): string {
+	if (typeof value === "string") return timestamp ? `[${timestamp}] ${value}` : value;
+	const turn = dialogTurn(value);
+	const evidence = turn?.dia_id ? `[${turn.dia_id}] ` : "";
+	const speaker = turn?.speaker ? `[${turn.speaker}] ` : "";
+	const text = turn?.text ?? JSON.stringify(value);
+	const caption = turn?.minicpm_caption?.trim();
+	const imageDescription = caption ? `\n[Image description: ${caption}]` : "";
+	return `${timestamp ? `[${timestamp}] ` : ""}${evidence}${speaker}${text}${imageDescription}`;
+}
+
+function evidenceIdsFromTurns(turns: unknown[]): string[] {
+	return unique(
+		turns.flatMap((value) => {
+			const id = dialogTurn(value)?.dia_id;
+			return typeof id === "string" && id.length > 0 ? [id] : [];
+		}),
 	);
 }
 
-/**
- * Parse timestamp string to Unix ms.
- */
-function parseTimestamp(ts: string): number | undefined {
-	if (!ts) return undefined;
-	try {
-		const date = new Date(ts);
-		if (!Number.isNaN(date.getTime())) {
-			return date.getTime();
-		}
-		const parsed = Date.parse(ts);
-		return Number.isNaN(parsed) ? undefined : parsed;
-	} catch {
-		return undefined;
-	}
-}
-
-function toBenchMessage(
-	id: string,
-	sessionTimestamp: string,
-	content: string,
-	metadata: Record<string, unknown>,
-	now: number,
-): BenchRawMessage {
-	return {
-		messageId: `locomo_${id}`,
+function toMessageAndTrace(input: {
+	sample: LoCoMoSample;
+	retrievalMode: RetrievalMode;
+	sessionId: string;
+	sessionIndex: number;
+	timestamp: string;
+	content: string;
+	evidenceIds: string[];
+	now: number;
+}): { message: BenchRawMessage; trace: LoCoMoSessionTrace } {
+	const messageId = `locomo_${input.sample.sample_id}_${input.retrievalMode}_${input.sessionId}`;
+	const message: BenchRawMessage = {
+		messageId,
 		userId: "benchmark_user",
 		platform: "benchmark",
 		botId: "locomo",
-		timestamp: parseTimestamp(sessionTimestamp) ?? now,
-		content,
-		createdAt: now,
-		metadata,
+		timestamp: parseTimestamp(input.timestamp) ?? input.now,
+		content: input.content,
+		createdAt: input.now,
+		metadata: {
+			sampleId: input.sample.sample_id,
+			sessionId: input.sessionId,
+			contentType: input.retrievalMode,
+			sessionDate: input.timestamp || null,
+			evidenceIds: input.evidenceIds,
+		},
+	};
+	return {
+		message,
+		trace: {
+			schema_version: LOCOMO_TRACE_SCHEMA_VERSION,
+			sample_id: input.sample.sample_id,
+			retrieval_mode: input.retrievalMode,
+			message_id: messageId,
+			session_id: input.sessionId,
+			session_index: input.sessionIndex,
+			ingest_batch_index: Math.floor(input.sessionIndex / INGEST_BATCH_SIZE),
+			session_date: input.timestamp || null,
+			evidence_ids: input.evidenceIds,
+			content_sha256: sha256Text(input.content),
+			content_characters: input.content.length,
+			ingest_status: "pending",
+			ingest_latency_ms: null,
+			ingest_warnings: [],
+		},
 	};
 }
 
-/**
- * Format conversation data into raw memory messages (one per session).
- */
-function createMessagesFromDialog(sample: LoCoMoSample, now: number): BenchRawMessage[] {
-	const messages: BenchRawMessage[] = [];
+function createMessagesFromDialog(sample: LoCoMoSample, now: number) {
 	const speakerA = sample.conversation.speaker_a ?? "Speaker A";
 	const speakerB = sample.conversation.speaker_b ?? "Speaker B";
-
-	for (const key of Object.keys(sample.conversation).sort()) {
-		if (!key.startsWith("session_") || key.endsWith("_date_time")) {
-			continue;
-		}
-
-		const sessionNum = key.replace("session_", "");
-		const datetimeKey = `session_${sessionNum}_date_time`;
-		const sessionTimestamp = String(sample.conversation[datetimeKey] ?? "");
-		const session = sample.conversation[key] as unknown[];
-
-		const dialogParts: string[] = [];
-		dialogParts.push(`# Conversation Session ${sessionNum}`);
-		if (sessionTimestamp) {
-			dialogParts.push(`# Timestamp: ${sessionTimestamp}`);
-		}
-		dialogParts.push(`# Speakers: ${speakerA}, ${speakerB}`);
-		dialogParts.push("");
-
-		for (const turn of session) {
-			// Each turn is an object with speaker, dia_id, and text properties
-			const turnText =
-				typeof turn === "string" ? turn : (turn as { text?: string }).text || JSON.stringify(turn);
-			const speaker = typeof turn === "string" ? "" : `[${(turn as { speaker?: string }).speaker || ""}] `;
-			if (sessionTimestamp) {
-				dialogParts.push(`[${sessionTimestamp}] ${speaker}${turnText}`);
-			} else {
-				dialogParts.push(`${speaker}${turnText}`);
-			}
-		}
-
-		messages.push(
-			toBenchMessage(
-				`${sample.sample_id}_dialog_${sessionNum}`,
-				sessionTimestamp,
-				dialogParts.join("\n"),
-				{
-					sampleId: sample.sample_id,
-					sessionId: sessionNum,
-					contentType: "dialog",
-				},
-				now,
-			),
-		);
-	}
-
-	return messages;
+	const keys = sortSessionKeys(
+		Object.keys(sample.conversation).filter(
+			(key) => key.startsWith("session_") && !key.endsWith("_date_time"),
+		),
+	);
+	return keys.map((key, sessionIndex) => {
+		const sessionId = normalizedSessionId(key);
+		const timestamp = conversationDate(sample, sessionId);
+		const turns = conversationTurns(sample, sessionId);
+		const parts = [
+			`# Conversation Session ${sessionId}`,
+			...(timestamp ? [`# Timestamp: ${timestamp}`] : []),
+			`# Speakers: ${speakerA}, ${speakerB}`,
+			"",
+			...turns.map((turn) => formatDialogTurn(turn, timestamp)),
+		];
+		return toMessageAndTrace({
+			sample,
+			retrievalMode: RetrievalMode.DIALOG,
+			sessionId,
+			sessionIndex,
+			timestamp,
+			content: parts.join("\n"),
+			evidenceIds: evidenceIdsFromTurns(turns),
+			now,
+		});
+	});
 }
 
-/**
- * Format observation data into raw memory messages (one per session).
- */
-function createMessagesFromObservation(sample: LoCoMoSample, now: number): BenchRawMessage[] {
-	const messages: BenchRawMessage[] = [];
-
-	for (const key of Object.keys(sample.observation).sort()) {
-		if (!key.endsWith("_observation")) {
-			continue;
-		}
-
-		const sessionNum = key.replace("_observation", "");
-		const datetimeKey = `${sessionNum}_date_time`;
-		const sessionTimestamp = String(sample.conversation[datetimeKey] ?? "");
-		const obsContent = sample.observation[key];
-
-		const obsParts: string[] = [];
-		obsParts.push(`# Observation Summary ${sessionNum}`);
-		if (sessionTimestamp) {
-			obsParts.push(`# Session Date: ${sessionTimestamp}`);
-		}
-		obsParts.push("");
-
-		// Add observation summary with dialog references
-		if (typeof obsContent === "object" && obsContent !== null) {
-			for (const [speaker, utterances] of Object.entries(obsContent)) {
-				if (Array.isArray(utterances)) {
-					for (const item of utterances) {
-						if (Array.isArray(item) && item.length >= 2) {
-							const [text, diaId] = item;
-							// Include text and its dialog reference
-							obsParts.push(`${speaker}: ${text} [Ref: ${diaId}]`);
-						} else {
-							obsParts.push(`${speaker}: ${item}`);
-						}
-					}
+function createMessagesFromObservation(sample: LoCoMoSample, now: number) {
+	const keys = sortSessionKeys(Object.keys(sample.observation).filter((key) => key.endsWith("_observation")));
+	return keys.map((key, sessionIndex) => {
+		const sessionId = normalizedSessionId(key.replace(/_observation$/, ""));
+		const timestamp = conversationDate(sample, sessionId);
+		const observation = sample.observation[key];
+		const parts = [
+			`# Observation Summary ${sessionId}`,
+			...(timestamp ? [`# Session Date: ${timestamp}`] : []),
+			"",
+		];
+		if (typeof observation === "object" && observation !== null) {
+			for (const [speaker, utterances] of Object.entries(observation)) {
+				if (!Array.isArray(utterances)) continue;
+				for (const item of utterances) {
+					if (Array.isArray(item) && item.length >= 2) parts.push(`${speaker}: ${item[0]} [Ref: ${item[1]}]`);
+					else parts.push(`${speaker}: ${String(item)}`);
 				}
 			}
 		} else {
-			obsParts.push(String(obsContent));
+			parts.push(String(observation));
 		}
-
-		obsParts.push("");
-
-		// Add original dialog for this session to enable temporal reasoning
-		const sessionKey = `session_${sessionNum}`;
-		const dialogContent = sample.conversation[sessionKey];
-		if (Array.isArray(dialogContent)) {
-			obsParts.push("# Original Dialog (for date/time reasoning):");
-			for (const turn of dialogContent) {
-				if (typeof turn === "object" && turn !== null && "speaker" in turn && "text" in turn) {
-					obsParts.push(`${turn.speaker}: ${turn.text}`);
-				} else if (typeof turn === "string") {
-					obsParts.push(turn);
-				}
-			}
+		const turns = conversationTurns(sample, sessionId);
+		if (turns.length > 0) {
+			parts.push("", "# Original Dialog (for date/time reasoning):");
+			parts.push(...turns.map((turn) => formatDialogTurn(turn, "")));
 		}
-
-		messages.push(
-			toBenchMessage(
-				`${sample.sample_id}_observation_${sessionNum}`,
-				sessionTimestamp,
-				obsParts.join("\n"),
-				{
-					sampleId: sample.sample_id,
-					sessionId: sessionNum,
-					contentType: "observation",
-				},
-				now,
-			),
-		);
-	}
-
-	return messages;
+		const content = parts.join("\n");
+		return toMessageAndTrace({
+			sample,
+			retrievalMode: RetrievalMode.OBSERVATION,
+			sessionId,
+			sessionIndex,
+			timestamp,
+			content,
+			evidenceIds: unique([...evidenceIdsFromTurns(turns), ...extractEvidenceIds(content)]),
+			now,
+		});
+	});
 }
 
-/**
- * Format session summary data into raw memory messages (one per session).
- */
-function createMessagesFromSummary(sample: LoCoMoSample, now: number): BenchRawMessage[] {
-	const messages: BenchRawMessage[] = [];
+function createMessagesFromSummary(sample: LoCoMoSample, now: number) {
+	const keys = sortSessionKeys(Object.keys(sample.session_summary).filter((key) => key.endsWith("_summary")));
+	return keys.map((key, sessionIndex) => {
+		const sessionId = normalizedSessionId(key.replace(/_summary$/, ""));
+		const timestamp = conversationDate(sample, sessionId);
+		const summary = sample.session_summary[key];
+		const parts = [`# Session Summary ${sessionId}`, ...(timestamp ? [`# Timestamp: ${timestamp}`] : []), ""];
+		if (typeof summary === "object" && summary !== null) {
+			for (const [speaker, text] of Object.entries(summary)) parts.push(`${speaker}: ${String(text)}`);
+		} else {
+			parts.push(String(summary));
+		}
+		const content = parts.join("\n");
+		return toMessageAndTrace({
+			sample,
+			retrievalMode: RetrievalMode.SESSION_SUMMARY,
+			sessionId,
+			sessionIndex,
+			timestamp,
+			content,
+			evidenceIds: extractEvidenceIds(content),
+			now,
+		});
+	});
+}
 
-	for (const key of Object.keys(sample.session_summary).sort()) {
-		if (!key.endsWith("_summary")) {
+export function buildSampleMessages(
+	sample: LoCoMoSample,
+	retrievalMode: RetrievalMode,
+): { messages: BenchRawMessage[]; sessions: LoCoMoSessionTrace[] } {
+	const now = Date.now();
+	const built =
+		retrievalMode === RetrievalMode.DIALOG
+			? createMessagesFromDialog(sample, now)
+			: retrievalMode === RetrievalMode.OBSERVATION
+				? createMessagesFromObservation(sample, now)
+				: createMessagesFromSummary(sample, now);
+	return {
+		messages: built.map((item) => item.message),
+		sessions: built.map((item) => item.trace),
+	};
+}
+
+export function fingerprintSample(sample: LoCoMoSample): string {
+	return sha256Text(JSON.stringify(sample));
+}
+
+export function fingerprintQuestion(
+	sample: LoCoMoSample,
+	qa: QAPair,
+	questionIndex: number,
+	retrievalMode: RetrievalMode,
+): string {
+	return sha256Text(
+		JSON.stringify({
+			sample_id: sample.sample_id,
+			question_index: questionIndex,
+			question: qa.question,
+			answer: qa.answer,
+			category: qa.category,
+			evidence: qa.evidence,
+			retrieval_mode: retrievalMode,
+			top_k: RETRIEVAL_LIMIT,
+		}),
+	);
+}
+
+function applyIngestBatchTraces(sessions: LoCoMoSessionTrace[], batches: IngestBatchTrace[]): void {
+	const byMessageId = new Map(
+		batches.flatMap((batch) => batch.message_ids.map((messageId) => [messageId, batch] as const)),
+	);
+	for (const session of sessions) {
+		const batch = byMessageId.get(session.message_id);
+		if (!batch) {
+			session.ingest_status = "not_attempted";
 			continue;
 		}
-
-		const sessionNum = key.replace("_summary", "");
-		const datetimeKey = `${sessionNum}_date_time`;
-		const sessionTimestamp = String(sample.conversation[datetimeKey] ?? "");
-		const summaryContent = sample.session_summary[key];
-
-		const summaryParts: string[] = [];
-		summaryParts.push(`# Session Summary ${sessionNum}`);
-		if (sessionTimestamp) {
-			summaryParts.push(`# Timestamp: ${sessionTimestamp}`);
-		}
-		summaryParts.push("");
-
-		if (typeof summaryContent === "object" && summaryContent !== null) {
-			for (const [speaker, text] of Object.entries(summaryContent)) {
-				summaryParts.push(`${speaker}: ${text}`);
-			}
-		} else {
-			summaryParts.push(String(summaryContent));
-		}
-
-		messages.push(
-			toBenchMessage(
-				`${sample.sample_id}_summary_${sessionNum}`,
-				sessionTimestamp,
-				summaryParts.join("\n"),
-				{
-					sampleId: sample.sample_id,
-					sessionId: sessionNum,
-					contentType: "session_summary",
-				},
-				now,
-			),
-		);
+		session.ingest_status = batch.status;
+		session.ingest_latency_ms = batch.latency_ms;
+		session.ingest_warnings = batch.warnings;
+		if (batch.error) session.error = batch.error;
 	}
-
-	return messages;
 }
 
-/**
- * Build the answer prompt from retrieved memory excerpts.
- */
 function buildAnswerPrompt(qa: QAPair, sample: LoCoMoSample, hits: MemorySearchHit[]): string {
 	const speakerA = sample.conversation.speaker_a ?? "Speaker A";
 	const speakerB = sample.conversation.speaker_b ?? "Speaker B";
-
 	const excerpts = hits
 		.map(
-			(h, i) =>
-				`--- Memory excerpt ${i + 1} (id=${h.id}, score=${h.similarity.toFixed(3)}) ---\n${h.content}`,
+			(hit, index) =>
+				`--- Memory excerpt ${index + 1} (id=${hit.id}, score=${hit.similarity.toFixed(3)}) ---\n${hit.content}`,
 		)
 		.join("\n\n");
-
 	const categoryGuidance =
 		qa.category === 5
-			? `- This is an ADVERSARIAL question. If the excerpts do not contain the relevant information, say you don't know — do not guess or hallucinate.`
+			? "- This is an ADVERSARIAL question. If the excerpts do not contain the relevant information, say you don't know — do not guess or hallucinate."
 			: qa.category === 2
 				? "- This is a TEMPORAL question. Use the timestamps in the excerpts as the authoritative dates. Convert every relative time reference into a specific date, month, or year."
-				: qa.category === 3
+				: qa.category === 1
 					? "- This is a MULTI-HOP question. The answer requires combining information from multiple excerpts — cite each fact you use."
-					: qa.category === 4
+					: qa.category === 3
 						? "- This is an OPEN-DOMAIN question. Ground your answer in the excerpts; do not invent facts that are not there."
 						: "- This is a SINGLE-HOP question. Pull the specific fact from the excerpts.";
 
@@ -318,9 +404,17 @@ Question: ${qa.question}
 Answer based only on the retrieved memory excerpts above:`;
 }
 
-/**
- * Evaluator for the LoCoMo benchmark against the OpenContext memory store.
- */
+export { checkOpencontextHealth, getOpencontextBaseUrl };
+
+function locomoUserId(sample: LoCoMoSample): string {
+	return `locomo_${sample.sample_id}`;
+}
+
+export function getLoCoMoCheckpointDir(): string {
+	const configured = process.env.LOCOMO_CHECKPOINT_DIR?.trim();
+	return configured ? resolve(configured) : join(import.meta.dirname, "..", "checkpoints", "locomo");
+}
+
 export class LoCoMoEvaluator {
 	private retrievalMode: RetrievalMode;
 	private baseUrl: string;
@@ -328,189 +422,369 @@ export class LoCoMoEvaluator {
 	private checkpointDir: string;
 	private resume: boolean;
 	private ingestedCount = 0;
+	private sessionTraces = new Map<string, LoCoMoSessionTrace>();
+	private sampleFingerprints = new Map<string, string>();
 
 	constructor(
-		retrievalMode: RetrievalMode | string = RetrievalMode.OBSERVATION,
+		retrievalMode: RetrievalMode | string = RetrievalMode.DIALOG,
 		baseUrl?: string,
 		quickLimit?: number,
 		resume = true,
 	) {
-		// Convert string to enum if needed
-		if (typeof retrievalMode === "string") {
-			const modeMap: Record<string, RetrievalMode> = {
-				dialog: RetrievalMode.DIALOG,
-				observation: RetrievalMode.OBSERVATION,
-				session_summary: RetrievalMode.SESSION_SUMMARY,
-			};
-			this.retrievalMode = modeMap[retrievalMode] || RetrievalMode.OBSERVATION;
-		} else {
-			this.retrievalMode = retrievalMode;
-		}
+		this.retrievalMode = Object.values(RetrievalMode).includes(retrievalMode as RetrievalMode)
+			? (retrievalMode as RetrievalMode)
+			: RetrievalMode.DIALOG;
 		this.baseUrl = baseUrl ?? getOpencontextBaseUrl();
 		this.quickLimit = quickLimit;
 		this.resume = resume;
-		this.checkpointDir = join(import.meta.dirname, "..", "checkpoints", "locomo");
+		this.checkpointDir = getLoCoMoCheckpointDir();
 	}
 
-	/**
-	 * Get checkpoint file path for a sample
-	 */
 	private getCheckpointPath(sampleId: string): string {
-		return join(this.checkpointDir, `${sampleId}.json`);
+		return join(this.checkpointDir, `${sampleId}.${this.retrievalMode}.json`);
 	}
 
-	/**
-	 * Load checkpoint for a sample if it exists
-	 */
 	private async loadCheckpoint(sampleId: string): Promise<Record<number, Prediction> | null> {
 		if (!this.resume) return null;
 		try {
-			const path = this.getCheckpointPath(sampleId);
-			const data = await readFile(path, "utf-8");
-			const parsed = JSON.parse(data);
-			// Return predictions keyed by question index
-			return parsed as Record<number, Prediction>;
+			return JSON.parse(await readFile(this.getCheckpointPath(sampleId), "utf-8")) as Record<
+				number,
+				Prediction
+			>;
 		} catch {
 			return null;
 		}
 	}
 
-	/**
-	 * Save checkpoint for a sample after each question is evaluated
-	 */
 	private async saveCheckpoint(sampleId: string, predictions: Record<number, Prediction>): Promise<void> {
 		try {
 			await mkdir(this.checkpointDir, { recursive: true });
-			const path = this.getCheckpointPath(sampleId);
-			await writeFile(path, JSON.stringify(predictions, null, 2), "utf-8");
+			await writeFile(this.getCheckpointPath(sampleId), JSON.stringify(predictions, null, 2), "utf-8");
 		} catch (error) {
-			console.error(`Failed to save checkpoint: ${error}`);
+			process.stderr.write(`Failed to save checkpoint: ${error}\n`);
 		}
 	}
 
-	/**
-	 * Ingest a LoCoMo sample into the OpenContext memory store.
-	 * Returns the number of ingested memory messages.
-	 */
-	async loadSample(sample: LoCoMoSample): Promise<number> {
-		const now = Date.now();
+	private selectedQuestions(sample: LoCoMoSample): QAPair[] {
+		return this.quickLimit ? sample.qa_pairs.slice(0, this.quickLimit) : sample.qa_pairs;
+	}
 
-		// Build memory messages based on retrieval mode (one per session)
-		let messages: BenchRawMessage[];
-
-		if (this.retrievalMode === RetrievalMode.DIALOG) {
-			messages = createMessagesFromDialog(sample, now);
-		} else if (this.retrievalMode === RetrievalMode.OBSERVATION) {
-			messages = createMessagesFromObservation(sample, now);
-		} else if (this.retrievalMode === RetrievalMode.SESSION_SUMMARY) {
-			messages = createMessagesFromSummary(sample, now);
-		} else {
-			messages = [];
-		}
-
-		const inserted = await ingestMessages(messages, this.baseUrl, `locomo_${sample.sample_id}`);
-		this.ingestedCount = messages.length;
-
-		console.log(
-			`[LoCoMo] Ingested ${inserted} memory messages for ${sample.sample_id} (mode: ${this.retrievalMode}) → ${this.baseUrl}`,
+	private checkpointMatches(
+		prediction: Prediction | undefined,
+		sample: LoCoMoSample,
+		qa: QAPair,
+		questionIndex: number,
+	): boolean {
+		return (
+			prediction?.trace_schema_version === LOCOMO_TRACE_SCHEMA_VERSION &&
+			prediction.sample_sha256 ===
+				(this.sampleFingerprints.get(sample.sample_id) ?? fingerprintSample(sample)) &&
+			prediction.question_sha256 === fingerprintQuestion(sample, qa, questionIndex, this.retrievalMode) &&
+			prediction.retrieval_mode === this.retrievalMode &&
+			prediction.answerer_model === getAnswererModelIdentity() &&
+			prediction.judge_model === getJudgeModelIdentity()
 		);
-		return messages.length;
 	}
 
-	/**
-	 * Evaluate question answering on a LoCoMo sample.
-	 */
-	async evaluateQA(sample: LoCoMoSample): Promise<EvaluationResult> {
-		if (this.ingestedCount === 0) {
-			return {
-				sample_id: sample.sample_id,
-				retrieval_mode: this.retrievalMode,
-				total_questions: sample.qa_pairs.length,
-				correct_answers: 0,
-				accuracy: 0,
-				token_usage: unavailableTokenUsage(),
-				predictions: [],
-				error: "No records in storage",
-			};
+	getSessionTraces(): LoCoMoSessionTrace[] {
+		return [...this.sessionTraces.values()];
+	}
+
+	async reuseCompletedSample(sample: LoCoMoSample): Promise<boolean> {
+		if (!this.resume) return false;
+		this.sampleFingerprints.set(sample.sample_id, fingerprintSample(sample));
+		const checkpoint = await this.loadCheckpoint(sample.sample_id);
+		const questions = this.selectedQuestions(sample);
+		if (
+			!checkpoint ||
+			questions.length === 0 ||
+			!questions.every(
+				(qa, questionIndex) =>
+					checkpoint[questionIndex]?.status === "completed" &&
+					this.checkpointMatches(checkpoint[questionIndex], sample, qa, questionIndex),
+			)
+		) {
+			return false;
 		}
+		const { messages, sessions } = buildSampleMessages(sample, this.retrievalMode);
+		for (const session of sessions) {
+			session.ingest_status = "completed";
+			session.ingest_warnings = [
+				"Restored from context-matched completed checkpoints; original ingest latency was not persisted.",
+			];
+			this.sessionTraces.set(session.message_id, session);
+		}
+		this.ingestedCount = messages.length;
+		return true;
+	}
 
-		const checkpoint = (await this.loadCheckpoint(sample.sample_id)) || {};
-		const answererModel = getAnswererModelIdentity();
-		const judgeModel = JUDGE_MODEL;
-		const reusableIndices = new Set<number>();
-		let executionErrorsToRetry = 0;
-		let incompatibleCheckpoints = 0;
-
-		for (const [idx, pred] of Object.entries(checkpoint)) {
-			const i = Number(idx);
-			if (isReusableCheckpoint(pred, answererModel, judgeModel)) {
-				reusableIndices.add(i);
-			} else if (pred?.status === "execution_error") {
-				executionErrorsToRetry++;
-			} else {
-				incompatibleCheckpoints++;
+	async loadSample(sample: LoCoMoSample): Promise<number> {
+		const { messages, sessions } = buildSampleMessages(sample, this.retrievalMode);
+		if (messages.length === 0)
+			throw new Error(`No ${this.retrievalMode} sessions found in ${sample.sample_id}`);
+		this.sampleFingerprints.set(sample.sample_id, fingerprintSample(sample));
+		for (const session of sessions) this.sessionTraces.set(session.message_id, session);
+		const startedAt = performance.now();
+		try {
+			const result = await ingestMessages(messages, this.baseUrl, locomoUserId(sample));
+			applyIngestBatchTraces(sessions, result.batches);
+			this.ingestedCount = messages.length;
+			process.stdout.write(
+				`[LoCoMo] Ingested ${result.inserted} raw sessions for ${sample.sample_id} (mode: ${this.retrievalMode}) → ${this.baseUrl}\n`,
+			);
+			return messages.length;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			if (error instanceof IngestMessagesError) applyIngestBatchTraces(sessions, error.result.batches);
+			else {
+				const latencyMs = Math.round(performance.now() - startedAt);
+				for (const session of sessions) {
+					session.ingest_status = "execution_error";
+					session.ingest_latency_ms = latencyMs;
+					session.error = message;
+				}
 			}
+			throw error;
 		}
+	}
 
+	createExecutionErrorPrediction(
+		sample: LoCoMoSample,
+		qa: QAPair,
+		questionIndex: number,
+		error: unknown,
+		stage: "ingest" | "retrieval" | "answerer" | "judge" | "provider",
+		attempt = 1,
+		trace: {
+			retrieval?: LoCoMoRetrievalTrace | null;
+			answerer?: LoCoMoAnswerTrace | null;
+			judge?: LoCoMoJudgeTrace | null;
+		} = {},
+		tokenUsage: TokenUsage = unavailableTokenUsage(),
+	): Prediction {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		return {
+			trace_schema_version: LOCOMO_TRACE_SCHEMA_VERSION,
+			sample_sha256: this.sampleFingerprints.get(sample.sample_id) ?? fingerprintSample(sample),
+			question_sha256: fingerprintQuestion(sample, qa, questionIndex, this.retrievalMode),
+			status: "execution_error",
+			attempt,
+			answerer_model: getAnswererModelIdentity(),
+			judge_model: getJudgeModelIdentity(),
+			execution_error: { stage, message: errorMessage },
+			token_usage: tokenUsage,
+			sample_id: sample.sample_id,
+			question_index: questionIndex,
+			retrieval_mode: this.retrievalMode,
+			question: qa.question,
+			answer: qa.answer,
+			response: `Error: ${errorMessage}`,
+			prediction: `Error: ${errorMessage}`,
+			ground_truth: qa.answer,
+			category: String(qa.category),
+			llm_score: 0,
+			correct: false,
+			f1_score: 0,
+			bleu_score: 0,
+			bleu1: 0,
+			bleu2: 0,
+			bleu3: 0,
+			bleu4: 0,
+			evidence: qa.evidence,
+			trace: {
+				retrieval: trace.retrieval ?? null,
+				answerer: trace.answerer ?? null,
+				judge: trace.judge ?? null,
+			},
+			failure_stage: deriveFailureStage({
+				qa,
+				retrieval: trace.retrieval ?? null,
+				correct: false,
+				executionStage: stage,
+			}),
+		};
+	}
+
+	createIngestErrorResult(sample: LoCoMoSample, error: unknown): EvaluationResult {
+		const predictions = this.selectedQuestions(sample).map((qa, questionIndex) =>
+			this.createExecutionErrorPrediction(sample, qa, questionIndex, error, "ingest"),
+		);
+		return {
+			sample_id: sample.sample_id,
+			retrieval_mode: this.retrievalMode,
+			total_questions: predictions.length,
+			correct_answers: 0,
+			accuracy: 0,
+			token_usage: sumTokenUsage(predictions.map((prediction) => prediction.token_usage)),
+			predictions,
+			error: error instanceof Error ? error.message : String(error),
+		};
+	}
+
+	async evaluateQA(sample: LoCoMoSample): Promise<EvaluationResult> {
+		if (this.ingestedCount === 0) return this.createIngestErrorResult(sample, "No records in storage");
+
+		const checkpoint = (await this.loadCheckpoint(sample.sample_id)) ?? {};
+		const questions = this.selectedQuestions(sample);
 		const predictions: Prediction[] = [];
 		let correct = 0;
+		let reused = 0;
+		let retrying = 0;
+		let incompatible = 0;
 
+		for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
+			const qa = questions[questionIndex];
+			const existing = checkpoint[questionIndex];
+			const matches = this.checkpointMatches(existing, sample, qa, questionIndex);
+			if (existing?.status === "completed" && matches) reused++;
+			else if (existing?.status === "execution_error" && matches) retrying++;
+			else if (existing) incompatible++;
+		}
 		if (Object.keys(checkpoint).length > 0) {
-			console.log(
-				`[LoCoMo] Resume: ${reusableIndices.size} completed result(s) reused, ${executionErrorsToRetry} execution error(s) retrying, ${incompatibleCheckpoints} legacy/model-mismatched result(s) re-running`,
+			process.stdout.write(
+				`[LoCoMo] Resume: ${reused} completed result(s) reused, ${retrying} execution error(s) retrying, ${incompatible} trace/data/model-mismatched result(s) re-running\n`,
 			);
 		}
 
-		// Limit questions if quick mode is enabled
-		const questionsToEvaluate = this.quickLimit ? sample.qa_pairs.slice(0, this.quickLimit) : sample.qa_pairs;
-
-		console.log(
-			`[LoCoMo] Evaluating ${questionsToEvaluate.length} questions (quick limit: ${this.quickLimit || "none"})`,
-		);
-
-		for (let i = 0; i < questionsToEvaluate.length; i++) {
-			const qa = questionsToEvaluate[i];
-
-			const existing = checkpoint[i];
-			if (reusableIndices.has(i)) {
+		for (let questionIndex = 0; questionIndex < questions.length; questionIndex++) {
+			const qa = questions[questionIndex];
+			const existing = checkpoint[questionIndex];
+			const checkpointMatches = this.checkpointMatches(existing, sample, qa, questionIndex);
+			if (existing?.status === "completed" && checkpointMatches) {
 				predictions.push(existing);
 				if (existing.correct) correct++;
 				continue;
 			}
-			const attempt = (existing?.attempt ?? 0) + 1;
+			const attempt =
+				existing?.status === "execution_error" && checkpointMatches ? (existing.attempt ?? 0) + 1 : 1;
 			let answerUsage = unavailableTokenUsage();
 			let judgeUsage = unavailableTokenUsage();
+			let retrievalTrace: LoCoMoRetrievalTrace | null = null;
+			let answerTrace: LoCoMoAnswerTrace | null = null;
+			let judgeTrace: LoCoMoJudgeTrace | null = null;
+			let executionStage: "retrieval" | "answerer" | "judge" = "retrieval";
 
 			try {
-				// Retrieve relevant memories, then answer using only those excerpts
-				const answerResult = await this.answerQuestion(qa, sample);
-				const response = answerResult.text;
-				answerUsage = answerResult.token_usage;
+				const sampleSessions = this.getSessionTraces().filter(
+					(session) =>
+						session.sample_id === sample.sample_id && session.retrieval_mode === this.retrievalMode,
+				);
+				const availableEvidenceIds = unique(sampleSessions.flatMap((session) => session.evidence_ids));
+				const searchStartedAt = performance.now();
+				let searchResponse: MemorySearchResponse;
+				try {
+					searchResponse = await searchMemory(
+						qa.question,
+						RETRIEVAL_LIMIT,
+						this.baseUrl,
+						locomoUserId(sample),
+						{ includeRetrievalDiagnostics: true },
+					);
+				} catch (error) {
+					retrievalTrace = buildRetrievalErrorTrace({
+						qa,
+						availableEvidenceIds,
+						userId: locomoUserId(sample),
+						topK: RETRIEVAL_LIMIT,
+						latencyMs: Math.round(performance.now() - searchStartedAt),
+						error: error instanceof Error ? error.message : String(error),
+					});
+					throw error;
+				}
+				retrievalTrace = buildRetrievalTrace({
+					qa,
+					response: searchResponse,
+					sessionsByMessageId: new Map(
+						sampleSessions.map((session) => [session.message_id, session] as const),
+					),
+					availableEvidenceIds,
+					userId: locomoUserId(sample),
+					topK: RETRIEVAL_LIMIT,
+					latencyMs: Math.round(performance.now() - searchStartedAt),
+				});
 
-				// Evaluate answer correctness using LLM judge
+				const hits = searchResponse.results;
+				const prompt = buildAnswerPrompt(qa, sample, hits);
+				executionStage = "answerer";
+				const answerStartedAt = performance.now();
+				let response: string;
+				let answerAttempt = 1;
+				try {
+					const answerResult = await generateAnswer(prompt);
+					if (!answerResult.text.trim()) throw new Error("Answerer returned an empty response");
+					answerUsage = answerResult.token_usage;
+					answerAttempt = answerResult.attempt;
+					response = answerResult.text;
+					answerTrace = {
+						model: getAnswererModelIdentity(),
+						status: "completed",
+						attempt: answerAttempt,
+						latency_ms: Math.round(performance.now() - answerStartedAt),
+						prompt_version: "locomo-answer-v1",
+						prompt_sha256: sha256Text(prompt),
+						prompt_characters: prompt.length,
+						system_prompt: null,
+						prompt,
+						token_usage: answerUsage,
+						included_hit_ids: hits.map((hit) => hit.id),
+						included_context_characters: hits.reduce((sum, hit) => sum + hit.content.length, 0),
+					};
+				} catch (error) {
+					answerAttempt = error instanceof AnswererGenerationError ? error.attempts : answerAttempt;
+					answerTrace = {
+						model: getAnswererModelIdentity(),
+						status: "execution_error",
+						attempt: answerAttempt,
+						latency_ms: Math.round(performance.now() - answerStartedAt),
+						prompt_version: "locomo-answer-v1",
+						prompt_sha256: sha256Text(prompt),
+						prompt_characters: prompt.length,
+						system_prompt: null,
+						prompt,
+						token_usage: answerUsage,
+						included_hit_ids: hits.map((hit) => hit.id),
+						included_context_characters: hits.reduce((sum, hit) => sum + hit.content.length, 0),
+						error: error instanceof Error ? error.message : String(error),
+					};
+					throw error;
+				}
+
+				executionStage = "judge";
 				const judgeResult = await evaluateLLMJudge(qa.question, qa.answer, response);
 				judgeUsage = judgeResult.token_usage;
+				judgeTrace = {
+					model: getJudgeModelIdentity(),
+					status: judgeResult.status,
+					attempt: judgeResult.attempt,
+					latency_ms: judgeResult.latency_ms,
+					prompt_version: judgeResult.prompt_version,
+					prompt_sha256: judgeResult.prompt_sha256,
+					prompt_characters: judgeResult.prompt_characters,
+					system_prompt: judgeResult.system_prompt,
+					prompt: judgeResult.prompt,
+					token_usage: judgeResult.token_usage,
+					raw_response: judgeResult.raw_response,
+					parse_status: judgeResult.parse_status,
+					...(judgeResult.error ? { error: judgeResult.error } : {}),
+				};
+				if (judgeResult.status === "execution_error") {
+					throw new Error(judgeResult.error ?? "Judge failed without returning a result");
+				}
+
 				const isCorrect = judgeResult.score === 1;
-				console.log(
-					`[Q${i + 1}] ${isCorrect ? "✓" : "✗"} Q: "${qa.question.substring(0, 60)}..." GT: "${qa.answer}"`,
-				);
-				if (!isCorrect) {
-					console.log(`    Agent response: "${response.substring(0, 300)}..."`);
-				}
-
-				if (isCorrect) {
-					correct++;
-				}
-
-				// Calculate additional metrics
 				const metrics = calculateMetrics(response, qa.answer);
-
-				const pred: Prediction = {
+				const prediction: Prediction = {
+					trace_schema_version: LOCOMO_TRACE_SCHEMA_VERSION,
+					sample_sha256: this.sampleFingerprints.get(sample.sample_id) ?? fingerprintSample(sample),
+					question_sha256: fingerprintQuestion(sample, qa, questionIndex, this.retrievalMode),
 					status: "completed",
 					attempt,
-					answerer_model: answererModel,
-					judge_model: judgeModel,
+					answerer_model: getAnswererModelIdentity(),
+					judge_model: getJudgeModelIdentity(),
 					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
+					sample_id: sample.sample_id,
+					question_index: questionIndex,
+					retrieval_mode: this.retrievalMode,
 					question: qa.question,
 					answer: qa.answer,
 					response,
@@ -526,75 +800,38 @@ export class LoCoMoEvaluator {
 					bleu3: metrics.bleu3,
 					bleu4: metrics.bleu4,
 					evidence: qa.evidence,
+					trace: { retrieval: retrievalTrace, answerer: answerTrace, judge: judgeTrace },
+					failure_stage: deriveFailureStage({ qa, retrieval: retrievalTrace, correct: isCorrect }),
 				};
-
-				predictions.push(pred);
-
-				// Save checkpoint after each question
-				checkpoint[i] = pred;
+				predictions.push(prediction);
+				checkpoint[questionIndex] = prediction;
 				await this.saveCheckpoint(sample.sample_id, checkpoint);
+				if (isCorrect) correct++;
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				const errorCause = error instanceof Error && error.cause ? String(error.cause) : "";
-				console.error(
-					`Error evaluating question: ${errorMessage}${errorCause ? ` (cause: ${errorCause})` : ""}`,
-				);
-
-				const pred: Prediction = {
-					status: "execution_error",
+				const prediction = this.createExecutionErrorPrediction(
+					sample,
+					qa,
+					questionIndex,
+					error,
+					executionStage,
 					attempt,
-					answerer_model: answererModel,
-					judge_model: judgeModel,
-					error: errorMessage,
-					token_usage: sumTokenUsage([answerUsage, judgeUsage]),
-					question: qa.question,
-					answer: qa.answer,
-					response: `Error: ${errorMessage}`,
-					prediction: `Error: ${errorMessage}`,
-					ground_truth: qa.answer,
-					category: String(qa.category),
-					llm_score: 0,
-					correct: false,
-					f1_score: 0.0,
-					bleu_score: 0.0,
-					bleu1: 0.0,
-					bleu2: 0.0,
-					bleu3: 0.0,
-					bleu4: 0.0,
-					evidence: qa.evidence,
-				};
-
-				predictions.push(pred);
-
-				// Save checkpoint after each question
-				checkpoint[i] = pred;
+					{ retrieval: retrievalTrace, answerer: answerTrace, judge: judgeTrace },
+					sumTokenUsage([answerUsage, judgeUsage]),
+				);
+				predictions.push(prediction);
+				checkpoint[questionIndex] = prediction;
 				await this.saveCheckpoint(sample.sample_id, checkpoint);
 			}
 		}
 
-		const total = sample.qa_pairs.length;
-
 		return {
 			sample_id: sample.sample_id,
 			retrieval_mode: this.retrievalMode,
-			total_questions: total,
+			total_questions: questions.length,
 			correct_answers: correct,
-			accuracy: total > 0 ? correct / total : 0,
+			accuracy: questions.length > 0 ? correct / questions.length : 0,
 			token_usage: sumTokenUsage(predictions.map((prediction) => prediction.token_usage)),
 			predictions,
 		};
-	}
-
-	/**
-	 * Answer a question using retrieved memory excerpts.
-	 */
-	private async answerQuestion(qa: QAPair, sample: LoCoMoSample): Promise<GeneratedAnswer> {
-		const hits = await searchMemory(qa.question, RETRIEVAL_LIMIT, this.baseUrl, `locomo_${sample.sample_id}`);
-		const prompt = buildAnswerPrompt(qa, sample, hits);
-		const response = await generateAnswer(prompt);
-		if (!response.text.trim()) {
-			throw new Error("Answerer returned an empty response");
-		}
-		return response;
 	}
 }

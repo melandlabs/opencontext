@@ -3,11 +3,15 @@
  */
 
 export const CATEGORY_NAMES: Record<string, string> = {
-	"1": "single_hop",
+	"1": "multi_hop",
 	"2": "temporal",
-	"3": "multi_hop",
-	"4": "open_domain",
+	"3": "open_domain",
+	"4": "single_hop",
 	"5": "adversarial", // Usually excluded from overall stats
 };
 
-export const CATEGORIES = ["single_hop", "temporal", "multi_hop", "open_domain"];
+export const CATEGORIES = ["multi_hop", "temporal", "open_domain", "single_hop"];
+
+export function getCategoryName(category: number): string {
+	return CATEGORY_NAMES[String(category)] ?? `category_${category}`;
+}

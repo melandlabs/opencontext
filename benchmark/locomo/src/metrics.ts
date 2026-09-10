@@ -7,7 +7,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
-import { tokenUsage, type TokenUsage } from "../../run-support";
+import { tokenUsage, type TokenUsage, unavailableTokenUsage } from "../../run-support";
 
 const openrouter = createOpenAICompatible({
 	baseURL: "https://openrouter.ai/api/v1",
@@ -15,6 +15,18 @@ const openrouter = createOpenAICompatible({
 	name: "openrouter",
 });
 import { LLM_JUDGE_PROMPT } from "./prompts";
+import { sha256Text } from "./diagnostics";
+
+const configuredModelRequestTimeoutMs = Number.parseInt(
+	process.env.LOCOMO_MODEL_REQUEST_TIMEOUT_MS ?? "90000",
+	10,
+);
+const MODEL_REQUEST_TIMEOUT_MS =
+	Number.isInteger(configuredModelRequestTimeoutMs) && configuredModelRequestTimeoutMs >= 10_000
+		? configuredModelRequestTimeoutMs
+		: 90_000;
+const JUDGE_SYSTEM_PROMPT =
+	"You are an impartial judge evaluating answers to questions. Always respond with valid JSON.";
 
 /**
  * Calculate F1 score between prediction and ground truth.
@@ -143,11 +155,30 @@ interface LLMJudgeResult {
 	reasoning?: string;
 }
 
-export const JUDGE_MODEL = "qwen/qwen3.7-max";
+export function getJudgeModel(): string {
+	const model = process.env.OPENROUTER_JUDGE_MODEL?.trim();
+	if (!model) throw new Error("Judge model missing: set OPENROUTER_JUDGE_MODEL");
+	return model;
+}
+
+export function getJudgeModelIdentity(): string {
+	return `openrouter:${getJudgeModel()}`;
+}
 
 export interface LLMJudgeEvaluation {
 	score: number;
 	token_usage: TokenUsage;
+	status: "completed" | "execution_error";
+	attempt: number;
+	latency_ms: number;
+	prompt_version: string;
+	prompt_sha256: string;
+	prompt_characters: number;
+	system_prompt: string;
+	prompt: string;
+	raw_response: string | null;
+	parse_status: "parsed" | "failed";
+	error?: string;
 }
 
 export function parseLLMJudgeResponse(text: string): number {
@@ -164,9 +195,12 @@ export function parseLLMJudgeResponse(text: string): number {
 		throw new Error("Judge JSON response is missing a valid CORRECT/WRONG label");
 	} catch (error) {
 		if (error instanceof SyntaxError) {
+			const embeddedLabel = normalized.match(/"label"\s*:\s*"(CORRECT|WRONG)"/i)?.[1];
+			if (embeddedLabel?.toUpperCase() === "CORRECT") return 1;
+			if (embeddedLabel?.toUpperCase() === "WRONG") return 0;
 			const upper = normalized.toUpperCase();
-			const hasCorrect = upper.includes("CORRECT");
-			const hasWrong = upper.includes("WRONG");
+			const hasCorrect = /\bCORRECT\b/.test(upper);
+			const hasWrong = /\bWRONG\b/.test(upper);
 			if (hasCorrect && !hasWrong) return 1;
 			if (hasWrong && !hasCorrect) return 0;
 			throw new Error("Judge response could not be parsed as CORRECT or WRONG", { cause: error });
@@ -185,37 +219,65 @@ export async function evaluateLLMJudge(
 	question: string,
 	goldAnswer: string,
 	generatedAnswer: string,
-	maxRetries = 3,
+	maxRetries = 5,
 ): Promise<LLMJudgeEvaluation> {
 	const prompt = LLM_JUDGE_PROMPT.replace("{question}", question)
 		.replace("{gold_answer}", goldAnswer)
 		.replace("{generated_answer}", generatedAnswer);
 
 	let lastError: Error | undefined;
+	let lastRawResponse: string | null = null;
+	let lastUsage = unavailableTokenUsage();
+	const startedAt = performance.now();
 
 	for (let attempt = 1; attempt <= maxRetries; attempt++) {
 		try {
 			const { text, usage } = await generateText({
-				model: openrouter(JUDGE_MODEL),
-				system: "You are an impartial judge evaluating answers to questions. Always respond with valid JSON.",
+				model: openrouter(getJudgeModel()),
+				system: JUDGE_SYSTEM_PROMPT,
 				prompt,
+				maxRetries: 0,
+				abortSignal: AbortSignal.timeout(MODEL_REQUEST_TIMEOUT_MS),
 			});
+			lastRawResponse = text;
+			lastUsage = tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens);
 
 			return {
 				score: parseLLMJudgeResponse(text),
-				token_usage: tokenUsage(usage.inputTokens, usage.outputTokens, usage.totalTokens),
+				token_usage: lastUsage,
+				status: "completed",
+				attempt,
+				latency_ms: Math.round(performance.now() - startedAt),
+				prompt_version: "locomo-judge-v1",
+				prompt_sha256: sha256Text(prompt),
+				prompt_characters: prompt.length,
+				system_prompt: JUDGE_SYSTEM_PROMPT,
+				prompt,
+				raw_response: text,
+				parse_status: "parsed",
 			};
 		} catch (error) {
 			lastError = error instanceof Error ? error : new Error(String(error));
-			console.log(`[Judge] Attempt ${attempt}/${maxRetries} failed: ${lastError.message.substring(0, 80)}`);
 			if (attempt < maxRetries) {
-				// Wait before retry (exponential backoff)
 				await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
 			}
 		}
 	}
-
-	throw lastError ?? new Error("Judge failed without returning a result");
+	return {
+		score: 0,
+		token_usage: lastUsage,
+		status: "execution_error",
+		attempt: maxRetries,
+		latency_ms: Math.round(performance.now() - startedAt),
+		prompt_version: "locomo-judge-v1",
+		prompt_sha256: sha256Text(prompt),
+		prompt_characters: prompt.length,
+		system_prompt: JUDGE_SYSTEM_PROMPT,
+		prompt,
+		raw_response: lastRawResponse,
+		parse_status: "failed",
+		error: lastError?.message ?? "Judge failed without returning a result",
+	};
 }
 
 /**
