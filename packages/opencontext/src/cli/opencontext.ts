@@ -40,6 +40,10 @@ import { parseDoctorArgs, runDoctor } from "./doctor.js";
 import { parseListArgs, runList } from "./list.js";
 import { parseSearchArgs, runSearch } from "./search.js";
 import { parseStatsArgs, runStats } from "./stats.js";
+// Workspace CLI is shipped as an optional subpath import so a host
+// that doesn't install `@melandlabs/workspace` still gets a usable
+// `opencontext` CLI without crashing the bootstrap.
+import { runWorkspaceCli } from "@melandlabs/workspace/cli";
 
 interface HttpArgs extends UnifiedArgs {
 	port: number;
@@ -296,6 +300,7 @@ Commands:
   stats      Report counts from the active raw-message store
   doctor     Run health checks against the local install
   okf        OKF v0.2 (Open Knowledge Format) importer / exporter
+  workspace  Versioned, cross-file folder knowledge
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -585,6 +590,11 @@ async function main(): Promise<void> {
 		}
 		const result = await startOkf(okfArgs, { packageVersion: "@melandlabs/opencontext" });
 		process.exit(result.exit);
+	}
+
+	if (head === "workspace" || head === "WORKSPACE") {
+		const exit = await runWorkspaceCli(argv.slice(1));
+		process.exit(exit);
 	}
 
 	if (head === "--help" || head === "-h") {

@@ -1,0 +1,83 @@
+{
+	"name": "@melandlabs/workspace",
+	"version": "0.1.0",
+	"type": "module",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"publishConfig": {
+		"access": "public"
+	},
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./sqlite": {
+			"types": "./dist/sqlite.d.ts",
+			"import": "./dist/sqlite.js"
+		},
+		"./cli": {
+			"types": "./dist/cli.d.ts",
+			"import": "./dist/cli.js"
+		}
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/melandlabs/opencontext.git",
+		"directory": "packages/project-context"
+	},
+	"homepage": "https://github.com/melandlabs/opencontext/tree/main/packages/project-context",
+	"bugs": {
+		"url": "https://github.com/melandlabs/opencontext/issues"
+	},
+	"license": "Apache-2.0",
+	"description": "OpenContext · workspace module. Provides project-level indexing, hybrid retrieval, and cross-file reference edges over a project workspace.",
+	"keywords": [
+		"opencontext",
+		"project-context",
+		"hybrid-search",
+		"rag"
+	],
+	"dependencies": {
+		"@melandlabs/contracts": "workspace:*",
+		"@melandlabs/env-config": "workspace:*",
+		"@melandlabs/okf": "workspace:*",
+		"@melandlabs/rag": "workspace:*",
+		"@melandlabs/shared": "workspace:*",
+		"@melandlabs/sqlite": "workspace:*",
+		"@modelcontextprotocol/sdk": "^1.25.3",
+		"better-sqlite3": "^11.10.0",
+		"hono": "^4.6.14",
+		"sqlite-vec": "^0.1.9",
+		"zod": "^4.3.6"
+	},
+	"peerDependencies": {
+		"@melandlabs/ai-rag": "workspace:*"
+	},
+	"peerDependenciesMeta": {
+		"@melandlabs/ai-rag": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@melandlabs/ai-rag": "workspace:*",
+		"@melandlabs/config": "workspace:*",
+		"@types/better-sqlite3": "^7.6.13",
+		"@types/node": "^22.13.10",
+		"typescript": "^5.6.3",
+		"vitest": "^4.1.10"
+	},
+	"scripts": {
+		"build": "tsup",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"test": "vitest run",
+		"test:watch": "vitest"
+	}
+}
