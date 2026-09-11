@@ -25,14 +25,6 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import {
-	closeSQLiteWorkspaceStore,
-	getSQLiteWorkspaceStore,
-	listWorkspaceResources,
-	resolveWorkspaceDbPath,
-	searchWorkspaceContext,
-	updateWorkspaceContext,
-} from "@melandlabs/opencontext";
 import type {
 	RuntimeContext,
 	SearchWorkspaceContextResult,
@@ -51,6 +43,50 @@ const SETTLE_MS = 15_000; // give the embedding queue time to drain on first run
 // accidentally rides a stray env value into the cloud path.
 const PREVIOUS_PROVIDER_ENV = process.env.EMBEDDING_PROVIDER;
 process.env.EMBEDDING_PROVIDER = "local";
+
+// Workspace value imports are pulled in dynamically so the smoke test
+// (which pulls @melandlabs/opencontext from npm without the optional
+// @melandlabs/workspace peer) can skip this demo cleanly instead of
+// crashing the bootstrap with `ERR_MODULE_NOT_FOUND`.
+type WorkspaceModule = {
+	closeSQLiteWorkspaceStore: () => Promise<void>;
+	getSQLiteWorkspaceStore: (options: { dbPath: string }) => Promise<unknown>;
+	listWorkspaceResources: (
+		ctx: RuntimeContext,
+		store: unknown,
+		input: { workspace_id: string },
+	) => Promise<{ resources: unknown[]; total: number }>;
+	resolveWorkspaceDbPath: (override?: string) => string;
+	searchWorkspaceContext: (
+		ctx: RuntimeContext,
+		store: unknown,
+		input: {
+			workspace_id: string;
+			query: string;
+			strategy: string;
+			options?: Record<string, unknown>;
+		},
+	) => Promise<SearchWorkspaceContextResult>;
+	updateWorkspaceContext: (
+		ctx: RuntimeContext,
+		store: unknown,
+		input: { workspace_id: string; source: string; path: string },
+	) => Promise<UpdateWorkspaceContextResult>;
+};
+
+let _workspaceCache: WorkspaceModule | undefined;
+async function loadWorkspace(): Promise<WorkspaceModule | null> {
+	if (_workspaceCache) return _workspaceCache;
+	try {
+		// @ts-expect-error -- optional workspace subpath; may be absent
+		// (e.g. in the npm-installed smoke test environment).
+		const mod = (await import("@melandlabs/workspace")) as WorkspaceModule;
+		_workspaceCache = mod;
+		return mod;
+	} catch {
+		return null;
+	}
+}
 
 function makeRuntimeContext(): RuntimeContext {
 	return {
@@ -116,6 +152,15 @@ export default async function demoWorkspace() {
 	await runSection("demo: @melandlabs/workspace (folder indexing + cross-file search)", async () => {
 		const { check, skip } = makeCheckWithSkip("demo/workspace");
 
+		const ws = await loadWorkspace();
+		if (!ws) {
+			skip(
+				"@melandlabs/workspace is installed",
+				"optional peer dep — npm-installed smoke test environment skips this demo",
+			);
+			return;
+		}
+
 		// Restore whatever was in EMBEDDING_PROVIDER before this demo so
 		// subsequent demos don't see `local` stuck on.
 		const restoreEnv = () => {
@@ -131,13 +176,13 @@ export default async function demoWorkspace() {
 			await buildFixture(dir);
 
 			const dbPath = join(dir, "workspace.db");
-			const store = await getSQLiteWorkspaceStore({ dbPath });
+			const store = await ws.getSQLiteWorkspaceStore({ dbPath });
 			const ctx = makeRuntimeContext();
 
 			// 1. updateWorkspaceContext — synchronous chunking + async fan-out.
 			let update: UpdateWorkspaceContextResult;
 			try {
-				update = await updateWorkspaceContext(ctx, store, {
+				update = await ws.updateWorkspaceContext(ctx, store, {
 					workspace_id: WORKSPACE_ID,
 					source: "okf_folder",
 					path: join(dir, "wiki"),
@@ -165,7 +210,7 @@ export default async function demoWorkspace() {
 			);
 
 			// 2. listWorkspaceResources — every fixture file appears.
-			const listed = await listWorkspaceResources(ctx, store, {
+			const listed = await ws.listWorkspaceResources(ctx, store, {
 				workspace_id: WORKSPACE_ID,
 			});
 			check(
@@ -177,7 +222,7 @@ export default async function demoWorkspace() {
 			// 3. Lexical search — works synchronously, FTS5 was filled in
 			//    during the sync chunk phase. This is the only strategy
 			//    that is guaranteed to work even before embeddings finish.
-			const lexicalResult = await searchWorkspaceContext(ctx, store, {
+			const lexicalResult = await ws.searchWorkspaceContext(ctx, store, {
 				workspace_id: WORKSPACE_ID,
 				query: "limitation",
 				strategy: "lexical",
@@ -206,7 +251,7 @@ export default async function demoWorkspace() {
 
 			let semanticResult: SearchWorkspaceContextResult | undefined;
 			try {
-				semanticResult = await searchWorkspaceContext(ctx, store, {
+				semanticResult = await ws.searchWorkspaceContext(ctx, store, {
 					workspace_id: WORKSPACE_ID,
 					query: "what is the cap on liability",
 					strategy: "semantic",
@@ -246,7 +291,7 @@ export default async function demoWorkspace() {
 			//    hits from both `a.md` and the `b.md` it cites.
 			let crossFileResult: SearchWorkspaceContextResult | undefined;
 			try {
-				crossFileResult = await searchWorkspaceContext(ctx, store, {
+				crossFileResult = await ws.searchWorkspaceContext(ctx, store, {
 					workspace_id: WORKSPACE_ID,
 					query: "limitation",
 					strategy: "cross-file",
@@ -290,7 +335,7 @@ export default async function demoWorkspace() {
 			}
 
 			// 6. Re-run update — every file should now be `unchanged`.
-			const reUpdate = await updateWorkspaceContext(ctx, store, {
+			const reUpdate = await ws.updateWorkspaceContext(ctx, store, {
 				workspace_id: WORKSPACE_ID,
 				source: "okf_folder",
 				path: join(dir, "wiki"),
@@ -305,11 +350,11 @@ export default async function demoWorkspace() {
 			//    and the override here is honoured.
 			check(
 				"resolveWorkspaceDbPath returns the path we passed in",
-				resolveWorkspaceDbPath(dbPath) === dbPath,
-				resolveWorkspaceDbPath(dbPath),
+				ws.resolveWorkspaceDbPath(dbPath) === dbPath,
+				ws.resolveWorkspaceDbPath(dbPath),
 			);
 
-			await closeSQLiteWorkspaceStore().catch(() => undefined);
+			await ws.closeSQLiteWorkspaceStore().catch(() => undefined);
 			restoreEnv();
 		});
 	});
