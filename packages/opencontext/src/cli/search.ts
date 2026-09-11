@@ -44,6 +44,13 @@ export interface SearchOptions {
 	contextOnly: boolean;
 	json: boolean;
 	explain: boolean;
+	/**
+	 * Include messages that have been soft-deprecated via
+	 * `opencontext deprecate` (or `deprecateMessages` directly). Default
+	 * `false` keeps `current-truth` retrievals clean; set `true` to audit
+	 * the supersession chain (REST → GraphQL → tRPC, etc.).
+	 */
+	includeDeprecated: boolean;
 }
 
 export interface SearchEnvelope {
@@ -72,6 +79,7 @@ export function parseSearchArgs(argv: string[]): SearchOptions {
 		contextOnly: false,
 		json: false,
 		explain: false,
+		includeDeprecated: false,
 	};
 
 	for (let i = 0; i < argv.length; i += 1) {
@@ -117,6 +125,9 @@ export function parseSearchArgs(argv: string[]): SearchOptions {
 				break;
 			case "--context-only":
 				opts.contextOnly = true;
+				break;
+			case "--include-deprecated":
+				opts.includeDeprecated = true;
 				break;
 			case "--json":
 				opts.json = true;
@@ -179,6 +190,10 @@ export async function runSearch(opts: SearchOptions): Promise<number> {
 		sources: opts.mode === "sem" ? (["memory"] as const) : undefined,
 		// Critical: --context-only must never spend an LLM call.
 		synthesize: false,
+		// Forward supersession opt-in. Default false in SearchInput
+		// already; we only set it when the user explicitly opts in so
+		// existing scripts keep their current-truth behaviour.
+		...(opts.includeDeprecated ? { includeDeprecated: true } : {}),
 	};
 
 	let out: SearchOutput;
@@ -233,6 +248,13 @@ function emitContextOnly(opts: SearchOptions, env: SearchEnvelope): number {
 		const ts = ev.timestamp ? new Date(ev.timestamp).toISOString() : "—";
 		lines.push(`[${ev.score.toFixed(3)}] ${ev.source} @ ${ts}`);
 		lines.push(`    id: ${ev.id}`);
+		// Surface per-fact provenance when the hit carried `metadata.source`
+		// (set by `opencontext add --source <uri>`). Falls back to em-dash
+		// for legacy rows without provenance so the prompt stays
+		// well-formed.
+		const factSource =
+			typeof ev.metadata?.source === "string" && ev.metadata.source.length > 0 ? ev.metadata.source : "—";
+		lines.push(`    source: ${factSource}`);
 		lines.push(`    ${ev.snippet}`);
 		lines.push("");
 	}
@@ -296,6 +318,9 @@ Filtering:
   --kind <factType>          Filter to one fact type (repeatable)
   --since <iso-8601>         Inclusive start date for memory timestamps
   --until <iso-8601>         Inclusive end date for memory timestamps
+  --include-deprecated       Include messages soft-deprecated via
+                             'opencontext deprecate' (default: hide). Use
+                             for audits of the supersession chain.
 
 Output:
   --json                     Emit full SearchOutput as JSON

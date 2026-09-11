@@ -35,6 +35,7 @@ import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
+import { parseDeprecateArgs, runDeprecate } from "./deprecate.js";
 import { parseDoctorArgs, runDoctor } from "./doctor.js";
 import { parseListArgs, runList } from "./list.js";
 import { parseSearchArgs, runSearch } from "./search.js";
@@ -284,14 +285,17 @@ Usage:
   opencontext [command] [options]
 
 Commands:
-  mcp     Start the MCP server on stdio (default)
-  http    Start the HTTP server
-  add     Append a raw message to the active manager (no LLM roundtrip)
-  search  Unified read with --mode {auto|lex|sem} and --context-only
-  list    Browse raw messages by filter (newest first by default)
-  stats   Report counts from the active raw-message store
-  doctor  Run health checks against the local install
-  okf     OKF v0.2 (Open Knowledge Format) importer / exporter
+  mcp        Start the MCP server on stdio (default)
+  http       Start the HTTP server
+  add        Append a raw message to the active manager (no LLM roundtrip)
+  deprecate  Soft-deprecate raw messages (supersession: hide from search
+             unless --include-deprecated is set; record --reason and
+             --superseded-by for the chain)
+  search     Unified read with --mode {auto|lex|sem} and --context-only
+  list       Browse raw messages by filter (newest first by default)
+  stats      Report counts from the active raw-message store
+  doctor     Run health checks against the local install
+  okf        OKF v0.2 (Open Knowledge Format) importer / exporter
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -304,6 +308,8 @@ Examples:
   opencontext add --user alice --text "Rust achieves memory safety without GC"
   opencontext search --user alice --query "memory safety" --k 5
   opencontext search --user alice --query "x" --context-only
+  opencontext deprecate --user alice --id <old-id> --reason "superseded" --superseded-by <new-id>
+  opencontext search --user alice --query "memory safety" --include-deprecated --json
   opencontext list --user alice --since 2026-08-01 --limit 20
   opencontext stats --json | jq '.stats.totalMessages'
   opencontext doctor
@@ -548,6 +554,10 @@ async function main(): Promise<void> {
 
 	if (head === "add" || head === "ADD") {
 		process.exit(await runAdd(parseAddArgs(argv.slice(1))));
+	}
+
+	if (head === "deprecate" || head === "DEPRECATE") {
+		process.exit(await runDeprecate(parseDeprecateArgs(argv.slice(1))));
 	}
 
 	if (head === "search" || head === "SEARCH") {

@@ -40,6 +40,12 @@ export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
 		scanLimit?: number;
 		threshold?: number;
 		includeArchived?: boolean;
+		/**
+		 * Forward `includeDeprecated` from the unified search input so
+		 * supersession-aware callers can opt into deprecated rows for
+		 * audits. Default `false` preserves the current-truth behaviour.
+		 */
+		includeDeprecated?: boolean;
 		platform?: string;
 		botId?: string;
 		channel?: string;
@@ -52,6 +58,12 @@ export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
 		keywords: string[];
 		limit?: number;
 		includeArchived?: boolean;
+		/**
+		 * Forward `includeDeprecated` from the unified search input so
+		 * supersession-aware callers can opt into deprecated rows for
+		 * audits. Default `false` preserves the current-truth behaviour.
+		 */
+		includeDeprecated?: boolean;
 		platform?: string;
 		botId?: string;
 	}) => Promise<unknown[]>;

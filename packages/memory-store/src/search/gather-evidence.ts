@@ -396,10 +396,24 @@ export async function gatherEvidence(opts: GatherOptions): Promise<GatherResult>
  * Build the prompt the LLM receives when `synthesize: true` is set.
  * Mirrors the legacy `reflect.ts` prompt format so callers see identical
  * behaviour before and after the merge.
+ *
+ * Per-fact provenance: when an evidence item carries `metadata.source`
+ * (e.g. `"meeting://2026-08-15"` written by `opencontext add --source`),
+ * the line format surfaces it as `source=<uri>` so the LLM can attribute
+ * claims to the originating fact. Items without a `source` metadata field
+ * fall back to the channel-level `source` (e.g. `"memory"`, `"insight"`)
+ * and finally `"unknown"`, so the prompt stays well-formed even when an
+ * upstream tier doesn't carry per-fact provenance.
  */
 export function buildSynthesisPrompt(input: {
 	query: string;
-	evidence: Array<{ id: string; source: SearchTier; snippet: string; score: number }>;
+	evidence: Array<{
+		id: string;
+		source: SearchTier;
+		snippet: string;
+		score: number;
+		metadata?: Record<string, unknown>;
+	}>;
 	responseSchema?: Record<string, unknown>;
 }): string {
 	const grouped = new Map<SearchTier, typeof input.evidence>();
@@ -415,9 +429,13 @@ export function buildSynthesisPrompt(input: {
 		if (items.length === 0) {
 			continue;
 		}
-		const lines = items.map(
-			(item, index) => `  [${index + 1}] (${item.id}, score=${item.score.toFixed(4)}) ${item.snippet}`,
-		);
+		const lines = items.map((item, index) => {
+			const factSource =
+				typeof item.metadata?.source === "string" && item.metadata.source.length > 0
+					? item.metadata.source
+					: (item.source ?? "unknown");
+			return `  [${index + 1}] (${item.id}, source=${factSource}, score=${item.score.toFixed(4)}) ${item.snippet}`;
+		});
 		sections.push(`## ${tier}\n${lines.join("\n")}`);
 	}
 
@@ -512,6 +530,9 @@ export async function synthesizeAnswer(input: {
 		source: mapEvidenceSourceToTier(item.source),
 		snippet: item.snippet,
 		score: item.score,
+		// Forward per-fact provenance (e.g. `metadata.source` from
+		// `opencontext add --source`) so the synthesis prompt can cite it.
+		metadata: item.metadata,
 	}));
 	const warnings: UnifiedMemorySearchWarning[] = [];
 

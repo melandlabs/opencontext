@@ -79,6 +79,12 @@ export async function lexicalSearchRawMessages(input: {
 	keywords: string[];
 	limit?: number;
 	includeArchived?: boolean;
+	/**
+	 * Forward `includeDeprecated` from `UnifiedMemorySearchInput` so
+	 * supersession-aware callers can opt into deprecated rows for
+	 * audits. Default `false` preserves the current-truth behaviour.
+	 */
+	includeDeprecated?: boolean;
 	platform?: string;
 	botId?: string;
 	factTypes?: Array<"world" | "experience" | "mental_model">;

@@ -382,6 +382,12 @@ export interface RawMessageSearchHooks {
 		threshold?: number;
 		botId?: string;
 		includeArchived?: boolean;
+		/**
+		 * Forward `includeDeprecated` from the unified search input so
+		 * supersession-aware callers can opt into deprecated rows for
+		 * audits. Default `false` preserves the current-truth behaviour.
+		 */
+		includeDeprecated?: boolean;
 	}): Promise<RawMessageSemanticHit[]>;
 	lexicalSearch?(input: {
 		userId: string;
@@ -389,6 +395,12 @@ export interface RawMessageSearchHooks {
 		limit: number;
 		botId?: string;
 		includeArchived?: boolean;
+		/**
+		 * Forward `includeDeprecated` from the unified search input so
+		 * supersession-aware callers can opt into deprecated rows for
+		 * audits. Default `false` preserves the current-truth behaviour.
+		 */
+		includeDeprecated?: boolean;
 	}): Promise<RawMessageLexicalHit[]>;
 }
 
