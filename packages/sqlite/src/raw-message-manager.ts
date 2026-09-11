@@ -1388,33 +1388,63 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		input: SQLiteRawMessageSemanticSearchInput,
 	): SQLiteRawMessageSemanticSearchResult[] {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
-		const scanLimit = Math.min(4096, Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10)));
+		// sqlite-vec rejects knn queries with k > 4096 ("k value in knn query
+		// too large"). The widest possible scan is therefore 4096; widening
+		// past it throws inside sqlite-vec.
+		const vecKnnMaxK = 4096;
+		// Bound retries so a heavily-deprecated corpus can't pin us in a
+		// widening loop. Three doublings (10x → 20x → 40x → 80x limit)
+		// comfortably out-scans the worst-case "every top-K row is deprecated"
+		// scenario for typical limits while still returning inside the hard cap.
+		const maxWideningAttempts = 3;
+		let currentScanLimit = Math.min(
+			vecKnnMaxK,
+			Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10)),
+		);
 		const threshold = input.threshold ?? 0.7;
-		const rows = this.db
-			.prepare(`
-        SELECT chunk_id, distance
-        FROM ${this.getChildVectorTableName(input.queryEmbedding.length)}
-        WHERE embedding MATCH ?
-        ORDER BY distance
-        LIMIT ?
-      `)
-			.all(floatArrayToBuffer(input.queryEmbedding), scanLimit) as Array<{
-			chunk_id: string;
-			distance: number;
-		}>;
-		const distances = new Map(rows.map((row) => [row.chunk_id, row.distance]));
-		const chunks = this.getSearchChunkRowsByIds(rows.map((row) => row.chunk_id));
-		return this.hydrateSemanticChunkRows(
-			chunks.map((chunk) => ({
-				chunk,
-				similarity: sqliteVectorDistanceToCosineSimilarity(
-					distances.get(chunk.chunk_id) ?? Number.POSITIVE_INFINITY,
-				),
-			})),
-			input,
-		)
-			.filter((result) => result.similarity >= threshold)
-			.slice(0, limit);
+		for (let attempt = 0; attempt <= maxWideningAttempts; attempt += 1) {
+			const rows = this.db
+				.prepare(
+					`
+            SELECT chunk_id, distance
+            FROM ${this.getChildVectorTableName(input.queryEmbedding.length)}
+            WHERE embedding MATCH ?
+            ORDER BY distance
+            LIMIT ?
+          `,
+				)
+				.all(floatArrayToBuffer(input.queryEmbedding), currentScanLimit) as Array<{
+				chunk_id: string;
+				distance: number;
+			}>;
+			const distances = new Map(rows.map((row) => [row.chunk_id, row.distance]));
+			const chunks = this.getSearchChunkRowsByIds(rows.map((row) => row.chunk_id));
+			const results = this.hydrateSemanticChunkRows(
+				chunks.map((chunk) => ({
+					chunk,
+					similarity: sqliteVectorDistanceToCosineSimilarity(
+						distances.get(chunk.chunk_id) ?? Number.POSITIVE_INFINITY,
+					),
+				})),
+				input,
+			).filter((result) => result.similarity >= threshold);
+
+			// If post-filtering (deprecated / archived / peer) ate enough rows
+			// to underflow `limit`, widen the vec scan and retry — mirroring
+			// the pattern in `searchMessagesWithVectorTable`. Two early-exit
+			// conditions: (a) we already have enough rows, (b) the vec scan
+			// returned fewer rows than we asked for, so widening cannot help.
+			if (results.length >= limit || rows.length < currentScanLimit) {
+				return results.slice(0, limit);
+			}
+			if (currentScanLimit >= vecKnnMaxK) {
+				return results.slice(0, limit);
+			}
+			currentScanLimit = Math.min(currentScanLimit * 2, vecKnnMaxK);
+		}
+		// Unreachable: the loop above always returns. Returning an empty slice
+		// keeps the signature honest in case the bounds ever change.
+		return [];
 	}
 
 	private searchChunksWithStoredEmbeddings(
@@ -1943,7 +1973,11 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const threshold = input.threshold ?? 0.7;
 		// sqlite-vec rejects knn queries with k > 4096 ("k value in knn query
 		// too large"), so the widening scan must stop there instead of
-		// doubling past the engine limit and throwing.
+		// doubling past the engine limit and throwing. `matchesSemanticFilters`
+		// post-filters deprecated / archived / peer-scoped rows, so when those
+		// dominate the top-K we widen the vec scan and retry to preserve
+		// `limit`. This is the parent-level mirror of the widen loop in
+		// `searchChunksWithVectorTable`; keep both in sync when tuning.
 		const vecKnnMaxK = 4096;
 		let currentScanLimit = scanLimit;
 		while (true) {

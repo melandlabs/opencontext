@@ -328,6 +328,7 @@ async function runSemanticSearchForEmbedding(
 	if (typeof deps.searchRawMessagesAnn === "function") {
 		const searchRawMessagesAnn = deps.searchRawMessagesAnn;
 		const factTypes = input.factTypes?.length ? input.factTypes : undefined;
+		const includeDeprecated = input.includeDeprecated === true;
 		semantic = (
 			await Promise.all(
 				filters.map((filter) =>
@@ -337,6 +338,7 @@ async function runSemanticSearchForEmbedding(
 						limit,
 						threshold,
 						botId: "botId" in filter ? filter.botId : undefined,
+						includeDeprecated,
 						...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 						...(factTypes ? { factTypes } : {}),
 						...(runtimeContext ?? {}),
@@ -394,6 +396,7 @@ async function runSemanticSearchForEmbedding(
 					queryEmbedding,
 					limit,
 					threshold,
+					includeDeprecated: input.includeDeprecated === true,
 					...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 					...(factTypes ? { factTypes } : {}),
 				});
@@ -481,6 +484,7 @@ async function runLexicalSearchForKeywords(
 			const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 			const searchRawMessagesLexical = deps.searchRawMessagesLexical;
 			const factTypes = input.factTypes?.length ? input.factTypes : undefined;
+			const includeDeprecated = input.includeDeprecated === true;
 			return (
 				await Promise.all(
 					filters.map((botId) =>
@@ -489,6 +493,7 @@ async function runLexicalSearchForKeywords(
 							keywords,
 							limit: Math.ceil(limit / filters.length),
 							botId,
+							includeDeprecated,
 							...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 							...(factTypes ? { factTypes } : {}),
 							...(runtimeContext ?? {}),
@@ -515,6 +520,7 @@ async function runLexicalSearchForKeywords(
 		const { lexicalSearchRawMessages } = await import("../storage/sqlite-raw-message-store");
 		const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 		const factTypes = input.factTypes?.length ? input.factTypes : undefined;
+		const includeDeprecated = input.includeDeprecated === true;
 		return (
 			await Promise.all(
 				filters.map((botId) =>
@@ -523,6 +529,7 @@ async function runLexicalSearchForKeywords(
 						keywords,
 						limit: Math.ceil(limit / filters.length),
 						botId,
+						includeDeprecated,
 						...(factTypes ? { factTypes } : {}),
 					}),
 				),
@@ -582,6 +589,7 @@ function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
 		reasoningStrategy: input.reasoningStrategy,
 		factTypes: input.factTypes,
 		includeRetrievalDiagnostics: input.includeRetrievalDiagnostics,
+		includeDeprecated: input.includeDeprecated,
 	};
 }
 
@@ -1416,6 +1424,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			snippet: hit.content,
 			score: hit.similarity,
 			timestamp: getCandidateTimestamp(hit.metadata),
+			metadata: hit.metadata,
 		}));
 		const base: SearchOutput = {
 			query,

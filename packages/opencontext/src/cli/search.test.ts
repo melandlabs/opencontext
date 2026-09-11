@@ -57,6 +57,7 @@ describe("parseSearchArgs", () => {
 			contextOnly: false,
 			json: false,
 			explain: false,
+			includeDeprecated: false,
 		});
 	});
 
@@ -106,6 +107,7 @@ describe("parseSearchArgs", () => {
 			contextOnly: true,
 			json: true,
 			explain: true,
+			includeDeprecated: false,
 		});
 	});
 
@@ -323,7 +325,42 @@ describe("runSearch", () => {
 		expect(out).toContain("count=1");
 		expect(out).toContain("[0.870] memory @ ");
 		expect(out).toContain("id: r1");
+		// Per-fact provenance: hits without `metadata.source` fall back to em-dash
+		// so the prompt stays well-formed even when the upstream tier doesn't
+		// carry per-fact provenance.
+		expect(out).toContain("source: —");
 		expect(out).toContain("discussed the roadmap");
+	});
+
+	it("--context-only surfaces per-fact metadata.source when present", async () => {
+		const { __mock } = await getMockStore();
+		__mock.search.mockResolvedValueOnce(
+			makeOutput({
+				results: [
+					{
+						id: "r1",
+						type: "memory",
+						content: "We use tRPC",
+						similarity: 0.95,
+						metadata: { source: "meeting://2026-08-15" },
+					},
+				],
+				evidence: [
+					{
+						id: "r1",
+						source: "memory",
+						score: 0.95,
+						snippet: "We use tRPC",
+						timestamp: Date.parse("2026-08-15T10:00:00Z"),
+						metadata: { source: "meeting://2026-08-15" },
+					},
+				],
+			}),
+		);
+
+		await runSearch(parseSearchArgs(["--user", "alice", "--query", "x", "--context-only"]));
+		const out = stdoutChunks.join("");
+		expect(out).toContain("source: meeting://2026-08-15");
 	});
 
 	it("--json prints the full SearchOutput envelope", async () => {
@@ -408,5 +445,26 @@ describe("runSearch", () => {
 		expect(parsed.ok).toBe(false);
 		expect(parsed.exit).toBe(1);
 		expect(parsed.error).toBe("backend down");
+	});
+
+	it("omits includeDeprecated from SearchInput by default", async () => {
+		const { __mock } = await getMockStore();
+		__mock.search.mockResolvedValueOnce(makeOutput());
+
+		await runSearch(parseSearchArgs(["--user", "alice", "--query", "x"]));
+		const input = __mock.search.mock.calls[0]?.[0] as SearchInput;
+		// `includeDeprecated: true` is opt-in. Without the flag the SDK
+		// should not see the key, so current-truth behaviour is preserved
+		// for scripts that haven't opted in.
+		expect(input.includeDeprecated).toBeUndefined();
+	});
+
+	it("--include-deprecated forwards includeDeprecated: true to the SDK", async () => {
+		const { __mock } = await getMockStore();
+		__mock.search.mockResolvedValueOnce(makeOutput());
+
+		await runSearch(parseSearchArgs(["--user", "alice", "--query", "x", "--include-deprecated"]));
+		const input = __mock.search.mock.calls[0]?.[0] as SearchInput;
+		expect(input.includeDeprecated).toBe(true);
 	});
 });

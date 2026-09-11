@@ -171,6 +171,15 @@ export interface UnifiedMemorySearchInput {
 	factTypes?: FactType[];
 	/** Include pre-fusion channel candidates in the response for diagnostics. */
 	includeRetrievalDiagnostics?: boolean;
+	/**
+	 * Include messages that have been soft-deprecated
+	 * (`raw_messages.deprecated_at IS NOT NULL`). Default `false` keeps
+	 * `current-truth` retrievals clean: a row that was marked superseded
+	 * via `deprecateMessages` (or the `opencontext deprecate` CLI) is
+	 * excluded from results. Set to `true` for audits and historical
+	 * exploration.
+	 */
+	includeDeprecated?: boolean;
 }
 
 export type UnifiedMemoryMergeStrategy = "similarity" | "rrf";
@@ -321,6 +330,15 @@ export interface SearchInput {
 	includeArchivedInsights?: boolean;
 	/** Include pre-fusion retrieval candidates; intended for evaluation/debugging. */
 	includeRetrievalDiagnostics?: boolean;
+	/**
+	 * Include messages that have been soft-deprecated
+	 * (`raw_messages.deprecated_at IS NOT NULL`). Default `false` keeps
+	 * `current-truth` retrievals clean: a row that was marked superseded
+	 * via `deprecateMessages` (or the `opencontext deprecate` CLI) is
+	 * excluded from results. Set to `true` for audits and historical
+	 * exploration.
+	 */
+	includeDeprecated?: boolean;
 }
 
 export interface SearchEvidence {
@@ -329,6 +347,12 @@ export interface SearchEvidence {
 	snippet: string;
 	score: number;
 	timestamp?: number;
+	/**
+	 * Forwarded from the underlying hit's `metadata`. Surfaces per-fact
+	 * provenance (`metadata.source`, `metadata.factType`, etc.) to the
+	 * synthesis prompt and the CLI's `--context-only` / `--json` output.
+	 */
+	metadata?: Record<string, unknown>;
 }
 
 export interface SearchOutput {

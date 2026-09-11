@@ -215,6 +215,12 @@ export interface UnifiedSearchDeps {
 			limit: number;
 			threshold: number;
 			botId?: string;
+			/**
+			 * Forward `includeDeprecated` from `UnifiedMemorySearchInput` so
+			 * supersession-aware callers can opt into deprecated rows for
+			 * audits. Default `false` preserves the current-truth behaviour.
+			 */
+			includeDeprecated?: boolean;
 			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
 			peers?: ReadonlyArray<Peer>;
 			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
@@ -282,6 +288,12 @@ export interface UnifiedSearchDeps {
 			keywords: string[];
 			limit: number;
 			botId?: string;
+			/**
+			 * Forward `includeDeprecated` from `UnifiedMemorySearchInput` so
+			 * supersession-aware callers can opt into deprecated rows for
+			 * audits. Default `false` preserves the current-truth behaviour.
+			 */
+			includeDeprecated?: boolean;
 			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
 			peers?: ReadonlyArray<Peer>;
 			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
