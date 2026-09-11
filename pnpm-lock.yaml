@@ -266,9 +266,6 @@ importers:
       '@melandlabs/vsa':
         specifier: ^0.3.0
         version: link:../packages/vsa
-      '@melandlabs/workspace':
-        specifier: workspace:*
-        version: link:../packages/workspace
       better-sqlite3:
         specifier: ^11.7.0
         version: 11.10.0
