@@ -19,7 +19,7 @@ Get-Content .env | ForEach-Object {
 }
 $env:ANSWER_API_BASE = 'https://openrouter.ai/api/v1'
 $env:ANSWER_API_KEY  = $env:OPENROUTER_API_KEY
-$env:ANSWER_MODEL    = 'qwen/qwen3-14b'
+$env:ANSWER_MODEL    = if ($env:OPENROUTER_ANSWER_MODEL) { $env:OPENROUTER_ANSWER_MODEL } else { 'qwen/qwen3-14b' }
 
 $PY   = 'd:\opencontext\benchmark\AML-agent-memory-leaderboard\.venv\Scripts\python.exe'
 $PIPE = 'd:\opencontext\benchmark\AML-agent-memory-leaderboard\data\personamem\pipeline_v2.py'
