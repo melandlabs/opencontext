@@ -1,5 +1,11 @@
 # @melandlabs/shared
 
+## 0.4.1
+
+### Patch Changes
+
+- 7151fd1: Add bounded raw-message child indexing, hybrid RRF retrieval, backend diagnostics, and optional local reranking across OpenContext memory services.
+
 ## 0.4.0
 
 ### Minor Changes

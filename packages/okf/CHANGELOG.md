@@ -1,5 +1,14 @@
 # @melandlabs/okf
 
+## 0.3.2
+
+### Patch Changes
+
+- 7151fd1: Add bounded raw-message child indexing, hybrid RRF retrieval, backend diagnostics, and optional local reranking across OpenContext memory services.
+- Updated dependencies [7151fd1]
+- Updated dependencies
+  - @melandlabs/indexeddb@0.5.9
+
 ## 0.3.1
 
 ### Patch Changes

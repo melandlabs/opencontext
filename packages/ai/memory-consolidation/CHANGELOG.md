@@ -1,5 +1,11 @@
 # @melandlabs/memory-consolidation
 
+## 0.5.3
+
+### Patch Changes
+
+- 9a872cf: Add a trusted in-process applicability context to unified memory search, propagate one resolved timestamp through every retrieval provider and reasoning sub-search, and fail closed for built-in raw-message sources that cannot enforce the requested scope. Align graph retrieval on the shared exact-match and validity-window contract.
+
 ## 0.5.2
 
 ### Patch Changes

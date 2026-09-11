@@ -1,5 +1,13 @@
 # @melandlabs/integrations-weixin
 
+## 0.3.10
+
+### Patch Changes
+
+- @melandlabs/ai@0.10.4
+- @melandlabs/integrations-channels@0.3.2
+- @melandlabs/integrations-weixin@0.3.10
+
 ## 0.3.9
 
 ### Patch Changes

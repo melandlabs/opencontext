@@ -1,5 +1,21 @@
 # @melandlabs/sqlite
 
+## 0.5.3
+
+### Patch Changes
+
+- 7151fd1: Add bounded raw-message child indexing, hybrid RRF retrieval, backend diagnostics, and optional local reranking across OpenContext memory services.
+- Wire supersession end-to-end across the search layer, CLI, and LLM synthesis prompt.
+
+  - Plumb `includeDeprecated` through `SearchInput` → `UnifiedMemorySearchInput` → the ANN/lexical deps and SQLite fallbacks, so callers can opt into deprecated rows for audits without losing current-truth behaviour by default.
+  - Add `--include-deprecated` to `opencontext search` (default off) and a new `opencontext deprecate` subcommand that mirrors `add`'s shape, with `--reason` and `--superseded-by` for the underlying `RawMessageStorageManager.deprecateMessages`.
+  - Surface per-fact `metadata.source` through `SearchEvidence` → CLI `--context-only` output → the `buildSynthesisPrompt` line format, so the LLM sees the same provenance that `list --json` already exposed.
+  - Wrap `searchChunksWithVectorTable` in a widen-and-retry loop so vec0 KNN preserves `limit` even when most top-K candidates are deprecated; mirror the same pattern on `searchMessagesWithVectorTable`.
+
+- Updated dependencies [7151fd1]
+- Updated dependencies
+  - @melandlabs/indexeddb@0.5.9
+
 ## 0.5.2
 
 ### Patch Changes

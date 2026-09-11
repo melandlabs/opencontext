@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/rag",
-	"version": "0.3.0",
+	"version": "0.3.1",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -33,7 +37,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · rag module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"langchain": "^1.2.3",
 		"@langchain/community": "^1.1.1",

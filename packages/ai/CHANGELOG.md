@@ -1,5 +1,14 @@
 # @melandlabs/ai
 
+## 0.10.4
+
+### Patch Changes
+
+- Updated dependencies [7151fd1]
+- Updated dependencies [9a872cf]
+  - @melandlabs/shared@0.4.1
+  - @melandlabs/memory-consolidation@0.5.3
+
 ## 0.10.3
 
 ### Patch Changes

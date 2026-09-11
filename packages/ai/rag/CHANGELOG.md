@@ -1,5 +1,13 @@
 # @melandlabs/ai-rag
 
+## 0.2.10
+
+### Patch Changes
+
+- 7151fd1: Add bounded raw-message child indexing, hybrid RRF retrieval, backend diagnostics, and optional local reranking across OpenContext memory services.
+- Updated dependencies [7151fd1]
+  - @melandlabs/shared@0.4.1
+
 ## 0.2.9
 
 ### Patch Changes

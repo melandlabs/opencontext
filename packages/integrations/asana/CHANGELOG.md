@@ -1,5 +1,12 @@
 # @melandlabs/integrations-asana
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [7151fd1]
+  - @melandlabs/shared@0.4.1
+
 ## 0.3.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @melandlabs/integrations-gmail
 
+## 0.3.10
+
+### Patch Changes
+
+- @melandlabs/ai@0.10.4
+
 ## 0.3.9
 
 ### Patch Changes
