@@ -15,8 +15,8 @@
 
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
-import { estimateTokens } from "@melandlabs/shared";
 import { parseFile, parseFileToDocument } from "@melandlabs/rag";
+import { estimateTokens } from "@melandlabs/shared";
 
 let _parsersConfigured = false;
 

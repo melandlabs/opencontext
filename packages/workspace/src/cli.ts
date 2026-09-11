@@ -18,18 +18,10 @@
 
 import { randomUUID } from "node:crypto";
 
-import type { RuntimeContext, WorkspaceSearchStrategy } from "./types";
-import {
-	getSQLiteWorkspaceStore,
-	closeSQLiteWorkspaceStore,
-	resolveWorkspaceDbPath,
-} from "./sqlite";
-import {
-	updateWorkspaceContext,
-	searchWorkspaceContext,
-	listWorkspaceResources,
-} from "./api";
+import { listWorkspaceResources, searchWorkspaceContext, updateWorkspaceContext } from "./api";
 import { createEmbeddingQueue } from "./embedding-queue";
+import { closeSQLiteWorkspaceStore, getSQLiteWorkspaceStore, resolveWorkspaceDbPath } from "./sqlite";
+import type { RuntimeContext, WorkspaceSearchStrategy } from "./types";
 
 const logPrefix = "[opencontext/workspace]";
 
@@ -39,11 +31,7 @@ const INDEX_STATUSES = ["pending", "partial", "ready", "failed"] as const;
 // Flags that don't take a value (booleans). Listed once here so the
 // generic parseFlags() helper can skip its `next.startsWith("--")`
 // guard for them.
-const BOOLEAN_FLAGS = new Set<string>([
-	"--await-embeddings",
-	"--no-await-embeddings",
-	"--json",
-]);
+const BOOLEAN_FLAGS = new Set<string>(["--await-embeddings", "--no-await-embeddings", "--json"]);
 
 // ────────────────────────────────────────────────────────────────────────────
 //  Argv helpers
@@ -67,10 +55,7 @@ function takeValue(argv: string[], i: number, flag: string): { value: string; ne
 	return { value: next, next: i + 2 };
 }
 
-function parseFlags<T extends object>(
-	argv: string[],
-	options: ParseOptions<T> = {},
-): T {
+function parseFlags<T extends object>(argv: string[], options: ParseOptions<T> = {}): T {
 	const out = {} as T;
 	for (let i = 0; i < argv.length; i += 1) {
 		const arg = argv[i];
@@ -171,10 +156,7 @@ async function runUpdate(args: UpdateArgs): Promise<number> {
 		// out with --no-await-embeddings (handled by parseFlags: any
 		// `--no-X` is captured as `awaitEmbeddings: false`).
 		const timeoutMs = args.drainTimeoutMs ?? 120_000;
-		await Promise.race([
-			queue.drain(),
-			new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
-		]);
+		await Promise.race([queue.drain(), new Promise<void>((resolve) => setTimeout(resolve, timeoutMs))]);
 	}
 
 	const out = {
@@ -245,7 +227,10 @@ async function runSearch(args: SearchArgs): Promise<number> {
 		throw new ArgvError(`--threshold must be in [0, 1] (got "${args.threshold}")`);
 	}
 	const resourceTypes = args.resourceType
-		? args.resourceType.split(",").map((s) => s.trim()).filter(Boolean)
+		? args.resourceType
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean)
 		: undefined;
 	const hops = args.hops !== undefined ? Number.parseInt(args.hops, 10) : undefined;
 	if (hops !== undefined && hops !== 1 && hops !== 2) {
@@ -327,12 +312,7 @@ async function runList(args: ListArgs): Promise<number> {
 	const result = await listWorkspaceResources(ctx_rt, store, {
 		workspace_id: workspaceId,
 		resource_type: args.resourceType,
-		index_status: args.indexStatus as
-			| "pending"
-			| "partial"
-			| "ready"
-			| "failed"
-			| undefined,
+		index_status: args.indexStatus as "pending" | "partial" | "ready" | "failed" | undefined,
 		limit,
 		offset,
 	});
@@ -457,26 +437,6 @@ Example:
 //  Entry
 // ────────────────────────────────────────────────────────────────────────────
 
-/**
- * Tear down the SQLite handle in the background so a `sqlite-vec` mutex
- * destructor (which can `SIGABRT` on certain platforms) doesn't poison
- * the main process exit. We:
- *
- *   1. Detach the close promise so no `await` ever blocks on it.
- *   2. Schedule `process.exit` to run AFTER stdout has drained (so the
- *      human / JSON output is actually visible) and BEFORE the OS
- *      reaps the still-pending sqlite-vec native mutex teardown.
- *   3. Set a hard 250ms timeout so a stuck close doesn't hang the CLI.
- */
-function scheduleBackgroundClose(): void {
-	// Detach the SQLite teardown — we never want `await` on it inside the
-	// hot path because `sqlite-vec`'s native destructor occasionally
-	// raises SIGABRT during process teardown.
-	closeSQLiteWorkspaceStore().catch(() => {
-		// Best-effort cleanup; ignore secondary errors.
-	});
-}
-
 async function main(): Promise<void> {
 	const argv = process.argv.slice(2);
 	const sub = argv[0];
@@ -546,7 +506,7 @@ process.on("SIGPIPE", () => {
 
 if (isDirectInvocation) {
 	main().catch((error: unknown) => {
-		const message = error instanceof Error ? error.stack ?? error.message : String(error);
+		const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
 		process.stderr.write(`${logPrefix} fatal: ${message}\n`);
 		process.exit(1);
 	});
@@ -590,7 +550,7 @@ export async function runWorkspaceCli(argv: string[]): Promise<number> {
 			process.stderr.write(`${error.message}\n`);
 			return 2;
 		}
-		const message = error instanceof Error ? error.stack ?? error.message : String(error);
+		const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
 		process.stderr.write(`${logPrefix} fatal: ${message}\n`);
 		return 1;
 	} finally {

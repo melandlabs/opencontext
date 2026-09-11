@@ -84,9 +84,7 @@ describe("indexOkfFolder", () => {
                  WHERE edge_type = 'cites'`,
 			)
 			.all() as Array<{ source: string; target: string; edge_type: string }>;
-		const contractLaw = edgeRows.find(
-			(row) => row.source === "contract.md" && row.target === "law.md",
-		);
+		const contractLaw = edgeRows.find((row) => row.source === "contract.md" && row.target === "law.md");
 		expect(contractLaw).toBeDefined();
 		await store.close();
 	});
@@ -114,7 +112,7 @@ describe("indexOkfFolder", () => {
 		});
 		expect(second.filesDeleted).toBe(1);
 		const rows = store.__testDb
-			.prepare(`SELECT canonical_key, metadata FROM workspace_resources ORDER BY canonical_key`)
+			.prepare("SELECT canonical_key, metadata FROM workspace_resources ORDER BY canonical_key")
 			.all() as Array<{ canonical_key: string; metadata: string | null }>;
 		const dropped = rows.find((row) => row.canonical_key === "drop.md");
 		expect(dropped).toBeDefined();

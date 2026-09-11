@@ -27,7 +27,9 @@ describe("parsers-adapter", () => {
 		expect(detectMimeType("a.markdown")).toBe("text/markdown");
 		expect(detectMimeType("a.txt")).toBe("text/plain");
 		expect(detectMimeType("a.pdf")).toBe("application/pdf");
-		expect(detectMimeType("a.docx")).toBe("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+		expect(detectMimeType("a.docx")).toBe(
+			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		);
 		expect(detectMimeType("a.pages")).toBe("application/x-iwork-pages-sffpages");
 		expect(detectMimeType("a.unknown")).toBe("application/octet-stream");
 	});

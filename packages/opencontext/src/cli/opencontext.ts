@@ -33,6 +33,10 @@ import {
 } from "@melandlabs/memory-store/cli-shared";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
+// Workspace CLI is shipped as an optional subpath import so a host
+// that doesn't install `@melandlabs/workspace` still gets a usable
+// `opencontext` CLI without crashing the bootstrap.
+import { runWorkspaceCli } from "@melandlabs/workspace/cli";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
 import { parseDeprecateArgs, runDeprecate } from "./deprecate.js";
@@ -40,10 +44,6 @@ import { parseDoctorArgs, runDoctor } from "./doctor.js";
 import { parseListArgs, runList } from "./list.js";
 import { parseSearchArgs, runSearch } from "./search.js";
 import { parseStatsArgs, runStats } from "./stats.js";
-// Workspace CLI is shipped as an optional subpath import so a host
-// that doesn't install `@melandlabs/workspace` still gets a usable
-// `opencontext` CLI without crashing the bootstrap.
-import { runWorkspaceCli } from "@melandlabs/workspace/cli";
 
 interface HttpArgs extends UnifiedArgs {
 	port: number;

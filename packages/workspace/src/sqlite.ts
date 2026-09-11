@@ -24,33 +24,35 @@
  *     vec0 row + `index_status` flip in subsequent transactions.
  */
 
+import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import { createHash } from "node:crypto";
-import { chunkTextByEstimatedTokens, RAW_MESSAGE_CHUNK_MAX_TOKENS, RAW_MESSAGE_CHUNK_OVERLAP_TOKENS } from "@melandlabs/shared";
 import { getOpenContextPath } from "@melandlabs/env-config";
+import {
+	RAW_MESSAGE_CHUNK_MAX_TOKENS,
+	RAW_MESSAGE_CHUNK_OVERLAP_TOKENS,
+	chunkTextByEstimatedTokens,
+} from "@melandlabs/shared";
+import { floatArrayToBuffer } from "@melandlabs/sqlite";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
-import { bufferToFloatArray, floatArrayToBuffer } from "@melandlabs/sqlite";
+import { initializeWorkspaceSchema } from "./schema";
 import type {
 	ListWorkspaceResourcesInput,
 	ListWorkspaceResourcesResult,
 	OkfFolderResource,
-	WorkspaceChunk,
-	WorkspaceEdgeType,
-	WorkspaceIndexStatus,
-	WorkspaceJob,
-	WorkspaceReferenceEdge,
-	WorkspaceResource,
-	WorkspaceResourceVersion,
-	WorkspaceSearchHit,
-	WorkspaceSearchStrategy,
 	SearchWorkspaceContextInput,
 	SearchWorkspaceContextResult,
 	UpdateWorkspaceContextInput,
 	UpdateWorkspaceContextResult,
+	WorkspaceEdgeType,
+	WorkspaceIndexStatus,
+	WorkspaceJob,
+	WorkspaceResource,
+	WorkspaceResourceVersion,
+	WorkspaceSearchHit,
+	WorkspaceSearchStrategy,
 } from "./types";
-import { initializeWorkspaceSchema } from "./schema";
 
 type DatabaseLike = Database.Database;
 
@@ -66,19 +68,6 @@ interface WorkspaceResourceRow {
 	index_status: string;
 	created_at: number;
 	updated_at: number;
-	metadata: string | null;
-}
-
-interface WorkspaceResourceVersionRow {
-	id: number;
-	resource_id: number;
-	version_number: number;
-	sha256: string;
-	change_kind: string;
-	size_bytes: number;
-	parent_version_id: number | null;
-	source_path: string | null;
-	created_at: number;
 	metadata: string | null;
 }
 
@@ -98,18 +87,6 @@ interface WorkspaceChunkRow {
 	embedding_model: string | null;
 	embedding_dimensions: number | null;
 	embedding_updated_at: number | null;
-}
-
-interface WorkspaceReferenceEdgeRow {
-	id: number;
-	workspace_id: string;
-	source_resource_id: number;
-	source_version_id: number | null;
-	target_resource_id: number;
-	target_version_id: number | null;
-	edge_type: string;
-	quote: string | null;
-	created_at: number;
 }
 
 interface WorkspaceJobRow {
@@ -138,55 +115,6 @@ function toWorkspaceResource(row: WorkspaceResourceRow): WorkspaceResource {
 		created_at: row.created_at,
 		updated_at: row.updated_at,
 		metadata: parseJson<Record<string, unknown>>(row.metadata, {} as Record<string, unknown>),
-	};
-}
-
-function toWorkspaceResourceVersion(row: WorkspaceResourceVersionRow): WorkspaceResourceVersion {
-	return {
-		id: row.id,
-		resource_id: row.resource_id,
-		version_number: row.version_number,
-		sha256: row.sha256,
-		change_kind: row.change_kind as WorkspaceResourceVersion["change_kind"],
-		size_bytes: row.size_bytes,
-		parent_version_id: row.parent_version_id,
-		source_path: row.source_path,
-		created_at: row.created_at,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {} as Record<string, unknown>),
-	};
-}
-
-function toWorkspaceChunk(row: WorkspaceChunkRow): WorkspaceChunk {
-	return {
-		id: row.id,
-		chunk_id: row.chunk_id,
-		resource_id: row.resource_id,
-		version_id: row.version_id,
-		workspace_id: row.workspace_id,
-		chunk_index: row.chunk_index,
-		chunk_count: row.chunk_count,
-		start_position: row.start_position,
-		end_position: row.end_position,
-		content: row.content,
-		content_hash: row.content_hash,
-		embedding: bufferToFloatArray(row.embedding),
-		embedding_model: row.embedding_model ?? undefined,
-		embedding_dimensions: row.embedding_dimensions ?? undefined,
-		embedding_updated_at: row.embedding_updated_at ?? undefined,
-	};
-}
-
-function toWorkspaceReferenceEdge(row: WorkspaceReferenceEdgeRow): WorkspaceReferenceEdge {
-	return {
-		id: row.id,
-		workspace_id: row.workspace_id,
-		source_resource_id: row.source_resource_id,
-		source_version_id: row.source_version_id,
-		target_resource_id: row.target_resource_id,
-		target_version_id: row.target_version_id,
-		edge_type: row.edge_type as WorkspaceEdgeType,
-		quote: row.quote,
-		created_at: row.created_at,
 	};
 }
 
@@ -266,7 +194,7 @@ export interface SqliteWorkspaceStoreOptions {
  * here (rather than re-importing the queue file) avoids a circular type
  * reference between `embedding-queue.ts` and `sqlite.ts`.
  */
-export interface SqliteWorkspaceStore {
+export interface ISqliteWorkspaceStore {
 	readonly __testDb: DatabaseLike;
 	init(): Promise<void>;
 	close(): Promise<void>;
@@ -288,7 +216,11 @@ export interface SqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
-	}): Promise<{ resource_id: number; version_id: number; change_kind: WorkspaceResourceVersion["change_kind"] }>;
+	}): Promise<{
+		resource_id: number;
+		version_id: number;
+		change_kind: WorkspaceResourceVersion["change_kind"];
+	}>;
 
 	upsertReferenceEdges(input: {
 		workspace_id: string;
@@ -333,7 +265,10 @@ export interface SqliteWorkspaceStore {
 		limit: number;
 	}): WorkspaceSearchHit[];
 
-	findResourceByCanonicalKey(input: { workspace_id: string; canonical_key: string }): WorkspaceResource | null;
+	findResourceByCanonicalKey(input: {
+		workspace_id: string;
+		canonical_key: string;
+	}): WorkspaceResource | null;
 
 	createJob(input: { workspace_id: string; kind: WorkspaceJob["kind"]; total: number }): WorkspaceJob;
 	updateJobTotal(jobId: number, total: number): void;
@@ -345,7 +280,7 @@ export interface SqliteWorkspaceStore {
  * `search pipeline`, `cross-file expansion`) to keep the file readable
  * when each section grows in later phases.
  */
-export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
+export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	readonly __testDb!: DatabaseLike;
 	private readonly db: DatabaseLike;
 	private readonly ownsConnection: boolean;
@@ -394,7 +329,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		this.initialized = true;
 	}
 
-		async close(): Promise<void> {
+	async close(): Promise<void> {
 		// Best-effort: drop the singleton reference and let the OS reap the
 		// native handle on process exit. `db.close()` is intentionally NOT
 		// called here because `sqlite-vec`'s native destructor occasionally
@@ -485,9 +420,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
                  WHERE chunk_id = ?`,
 			);
 			const insertVecStmt = writeVec
-				? this.db.prepare(
-						`INSERT OR REPLACE INTO ${dimensionsTable}(embedding, chunk_id) VALUES (?, ?)`,
-					)
+				? this.db.prepare(`INSERT OR REPLACE INTO ${dimensionsTable}(embedding, chunk_id) VALUES (?, ?)`)
 				: null;
 			const now = currentUnixSeconds();
 			for (const entry of entries) {
@@ -504,17 +437,13 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 
 	markVersionEmbeddingReady(resourceId: number, versionId: number): void {
 		const stillMissing = this.db
-			.prepare(`SELECT 1 FROM workspace_chunks WHERE version_id = ? AND embedding IS NULL LIMIT 1`)
+			.prepare("SELECT 1 FROM workspace_chunks WHERE version_id = ? AND embedding IS NULL LIMIT 1")
 			.get(versionId);
 		if (stillMissing) {
-			this.db
-				.prepare(`UPDATE workspace_resources SET index_status = 'partial' WHERE id = ?`)
-				.run(resourceId);
+			this.db.prepare(`UPDATE workspace_resources SET index_status = 'partial' WHERE id = ?`).run(resourceId);
 			return;
 		}
-		this.db
-			.prepare(`UPDATE workspace_resources SET index_status = 'ready' WHERE id = ?`)
-			.run(resourceId);
+		this.db.prepare(`UPDATE workspace_resources SET index_status = 'ready' WHERE id = ?`).run(resourceId);
 	}
 
 	markVersionEmbeddingPartial(resourceId: number, versionId: number, errorMessage: string): void {
@@ -524,9 +453,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		// resource is half-indexed.
 		void versionId;
 		void errorMessage;
-		this.db
-			.prepare(`UPDATE workspace_resources SET index_status = 'partial' WHERE id = ?`)
-			.run(resourceId);
+		this.db.prepare(`UPDATE workspace_resources SET index_status = 'partial' WHERE id = ?`).run(resourceId);
 	}
 
 	markVersionEmbeddingFailed(resourceId: number, versionId: number, errorMessage: string): void {
@@ -534,9 +461,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		// will surface the error string on the resource / version row.
 		void versionId;
 		void errorMessage;
-		this.db
-			.prepare(`UPDATE workspace_resources SET index_status = 'failed' WHERE id = ?`)
-			.run(resourceId);
+		this.db.prepare(`UPDATE workspace_resources SET index_status = 'failed' WHERE id = ?`).run(resourceId);
 	}
 
 	markJobFailed(jobId: number | null, errorMessage: string): void {
@@ -560,7 +485,11 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
-	}): Promise<{ resource_id: number; version_id: number; change_kind: WorkspaceResourceVersion["change_kind"] }> {
+	}): Promise<{
+		resource_id: number;
+		version_id: number;
+		change_kind: WorkspaceResourceVersion["change_kind"];
+	}> {
 		await this.init();
 		const { workspace_id, user_id, resource } = input;
 		const now = currentUnixSeconds();
@@ -573,7 +502,9 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
                      FROM workspace_resources
                      WHERE workspace_id = ? AND canonical_key = ?`,
 				)
-				.get(workspace_id, resource.canonical_key) as { id: number; current_version_id: number | null } | undefined;
+				.get(workspace_id, resource.canonical_key) as
+				| { id: number; current_version_id: number | null }
+				| undefined;
 
 			let resourceId: number;
 			let currentVersionId: number | null = existing?.current_version_id ?? null;
@@ -604,9 +535,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 				resourceId = existing.id;
 				if (currentVersionId !== null) {
 					const prevVersion = this.db
-						.prepare(
-							`SELECT sha256 FROM workspace_resource_versions WHERE id = ?`,
-						)
+						.prepare("SELECT sha256 FROM workspace_resource_versions WHERE id = ?")
 						.get(currentVersionId) as { sha256: string } | undefined;
 					if (prevVersion?.sha256 === contentHash) {
 						changeKind = "unchanged";
@@ -614,7 +543,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 						// re-indexing — callers may want to detect staleness
 						// via `updated_at` vs. `current_version_id.created_at`.
 						this.db
-							.prepare(`UPDATE workspace_resources SET updated_at = ? WHERE id = ?`)
+							.prepare("UPDATE workspace_resources SET updated_at = ? WHERE id = ?")
 							.run(now, resourceId);
 						return { resource_id: resourceId, version_id: currentVersionId, change_kind: changeKind };
 					}
@@ -651,7 +580,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 
 			// Delete any old chunks for this resource; FTS5 mirror is
 			// kept in sync via the AI/AD/AU triggers.
-			this.db.prepare(`DELETE FROM workspace_chunks WHERE resource_id = ?`).run(resourceId);
+			this.db.prepare("DELETE FROM workspace_chunks WHERE resource_id = ?").run(resourceId);
 
 			const pieces = chunkTextByEstimatedTokens(resource.body, {
 				maxTokens: RAW_MESSAGE_CHUNK_MAX_TOKENS,
@@ -774,9 +703,12 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		};
 	}
 
-	findResourceByCanonicalKey(input: { workspace_id: string; canonical_key: string }): WorkspaceResource | null {
+	findResourceByCanonicalKey(input: {
+		workspace_id: string;
+		canonical_key: string;
+	}): WorkspaceResource | null {
 		const row = this.db
-			.prepare(`SELECT * FROM workspace_resources WHERE workspace_id = ? AND canonical_key = ?`)
+			.prepare("SELECT * FROM workspace_resources WHERE workspace_id = ? AND canonical_key = ?")
 			.get(input.workspace_id, input.canonical_key) as WorkspaceResourceRow | undefined;
 		return row ? toWorkspaceResource(row) : null;
 	}
@@ -952,9 +884,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 	private childVectorTableExists(name: string): boolean {
 		if (!this.vectorSearchAvailable) return false;
 		return Boolean(
-			this.db
-				.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?")
-				.get(name),
+			this.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name),
 		);
 	}
 
@@ -1081,7 +1011,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 		presentKeys: Set<string>;
 	}): Array<{ canonical_key: string }> {
 		const allRows = this.db
-			.prepare(`SELECT id, canonical_key, metadata FROM workspace_resources WHERE workspace_id = ?`)
+			.prepare("SELECT id, canonical_key, metadata FROM workspace_resources WHERE workspace_id = ?")
 			.all(input.workspace_id) as Array<{ id: number; canonical_key: string; metadata: string | null }>;
 		const missing: Array<{ canonical_key: string }> = [];
 		const now = currentUnixSeconds();
@@ -1091,7 +1021,7 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 			if (meta.deleted_at) continue;
 			meta.deleted_at = now;
 			this.db
-				.prepare(`UPDATE workspace_resources SET metadata = ?, updated_at = ? WHERE id = ?`)
+				.prepare("UPDATE workspace_resources SET metadata = ?, updated_at = ? WHERE id = ?")
 				.run(stringifyJson(meta), now, row.id);
 			missing.push({ canonical_key: row.canonical_key });
 		}
@@ -1111,14 +1041,14 @@ export class SqliteWorkspaceStore implements SqliteWorkspaceStore {
 			)
 			.run(input.workspace_id, input.kind, input.total, now, now);
 		const row = this.db
-			.prepare(`SELECT * FROM workspace_jobs WHERE id = ?`)
+			.prepare("SELECT * FROM workspace_jobs WHERE id = ?")
 			.get(Number(stmt.lastInsertRowid)) as WorkspaceJobRow;
 		return toWorkspaceJob(row);
 	}
 
 	updateJobTotal(jobId: number, total: number): void {
 		this.db
-			.prepare(`UPDATE workspace_jobs SET total = ?, updated_at = ? WHERE id = ?`)
+			.prepare("UPDATE workspace_jobs SET total = ?, updated_at = ? WHERE id = ?")
 			.run(total, currentUnixSeconds(), jobId);
 	}
 }
@@ -1210,7 +1140,7 @@ export async function createSqliteWorkspaceStore(
 // -------------------------------------------------------------------------
 
 export async function runUpdateWorkspaceContext(
-	store: SqliteWorkspaceStore,
+	_store: SqliteWorkspaceStore,
 	input: UpdateWorkspaceContextInput & { user_id: string },
 	hooks: {
 		indexOkfFolder: (
@@ -1224,7 +1154,7 @@ export async function runUpdateWorkspaceContext(
 }
 
 export async function runSearchWorkspaceContext(
-	store: SqliteWorkspaceStore,
+	_store: SqliteWorkspaceStore,
 	input: SearchWorkspaceContextInput & { user_id: string },
 	hooks: {
 		searchLexical: (
@@ -1249,7 +1179,11 @@ export async function runSearchWorkspaceContext(
 			limit: number,
 		) => WorkspaceSearchHit[];
 		generateEmbedding?: (text: string) => Promise<number[]>;
-		fuse?: (lexical: WorkspaceSearchHit[], semantic: WorkspaceSearchHit[], limit: number) => WorkspaceSearchHit[];
+		fuse?: (
+			lexical: WorkspaceSearchHit[],
+			semantic: WorkspaceSearchHit[],
+			limit: number,
+		) => WorkspaceSearchHit[];
 	},
 ): Promise<SearchWorkspaceContextResult> {
 	const strategy: WorkspaceSearchStrategy = input.strategy ?? "hybrid";
@@ -1324,12 +1258,7 @@ export async function runSearchWorkspaceContext(
 			);
 		}
 		const fused = hooks.fuse ? hooks.fuse(lexicalHits, semanticHits, candidateLimit) : lexicalHits;
-		hits = hooks.expandNeighbors(
-			input.workspace_id,
-			fused,
-			options.hops ?? 1,
-			limit,
-		);
+		hits = hooks.expandNeighbors(input.workspace_id, fused, options.hops ?? 1, limit);
 	}
 	return {
 		query: input.query,

@@ -34,10 +34,10 @@ import {
 	updateWorkspaceContext,
 } from "@melandlabs/opencontext";
 import type {
-  RuntimeContext,
-  SearchWorkspaceContextResult,
-  UpdateWorkspaceContextResult,
-  WorkspaceSearchHit,
+	RuntimeContext,
+	SearchWorkspaceContextResult,
+	UpdateWorkspaceContextResult,
+	WorkspaceSearchHit,
 } from "@melandlabs/opencontext";
 import { info, makeCheckWithSkip, runSection, withTmp } from "../_helpers.ts";
 
@@ -58,7 +58,7 @@ function makeRuntimeContext(): RuntimeContext {
 		employee_id: "demo-employee",
 		session_id: "demo-session",
 		request_id: randomUUID(),
-};
+	};
 }
 
 async function buildFixture(dir: string): Promise<void> {
@@ -157,11 +157,7 @@ export default async function demoWorkspace() {
 				update.filesAdded >= 3,
 				`filesAdded=${update.filesAdded}`,
 			);
-			check(
-				"updateWorkspaceContext returns a positive jobId",
-				update.jobId > 0,
-				`jobId=${update.jobId}`,
-			);
+			check("updateWorkspaceContext returns a positive jobId", update.jobId > 0, `jobId=${update.jobId}`);
 			info(
 				"demo/workspace",
 				`updateWorkspaceContext → jobId=${update.jobId}, status=${update.status}, ` +
@@ -175,9 +171,7 @@ export default async function demoWorkspace() {
 			check(
 				"listWorkspaceResources returns ≥ 3 resources for the fixture folder",
 				listed.resources.length >= 3,
-				`total=${listed.total}, resources=${listed.resources
-					.map((r) => r.canonical_key)
-					.join(", ")}`,
+				`total=${listed.total}, resources=${listed.resources.map((r) => r.canonical_key).join(", ")}`,
 			);
 
 			// 3. Lexical search — works synchronously, FTS5 was filled in
@@ -282,9 +276,7 @@ export default async function demoWorkspace() {
 						titles.has("a") && titles.has("b"),
 						`titles=${[...titles].join(", ")}`,
 					);
-					const hitsWithEdges = crossFileResult.hits.filter(
-						(h) => h.reference_edges.length > 0,
-					);
+					const hitsWithEdges = crossFileResult.hits.filter((h) => h.reference_edges.length > 0);
 					check(
 						"at least one cross-file hit carries reference_edges (cites graph)",
 						hitsWithEdges.length >= 1,

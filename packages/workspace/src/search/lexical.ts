@@ -8,8 +8,8 @@
  * queue drains.
  */
 
-import type { WorkspaceSearchHit } from "../types";
 import type { SqliteWorkspaceStore } from "../sqlite";
+import type { WorkspaceSearchHit } from "../types";
 
 export interface LexicalSearchInput {
 	workspace_id: string;

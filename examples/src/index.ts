@@ -162,7 +162,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
 	["demo: okf — OKF v0.2 (Open Knowledge Format) importer / exporter", demoOkf],
 	["demo: okf — serve (live + frozen viewer)", demoOkfServe],
-	["demo: workspace — folder indexing + cross-file hybrid search (local embeddings by default)", demoWorkspace],
+	[
+		"demo: workspace — folder indexing + cross-file hybrid search (local embeddings by default)",
+		demoWorkspace,
+	],
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],

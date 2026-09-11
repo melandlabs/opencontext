@@ -60,17 +60,12 @@ export async function getWorkspaceEmbeddingProvider(): Promise<WorkspaceEmbeddin
 			mod = await import(specifier);
 		} catch (error) {
 			throw new Error(
-				`EMBEDDING_PROVIDER=local but "${specifier}" could not be resolved. ` +
-					`Install @melandlabs/ai-rag to enable local ONNX embeddings ` +
-					`(Xenova/all-MiniLM-L6-v2, 384 dims by default). ` +
-					`Underlying error: ${error instanceof Error ? error.message : String(error)}`,
+				`EMBEDDING_PROVIDER=local but "${specifier}" could not be resolved. Install @melandlabs/ai-rag to enable local ONNX embeddings (Xenova/all-MiniLM-L6-v2, 384 dims by default). Underlying error: ${error instanceof Error ? error.message : String(error)}`,
 			);
 		}
 		const provider = mod.getConfiguredEmbeddingProvider({ providerType: "local" });
 		if (!provider) {
-			throw new Error(
-				`EMBEDDING_PROVIDER=local but getConfiguredEmbeddingProvider returned no provider`,
-			);
+			throw new Error("EMBEDDING_PROVIDER=local but getConfiguredEmbeddingProvider returned no provider");
 		}
 		_provider = provider;
 	} else {
@@ -80,16 +75,13 @@ export async function getWorkspaceEmbeddingProvider(): Promise<WorkspaceEmbeddin
 			mod = await import(specifier);
 		} catch (error) {
 			throw new Error(
-				`Cloud embedding provider requested but "${specifier}" could not be resolved. ` +
-					`Install @melandlabs/ai-rag to enable OpenRouter-backed embeddings ` +
-					`(requires OPENROUTER_API_KEY). ` +
-					`Underlying error: ${error instanceof Error ? error.message : String(error)}`,
+				`Cloud embedding provider requested but "${specifier}" could not be resolved. Install @melandlabs/ai-rag to enable OpenRouter-backed embeddings (requires OPENROUTER_API_KEY). Underlying error: ${error instanceof Error ? error.message : String(error)}`,
 			);
 		}
 		const provider = mod.getConfiguredEmbeddingProvider({ providerType: "cloud" });
 		if (!provider) {
 			throw new Error(
-				`Cloud embedding provider requested but getConfiguredEmbeddingProvider returned no provider`,
+				"Cloud embedding provider requested but getConfiguredEmbeddingProvider returned no provider",
 			);
 		}
 		_provider = provider;

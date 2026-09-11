@@ -6,8 +6,8 @@
  * "no embeddings yet → empty result" fallback.
  */
 
-import type { WorkspaceSearchHit } from "../types";
 import type { SqliteWorkspaceStore } from "../sqlite";
+import type { WorkspaceSearchHit } from "../types";
 
 export interface SemanticSearchInput {
 	workspace_id: string;
@@ -18,6 +18,9 @@ export interface SemanticSearchInput {
 	threshold: number;
 }
 
-export function searchSemantic(store: SqliteWorkspaceStore, input: SemanticSearchInput): WorkspaceSearchHit[] {
+export function searchSemantic(
+	store: SqliteWorkspaceStore,
+	input: SemanticSearchInput,
+): WorkspaceSearchHit[] {
 	return store.searchSemantic(input);
 }

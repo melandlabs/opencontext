@@ -22,7 +22,9 @@ afterEach(() => {
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
-function makeResource(overrides: Partial<OkfFolderResource> & Pick<OkfFolderResource, "canonical_key" | "body">): OkfFolderResource {
+function makeResource(
+	overrides: Partial<OkfFolderResource> & Pick<OkfFolderResource, "canonical_key" | "body">,
+): OkfFolderResource {
 	return {
 		absolute_path: `/fake/${overrides.canonical_key}`,
 		title: overrides.canonical_key,
@@ -36,8 +38,10 @@ describe("SqliteWorkspaceStore", () => {
 	it("initialises every schema table on init()", async () => {
 		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
 		await store.init();
-		const tables = (store as unknown as { __testDb: { prepare: (s: string) => { all: () => unknown[] } } })
-			.__testDb.prepare(`SELECT name FROM sqlite_master WHERE type IN ('table', 'view', 'trigger')`)
+		const tables = (
+			store as unknown as { __testDb: { prepare: (s: string) => { all: () => unknown[] } } }
+		).__testDb
+			.prepare(`SELECT name FROM sqlite_master WHERE type IN ('table', 'view', 'trigger')`)
 			.all() as Array<{ name: string }>;
 		const names = tables.map((row) => row.name);
 		expect(names).toContain("workspace_resources");
@@ -63,7 +67,7 @@ describe("SqliteWorkspaceStore", () => {
 		expect(result.change_kind).toBe("created");
 		expect(result.resource_id).toBeGreaterThan(0);
 		const chunks = store.__testDb
-			.prepare(`SELECT chunk_index, chunk_count, content FROM workspace_chunks ORDER BY chunk_index`)
+			.prepare("SELECT chunk_index, chunk_count, content FROM workspace_chunks ORDER BY chunk_index")
 			.all() as Array<{ chunk_index: number; chunk_count: number; content: string }>;
 		expect(chunks.length).toBeGreaterThan(0);
 		expect(chunks[0]?.chunk_count).toBe(chunks.length);
@@ -106,7 +110,9 @@ describe("SqliteWorkspaceStore", () => {
 		expect(second.change_kind).toBe("modified");
 		expect(second.version_id).not.toBe(first.version_id);
 		const versions = store.__testDb
-			.prepare(`SELECT id, version_number, parent_version_id FROM workspace_resource_versions ORDER BY version_number`)
+			.prepare(
+				"SELECT id, version_number, parent_version_id FROM workspace_resource_versions ORDER BY version_number",
+			)
 			.all() as Array<{ id: number; version_number: number; parent_version_id: number | null }>;
 		expect(versions.length).toBe(2);
 		expect(versions[1]?.parent_version_id).toBe(versions[0]?.id ?? null);
@@ -132,7 +138,7 @@ describe("SqliteWorkspaceStore", () => {
 		});
 		expect(missing.map((entry) => entry.canonical_key)).toEqual(["docs/b.md"]);
 		const afterRows = store.__testDb
-			.prepare(`SELECT canonical_key, metadata FROM workspace_resources ORDER BY canonical_key`)
+			.prepare("SELECT canonical_key, metadata FROM workspace_resources ORDER BY canonical_key")
 			.all() as Array<{ canonical_key: string; metadata: string | null }>;
 		const deletedRow = afterRows.find((row) => row.canonical_key === "docs/b.md");
 		expect(deletedRow).toBeDefined();

@@ -1,24 +1,5 @@
-/**
- * `@melandlabs/workspace` — in-process embedding queue.
- *
- * Mirrors the lightweight Promise-chained serialiser pattern in
- * `packages/rag/src/lancedb-store.ts:228-232`. The job runner reads
- * up to `BATCH_SIZE` chunks from `workspace_chunks` that don't yet have
- * an embedding, asks the configured provider for vectors via
- * `workspaceEmbedDocuments(batch)`, and writes the results back into
- * both `workspace_chunks.embedding*` columns and the
- * dimension-suffixed vec0 child table (`workspace_chunks_vec_d{N}`).
- *
- * The default dimension (`DEFAULT_DIMENSIONS = 384`) matches the
- * `Xenova/all-MiniLM-L6-v2` model selected when
- * `EMBEDDING_PROVIDER=local`. Cloud / OpenRouter embeddings use 1536
- * dims (text-embedding-3-small) and the queue adapts automatically
- * because the dimensions are read off the first returned vector.
- */
-
-import { floatArrayToBuffer } from "@melandlabs/sqlite";
-import type { SqliteWorkspaceStore } from "./sqlite";
 import { workspaceEmbedDocuments, workspaceEmbeddingModelName } from "./embedding-provider";
+import type { SqliteWorkspaceStore } from "./sqlite";
 
 const DEFAULT_BATCH_SIZE = 100;
 // 384 = Xenova/all-MiniLM-L6-v2 (local). Cloud picks 1536 dynamically.

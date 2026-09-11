@@ -6,7 +6,7 @@
  * `VectorSearchResult` shape that the RAG fusion helper expects.
  */
 
-import { fuseHybridResults, type VectorSearchResult } from "@melandlabs/rag";
+import { type VectorSearchResult, fuseHybridResults } from "@melandlabs/rag";
 import type { WorkspaceSearchHit } from "../types";
 
 function toVectorResult(hit: WorkspaceSearchHit): VectorSearchResult {

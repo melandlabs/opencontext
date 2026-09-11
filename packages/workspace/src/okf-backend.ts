@@ -10,14 +10,13 @@
  */
 
 import { stat } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import { extname } from "node:path";
-import { readdir } from "node:fs/promises";
-import { buildGraphFromDir, type WikiGraph, type WikiNode } from "@melandlabs/okf";
-import type { OkfFrontMatter } from "@melandlabs/contracts";
-import type { OkfFolderResource, WorkspaceEdgeType, UpdateWorkspaceContextResult } from "./types";
+import { type WikiGraph, type WikiNode, buildGraphFromDir } from "@melandlabs/okf";
 import { extractText } from "./parsers-adapter";
 import type { SqliteWorkspaceStore } from "./sqlite";
+import type { OkfFolderResource, UpdateWorkspaceContextResult, WorkspaceEdgeType } from "./types";
 
 const SUPPORTED_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".pdf", ".docx", ".pages"]);
 
@@ -43,12 +42,6 @@ async function walk(dir: string): Promise<string[]> {
 		}
 	}
 	return out;
-}
-
-function pickFrontMatterType(fm: OkfFrontMatter | undefined): string {
-	if (!fm) return "document";
-	const type = typeof fm.type === "string" ? fm.type : "document";
-	return type;
 }
 
 function resourceTypeForExtension(ext: string): string {
@@ -110,7 +103,12 @@ export async function listOkfFolderResources(dir: string): Promise<OkfFolderReso
  */
 export async function indexOkfFolder(
 	store: SqliteWorkspaceStore,
-	input: { workspace_id: string; user_id: string; path: string; enqueueEmbedding: (input: { resource_id: number; version_id: number; jobId?: number }) => Promise<void> },
+	input: {
+		workspace_id: string;
+		user_id: string;
+		path: string;
+		enqueueEmbedding: (input: { resource_id: number; version_id: number; jobId?: number }) => Promise<void>;
+	},
 ): Promise<UpdateWorkspaceContextResult> {
 	const resources = await listOkfFolderResources(input.path);
 	const job = store.createJob({ workspace_id: input.workspace_id, kind: "index", total: resources.length });

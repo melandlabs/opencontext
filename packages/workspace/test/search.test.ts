@@ -10,10 +10,10 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { searchWorkspaceContext } from "../src/api";
+import { searchCrossFile } from "../src/search/cross-file";
+import { fuseHybridHits } from "../src/search/hybrid";
 import { searchLexical } from "../src/search/lexical";
 import { searchSemantic } from "../src/search/semantic";
-import { fuseHybridHits } from "../src/search/hybrid";
-import { searchCrossFile } from "../src/search/cross-file";
 import { SqliteWorkspaceStore } from "../src/sqlite";
 import type { OkfFolderResource, WorkspaceSearchHit } from "../src/types";
 
@@ -27,7 +27,9 @@ afterEach(() => {
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
-function makeResource(overrides: Partial<OkfFolderResource> & Pick<OkfFolderResource, "canonical_key" | "body">): OkfFolderResource {
+function makeResource(
+	overrides: Partial<OkfFolderResource> & Pick<OkfFolderResource, "canonical_key" | "body">,
+): OkfFolderResource {
 	return {
 		absolute_path: `/fake/${overrides.canonical_key}`,
 		title: overrides.canonical_key,
@@ -59,17 +61,26 @@ async function indexThreeDocuments(store: SqliteWorkspaceStore): Promise<void> {
 	await store.indexResource({
 		workspace_id: "p1",
 		user_id: "u1",
-		resource: makeResource({ canonical_key: "Reference/contract.md", body: "limitation of liability clauses must conform to applicable law".trim() }),
+		resource: makeResource({
+			canonical_key: "Reference/contract.md",
+			body: "limitation of liability clauses must conform to applicable law".trim(),
+		}),
 	});
 	await store.indexResource({
 		workspace_id: "p1",
 		user_id: "u1",
-		resource: makeResource({ canonical_key: "Reference/law.md", body: "civil code article 123: parties may limit liability unless the law forbids it".trim() }),
+		resource: makeResource({
+			canonical_key: "Reference/law.md",
+			body: "civil code article 123: parties may limit liability unless the law forbids it".trim(),
+		}),
 	});
 	await store.indexResource({
 		workspace_id: "p1",
 		user_id: "u1",
-		resource: makeResource({ canonical_key: "Reference/cookie-policy.md", body: "this document describes cookie usage on the marketing site".trim() }),
+		resource: makeResource({
+			canonical_key: "Reference/cookie-policy.md",
+			body: "this document describes cookie usage on the marketing site".trim(),
+		}),
 	});
 }
 

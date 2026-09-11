@@ -9,8 +9,8 @@
  *      heavily linked resources surface higher.
  */
 
-import type { WorkspaceSearchHit } from "../types";
 import type { SqliteWorkspaceStore } from "../sqlite";
+import type { WorkspaceSearchHit } from "../types";
 import { fuseHybridHits } from "./hybrid";
 
 export interface CrossFileSearchInput {

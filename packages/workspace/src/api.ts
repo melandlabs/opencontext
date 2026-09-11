@@ -12,6 +12,13 @@
  * `SqliteWorkspaceStore` and a mock embedding function.
  */
 
+import { workspaceEmbedQuery } from "./embedding-provider";
+import { indexOkfFolder } from "./okf-backend";
+import { searchCrossFile } from "./search/cross-file";
+import { fuseHybridHits } from "./search/hybrid";
+import { searchLexical } from "./search/lexical";
+import { searchSemantic } from "./search/semantic";
+import type { SqliteWorkspaceStore } from "./sqlite";
 import type {
 	ListWorkspaceResourcesInput,
 	ListWorkspaceResourcesResult,
@@ -21,13 +28,6 @@ import type {
 	UpdateWorkspaceContextInput,
 	UpdateWorkspaceContextResult,
 } from "./types";
-import { indexOkfFolder } from "./okf-backend";
-import { searchLexical } from "./search/lexical";
-import { searchSemantic } from "./search/semantic";
-import { searchCrossFile } from "./search/cross-file";
-import { fuseHybridHits } from "./search/hybrid";
-import type { SqliteWorkspaceStore } from "./sqlite";
-import { workspaceEmbedQuery } from "./embedding-provider";
 
 /**
  * Only `okf_folder` is supported as a source today. Any other value
@@ -103,15 +103,16 @@ export async function searchWorkspaceContext(
 		});
 		// Fallback to lexical when no embeddings are written yet so the
 		// user still gets a hit during the indexing warm-up window.
-		const finalHits = hits.length > 0
-			? hits
-			: searchLexical(store, {
-					workspace_id: input.workspace_id,
-					user_id: ctx_rt.user_id,
-					query: input.query,
-					resource_types: resourceTypes,
-					limit,
-				});
+		const finalHits =
+			hits.length > 0
+				? hits
+				: searchLexical(store, {
+						workspace_id: input.workspace_id,
+						user_id: ctx_rt.user_id,
+						query: input.query,
+						resource_types: resourceTypes,
+						limit,
+					});
 		return { query: input.query, strategy, total: finalHits.length, hits: finalHits };
 	}
 	if (strategy === "cross-file") {
