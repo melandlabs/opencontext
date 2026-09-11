@@ -2,9 +2,17 @@
 
 # OpenContext
 
-**Agentic 应用的上下文运行时底座，让应用真正能自主行动**
+**你的 Agent 做完决策就忘了为什么。OpenContext 把『为什么』找回来。**
 
-一个时序上下文图谱、一套记忆 API、一组检索能力，以及一个跨平台集成网格 —— 整体可作为一个依赖嵌入到任何宿主进程或 agent 里。
+_面向 AI Agent 的上下文层 —— 时序上下文图谱 + 记忆 API + 自进化回路，一个依赖搞定。_
+
+</div>
+
+**上下文才是缺失的那一层。** 检索告诉你『发生了什么』，OpenContext 告诉你『发生的事是如何变成现在这样的』。
+
+**其他记忆库只做检索，OpenContext 把『为什么』留住** —— 时序时间线、信念修正、出处全程可溯。
+
+<div align="center">
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>

@@ -2,11 +2,17 @@
 
 # OpenContext
 
-**The agentic context runtime, powering applications that act on your behalf.**
+**Your agent forgets why it made decisions. OpenContext fixes that.**
 
-A temporal context graph, a memory API, retrieval primitives,
-and a multi-platform integration mesh — designed to be embedded into any
-host process or agents.
+_The context layer for AI agents — a temporal context graph, memory API, and self-evolving loop in one dependency._
+
+</div>
+
+**Context is the missing layer.** Retrieval answers _what_ happened. OpenContext answers _how_ what happened became what is.
+
+**Unlike memory libs that only retrieve,** OpenContext keeps the _why_ — temporal timelines, belief revision, and provenance.
+
+<div align="center">
 
 <p align="center">
 <a href="./README.md">English</a> · <a href="./README-zh.md">简体中文</a>
