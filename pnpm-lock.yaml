@@ -1176,13 +1176,13 @@ importers:
         specifier: ^0.37.1
         version: 0.37.1(@types/node@22.20.1)(apache-arrow@18.1.0)(encoding@0.1.13)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.10
+        specifier: ^0.2.11
         version: link:../ai/rag
       '@melandlabs/integrations':
         specifier: ^0.3.0
         version: link:../integrations
       '@melandlabs/okf':
-        specifier: ^0.3.2
+        specifier: ^0.3.3
         version: link:../okf
       '@melandlabs/security':
         specifier: ^0.3.0

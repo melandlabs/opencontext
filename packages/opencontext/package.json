@@ -22,9 +22,9 @@
 	"dependencies": {
 		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@hono/node-server": "^1.13.7",
-		"@melandlabs/ai-rag": "^0.2.10",
+		"@melandlabs/ai-rag": "^0.2.11",
 		"@melandlabs/integrations": "^0.3.0",
-		"@melandlabs/okf": "^0.3.2",
+		"@melandlabs/okf": "^0.3.3",
 		"@melandlabs/security": "^0.3.0",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",

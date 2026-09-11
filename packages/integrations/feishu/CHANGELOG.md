@@ -1,5 +1,11 @@
 # @melandlabs/integrations-feishu
 
+## 0.3.4
+
+### Patch Changes
+
+- @melandlabs/integrations-channels@0.3.3
+
 ## 0.3.3
 
 ### Patch Changes

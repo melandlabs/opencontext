@@ -1,5 +1,12 @@
 # @melandlabs/integrations-qqbot
 
+## 0.3.11
+
+### Patch Changes
+
+- @melandlabs/ai@0.10.5
+- @melandlabs/integrations-channels@0.3.3
+
 ## 0.3.10
 
 ### Patch Changes

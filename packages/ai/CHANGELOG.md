@@ -1,5 +1,12 @@
 # @melandlabs/ai
 
+## 0.10.5
+
+### Patch Changes
+
+- Updated dependencies [5c117bc]
+  - @melandlabs/shared@0.4.2
+
 ## 0.10.4
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @melandlabs/integrations-facebook-messenger
 
+## 0.3.3
+
+### Patch Changes
+
+- @melandlabs/integrations-channels@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes
