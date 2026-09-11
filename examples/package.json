@@ -52,6 +52,7 @@
 		"@melandlabs/opencontext": "^0.9.0",
 		"@melandlabs/rag": "^0.3.1",
 		"@melandlabs/rss": "^0.3.0",
+		"@melandlabs/workspace": "workspace:*",
 		"@melandlabs/search": "^0.3.0",
 		"@melandlabs/security": "^0.3.0",
 		"@melandlabs/shared": "^0.4.1",

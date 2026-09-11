@@ -18,7 +18,17 @@ import { extractText } from "./parsers-adapter";
 import type { SqliteWorkspaceStore } from "./sqlite";
 import type { OkfFolderResource, UpdateWorkspaceContextResult, WorkspaceEdgeType } from "./types";
 
-const SUPPORTED_EXTENSIONS = new Set([".md", ".markdown", ".txt", ".pdf", ".docx", ".pages"]);
+const SUPPORTED_EXTENSIONS = new Set([
+	".md",
+	".markdown",
+	".txt",
+	".pdf",
+	".docx",
+	".xlsx",
+	".xls",
+	".numbers",
+	".pages",
+]);
 
 async function walk(dir: string): Promise<string[]> {
 	const out: string[] = [];
@@ -55,6 +65,10 @@ function resourceTypeForExtension(ext: string): string {
 			return "document";
 		case ".docx":
 			return "document";
+		case ".xlsx":
+		case ".xls":
+		case ".numbers":
+			return "spreadsheet";
 		case ".pages":
 			return "document";
 		default:

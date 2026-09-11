@@ -47,6 +47,7 @@
 		"mammoth": "^1.11.0",
 		"pdf-parse": "^2.0.0",
 		"sqlite-vec": "^0.1.9",
+		"xlsx": "^0.18.5",
 		"zod": "^4.3.6"
 	},
 	"peerDependencies": {

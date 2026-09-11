@@ -102,8 +102,15 @@ function makeRuntimeContext(): RuntimeContext {
 // copies each file into a tmp directory before running so every run starts
 // from a clean slate — the same fixtures also back the workspace tutorial.
 // The set covers every format @melandlabs/workspace's parsers-adapter
-// claims to support: .md / .pdf / .docx (and .pages on macOS).
-const FIXTURE_FILES = ["a.md", "b.md", "law-clause.md", "law-brief.pdf", "signed-addendum.docx"] as const;
+// claims to support: .md / .pdf / .docx / .xlsx (and .pages / .numbers on macOS).
+const FIXTURE_FILES = [
+	"a.md",
+	"b.md",
+	"law-clause.md",
+	"law-brief.pdf",
+	"signed-addendum.docx",
+	"contract-terms.xlsx",
+] as const;
 
 function resolveFixtureDir(): string {
 	// examples/src/simple/22-workspace.ts → examples/fixtures/workspace-wiki
@@ -176,13 +183,13 @@ export default async function demoWorkspace() {
 			}
 
 			check(
-				"updateWorkspaceContext returns ok with files_scanned ≥ 5",
-				update.filesScanned >= 5,
+				"updateWorkspaceContext returns ok with files_scanned ≥ 6",
+				update.filesScanned >= 6,
 				`filesScanned=${update.filesScanned}, filesAdded=${update.filesAdded}`,
 			);
 			check(
 				"updateWorkspaceContext flags the new files as added",
-				update.filesAdded >= 5,
+				update.filesAdded >= 6,
 				`filesAdded=${update.filesAdded}`,
 			);
 			check("updateWorkspaceContext returns a positive jobId", update.jobId > 0, `jobId=${update.jobId}`);
@@ -197,8 +204,8 @@ export default async function demoWorkspace() {
 				workspace_id: WORKSPACE_ID,
 			});
 			check(
-				"listWorkspaceResources returns ≥ 5 resources for the fixture folder",
-				listed.resources.length >= 5,
+				"listWorkspaceResources returns ≥ 6 resources for the fixture folder",
+				listed.resources.length >= 6,
 				`total=${listed.total}, resources=${listed.resources.map((r) => r.canonical_key).join(", ")}`,
 			);
 
@@ -325,7 +332,7 @@ export default async function demoWorkspace() {
 			});
 			check(
 				"re-running update reports every file as `unchanged` (sha256 dedup)",
-				reUpdate.filesUnchanged >= 5 && reUpdate.filesAdded === 0,
+				reUpdate.filesUnchanged >= 6 && reUpdate.filesAdded === 0,
 				`unchanged=${reUpdate.filesUnchanged}, added=${reUpdate.filesAdded}`,
 			);
 
