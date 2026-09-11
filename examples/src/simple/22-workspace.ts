@@ -22,8 +22,9 @@
  * the printed JSON envelope mirrors what the CLI prints.
  */
 
-import { writeFile, mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { copyFile, mkdir } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import type {
 	RuntimeContext,
@@ -97,44 +98,24 @@ function makeRuntimeContext(): RuntimeContext {
 	};
 }
 
+// Fixture lives on disk at examples/fixtures/workspace-wiki/. The demo
+// copies each file into a tmp directory before running so every run starts
+// from a clean slate — the same fixtures also back the workspace tutorial.
+const FIXTURE_FILES = ["a.md", "b.md", "law-clause.md"] as const;
+
+function resolveFixtureDir(): string {
+	// examples/src/simple/22-workspace.ts → examples/fixtures/workspace-wiki
+	const here = dirname(fileURLToPath(import.meta.url));
+	return resolve(here, "..", "..", "fixtures", "workspace-wiki");
+}
+
 async function buildFixture(dir: string): Promise<void> {
 	const wikiDir = join(dir, "wiki");
 	await mkdir(wikiDir, { recursive: true });
-
-	await writeFile(
-		join(wikiDir, "a.md"),
-		`---
-title: Limitation of Liability
-type: contract
-created: 2026-09-11
----
-The Aggregate liability of either party shall not exceed the fees paid in the
-twelve (12) months preceding the claim. See [Indemnification](./b.md) for carve-outs.
-`,
-	);
-
-	await writeFile(
-		join(wikiDir, "b.md"),
-		`---
-title: Indemnification
-type: contract
-created: 2026-09-11
----
-Neither party shall indemnify the other for indirect, consequential, or
-punitive damages. References: [Limitation of Liability](./a.md).
-`,
-	);
-
-	await writeFile(
-		join(wikiDir, "law-clause.md"),
-		`---
-title: Public Law Clause — Cap of Liability
-type: statute
-created: 2026-09-11
----
-Statutory cap of liability is twelve months of fees for ordinary breach.
-`,
-	);
+	const sourceDir = resolveFixtureDir();
+	for (const name of FIXTURE_FILES) {
+		await copyFile(join(sourceDir, name), join(wikiDir, name));
+	}
 }
 
 async function settleEmbeddings(): Promise<void> {
