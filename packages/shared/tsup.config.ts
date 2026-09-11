@@ -6,6 +6,7 @@ export default defineConfig({
 		errors: "src/errors.ts",
 		ref: "src/ref.ts",
 		soul: "src/soul.ts",
+		"text-chunking": "src/text-chunking.ts",
 		utils: "src/utils.ts",
 	},
 	format: ["esm"],

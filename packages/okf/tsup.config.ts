@@ -23,6 +23,7 @@ export default defineConfig({
 		http: "src/http.ts",
 		mcp: "src/mcp.ts",
 		serve: "src/serve.ts",
+		graph: "src/graph.ts",
 	},
 	format: ["esm"],
 	dts: true,
