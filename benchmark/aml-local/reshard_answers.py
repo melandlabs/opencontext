@@ -23,6 +23,12 @@ for f in src.parent.glob("answers*.jsonl"):
             except Exception:
                 pass
 rows = [r for r in rows if r["id"] not in done]
+# A previous run may have used more lanes.  Remove only generated input shards
+# before recreating them so stale shards cannot reintroduce already-completed
+# questions on a smaller resumed run.  Answer artifacts are intentionally left
+# untouched and continue to define the resume set above.
+for stale in src.parent.glob("input.ashard*.jsonl"):
+    stale.unlink()
 files = [(src.parent / f"input.ashard{i}.jsonl").open("w", encoding="utf-8") for i in range(n_shards)]
 try:
     for i, r in enumerate(rows):
