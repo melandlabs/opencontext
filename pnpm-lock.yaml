@@ -8,6 +8,7 @@ overrides:
   postcss: ^8.5.6
   vite: ^6.0.0
   '@whiskeysockets/libsignal-node': git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67
+  '@melandlabs/workspace': link:packages/workspace
 
 importers:
 
@@ -231,7 +232,7 @@ importers:
         specifier: ^1.3.0
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
-        specifier: ^0.9.0
+        specifier: ^0.10.0
         version: link:../packages/opencontext
       '@melandlabs/rag':
         specifier: ^0.3.1
@@ -1188,7 +1189,7 @@ importers:
         specifier: ^0.3.0
         version: link:../security
       '@melandlabs/workspace':
-        specifier: ^0.1.0
+        specifier: link:../workspace
         version: link:../workspace
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
