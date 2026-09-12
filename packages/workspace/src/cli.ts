@@ -109,6 +109,7 @@ interface UpdateArgs {
 	workspaceId?: string;
 	path?: string;
 	user?: string;
+	dbPath?: string;
 	awaitEmbeddings?: boolean;
 	drainTimeoutMs?: number;
 	json?: boolean;
@@ -140,7 +141,7 @@ async function runUpdate(args: UpdateArgs): Promise<number> {
 		request_id: randomUUID(),
 	};
 
-	const store = await getSQLiteWorkspaceStore();
+	const store = await getSQLiteWorkspaceStore(args.dbPath ? { dbPath: args.dbPath } : {});
 	const queue = createEmbeddingQueue({ store });
 
 	const result = await updateWorkspaceContext(
@@ -200,6 +201,7 @@ interface SearchArgs {
 	threshold?: string;
 	resourceType?: string;
 	hops?: string;
+	dbPath?: string;
 	json?: boolean;
 }
 
@@ -242,7 +244,7 @@ async function runSearch(args: SearchArgs): Promise<number> {
 		request_id: randomUUID(),
 	};
 
-	const store = await getSQLiteWorkspaceStore();
+	const store = await getSQLiteWorkspaceStore(args.dbPath ? { dbPath: args.dbPath } : {});
 	const result = await searchWorkspaceContext(ctx_rt, store, {
 		workspace_id: workspaceId,
 		query,
@@ -279,6 +281,7 @@ interface ListArgs {
 	indexStatus?: string;
 	limit?: string;
 	offset?: string;
+	dbPath?: string;
 	json?: boolean;
 }
 
@@ -308,7 +311,7 @@ async function runList(args: ListArgs): Promise<number> {
 		request_id: randomUUID(),
 	};
 
-	const store = await getSQLiteWorkspaceStore();
+	const store = await getSQLiteWorkspaceStore(args.dbPath ? { dbPath: args.dbPath } : {});
 	const result = await listWorkspaceResources(ctx_rt, store, {
 		workspace_id: workspaceId,
 		resource_type: args.resourceType,

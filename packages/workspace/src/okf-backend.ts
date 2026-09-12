@@ -18,6 +18,29 @@ import { extractText } from "./parsers-adapter";
 import type { SqliteWorkspaceStore } from "./sqlite";
 import type { OkfFolderResource, UpdateWorkspaceContextResult, WorkspaceEdgeType } from "./types";
 
+/**
+ * Lightweight markdown link extractor for extracted text bodies.
+ * Mirrors what `buildGraphFromDir` does for raw .md files: find every
+ * `[label](./relative/path.md)` style reference and resolve it to a
+ * canonical key relative to the source file's directory.
+ */
+function extractMarkdownLinksFromText(
+	text: string,
+	sourceCanonical: string,
+): Array<{ source: string; target: string }> {
+	const links: Array<{ source: string; target: string }> = [];
+	const re = /\]\(\.\/([^)\s]+\.md)(?:#[^)]*)?\)/g;
+	let match: RegExpExecArray | null;
+	while ((match = re.exec(text)) !== null) {
+		const sourceDir = sourceCanonical.includes("/")
+			? sourceCanonical.slice(0, sourceCanonical.lastIndexOf("/"))
+			: "";
+		const targetCanonical = sourceDir ? `${sourceDir}/${match[1]}` : match[1];
+		links.push({ source: sourceCanonical, target: targetCanonical });
+	}
+	return links;
+}
+
 const SUPPORTED_EXTENSIONS = new Set([
 	".md",
 	".markdown",
@@ -157,8 +180,9 @@ export async function indexOkfFolder(
 		});
 	}
 
-	// Edge pass: rebuild cites edges from the on-disk graph so a rename /
-	// delete in the OKF folder immediately reflects in the index.
+	// Edge pass: rebuild cites edges from BOTH the on-disk markdown
+	// graph (via buildGraphFromDir) AND from markdown links inside
+	// extracted text bodies of non-.md files (PDF / DOCX / XLSX).
 	let graph: WikiGraph;
 	try {
 		graph = await buildGraphFromDir(input.path);
@@ -173,19 +197,50 @@ export async function indexOkfFolder(
 		idByCanonical.set(indexed.canonical_key, indexed.resource_id);
 		canonicalByResourceId.set(indexed.resource_id, indexed.canonical_key);
 	}
+
+	// Map of canonical_key → extracted body for non-.md files so we
+	// can mine markdown links from extracted text. (.md files are
+	// already covered by buildGraphFromDir above.)
+	const bodyByCanonical = new Map<string, string>();
+	for (const resource of resources) {
+		if (extname(resource.canonical_key).toLowerCase() === ".md") continue;
+		bodyByCanonical.set(resource.canonical_key, resource.body);
+	}
+
 	const wikiEdges: Array<{
 		source_resource_id: number;
 		target_resource_id: number;
 		edge_type: WorkspaceEdgeType;
 	}> = [];
+	const seen = new Set<string>();
+	const addEdge = (sourceId: number, targetId: number) => {
+		const key = `${sourceId}->${targetId}`;
+		if (seen.has(key)) return;
+		seen.add(key);
+		wikiEdges.push({ source_resource_id: sourceId, target_resource_id: targetId, edge_type: "cites" });
+	};
+
+	// (a) Links discovered by buildGraphFromDir on raw .md files.
 	for (const edge of graph.edges) {
 		const sourceCanonical = `${edge.source}.md`;
 		const targetCanonical = `${edge.target}.md`;
 		const sourceId = idByCanonical.get(sourceCanonical);
 		const targetId = idByCanonical.get(targetCanonical);
 		if (sourceId === undefined || targetId === undefined) continue;
-		wikiEdges.push({ source_resource_id: sourceId, target_resource_id: targetId, edge_type: "cites" });
+		addEdge(sourceId, targetId);
 	}
+
+	// (b) Links discovered inside extracted text of non-.md files.
+	for (const [sourceCanonical, body] of bodyByCanonical) {
+		const sourceId = idByCanonical.get(sourceCanonical);
+		if (sourceId === undefined) continue;
+		for (const link of extractMarkdownLinksFromText(body, sourceCanonical)) {
+			const targetId = idByCanonical.get(link.target);
+			if (targetId === undefined) continue;
+			addEdge(sourceId, targetId);
+		}
+	}
+
 	if (wikiEdges.length > 0) {
 		store.upsertReferenceEdges({
 			workspace_id: input.workspace_id,

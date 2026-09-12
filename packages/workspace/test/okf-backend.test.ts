@@ -89,6 +89,49 @@ describe("indexOkfFolder", () => {
 		await store.close();
 	});
 
+	it("writes cites edges from markdown links inside non-.md file bodies", async () => {
+		// The docx body is the EXTRACTED plain text that parsers-adapter
+		// returns for signed-addendum.docx — it contains a markdown link
+		// pointing at ./law.md. The indexer should mine that link and
+		// write a cites edge, even though buildGraphFromDir only sees
+		// the raw .md files on disk.
+		const okfRoot = join(scratchDir, "wiki2");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(
+			okfRoot,
+			"law.md",
+			"---\ntype: Statute\n---\n# Law\n\nCivil code article 123 is the controlling clause.\n",
+		);
+		writeFile(
+			okfRoot,
+			"signed-addendum.txt",
+			"Public Law — Cap of Liability\n\nStatutory cap of liability is twelve months of fees.\nSee also [Limitation of Liability](./law.md).\n",
+		);
+
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store2.db") });
+		await store.init();
+		await indexOkfFolder(store, {
+			workspace_id: "p2",
+			user_id: "u2",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+
+		const edgeRows = store.__testDb
+			.prepare(
+				`SELECT pr1.canonical_key AS source, pr2.canonical_key AS target, edge_type
+                 FROM workspace_reference_edges e
+                 JOIN workspace_resources pr1 ON pr1.id = e.source_resource_id
+                 JOIN workspace_resources pr2 ON pr2.id = e.target_resource_id
+                 WHERE edge_type = 'cites'`,
+			)
+			.all() as Array<{ source: string; target: string; edge_type: string }>;
+		const txtToMd = edgeRows.find((row) => row.source === "signed-addendum.txt" && row.target === "law.md");
+		expect(txtToMd).toBeDefined();
+		expect(txtToMd?.edge_type).toBe("cites");
+		await store.close();
+	});
+
 	it("soft-deletes a resource whose file disappeared on a re-run", async () => {
 		const okfRoot = join(scratchDir, "wiki");
 		mkdirSync(okfRoot, { recursive: true });
