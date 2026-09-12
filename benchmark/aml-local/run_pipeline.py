@@ -15,7 +15,9 @@ Example:
 """
 from __future__ import annotations
 
+import asyncio
 import runpy
+import os
 import sys
 from pathlib import Path
 
@@ -71,14 +73,55 @@ def _content_of(payload):
         return None
 
 
+async def _post_with_transport_retries(client, url, *args, **kwargs):
+    """Retry transient connection failures without changing pipeline output."""
+    for attempt in range(3):
+        try:
+            return await _original_post(client, url, *args, **kwargs)
+        except httpx.TransportError as exc:
+            if attempt == 2:
+                raise
+            delay_seconds = 2**attempt
+            print(
+                f"[run_pipeline] transport error from {url}: {exc}; "
+                f"retry {attempt + 1}/2 in {delay_seconds}s",
+                file=sys.stderr,
+            )
+            await asyncio.sleep(delay_seconds)
+
+
 async def _patched_post(self, url, *args, **kwargs):
-    response = await _original_post(self, url, *args, **kwargs)
+    request_kwargs = kwargs
+    if (
+        os.environ.get("AML_DISABLE_PROVIDER_REASONING", "").strip().lower() in {"1", "true", "yes"}
+        and str(url).rstrip("/").endswith("/chat/completions")
+        and isinstance(kwargs.get("json"), dict)
+    ):
+        # Some OpenRouter reasoning-capable flash models can spend their whole
+        # default completion budget thinking before emitting any answer. Keep
+        # this opt-in so the vendored prompt/scoring code remains untouched.
+        payload = dict(kwargs["json"])
+        payload.setdefault("reasoning", {"effort": "none"})
+        request_kwargs = {**kwargs, "json": payload}
+
+    max_completion_tokens = os.environ.get("AML_MAX_COMPLETION_TOKENS", "").strip()
+    if max_completion_tokens and str(url).rstrip("/").endswith("/chat/completions") and isinstance(request_kwargs.get("json"), dict):
+        try:
+            parsed_max_completion_tokens = int(max_completion_tokens)
+        except ValueError:
+            parsed_max_completion_tokens = 0
+        if parsed_max_completion_tokens > 0:
+            payload = dict(request_kwargs["json"])
+            payload.setdefault("max_tokens", parsed_max_completion_tokens)
+            request_kwargs = {**request_kwargs, "json": payload}
+
+    response = await _post_with_transport_retries(self, url, *args, **request_kwargs)
     if not str(url).rstrip("/").endswith("/chat/completions"):
         return response
     if response.status_code == 200 and _content_of(response.json()) is None:
         for attempt in range(2):
             print(f"[run_pipeline] null content from {url}, retry {attempt + 1}/2", file=sys.stderr)
-            response = await _original_post(self, url, *args, **kwargs)
+            response = await _post_with_transport_retries(self, url, *args, **request_kwargs)
             if response.status_code != 200 or _content_of(response.json()) is not None:
                 break
     original_json = response.json
