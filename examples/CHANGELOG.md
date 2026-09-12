@@ -1,5 +1,14 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.11
+
+### Patch Changes
+
+- Updated dependencies [4118712]
+- Updated dependencies [ee3bda2]
+- Updated dependencies [378a3aa]
+  - @melandlabs/opencontext@0.11.0
+
 ## 0.3.10
 
 ### Patch Changes

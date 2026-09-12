@@ -1,5 +1,27 @@
 # @melandlabs/opencontext
 
+## 0.11.0
+
+### Minor Changes
+
+- ee3bda2: Add `@melandlabs/workspace` — a CLI for indexing an OKF / Markdown folder into SQLite and querying it with lexical, semantic, hybrid, and cross-file strategies. Reuses the existing `~/.opencontext/memory/store.db` schema and exposes `opencontext workspace update|search|list` subcommands.
+
+  The workspace CLI defaults `EMBEDDING_PROVIDER=local` (`Xenova/all-MiniLM-L6-v2`, 384 dims) so demos and OKF review workflows run offline without `OPENROUTER_API_KEY`. Multi-format parsing covers `.md`, `.markdown`, `.txt`, `.pdf`, `.docx`, and `.pages`. Cross-file strategy walks `cites` edges extracted from Markdown links for BFS-style expansion across related files.
+
+- 378a3aa: Add Excel / Apple Numbers spreadsheet parsing to `@melandlabs/workspace`'s `parsers-adapter`. `.xlsx` and `.xls` are converted via SheetJS (`xlsx`) — one CSV block per sheet, prefixed with `# Sheet: <name>` so the chunker preserves sheet boundaries. `.numbers` files are first converted with macOS `textutil -convert xlsx`, then routed through the SheetJS path.
+
+  The OKF walker now picks up `.xlsx`, `.xls`, and `.numbers` (macOS) alongside the existing `.md`, `.markdown`, `.txt`, `.pdf`, `.docx`, and `.pages` formats, and tags them with `resource_type: "spreadsheet"`.
+
+  The 22-workspace demo now ships a 6-file fixture folder (`.md` × 3, `.pdf`, `.docx`, `.xlsx`) and asserts `filesScanned ≥ 6`, `filesAdded ≥ 6`, `listWorkspaceResources ≥ 6`, and that the re-run reports every file as `unchanged` under sha256 dedup.
+
+### Patch Changes
+
+- 4118712: Republish `@melandlabs/opencontext` so the `0.9.0` tarball picks up the `@melandlabs/workspace` runtime dependency that PR #38 wired into the CLI (`opencontext workspace update|search|list`). Without this republish, `pnpm dlx @melandlabs/opencontext@0.9.0 workspace …` fails with `Cannot find package '@melandlabs/workspace'`.
+- Updated dependencies [bb7fae2]
+- Updated dependencies [ee3bda2]
+- Updated dependencies [378a3aa]
+  - @melandlabs/workspace@0.3.0
+
 ## 0.10.0
 
 ### Minor Changes
