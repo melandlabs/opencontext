@@ -232,7 +232,7 @@ importers:
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
         specifier: ^0.9.0
-        version: link:../packages/opencontext
+        version: 0.9.1(@cfworker/json-schema@4.1.1)(@lancedb/lancedb@0.37.1(@types/node@26.2.0)(apache-arrow@18.1.0)(encoding@0.1.13))(@zilliz/milvus2-sdk-node@2.6.17(bufferutil@4.1.0)(utf-8-validate@5.0.10))
       '@melandlabs/rag':
         specifier: ^0.3.1
         version: link:../packages/rag
@@ -1188,8 +1188,8 @@ importers:
         specifier: ^0.3.0
         version: link:../security
       '@melandlabs/workspace':
-        specifier: ^0.1.0
-        version: link:../workspace
+        specifier: ^0.2.0
+        version: 0.2.0(@cfworker/json-schema@4.1.1)(@melandlabs/ai-rag@packages+ai+rag)
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
@@ -1524,6 +1524,9 @@ importers:
 
   packages/workspace:
     dependencies:
+      '@melandlabs/ai-rag':
+        specifier: ^0.2.11
+        version: link:../ai/rag
       '@melandlabs/contracts':
         specifier: workspace:*
         version: link:../contracts
@@ -1567,9 +1570,6 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@melandlabs/ai-rag':
-        specifier: workspace:*
-        version: link:../ai/rag
       '@melandlabs/config':
         specifier: workspace:*
         version: link:../config
@@ -3421,6 +3421,26 @@ packages:
 
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
+
+  '@melandlabs/opencontext@0.9.1':
+    resolution: {integrity: sha512-FXuFIbn8Zjqe71u/yNYeKPILQbZnWn6i3bmXGzLyH4wZ0NXMhZc2Zow+R8EQfM3JYVpboyXe8Fs0rR6owNM1SQ==}
+    hasBin: true
+    peerDependencies:
+      '@lancedb/lancedb': ^0.37.1
+      '@zilliz/milvus2-sdk-node': ^2.5.13
+    peerDependenciesMeta:
+      '@lancedb/lancedb':
+        optional: true
+      '@zilliz/milvus2-sdk-node':
+        optional: true
+
+  '@melandlabs/workspace@0.2.0':
+    resolution: {integrity: sha512-1dZtltj2b2tpuARPW4vzLOd+9sP9C28PwZk6U33zHOeVjZXizg8oDvkhxBC5c2FwG5BSQHVBQefvKIwdYQ6g6Q==}
+    peerDependencies:
+      '@melandlabs/ai-rag': 0.2.11
+    peerDependenciesMeta:
+      '@melandlabs/ai-rag':
+        optional: true
 
   '@mistralai/mistralai@2.4.0':
     resolution: {integrity: sha512-t6hCx242MTGolB76CI+17jDtPIe/bzLsMdUTMMoMn9Qo1h02N2G5jQYHmKDGU3X//OgR2wvngTD7tO6tPp5poQ==}
@@ -9096,6 +9116,66 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
+  '@melandlabs/opencontext@0.9.1(@cfworker/json-schema@4.1.1)(@lancedb/lancedb@0.37.1(@types/node@26.2.0)(apache-arrow@18.1.0)(encoding@0.1.13))(@zilliz/milvus2-sdk-node@2.6.17(bufferutil@4.1.0)(utf-8-validate@5.0.10))':
+    dependencies:
+      '@ai-sdk/openai-compatible': 1.0.47(zod@4.4.3)
+      '@hono/node-server': 1.19.17(hono@4.13.1)
+      '@melandlabs/ai-rag': link:packages/ai/rag
+      '@melandlabs/integrations': link:packages/integrations
+      '@melandlabs/okf': link:packages/okf
+      '@melandlabs/security': link:packages/security
+      '@melandlabs/workspace': link:packages/workspace
+      '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
+      abort-controller: 3.0.0
+      agentkeepalive: 4.6.0
+      better-sqlite3: 11.10.0
+      cross-spawn: 7.0.6
+      encoding: 0.1.13
+      fernet: 0.4.0
+      form-data: 4.0.6
+      form-data-encoder: 1.7.2
+      formdata-node: 4.4.1
+      formdata-polyfill: 4.0.10
+      hono: 4.13.1
+      node-domexception: 1.0.0
+      node-fetch: 2.7.0(encoding@0.1.13)
+      pg: 8.23.0
+      punycode: 2.3.1
+      sqlite-vec: 0.1.9
+      tr46: 0.0.3
+      webidl-conversions: 3.0.1
+      whatwg-url: 5.0.0
+      zod: 4.4.3
+    optionalDependencies:
+      '@lancedb/lancedb': 0.37.1(@types/node@26.2.0)(apache-arrow@18.1.0)(encoding@0.1.13)
+      '@zilliz/milvus2-sdk-node': 2.6.17(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - pg-native
+      - supports-color
+
+  '@melandlabs/workspace@0.2.0(@cfworker/json-schema@4.1.1)(@melandlabs/ai-rag@packages+ai+rag)':
+    dependencies:
+      '@melandlabs/contracts': link:packages/contracts
+      '@melandlabs/env-config': link:packages/env-config
+      '@melandlabs/okf': link:packages/okf
+      '@melandlabs/rag': link:packages/rag
+      '@melandlabs/shared': link:packages/shared
+      '@melandlabs/sqlite': link:packages/sqlite
+      '@modelcontextprotocol/sdk': 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
+      better-sqlite3: 11.10.0
+      hono: 4.13.1
+      mammoth: 1.12.2
+      pdf-parse: 2.4.5
+      sqlite-vec: 0.1.9
+      xlsx: 0.18.5
+      zod: 4.4.3
+    optionalDependencies:
+      '@melandlabs/ai-rag': link:packages/ai/rag
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+
   '@mistralai/mistralai@2.4.0(@opentelemetry/api@1.9.0)(bufferutil@4.1.0)(utf-8-validate@5.0.10)':
     dependencies:
       '@opentelemetry/semantic-conventions': 1.43.0
@@ -11287,7 +11367,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0)
+      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -12398,7 +12478,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0):
+  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 
