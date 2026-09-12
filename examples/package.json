@@ -49,7 +49,7 @@
 		"@melandlabs/mcp": "^0.3.1",
 		"@melandlabs/memory-consolidation": "^0.5.3",
 		"@melandlabs/memory-store": "^1.3.0",
-		"@melandlabs/opencontext": "^0.9.0",
+		"@melandlabs/opencontext": "^0.10.0",
 		"@melandlabs/rag": "^0.3.1",
 		"@melandlabs/rss": "^0.3.0",
 		"@melandlabs/search": "^0.3.0",
