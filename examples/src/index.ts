@@ -48,6 +48,7 @@ import { withTmp } from "./_helpers.ts";
 import demoVsa from "./simple/19-vsa.ts";
 import demoOkf from "./simple/20-okf.ts";
 import demoOkfServe from "./simple/21-okf-serve.ts";
+import demoWorkspace from "./simple/22-workspace.ts";
 import demoHelloMemory from "./tutorials/00-hello-memory.ts";
 import demoRememberExample from "./tutorials/01-remember-example.ts";
 import demoRecallExample from "./tutorials/02-recall-example.ts";
@@ -161,6 +162,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 	["demo: memory-store — Vector Symbolic Architecture (VSA) verb", demoVsa],
 	["demo: okf — OKF v0.2 (Open Knowledge Format) importer / exporter", demoOkf],
 	["demo: okf — serve (live + frozen viewer)", demoOkfServe],
+	[
+		"demo: workspace — folder indexing + cross-file hybrid search (local embeddings by default)",
+		demoWorkspace,
+	],
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],
 	["demo: use-case — research knowledge tracker", demoResearchKnowledgeTracker],

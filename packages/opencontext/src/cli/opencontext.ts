@@ -33,6 +33,10 @@ import {
 } from "@melandlabs/memory-store/cli-shared";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
+// Workspace CLI is shipped as an optional subpath import so a host
+// that doesn't install `@melandlabs/workspace` still gets a usable
+// `opencontext` CLI without crashing the bootstrap.
+import { runWorkspaceCli } from "@melandlabs/workspace/cli";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
 import { parseDeprecateArgs, runDeprecate } from "./deprecate.js";
@@ -296,6 +300,7 @@ Commands:
   stats      Report counts from the active raw-message store
   doctor     Run health checks against the local install
   okf        OKF v0.2 (Open Knowledge Format) importer / exporter
+  workspace  Versioned, cross-file folder knowledge
 
 Run "opencontext <command> --help" for command-specific options.
 
@@ -585,6 +590,11 @@ async function main(): Promise<void> {
 		}
 		const result = await startOkf(okfArgs, { packageVersion: "@melandlabs/opencontext" });
 		process.exit(result.exit);
+	}
+
+	if (head === "workspace" || head === "WORKSPACE") {
+		const exit = await runWorkspaceCli(argv.slice(1));
+		process.exit(exit);
 	}
 
 	if (head === "--help" || head === "-h") {

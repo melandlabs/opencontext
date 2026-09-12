@@ -404,3 +404,51 @@ export type {
 	WikiEdge,
 	BuildGraphOptions,
 } from "@melandlabs/okf";
+
+// ─── 14. Workspace — versioned, cross-file folder knowledge ──
+// The single-package facade exposes the three core APIs (`updateWorkspaceContext`,
+// `searchWorkspaceContext`, `listWorkspaceResources`) so consumers don't need a
+// separate install. Storage is delegated to the shared SQLite DB the memory
+// store already owns (`~/.opencontext/memory/store.db`); embedding fan-out is
+// async and honours `EMBEDDING_PROVIDER=local|cloud` via the optional peer
+// dep `@melandlabs/ai-rag` (local = `Xenova/all-MiniLM-L6-v2`, 384 dims;
+// cloud = OpenRouter, 1536 dims).
+//
+// Surface is JS-API + CLI only; HTTP / MCP transport lives behind the
+// `opencontext workspace …` subcommand (`@melandlabs/workspace/cli`).
+export {
+	updateWorkspaceContext,
+	searchWorkspaceContext,
+	listWorkspaceResources,
+	getSQLiteWorkspaceStore,
+	closeSQLiteWorkspaceStore,
+	resolveWorkspaceDbPath,
+	getWorkspaceEmbeddingProvider,
+	workspaceEmbedQuery,
+	workspaceEmbedDocuments,
+	workspaceEmbeddingModelName,
+	workspaceEmbeddingDimensions,
+} from "@melandlabs/workspace";
+export type {
+	RuntimeContext,
+	WorkspaceStorageKind,
+	WorkspaceEdgeType,
+	WorkspaceIndexStatus,
+	WorkspaceSearchStrategy,
+	WorkspaceResource,
+	WorkspaceResourceVersion,
+	WorkspaceChunk,
+	WorkspaceReferenceEdge,
+	WorkspaceJob,
+	WorkspaceSearchHit,
+	SearchWorkspaceContextOptions,
+	UpdateWorkspaceContextInput,
+	UpdateWorkspaceContextResult,
+	SearchWorkspaceContextInput,
+	SearchWorkspaceContextResult,
+	ListWorkspaceResourcesInput,
+	ListWorkspaceResourcesResult,
+	OkfFolderResource,
+	WorkspaceEmbeddingProvider,
+	WorkspaceEmbeddingProviderType,
+} from "@melandlabs/workspace";

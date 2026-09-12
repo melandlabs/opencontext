@@ -53,8 +53,12 @@ export default async function demoLocalEmbedding() {
 		try {
 			factoryProvider = getConfiguredEmbeddingProvider();
 		} finally {
-			if (previousProvider === undefined) process.env.EMBEDDING_PROVIDER = undefined;
-			else process.env.EMBEDDING_PROVIDER = previousProvider;
+			if (previousProvider === undefined) {
+				// biome-ignore lint/performance/noDelete: env-reset pattern
+				delete process.env.EMBEDDING_PROVIDER;
+			} else {
+				process.env.EMBEDDING_PROVIDER = previousProvider;
+			}
 		}
 		check(
 			"getConfiguredEmbeddingProvider() returns the local embedding provider when EMBEDDING_PROVIDER=local",
