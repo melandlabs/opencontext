@@ -45,7 +45,8 @@
 		"overrides": {
 			"postcss": "^8.5.6",
 			"vite": "^6.0.0",
-			"@whiskeysockets/libsignal-node": "git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67"
+			"@whiskeysockets/libsignal-node": "git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67",
+			"@melandlabs/workspace": "link:packages/workspace"
 		},
 		"onlyBuiltDependencies": ["better-sqlite3", "protobufjs", "sqlite-vec", "sqlite3"],
 		"ignoredBuiltDependencies": [
