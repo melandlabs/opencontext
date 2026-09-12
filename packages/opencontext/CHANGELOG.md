@@ -1,5 +1,12 @@
 # @melandlabs/opencontext
 
+## 0.10.0
+
+### Minor Changes
+
+- Add `@melandlabs/workspace` as a runtime dependency so `opencontext workspace update|search|list` resolves on a fresh install. The workspace subcommand delegates to `@melandlabs/workspace@^0.2.0`, which exposes its own `workspace` bin for direct invocation as well.
+- Bump `@melandlabs/workspace` to 0.2.0 (adds `workspace` bin, adds `@melandlabs/ai-rag` dep so the cross-file strategy works on a standalone install).
+
 ## 0.9.1
 
 ### Patch Changes
