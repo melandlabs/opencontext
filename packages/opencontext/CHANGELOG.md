@@ -1,5 +1,11 @@
 # @melandlabs/opencontext
 
+## 0.9.1
+
+### Patch Changes
+
+- Republish to declare `@melandlabs/workspace` as a runtime dependency so `opencontext workspace update|search|list` resolves on a fresh `pnpm dlx @melandlabs/opencontext@latest` install.
+
 ## 0.9.0
 
 ### Minor Changes
