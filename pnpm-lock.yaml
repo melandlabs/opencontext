@@ -1526,22 +1526,22 @@ importers:
   packages/workspace:
     dependencies:
       '@melandlabs/contracts':
-        specifier: workspace:*
+        specifier: ^0.7.0
         version: link:../contracts
       '@melandlabs/env-config':
-        specifier: workspace:*
+        specifier: ^0.4.0
         version: link:../env-config
       '@melandlabs/okf':
-        specifier: workspace:*
+        specifier: ^0.3.3
         version: link:../okf
       '@melandlabs/rag':
-        specifier: workspace:*
+        specifier: ^0.3.2
         version: link:../rag
       '@melandlabs/shared':
-        specifier: workspace:*
+        specifier: ^0.4.2
         version: link:../shared
       '@melandlabs/sqlite':
-        specifier: workspace:*
+        specifier: ^0.5.3
         version: link:../sqlite
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3

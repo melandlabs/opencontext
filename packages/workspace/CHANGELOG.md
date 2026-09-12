@@ -1,5 +1,20 @@
 # @melandlabs/workspace
 
+## 0.3.1
+
+### Patch Changes
+
+- The 0.3.0 tarball listed the internal `@melandlabs/*` runtime deps as
+  `workspace:*`, which npm does not resolve when the package is installed
+  on its own. As a result `pnpm dlx @melandlabs/workspace` installed the
+  CLI without its `okf`/`rag`/`shared`/`sqlite`/`contracts`/`env-config`
+  deps, and the CLI silently no-op'd on every invocation.
+
+  Pin those deps to concrete npm ranges (`^0.7.0` / `^0.4.0` / `^0.3.3` /
+  `^0.3.2` / `^0.4.2` / `^0.5.3`) so the published tarball pulls them in.
+  The local `pnpm.overrides` for `@melandlabs/workspace` still forces the
+  workspace symlink for in-repo development.
+
 ## 0.3.0
 
 ### Minor Changes
