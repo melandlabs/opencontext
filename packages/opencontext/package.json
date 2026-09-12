@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext",
-	"version": "0.9.1",
+	"version": "0.10.0",
 	"type": "module",
 	"description": "OpenContext — single-package facade that bundles the contracts, memory-store, retrieval, loop engine, and agent runtime. Install once, get every capability.",
 	"main": "./dist/index.js",
@@ -26,7 +26,7 @@
 		"@melandlabs/integrations": "^0.3.0",
 		"@melandlabs/okf": "^0.3.3",
 		"@melandlabs/security": "^0.3.0",
-		"@melandlabs/workspace": "^0.1.0",
+		"@melandlabs/workspace": "^0.2.0",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",
 		"agentkeepalive": "^4.6.0",
