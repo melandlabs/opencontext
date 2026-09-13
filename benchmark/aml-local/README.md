@@ -92,6 +92,18 @@ Artifacts land in `outputs/<bench>/`: `input.jsonl` (retrieval results),
 parameters, and wall-clock time). The vendored AML pipelines do not expose
 provider token usage, so the manifest records those fields as `null`.
 
+For OpenRouter reasoning-capable answer models, set
+`AML_DISABLE_PROVIDER_REASONING=1` only when a model spends its completion
+budget reasoning without emitting a usable answer. The local shim then adds
+`reasoning: { effort: "none" }` to provider requests; it does not modify the
+vendored benchmark prompts or scoring code. Record this setting with the run,
+because it is an answer-model configuration choice.
+
+If a provider has no useful default completion limit, set a positive
+`AML_MAX_COMPLETION_TOKENS` (for example, `4096`). The shim adds it only when
+the vendored request did not already set `max_tokens`; record this cap with the
+run as well.
+
 ## Local smoke baselines (2026-08-18, daemon: sqlite-vec + local embeddings)
 
 | Benchmark | Sample | Score |
