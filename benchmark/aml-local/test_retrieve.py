@@ -232,6 +232,30 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.assertNotEqual(first, retrieve.scope_id("beam", Path("beam_10m.json"), "sample-1"))
         self.assertNotEqual(first, retrieve.scope_id("beam", Path("beam_1m.json"), "sample-2"))
 
+    def test_clbench_single_message_splits_inline_context_and_task(self) -> None:
+        row = {
+            "metadata": {"task_id": "inline-task"},
+            "messages": [
+                {
+                    "role": "user",
+                    "content": "Historical note: I use a standing desk.\n<|TASK|> What kind of desk do I use?",
+                }
+            ],
+            "rubrics": ["Mentions a standing desk."],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "CL-bench-Life.jsonl"
+            dataset.write_text(json.dumps(row) + "\n", encoding="utf-8")
+            output = retrieve.run_benchmark("clbench", dataset, self.client, Path(temp_dir) / "outputs")
+
+            result = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(result["question"], "What kind of desk do I use?")
+
+        add_requests = [payload for path, payload in self.server.requests if path == "/v1/raw-messages"]
+        search_requests = [payload for path, payload in self.server.requests if path == "/v1/search"]
+        self.assertEqual(add_requests[0]["messages"][0]["content"], "User: Historical note: I use a standing desk.")
+        self.assertEqual(search_requests[0]["query"], "What kind of desk do I use?")
+
 
 if __name__ == "__main__":
     unittest.main()

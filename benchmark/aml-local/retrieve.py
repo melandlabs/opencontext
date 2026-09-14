@@ -107,6 +107,19 @@ def hit_texts(hits: list[dict[str, Any]]) -> list[str]:
     return [str(hit.get("content", "")) for hit in hits]
 
 
+def split_clbench_inline_task(content: str) -> tuple[str, str] | None:
+    """Split CL-bench-Life's one-message ``context <|TASK|> question`` form."""
+    marker = "<|TASK|>"
+    if marker not in content:
+        return None
+    context, question = content.rsplit(marker, 1)
+    context = context.strip()
+    question = question.strip()
+    if not context or not question:
+        return None
+    return context, question
+
+
 def selected_ids(raw: str | None) -> set[str] | None:
     if not raw:
         return None
@@ -381,6 +394,14 @@ def run_clbench(
         source_messages = row.get("messages") or []
         context_messages = source_messages[:-1]
         question = str(source_messages[-1].get("content", "")) if source_messages else ""
+        # CL-bench-Life encodes 163 tasks as one user message whose historical
+        # context and final task are separated by ``<|TASK|>``. Treating that
+        # whole message as the query leaves nothing to ingest or retrieve.
+        if len(source_messages) == 1:
+            inline_task = split_clbench_inline_task(question)
+            if inline_task:
+                context, question = inline_task
+                context_messages = [{"role": source_messages[0].get("role", "user"), "content": context}]
         messages = [
             raw_message(
                 "clbench",
