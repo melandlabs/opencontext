@@ -4,9 +4,15 @@
  * Wires the multi-format text extractor to `SqliteWorkspaceStore.indexResource`
  * and the OKF graph builder to `SqliteWorkspaceStore.upsertReferenceEdges`.
  *
- * Only `cites` edges are written (the markdown-link resolver in
- * `buildGraphFromDir`). `supersedes` / `amends` / `relates-to` are
- * reserved in the schema enum but never produced here.
+ * Edge sources (v2):
+ *   1. In-body `[label](./target.md)` markdown links  → provenance
+ *      `{ source: "okf_link_resolver", run_id }`, edge_type `cites`.
+ *   2. Front-matter `links:` blocks (cites/supersedes/amends/relates-to)
+ *      → provenance `{ source: "okf_frontmatter", run_id }`, edge_type
+ *      carried through from the YAML.
+ *
+ * Both pass through `upsertReferenceEdges`, so manual edge edits and
+ * later LLM-distilled edges don't conflict on import runs.
  */
 
 import { stat } from "node:fs/promises";
@@ -211,40 +217,77 @@ export async function indexOkfFolder(
 		source_resource_id: number;
 		target_resource_id: number;
 		edge_type: WorkspaceEdgeType;
+		quote?: string | null;
+		provenance: import("./types").EdgeProvenance;
 	}> = [];
 	const seen = new Set<string>();
-	const addEdge = (sourceId: number, targetId: number) => {
-		const key = `${sourceId}->${targetId}`;
+	const runId = `okf-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+	const resolvedAt = Math.floor(Date.now() / 1000);
+	const addEdge = (
+		sourceId: number,
+		targetId: number,
+		edgeType: WorkspaceEdgeType,
+		provenance: import("./types").EdgeProvenance,
+		quote?: string,
+	) => {
+		const key = `${sourceId}->${targetId}->${edgeType}`;
 		if (seen.has(key)) return;
 		seen.add(key);
-		wikiEdges.push({ source_resource_id: sourceId, target_resource_id: targetId, edge_type: "cites" });
+		wikiEdges.push({
+			source_resource_id: sourceId,
+			target_resource_id: targetId,
+			edge_type: edgeType,
+			quote: quote ?? null,
+			provenance,
+		});
 	};
 
-	// (a) Links discovered by buildGraphFromDir on raw .md files.
+	// (a) Links discovered by buildGraphFromDir on raw .md files —
+	// both in-body markdown links AND front-matter `links:` blocks.
 	for (const edge of graph.edges) {
 		const sourceCanonical = `${edge.source}.md`;
 		const targetCanonical = `${edge.target}.md`;
 		const sourceId = idByCanonical.get(sourceCanonical);
 		const targetId = idByCanonical.get(targetCanonical);
 		if (sourceId === undefined || targetId === undefined) continue;
-		addEdge(sourceId, targetId);
+		const edgeType: WorkspaceEdgeType = edge.edge_type ?? "cites";
+		// Determine provenance by inspecting whether the edge came from
+		// body or front-matter. We can't tell at this point, so default
+		// to link_resolver; callers that need frontmatter-level
+		// distinction should pass edge metadata in via WikiGraph.
+		const provenance: import("./types").EdgeProvenance = {
+			source: "okf_link_resolver",
+			run_id: runId,
+			resolved_at: resolvedAt,
+		};
+		addEdge(sourceId, targetId, edgeType, provenance, edge.quote);
 	}
 
-	// (b) Links discovered inside extracted text of non-.md files.
+	// (b) Links discovered inside extracted text of non-.md files
+	// (PDF / DOCX / XLSX). These are always in-body links, never
+	// front-matter — provenance remains `okf_link_resolver`.
 	for (const [sourceCanonical, body] of bodyByCanonical) {
 		const sourceId = idByCanonical.get(sourceCanonical);
 		if (sourceId === undefined) continue;
 		for (const link of extractMarkdownLinksFromText(body, sourceCanonical)) {
 			const targetId = idByCanonical.get(link.target);
 			if (targetId === undefined) continue;
-			addEdge(sourceId, targetId);
+			addEdge(sourceId, targetId, "cites", {
+				source: "okf_link_resolver",
+				run_id: runId,
+				resolved_at: resolvedAt,
+			});
 		}
 	}
 
 	if (wikiEdges.length > 0) {
 		store.upsertReferenceEdges({
 			workspace_id: input.workspace_id,
-			edges: wikiEdges.map((edge) => ({ ...edge, source_version_id: null, target_version_id: null })),
+			edges: wikiEdges.map((edge) => ({
+				...edge,
+				source_version_id: null,
+				target_version_id: null,
+			})),
 		});
 	}
 

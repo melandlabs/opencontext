@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { searchWorkspaceContext } from "../src/api";
+import { resolveWorkspaceCitation } from "../src/api";
 import { searchCrossFile } from "../src/search/cross-file";
 import { fuseHybridHits } from "../src/search/hybrid";
 import { searchLexical } from "../src/search/lexical";
@@ -195,6 +196,106 @@ describe("search pipeline", () => {
 		);
 		expect(result.total).toBeGreaterThan(0);
 		expect(result.strategy).toBe("hybrid");
+		await store.close();
+	});
+
+	it("resolves a citation back to its live content", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		await indexThreeDocuments(store);
+		const hits = searchLexical(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			query: "limitation",
+			limit: 1,
+		});
+		expect(hits[0]?.citation).toBeDefined();
+		const result = await resolveWorkspaceCitation({ user_id: "u1", request_id: "req-2" }, store, {
+			citation: hits[0]!.citation,
+		});
+		expect(result.status).toBe("resolved");
+		if (result.status === "resolved") {
+			expect(result.content.length).toBeGreaterThan(0);
+			expect(result.drift).toBe(false);
+		}
+		await store.close();
+	});
+
+	it("detects drift when the chunk content has changed since the citation was issued", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		await indexThreeDocuments(store);
+		const hits = searchLexical(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			query: "limitation",
+			limit: 1,
+		});
+		const citation = hits[0]!.citation;
+		// Mutate the chunk content directly to simulate a re-index that
+		// changed the underlying bytes without updating the citation.
+		store.__testDb
+			.prepare("UPDATE workspace_chunks SET content = ?, content_hash = ? WHERE chunk_id = ?")
+			.run("limitation of liability (amended)", "drifted-hash", citation.chunk_id);
+		const result = await resolveWorkspaceCitation({ user_id: "u1", request_id: "req-3" }, store, {
+			citation,
+		});
+		expect(result.status).toBe("drifted");
+		if (result.status === "drifted") {
+			expect(result.drift).toBe(true);
+			expect(result.expected_hash).toBe(citation.content_hash);
+		}
+		await store.close();
+	});
+
+	it("reports missing for non-workspace citations without a host resolver", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		await indexThreeDocuments(store);
+		const result = await resolveWorkspaceCitation({ user_id: "u1", request_id: "req-4" }, store, {
+			citation: {
+				id: "fact:abc",
+				kind: "memory_fact",
+				memory_fact_id: "abc",
+				snippet: "x",
+				scores: {},
+				content_hash: "0",
+			},
+		});
+		expect(result.status).toBe("missing");
+		await store.close();
+	});
+
+	it("delegates memory_fact citations to the host resolver", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const result = await resolveWorkspaceCitation(
+			{ user_id: "u1", request_id: "req-5" },
+			store,
+			{
+				citation: {
+					id: "fact:xyz",
+					kind: "memory_fact",
+					memory_fact_id: "xyz",
+					snippet: "snapshot",
+					scores: {},
+					content_hash: "abc",
+				},
+			},
+			{
+				resolveMemoryFact: async ({ memory_fact_id }) => ({
+					kind: "memory_fact",
+					content: `live:${memory_fact_id}`,
+					content_hash: "abc",
+					drift: false,
+					raw: { id: memory_fact_id },
+				}),
+			},
+		);
+		expect(result.status).toBe("resolved");
+		if (result.status === "resolved") {
+			expect(result.content).toBe("live:xyz");
+		}
 		await store.close();
 	});
 });

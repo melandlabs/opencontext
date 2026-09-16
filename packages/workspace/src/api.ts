@@ -5,6 +5,9 @@
  *   - `searchWorkspaceContext` — multi-strategy hybrid search (lexical /
  *                               semantic / hybrid / cross-file)
  *   - `listWorkspaceResources` — enumerate indexed resources for a project
+ *   - `resolveWorkspaceCitation` — cross-layer citation resolver with
+ *                                 drift detection (workspace_chunk +
+ *                                 host-injected memory_fact + raw_message)
  *
  * The HTTP and MCP entry points (`src/http.ts`, `src/mcp.ts`) build the
  * `RuntimeContext` from request headers / tool args and pass it through
@@ -28,6 +31,7 @@ import type {
 	UpdateWorkspaceContextInput,
 	UpdateWorkspaceContextResult,
 } from "./types";
+import type { Citation } from "@melandlabs/contracts";
 
 /**
  * Only `okf_folder` is supported as a source today. Any other value
@@ -170,4 +174,119 @@ export async function listWorkspaceResources(
 	if (!input.workspace_id) throw new Error("workspace_id is required");
 	void ctx_rt; // Reserved for future per-user ACL filtering on the listing.
 	return store.listResources(input);
+}
+
+// ---------------------------------------------------------------------------
+// resolveWorkspaceCitation — cross-layer citation resolver
+// ---------------------------------------------------------------------------
+
+/**
+ * What a host-provided resolver returns for `memory_fact` / `raw_message`
+ * citations. The workspace store only owns `workspace_chunk` citations;
+ * the two cross-layer kinds must be resolved by the caller (which owns
+ * the memory store / message store).
+ */
+export interface CrossLayerResolvedCitation {
+	kind: "memory_fact" | "raw_message";
+	content: string;
+	content_hash: string;
+	drift: boolean;
+	raw: unknown;
+}
+
+export interface ResolveWorkspaceCitationDeps {
+	/**
+	 * Resolve a `memory_fact` citation to its live content. The workspace
+	 * store doesn't own the memory store, so the host wires this in.
+	 */
+	resolveMemoryFact?: (input: { memory_fact_id: string }) => Promise<CrossLayerResolvedCitation | null>;
+	/**
+	 * Resolve a `raw_message` citation to its live content (e.g. via
+	 * `@melandlabs/memory-store`'s SQLiteRawMessageManager).
+	 */
+	resolveRawMessage?: (input: { message_id: string }) => Promise<CrossLayerResolvedCitation | null>;
+}
+
+/**
+ * Resolve a citation back to its live content. Returns drift info when
+ * the live content_hash no longer matches the snapshot embedded in the
+ * citation — this lets the LLM warn the user ("the cited line was
+ * edited since this answer was generated") without ever silently
+ * serving stale evidence.
+ *
+ * The store handles `workspace_chunk` natively. The other two kinds
+ * (`memory_fact`, `raw_message`) need host-injected resolvers because
+ * they live outside the workspace store.
+ */
+export async function resolveWorkspaceCitation(
+	ctx_rt: RuntimeContext,
+	store: SqliteWorkspaceStore,
+	input: { citation: Citation; workspace_id?: string },
+	deps: ResolveWorkspaceCitationDeps = {},
+): Promise<
+	| { status: "resolved"; citation: Citation; content: string; drift: false }
+	| { status: "drifted"; citation: Citation; content: string; drift: true; expected_hash: string }
+	| {
+			status: "missing";
+			citation: Citation;
+			reason: "wrong_workspace" | "chunk_not_found" | "host_resolver_missing";
+	  }
+> {
+	void ctx_rt;
+	const citation = input.citation;
+	if (citation.kind === "workspace_chunk") {
+		const workspaceId = input.workspace_id ?? citation.workspace_id;
+		if (!workspaceId) {
+			return { status: "missing", citation, reason: "wrong_workspace" };
+		}
+		const result = store.resolveCitation({ workspace_id: workspaceId, citation });
+		if (result.status === "resolved") {
+			return { status: "resolved", citation, content: result.content, drift: false };
+		}
+		if (result.status === "drifted") {
+			return {
+				status: "drifted",
+				citation,
+				content: result.content,
+				drift: true,
+				expected_hash: result.expected_hash,
+			};
+		}
+		return { status: "missing", citation, reason: result.reason };
+	}
+	if (citation.kind === "memory_fact") {
+		if (!deps.resolveMemoryFact) {
+			return { status: "missing", citation, reason: "host_resolver_missing" };
+		}
+		const id = citation.memory_fact_id ?? "";
+		const resolved = await deps.resolveMemoryFact({ memory_fact_id: id });
+		if (!resolved) return { status: "missing", citation, reason: "chunk_not_found" };
+		if (resolved.drift) {
+			return {
+				status: "drifted",
+				citation,
+				content: resolved.content,
+				drift: true,
+				expected_hash: citation.content_hash,
+			};
+		}
+		return { status: "resolved", citation, content: resolved.content, drift: false };
+	}
+	// raw_message
+	if (!deps.resolveRawMessage) {
+		return { status: "missing", citation, reason: "host_resolver_missing" };
+	}
+	const id = citation.message_id ?? "";
+	const resolved = await deps.resolveRawMessage({ message_id: id });
+	if (!resolved) return { status: "missing", citation, reason: "chunk_not_found" };
+	if (resolved.drift) {
+		return {
+			status: "drifted",
+			citation,
+			content: resolved.content,
+			drift: true,
+			expected_hash: citation.content_hash,
+		};
+	}
+	return { status: "resolved", citation, content: resolved.content, drift: false };
 }

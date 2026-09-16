@@ -68,6 +68,17 @@ export function fuseHybridHits(input: HybridSearchInput): WorkspaceSearchHit[] {
 	return fused.map((result) => {
 		const original = byChunkId.get(result.id);
 		if (!original) {
+			// Defensive fallback: shouldn't trigger in practice (both
+			// inputs come from the same store) but keeps the type
+			// contract intact. Caller receives a stub citation that
+			// downstream `resolveCitation` can re-resolve.
+			const stubCitation = {
+				id: `ws::${result.id}`,
+				kind: "workspace_chunk" as const,
+				snippet: result.content,
+				scores: { rrf: result.score },
+				content_hash: "",
+			};
 			return {
 				chunk_id: result.id,
 				resource_id: 0,
@@ -80,6 +91,8 @@ export function fuseHybridHits(input: HybridSearchInput): WorkspaceSearchHit[] {
 				score: result.score,
 				signals: {},
 				reference_edges: [],
+				promoted_fact_ids: [],
+				citation: stubCitation,
 			};
 		}
 		return fromVectorResult(result, original);

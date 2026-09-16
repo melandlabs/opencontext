@@ -16,8 +16,17 @@ export {
 } from "./sqlite";
 export type { SqliteWorkspaceStore, SqliteWorkspaceStoreOptions } from "./sqlite";
 
-export { updateWorkspaceContext, searchWorkspaceContext, listWorkspaceResources } from "./api";
-export type { SearchWorkspaceContextDeps } from "./api";
+export {
+	updateWorkspaceContext,
+	searchWorkspaceContext,
+	listWorkspaceResources,
+	resolveWorkspaceCitation,
+} from "./api";
+export type {
+	SearchWorkspaceContextDeps,
+	ResolveWorkspaceCitationDeps,
+	CrossLayerResolvedCitation,
+} from "./api";
 
 export { indexOkfFolder, listOkfFolderResources } from "./okf-backend";
 
@@ -44,6 +53,13 @@ export type {
 
 export { initializeWorkspaceSchema, WORKSPACE_SCHEMA_VERSION } from "./schema";
 
+// ── v0.3 wiki-distillation surface ────────────────────────────────────
+export { distillResource } from "./distill";
+export type { DistillResourceInput, DistillResourceOutput, DistilledEdgeProposal } from "./distill";
+
+export { promoteFactsToPage } from "./promote";
+export type { PromoteFactsInput, PromoteFactsOutput, PromotedFact } from "./promote";
+
 export type {
 	RuntimeContext,
 	WorkspaceStorageKind,
@@ -55,6 +71,7 @@ export type {
 	WorkspaceChunk,
 	WorkspaceReferenceEdge,
 	WorkspaceJob,
+	EdgeProvenance,
 	WorkspaceSearchHit,
 	SearchWorkspaceContextOptions,
 	UpdateWorkspaceContextInput,

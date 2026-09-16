@@ -90,6 +90,7 @@ import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
 import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
 import demoExtractDerive from "./tutorials/42-extract-derive.ts";
 import demoOkfServeLive from "./tutorials/43-okf-serve-live.ts";
+import demoWikiDistillation from "./tutorials/45-wiki-distillation.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
@@ -165,6 +166,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 	[
 		"demo: workspace — folder indexing + cross-file hybrid search (local embeddings by default)",
 		demoWorkspace,
+	],
+	[
+		"demo: workspace — wiki distillation (v0.3: distill, promote, edit, rollback, citations)",
+		demoWikiDistillation,
 	],
 	["demo: use-case — personal memory assistant", demoPersonalMemoryAssistant],
 	["demo: use-case — customer support agent", demoCustomerSupportAgent],

@@ -20,8 +20,14 @@ import type Database from "better-sqlite3";
  * Current schema version. Bump when adding a new table or column;
  * the boot path reads this constant to decide whether to run a
  * migration.
+ *
+ * v1 (initial) — tables: workspace_resources, workspace_resource_versions,
+ *                 workspace_chunks (+ FTS5 mirror), workspace_reference_edges,
+ *                 workspace_jobs.
+ * v2           — workspace_reference_edges.provenance (TEXT), DLQ support
+ *                 via `index_status = 'dlq'` enum extension.
  */
-export const WORKSPACE_SCHEMA_VERSION = 1;
+export const WORKSPACE_SCHEMA_VERSION = 2;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -175,4 +181,35 @@ export function initializeWorkspaceSchema(db: Database.Database): void {
 	// without TypeScript flagging it as unused. Same pattern as the
 	// memory-store schema's v2–v5 column upgrades.
 	void addColumnIfMissing;
+
+	// ─── v2 migrations ─────────────────────────────────────────────────
+	//
+	// Provenance for reference edges (used by `distillResource`,
+	// `reconcileResourceEdges`, and the OKF frontmatter link writer).
+	// Stored as a JSON-encoded `EdgeProvenance` object — keeping it
+	// opaque at the SQL layer so we can grow the shape without DDL.
+	addColumnIfMissing(db, "workspace_reference_edges", "provenance", "TEXT");
+
+	// ─── Memory → Workspace promotion bridge (Tier 4.1) ─────────────────
+	//
+	// Permanent record of which memory facts were promoted into which
+	// workspace page version. Lets search hits expose `promoted_fact_ids`
+	// and lets audit trails trace a wiki page back to its constituent
+	// memory facts.
+	db.exec(`
+    CREATE TABLE IF NOT EXISTS workspace_resource_facts (
+      workspace_id TEXT NOT NULL,
+      resource_id INTEGER NOT NULL,
+      version_id INTEGER NOT NULL,
+      memory_fact_id TEXT NOT NULL,
+      promoted_at INTEGER NOT NULL,
+      promoted_by_run_id TEXT,
+      PRIMARY KEY (workspace_id, resource_id, version_id, memory_fact_id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_workspace_resource_facts_fact
+      ON workspace_resource_facts(memory_fact_id);
+    CREATE INDEX IF NOT EXISTS idx_workspace_resource_facts_resource
+      ON workspace_resource_facts(resource_id, version_id);
+  `);
 }

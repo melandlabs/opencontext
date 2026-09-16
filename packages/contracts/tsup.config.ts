@@ -16,6 +16,7 @@ export default defineConfig({
 		"vsa-fact": "src/vsa-fact.ts",
 		okf: "src/okf.ts",
 		schemas: "src/schemas.ts",
+		citation: "src/citation.ts",
 	},
 	format: ["esm"],
 	dts: true,
