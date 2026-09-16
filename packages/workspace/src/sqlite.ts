@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { type Citation, type CitationEdge, buildCitationId } from "@melandlabs/contracts";
 import { getOpenContextPath } from "@melandlabs/env-config";
 import {
 	RAW_MESSAGE_CHUNK_MAX_TOKENS,
@@ -38,6 +39,7 @@ import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { initializeWorkspaceSchema } from "./schema";
 import type {
+	EdgeProvenance,
 	ListWorkspaceResourcesInput,
 	ListWorkspaceResourcesResult,
 	OkfFolderResource,
@@ -163,6 +165,21 @@ function stringifyJson(value: unknown): string | null {
 }
 
 /**
+ * Defensive parse for the `provenance` JSON column. Returns `null` on
+ * any failure so callers can treat missing / malformed provenance as
+ * "legacy auto-edge, eligible for pruning".
+ */
+function safeParseProvenance(raw: string): EdgeProvenance | null {
+	try {
+		const obj = JSON.parse(raw) as Record<string, unknown>;
+		if (typeof obj.source !== "string") return null;
+		return obj as unknown as EdgeProvenance;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Resolve the SQLite DB file path that backs the workspace store.
  * Mirrors `packages/memory-store/src/storage/sqlite-raw-message-store.ts:27-31`
  * so the workspace tables live in the same file as the rest of the
@@ -209,8 +226,13 @@ export interface ISqliteWorkspaceStore {
 	markVersionEmbeddingReady(resourceId: number, versionId: number): void;
 	markVersionEmbeddingPartial(resourceId: number, versionId: number, errorMessage: string): void;
 	markVersionEmbeddingFailed(resourceId: number, versionId: number, errorMessage: string): void;
+	markIndexPending(resourceId: number, versionId: number): void;
+	markIndexDlq(resourceId: number, versionId: number, errorMessage: string): void;
 	markJobFailed(jobId: number | null, errorMessage: string): void;
+	markJobDlq(jobId: number, errorMessage: string): void;
+	markJobInFlight(jobId: number): void;
 	completeJob(jobId: number, done: number): void;
+	getDlqJobs(workspace_id?: string): Array<WorkspaceJob>;
 
 	indexResource(input: {
 		workspace_id: string;
@@ -231,8 +253,58 @@ export interface ISqliteWorkspaceStore {
 			target_version_id: number | null;
 			edge_type: WorkspaceEdgeType;
 			quote?: string | null;
+			provenance?: EdgeProvenance | null;
 		}>;
 	}): void;
+
+	rollbackToVersion(input: {
+		workspace_id: string;
+		resource_id: number;
+		target_version_id: number;
+		snapshotCurrent?: boolean;
+	}): {
+		resource_id: number;
+		previous_version_id: number | null;
+		new_current_version_id: number;
+		snapshot_version_id?: number;
+	};
+
+	editChunk(input: {
+		workspace_id: string;
+		chunk_id: string;
+		new_content: string;
+		edit_reason?: string;
+		skipReindex?: boolean;
+	}): Promise<{
+		chunk_id: string;
+		resource_version_id: number;
+		chunk_version_id: number;
+		needsReembed: boolean;
+	}>;
+
+	reconcileResourceEdges(input: {
+		workspace_id: string;
+		resource_id: number;
+		keep: Array<{ target_resource_id: number; edge_type: WorkspaceEdgeType }>;
+		onlyProvenance?: Array<
+			"okf_link_resolver" | "okf_frontmatter" | "llm_distill" | "promote_facts" | "import"
+		>;
+		dryRun?: boolean;
+	}): {
+		removed: Array<{
+			target_resource_id: number;
+			edge_type: WorkspaceEdgeType;
+			provenance: EdgeProvenance | null;
+		}>;
+		kept: number;
+	};
+
+	linkPromotedFacts(input: {
+		workspace_id: string;
+		resource_id: number;
+		version_id: number;
+		fact_ids: string[];
+	}): { inserted: number };
 
 	softDeleteMissingResources(input: {
 		workspace_id: string;
@@ -264,6 +336,31 @@ export interface ISqliteWorkspaceStore {
 		hops: 1 | 2;
 		limit: number;
 	}): WorkspaceSearchHit[];
+
+	resolveCitation(input: {
+		workspace_id: string;
+		citation: Citation;
+	}):
+		| {
+				status: "resolved";
+				content: string;
+				content_hash: string;
+				drift: false;
+				resource_id: number;
+				version_id: number;
+				chunk_index: number;
+		  }
+		| {
+				status: "drifted";
+				content: string;
+				content_hash: string;
+				drift: true;
+				expected_hash: string;
+				resource_id: number;
+				version_id: number;
+				chunk_index: number;
+		  }
+		| { status: "missing"; reason: "chunk_not_found" | "wrong_workspace" };
 
 	findResourceByCanonicalKey(input: {
 		workspace_id: string;
@@ -312,14 +409,18 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	}
 
 	async init(): Promise<void> {
+		this.ensureInitialized();
+	}
+
+	/**
+	 * Sync version of `init()` for write-side methods (`upsertReferenceEdges`,
+	 * `rollbackToVersion`, `reconcileResourceEdges`, …) that historically
+	 * returned synchronously. The body is pure side-effect-free setup
+	 * (DDL + native module load) so we can collapse it into a sync call.
+	 */
+	private ensureInitialized(): void {
 		if (this.initialized) return;
 		initializeWorkspaceSchema(this.db);
-		// Load sqlite-vec into this connection so vec0 tables can be
-		// created/queried. Mirrors `SQLiteRawMessageManager.initializeVectorSearch`
-		// (`packages/sqlite/src/raw-message-manager.ts:1683-1695`). If the
-		// extension can't load (e.g. the binary wasn't built for the host
-		// platform) we leave `vectorSearchAvailable = false` so the
-		// embedding fan-out degrades to lexical-only instead of crashing.
 		try {
 			sqliteVec.load(this.db);
 			this.vectorSearchAvailable = true;
@@ -471,10 +572,49 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			.run(errorMessage, currentUnixSeconds(), jobId);
 	}
 
+	markJobDlq(jobId: number, errorMessage: string): void {
+		this.db
+			.prepare(`UPDATE workspace_jobs SET status = 'dlq', error = ?, updated_at = ? WHERE id = ?`)
+			.run(errorMessage, currentUnixSeconds(), jobId);
+	}
+
+	markJobInFlight(jobId: number): void {
+		this.db
+			.prepare(`UPDATE workspace_jobs SET status = 'partial', updated_at = ? WHERE id = ?`)
+			.run(currentUnixSeconds(), jobId);
+	}
+
 	completeJob(jobId: number, done: number): void {
 		this.db
 			.prepare(`UPDATE workspace_jobs SET status = 'ready', done = ?, updated_at = ? WHERE id = ?`)
 			.run(done, currentUnixSeconds(), jobId);
+	}
+
+	getDlqJobs(workspace_id?: string): Array<WorkspaceJob> {
+		const rows = workspace_id
+			? (this.db
+					.prepare(
+						`SELECT * FROM workspace_jobs WHERE status = 'dlq' AND workspace_id = ? ORDER BY updated_at DESC`,
+					)
+					.all(workspace_id) as Array<WorkspaceJobRow>)
+			: (this.db
+					.prepare(`SELECT * FROM workspace_jobs WHERE status = 'dlq' ORDER BY updated_at DESC`)
+					.all() as Array<WorkspaceJobRow>);
+		return rows.map(toWorkspaceJob);
+	}
+
+	markIndexPending(resourceId: number, versionId: number): void {
+		void versionId;
+		this.db.prepare(`UPDATE workspace_resources SET index_status = 'pending' WHERE id = ?`).run(resourceId);
+	}
+
+	markIndexDlq(resourceId: number, versionId: number, errorMessage: string): void {
+		void versionId;
+		// Embedding DLQ flips the resource status to 'dlq' so the
+		// search lexical fallback still works; the per-version
+		// error message rides on the originating `workspace_jobs.error`.
+		void errorMessage;
+		this.db.prepare(`UPDATE workspace_resources SET index_status = 'dlq' WHERE id = ?`).run(resourceId);
 	}
 
 	// -------------------------------------------------------------------------
@@ -627,6 +767,309 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	}
 
 	// -------------------------------------------------------------------------
+	// Version control: rollbackToVersion + editChunk
+	// -------------------------------------------------------------------------
+
+	rollbackToVersion(input: {
+		workspace_id: string;
+		resource_id: number;
+		target_version_id: number;
+		snapshotCurrent?: boolean;
+	}): {
+		resource_id: number;
+		previous_version_id: number | null;
+		new_current_version_id: number;
+		snapshot_version_id?: number;
+	} {
+		this.ensureInitialized();
+		const { workspace_id, resource_id, target_version_id, snapshotCurrent } = input;
+		const now = currentUnixSeconds();
+
+		const tx = this.db.transaction(() => {
+			const resourceRow = this.db
+				.prepare("SELECT id, current_version_id FROM workspace_resources WHERE workspace_id = ? AND id = ?")
+				.get(workspace_id, resource_id) as { id: number; current_version_id: number | null } | undefined;
+			if (!resourceRow) {
+				throw new Error(`resource_id ${resource_id} not found in workspace ${workspace_id}`);
+			}
+			const previousVersionId = resourceRow.current_version_id;
+
+			const targetRow = this.db
+				.prepare("SELECT id, sha256 FROM workspace_resource_versions WHERE id = ? AND resource_id = ?")
+				.get(target_version_id, resource_id) as { id: number; sha256: string } | undefined;
+			if (!targetRow) {
+				throw new Error(
+					`target_version_id ${target_version_id} does not belong to resource_id ${resource_id}`,
+				);
+			}
+			if (previousVersionId === target_version_id) {
+				// No-op rollback to the same version.
+				return {
+					resource_id,
+					previous_version_id: previousVersionId,
+					new_current_version_id: target_version_id,
+				};
+			}
+
+			let snapshotVersionId: number | undefined;
+			if (snapshotCurrent && previousVersionId !== null) {
+				// Snapshot the current version before flipping — preserves an
+				// audit trail of "before rollback" content as its own
+				// immutable version row.
+				const prevVersionRow = this.db
+					.prepare(
+						"SELECT resource_id, sha256, size_bytes, source_path, metadata FROM workspace_resource_versions WHERE id = ?",
+					)
+					.get(previousVersionId) as {
+					resource_id: number;
+					sha256: string;
+					size_bytes: number;
+					source_path: string | null;
+					metadata: string | null;
+				};
+				const maxVersion = this.db
+					.prepare(
+						"SELECT COALESCE(MAX(version_number), 0) AS max_version FROM workspace_resource_versions WHERE resource_id = ?",
+					)
+					.get(resource_id) as { max_version: number };
+				const insertSnapshot = this.db
+					.prepare(
+						`INSERT INTO workspace_resource_versions(
+                            resource_id, version_number, sha256, change_kind, size_bytes,
+                            parent_version_id, source_path, created_at, metadata
+                         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+					)
+					.run(
+						prevVersionRow.resource_id,
+						maxVersion.max_version + 1,
+						prevVersionRow.sha256,
+						"rollback_snapshot",
+						prevVersionRow.size_bytes,
+						previousVersionId,
+						prevVersionRow.source_path,
+						now,
+						prevVersionRow.metadata,
+					);
+				snapshotVersionId = Number(insertSnapshot.lastInsertRowid);
+			}
+
+			// Delete chunks belonging to the *current* version (the one we
+			// are rolling away from). Target-version chunks are untouched —
+			// they were created under the target_version_id key and the
+			// UNIQUE (resource_id, version_id, chunk_index) constraint
+			// guarantees their isolation.
+			this.db
+				.prepare("DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?")
+				.run(resource_id, previousVersionId);
+
+			// Materialise target-version chunks into the current version
+			// slot. Since `workspace_chunks.version_id` is part of the
+			// unique key we can't just promote old rows; instead we copy
+			// them and update version_id to the new current.
+			if (previousVersionId !== null) {
+				const targetChunks = this.db
+					.prepare(
+						`SELECT chunk_id, chunk_index, chunk_count, start_position, end_position, content, content_hash
+                         FROM workspace_chunks
+                         WHERE resource_id = ? AND version_id = ?`,
+					)
+					.all(resource_id, target_version_id) as Array<{
+					chunk_id: string;
+					chunk_index: number;
+					chunk_count: number;
+					start_position: number;
+					end_position: number;
+					content: string;
+					content_hash: string;
+				}>;
+				// Bind under the *previous* version_id so the FTS5 triggers
+				// fire (chunk_id is a global unique; we don't reuse
+				// previous_version_id chunks since they were just
+				// deleted above).
+				const insertChunk = this.db.prepare(
+					`INSERT INTO workspace_chunks(
+                        chunk_id, resource_id, version_id, workspace_id, chunk_index, chunk_count,
+                        start_position, end_position, content, content_hash
+                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				);
+				for (const chunk of targetChunks) {
+					insertChunk.run(
+						`${workspace_id}:${resource_id}:${previousVersionId}:rollback:${chunk.chunk_index}:${chunk.content_hash.slice(0, 16)}`,
+						resource_id,
+						previousVersionId,
+						workspace_id,
+						chunk.chunk_index,
+						chunk.chunk_count,
+						chunk.start_position,
+						chunk.end_position,
+						chunk.content,
+						chunk.content_hash,
+					);
+				}
+			}
+
+			// Flip current_version_id + flip index_status so the embedding
+			// queue knows to re-embed the rolled-back content.
+			this.db
+				.prepare(
+					`UPDATE workspace_resources
+                     SET current_version_id = ?, index_status = 'pending', updated_at = ?
+                     WHERE id = ?`,
+				)
+				.run(target_version_id, now, resource_id);
+
+			return {
+				resource_id,
+				previous_version_id: previousVersionId,
+				new_current_version_id: target_version_id,
+				...(snapshotVersionId !== undefined ? { snapshot_version_id: snapshotVersionId } : {}),
+			};
+		});
+
+		return tx();
+	}
+
+	async editChunk(input: {
+		workspace_id: string;
+		chunk_id: string;
+		new_content: string;
+		edit_reason?: string;
+		skipReindex?: boolean;
+	}): Promise<{
+		chunk_id: string;
+		resource_version_id: number;
+		chunk_version_id: number;
+		needsReembed: boolean;
+	}> {
+		await this.init();
+		const { workspace_id, chunk_id, new_content, edit_reason, skipReindex } = input;
+
+		// Look up the chunk to derive resource/version context.
+		const chunkRow = this.db
+			.prepare(
+				`SELECT pc.id, pc.resource_id, pc.version_id, pc.chunk_index, pr.canonical_key, pr.title
+                 FROM workspace_chunks pc
+                 JOIN workspace_resources pr ON pr.id = pc.resource_id
+                 WHERE pc.chunk_id = ? AND pc.workspace_id = ?`,
+			)
+			.get(chunk_id, workspace_id) as
+			| {
+					id: number;
+					resource_id: number;
+					version_id: number;
+					chunk_index: number;
+					canonical_key: string;
+					title: string;
+			  }
+			| undefined;
+		if (!chunkRow) {
+			throw new Error(`chunk_id ${chunk_id} not found in workspace ${workspace_id}`);
+		}
+
+		const newContentHash = sha256(new_content);
+
+		if (skipReindex) {
+			// Fast path: update content + content_hash in place; FTS5
+			// UPDATE trigger keeps the mirror in sync. Caller is
+			// responsible for deciding whether to re-embed.
+			this.db
+				.prepare(
+					`UPDATE workspace_chunks SET content = ?, content_hash = ?, embedding = NULL,
+                       embedding_model = NULL, embedding_dimensions = NULL, embedding_updated_at = NULL
+                     WHERE chunk_id = ?`,
+				)
+				.run(new_content, newContentHash, chunk_id);
+			return {
+				chunk_id,
+				resource_version_id: chunkRow.version_id,
+				chunk_version_id: chunkRow.id,
+				needsReembed: true,
+			};
+		}
+
+		// Slow path: rewrite the full body and run `indexResource` so the
+		// version chain stays consistent. Read existing pieces first.
+		const existing = this.db
+			.prepare(
+				`SELECT chunk_index, start_position, end_position, content
+                 FROM workspace_chunks WHERE version_id = ? ORDER BY chunk_index ASC`,
+			)
+			.all(chunkRow.version_id) as Array<{
+			chunk_index: number;
+			start_position: number;
+			end_position: number;
+			content: string;
+		}>;
+
+		const pieces = chunkTextByEstimatedTokens(new_content, {
+			maxTokens: RAW_MESSAGE_CHUNK_MAX_TOKENS,
+			overlapTokens: RAW_MESSAGE_CHUNK_OVERLAP_TOKENS,
+		});
+
+		const tx = this.db.transaction(() => {
+			// Stash reason in resource metadata so audit / UI can show
+			// "last edit reason".
+			const resourceRow = this.db
+				.prepare("SELECT metadata FROM workspace_resources WHERE id = ?")
+				.get(chunkRow.resource_id) as { metadata: string | null };
+			const meta = resourceRow.metadata
+				? (parseJson<Record<string, unknown>>(resourceRow.metadata, {}) ?? {})
+				: {};
+			meta.last_edit_reason = edit_reason ?? "editChunk";
+			meta.last_edit_at = currentUnixSeconds();
+			this.db
+				.prepare(
+					`UPDATE workspace_resources SET metadata = ?, index_status = 'pending',
+					   updated_at = ?
+					 WHERE id = ?`,
+				)
+				.run(stringifyJson(meta), currentUnixSeconds(), chunkRow.resource_id);
+
+			// Wipe and rewrite chunks for this version.
+			this.db
+				.prepare("DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?")
+				.run(chunkRow.resource_id, chunkRow.version_id);
+
+			const insertChunk = this.db.prepare(
+				`INSERT INTO workspace_chunks(
+                    chunk_id, resource_id, version_id, workspace_id, chunk_index, chunk_count,
+                    start_position, end_position, content, content_hash
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			);
+			const total = pieces.length;
+			for (const piece of pieces) {
+				const pieceHash = sha256(piece.content);
+				insertChunk.run(
+					`${workspace_id}:${chunkRow.resource_id}:${chunkRow.version_id}:chunk:${piece.chunkIndex}:${pieceHash.slice(0, 16)}`,
+					chunkRow.resource_id,
+					chunkRow.version_id,
+					workspace_id,
+					piece.chunkIndex,
+					total,
+					piece.startPosition,
+					piece.endPosition,
+					piece.content,
+					pieceHash,
+				);
+			}
+
+			return chunkRow.version_id;
+		});
+
+		const resourceVersionId = tx();
+		// Suppress unused-var lint on `existing` (kept for future diff
+		// computation when callers want fine-grained "what changed").
+		void existing;
+
+		return {
+			chunk_id,
+			resource_version_id: resourceVersionId,
+			chunk_version_id: chunkRow.id,
+			needsReembed: true,
+		};
+	}
+
+	// -------------------------------------------------------------------------
 	// Reference edges
 	// -------------------------------------------------------------------------
 
@@ -639,6 +1082,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			target_version_id: number | null;
 			edge_type: WorkspaceEdgeType;
 			quote?: string | null;
+			provenance?: EdgeProvenance | null;
 		}>;
 	}): void {
 		const now = currentUnixSeconds();
@@ -646,12 +1090,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			const insertStmt = this.db.prepare(
 				`INSERT INTO workspace_reference_edges(
                     workspace_id, source_resource_id, source_version_id,
-                    target_resource_id, target_version_id, edge_type, quote, created_at
-                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    target_resource_id, target_version_id, edge_type, quote, provenance, created_at
+                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON CONFLICT(workspace_id, source_resource_id, target_resource_id, edge_type) DO UPDATE SET
                     source_version_id = excluded.source_version_id,
                     target_version_id = excluded.target_version_id,
-                    quote = excluded.quote`,
+                    quote = excluded.quote,
+                    provenance = excluded.provenance`,
 			);
 			for (const edge of input.edges) {
 				insertStmt.run(
@@ -662,11 +1107,138 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					edge.target_version_id,
 					edge.edge_type,
 					edge.quote ?? null,
+					edge.provenance ? JSON.stringify(edge.provenance) : null,
 					now,
 				);
 			}
 		});
 		tx();
+	}
+
+	// -------------------------------------------------------------------------
+	// Edge lifecycle: reconcileResourceEdges + linkPromotedFacts
+	// -------------------------------------------------------------------------
+
+	reconcileResourceEdges(input: {
+		workspace_id: string;
+		resource_id: number;
+		keep: Array<{ target_resource_id: number; edge_type: WorkspaceEdgeType }>;
+		onlyProvenance?: Array<
+			"okf_link_resolver" | "okf_frontmatter" | "llm_distill" | "promote_facts" | "import"
+		>;
+		dryRun?: boolean;
+	}): {
+		removed: Array<{
+			target_resource_id: number;
+			edge_type: WorkspaceEdgeType;
+			provenance: EdgeProvenance | null;
+		}>;
+		kept: number;
+	} {
+		this.ensureInitialized();
+		const { workspace_id, resource_id, keep, onlyProvenance, dryRun } = input;
+
+		// Build the keep key set (target + edge_type).
+		const keepKeys = new Set<string>();
+		for (const k of keep) {
+			keepKeys.add(`${k.target_resource_id}::${k.edge_type}`);
+		}
+		// Default: only auto-generated edges are pruned. Manual edges are
+		// sacred.
+		const allowedSources = onlyProvenance ?? [
+			"okf_link_resolver",
+			"okf_frontmatter",
+			"llm_distill",
+			"promote_facts",
+			"import",
+		];
+
+		const candidates = this.db
+			.prepare(
+				`SELECT target_resource_id, edge_type, provenance
+                 FROM workspace_reference_edges
+                 WHERE workspace_id = ? AND source_resource_id = ?`,
+			)
+			.all(workspace_id, resource_id) as Array<{
+			target_resource_id: number;
+			edge_type: WorkspaceEdgeType;
+			provenance: string | null;
+		}>;
+
+		const removed: Array<{
+			target_resource_id: number;
+			edge_type: WorkspaceEdgeType;
+			provenance: EdgeProvenance | null;
+		}> = [];
+		const toDelete: Array<{ target_resource_id: number; edge_type: WorkspaceEdgeType }> = [];
+		let kept = 0;
+
+		for (const row of candidates) {
+			const key = `${row.target_resource_id}::${row.edge_type}`;
+			if (keepKeys.has(key)) {
+				kept += 1;
+				continue;
+			}
+			const parsed: EdgeProvenance | null = row.provenance ? safeParseProvenance(row.provenance) : null;
+			// Manual edges are never touched.
+			if (parsed?.source === "manual") {
+				kept += 1;
+				continue;
+			}
+			// Edge without provenance pre-dates schema v2 — treat as
+			// legacy auto-edge, eligible for pruning.
+			if (parsed && !allowedSources.includes(parsed.source)) {
+				kept += 1;
+				continue;
+			}
+			removed.push({
+				target_resource_id: row.target_resource_id,
+				edge_type: row.edge_type,
+				provenance: parsed,
+			});
+			toDelete.push({ target_resource_id: row.target_resource_id, edge_type: row.edge_type });
+		}
+
+		if (!dryRun && toDelete.length > 0) {
+			const tx = this.db.transaction(() => {
+				const stmt = this.db.prepare(
+					`DELETE FROM workspace_reference_edges
+                     WHERE workspace_id = ? AND source_resource_id = ?
+                       AND target_resource_id = ? AND edge_type = ?`,
+				);
+				for (const row of toDelete) {
+					stmt.run(workspace_id, resource_id, row.target_resource_id, row.edge_type);
+				}
+			});
+			tx();
+		}
+
+		return { removed, kept };
+	}
+
+	linkPromotedFacts(input: {
+		workspace_id: string;
+		resource_id: number;
+		version_id: number;
+		fact_ids: string[];
+	}): { inserted: number } {
+		this.ensureInitialized();
+		const { workspace_id, resource_id, version_id, fact_ids } = input;
+		const now = currentUnixSeconds();
+		let inserted = 0;
+		const tx = this.db.transaction(() => {
+			const stmt = this.db.prepare(
+				`INSERT OR IGNORE INTO workspace_resource_facts(
+                    workspace_id, resource_id, version_id, memory_fact_id, promoted_at, promoted_by_run_id
+                 ) VALUES (?, ?, ?, ?, ?, ?)`,
+			);
+			for (const fid of fact_ids) {
+				const info = stmt.run(workspace_id, resource_id, version_id, fid, now, null);
+				if (info.changes > 0) inserted += 1;
+			}
+		});
+		tx();
+		return { inserted };
 	}
 
 	// -------------------------------------------------------------------------
@@ -742,6 +1314,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                    pr.title         AS resource_title,
                    pr.canonical_key,
                    pc.content,
+                   pc.content_hash,
                    bm25(workspace_chunks_fts) AS bm25_score,
                    pc.chunk_index
             FROM workspace_chunks_fts fts
@@ -762,22 +1335,43 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			resource_title: string;
 			canonical_key: string;
 			content: string;
+			content_hash: string;
 			bm25_score: number;
 			chunk_index: number;
 		}>;
-		return rows.map((row) => ({
-			chunk_id: row.chunk_id,
-			resource_id: row.resource_id,
-			version_id: row.version_id,
-			resource_type: row.resource_type,
-			resource_title: row.resource_title,
-			canonical_key: row.canonical_key,
-			snippet: buildSnippet(row.content, keywords),
-			matched_terms: keywords,
-			score: bm25ToSimilarity(row.bm25_score),
-			signals: { lexical: bm25ToSimilarity(row.bm25_score) },
-			reference_edges: this.edgesForResource(row.resource_id),
-		}));
+		return rows.map((row) => {
+			const edges = this.edgesForResource(row.resource_id);
+			const promoted = this.factsForResource(row.resource_id, row.version_id);
+			const lexicalScore = bm25ToSimilarity(row.bm25_score);
+			return {
+				chunk_id: row.chunk_id,
+				resource_id: row.resource_id,
+				version_id: row.version_id,
+				resource_type: row.resource_type,
+				resource_title: row.resource_title,
+				canonical_key: row.canonical_key,
+				snippet: buildSnippet(row.content, keywords),
+				matched_terms: keywords,
+				score: lexicalScore,
+				signals: { lexical: lexicalScore },
+				reference_edges: edges,
+				promoted_fact_ids: promoted,
+				citation: this.buildCitation({
+					workspace_id: input.workspace_id,
+					chunk_id: row.chunk_id,
+					resource_id: row.resource_id,
+					resource_title: row.resource_title,
+					resource_type: row.resource_type,
+					version_id: row.version_id,
+					canonical_key: row.canonical_key,
+					snippet: buildSnippet(row.content, keywords),
+					content_hash: row.content_hash,
+					scores: { lexical: lexicalScore },
+					reference_edges: edges,
+					promoted_fact_ids: promoted,
+				}),
+			};
+		});
 	}
 
 	// -------------------------------------------------------------------------
@@ -832,7 +1426,8 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                             pr.resource_type,
                             pr.title         AS resource_title,
                             pr.canonical_key,
-                            pc.content
+                            pc.content,
+                            pc.content_hash
                      FROM workspace_chunks pc
                      JOIN workspace_resources pr ON pr.id = pc.resource_id
                      WHERE pc.workspace_id = ?
@@ -849,6 +1444,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				resource_title: string;
 				canonical_key: string;
 				content: string;
+				content_hash: string;
 			}>;
 			const byDistance = new Map(vecRows.map((row) => [row.chunk_id, row.distance]));
 			const candidateHits: WorkspaceSearchHit[] = [];
@@ -856,6 +1452,9 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				const distance = byDistance.get(row.chunk_id) ?? Number.POSITIVE_INFINITY;
 				const similarity = sqliteDistanceToSimilarity(distance);
 				if (similarity < input.threshold) continue;
+				const snippet = buildSnippet(row.content, []);
+				const edges = this.edgesForResource(row.resource_id);
+				const promoted = this.factsForResource(row.resource_id, row.version_id);
 				candidateHits.push({
 					chunk_id: row.chunk_id,
 					resource_id: row.resource_id,
@@ -863,11 +1462,26 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					resource_type: row.resource_type,
 					resource_title: row.resource_title,
 					canonical_key: row.canonical_key,
-					snippet: buildSnippet(row.content, []),
+					snippet,
 					matched_terms: [],
 					score: similarity,
 					signals: { semantic: similarity },
-					reference_edges: this.edgesForResource(row.resource_id),
+					reference_edges: edges,
+					promoted_fact_ids: promoted,
+					citation: this.buildCitation({
+						workspace_id: input.workspace_id,
+						chunk_id: row.chunk_id,
+						resource_id: row.resource_id,
+						resource_title: row.resource_title,
+						resource_type: row.resource_type,
+						version_id: row.version_id,
+						canonical_key: row.canonical_key,
+						snippet,
+						content_hash: row.content_hash,
+						scores: { semantic: similarity },
+						reference_edges: edges,
+						promoted_fact_ids: promoted,
+					}),
 				});
 			}
 			const hits = candidateHits.sort((a, b) => b.score - a.score);
@@ -886,6 +1500,67 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		return Boolean(
 			this.db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(name),
 		);
+	}
+
+	// -------------------------------------------------------------------------
+	// Citation resolution (drift detection)
+	// -------------------------------------------------------------------------
+
+	resolveCitation(input: { workspace_id: string; citation: Citation }): ReturnType<
+		ISqliteWorkspaceStore["resolveCitation"]
+	> {
+		const { workspace_id, citation } = input;
+		if (citation.kind !== "workspace_chunk") {
+			// Memory / raw_message citations are resolved by the host
+			// via the api-level resolver (see `resolveWorkspaceCitation`).
+			// The store handles only the workspace layer.
+			return { status: "missing", reason: "chunk_not_found" };
+		}
+		if (!citation.workspace_id || citation.workspace_id !== workspace_id) {
+			return { status: "missing", reason: "wrong_workspace" };
+		}
+		if (!citation.chunk_id) {
+			return { status: "missing", reason: "chunk_not_found" };
+		}
+		this.ensureInitialized();
+		const row = this.db
+			.prepare(
+				`SELECT content, content_hash, resource_id, version_id, chunk_index
+                 FROM workspace_chunks
+                 WHERE workspace_id = ? AND chunk_id = ?`,
+			)
+			.get(workspace_id, citation.chunk_id) as
+			| {
+					content: string;
+					content_hash: string;
+					resource_id: number;
+					version_id: number;
+					chunk_index: number;
+			  }
+			| undefined;
+		if (!row) return { status: "missing", reason: "chunk_not_found" };
+		const drift = row.content_hash !== citation.content_hash;
+		if (drift) {
+			return {
+				status: "drifted",
+				content: row.content,
+				content_hash: row.content_hash,
+				drift: true,
+				expected_hash: citation.content_hash,
+				resource_id: row.resource_id,
+				version_id: row.version_id,
+				chunk_index: row.chunk_index,
+			};
+		}
+		return {
+			status: "resolved",
+			content: row.content,
+			content_hash: row.content_hash,
+			drift: false,
+			resource_id: row.resource_id,
+			version_id: row.version_id,
+			chunk_index: row.chunk_index,
+		};
 	}
 
 	// -------------------------------------------------------------------------
@@ -942,6 +1617,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				const chunkRow = this.db
 					.prepare(
 						`SELECT pc.chunk_id, pc.resource_id, pc.version_id, pc.content, pc.chunk_index,
+                                pc.content_hash,
                                 pr.resource_type, pr.title AS resource_title, pr.canonical_key
                          FROM workspace_chunks pc
                          JOIN workspace_resources pr ON pr.id = pc.resource_id
@@ -956,12 +1632,16 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 							version_id: number;
 							content: string;
 							chunk_index: number;
+							content_hash: string;
 							resource_type: string;
 							resource_title: string;
 							canonical_key: string;
 					  }
 					| undefined;
 				if (!chunkRow) continue;
+				const snippet = buildSnippet(chunkRow.content, []);
+				const edges = this.edgesForResource(chunkRow.resource_id);
+				const promoted = this.factsForResource(chunkRow.resource_id, chunkRow.version_id);
 				expansions.push({
 					chunk_id: chunkRow.chunk_id,
 					resource_id: chunkRow.resource_id,
@@ -969,11 +1649,26 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					resource_type: chunkRow.resource_type,
 					resource_title: chunkRow.resource_title,
 					canonical_key: chunkRow.canonical_key,
-					snippet: buildSnippet(chunkRow.content, []),
+					snippet,
 					matched_terms: [],
 					score: boost,
 					signals: { edge_boost: boost },
-					reference_edges: this.edgesForResource(chunkRow.resource_id),
+					reference_edges: edges,
+					promoted_fact_ids: promoted,
+					citation: this.buildCitation({
+						workspace_id: input.workspace_id,
+						chunk_id: chunkRow.chunk_id,
+						resource_id: chunkRow.resource_id,
+						resource_title: chunkRow.resource_title,
+						resource_type: chunkRow.resource_type,
+						version_id: chunkRow.version_id,
+						canonical_key: chunkRow.canonical_key,
+						snippet,
+						content_hash: chunkRow.content_hash,
+						scores: { edge_boost: boost },
+						reference_edges: edges,
+						promoted_fact_ids: promoted,
+					}),
 				});
 				queue.push({ resource_id: id, depth: head.depth + 1 });
 			}
@@ -994,12 +1689,76 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	private edgesForResource(resourceId: number): WorkspaceSearchHit["reference_edges"] {
 		const rows = this.db
 			.prepare(
-				`SELECT edge_type, target_resource_id FROM workspace_reference_edges
+				`SELECT edge_type, target_resource_id, provenance FROM workspace_reference_edges
                  WHERE source_resource_id = ? OR target_resource_id = ?
                  LIMIT 16`,
 			)
-			.all(resourceId, resourceId) as Array<{ edge_type: WorkspaceEdgeType; target_resource_id: number }>;
-		return rows;
+			.all(resourceId, resourceId) as Array<{
+			edge_type: WorkspaceEdgeType;
+			target_resource_id: number;
+			provenance: string | null;
+		}>;
+		return rows.map((row) => ({
+			edge_type: row.edge_type,
+			target_resource_id: row.target_resource_id,
+			provenance: row.provenance ? safeParseProvenance(row.provenance) : null,
+		}));
+	}
+
+	private factsForResource(resourceId: number, versionId: number): string[] {
+		const rows = this.db
+			.prepare(
+				`SELECT memory_fact_id FROM workspace_resource_facts
+                 WHERE resource_id = ? AND version_id = ?`,
+			)
+			.all(resourceId, versionId) as Array<{ memory_fact_id: string }>;
+		return rows.map((r) => r.memory_fact_id);
+	}
+
+	private buildCitation(input: {
+		workspace_id: string;
+		chunk_id: string;
+		resource_id: number;
+		resource_title: string;
+		resource_type: string;
+		version_id: number;
+		canonical_key: string;
+		snippet: string;
+		content_hash: string;
+		scores: Citation["scores"];
+		reference_edges: WorkspaceSearchHit["reference_edges"];
+		promoted_fact_ids: string[];
+	}): Citation {
+		// Workspace edges carry numeric `target_resource_id`s; the
+		// cross-layer citation envelope expects string `target_id`s
+		// so a chunk citation can link to a memory_fact or raw_message
+		// by the same key. We stringify the row id here — `resolveCitation`
+		// walks it back to a real chunk citation when needed.
+		const reference_edges: CitationEdge[] = (input.reference_edges ?? []).map((edge) => ({
+			edge_type: edge.edge_type,
+			target_id: `resource:${edge.target_resource_id}`,
+			target_kind: "workspace_chunk" as CitationEdge["target_kind"],
+		}));
+		return {
+			id: buildCitationId({
+				kind: "workspace_chunk",
+				workspace_id: input.workspace_id,
+				chunk_id: input.chunk_id,
+			}),
+			kind: "workspace_chunk",
+			workspace_id: input.workspace_id,
+			resource_id: input.resource_id,
+			resource_title: input.resource_title,
+			resource_type: input.resource_type,
+			chunk_id: input.chunk_id,
+			version_id: input.version_id,
+			canonical_key: input.canonical_key,
+			snippet: input.snippet,
+			scores: input.scores,
+			reference_edges,
+			content_hash: input.content_hash,
+			promoted_fact_ids: input.promoted_fact_ids,
+		};
 	}
 
 	// -------------------------------------------------------------------------

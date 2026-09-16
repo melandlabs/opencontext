@@ -40,6 +40,15 @@ export interface WikiNode {
 export interface WikiEdge {
 	source: string;
 	target: string;
+	/**
+	 * Optional edge type from the OKF front-matter `links:` block
+	 * (defaults to `cites` when absent). Front-matter-resolved edges
+	 * are tagged with this so `WorkspaceReferenceEdge` can preserve
+	 * `supersedes` / `amends` / `relates-to` intent across ingestion.
+	 */
+	edge_type?: "cites" | "supersedes" | "amends" | "relates-to";
+	/** Optional quote / context for the link, sourced from front-matter. */
+	quote?: string;
 }
 
 /** The complete in-memory graph served at `/api/graph`. */
@@ -105,26 +114,65 @@ function buildNodeFromMessage(message: RawMessage): WikiNode {
  * Resolve each node's outgoing links against known ids; populate
  * `links[]` and `backlinks[]` in place; return the resulting
  * deduplicated edge list.
+ *
+ * Two sources of edges:
+ *   1. In-body markdown links of the form `[label](./path.md)`.
+ *   2. Front-matter `links:` blocks of the form:
+ *        links:
+ *          - target: ./other.md
+ *            type: cites
+ *            quote: "see also ..."
+ *
+ * Edges from both sources flow through the same dedup / resolution
+ * pipeline; front-matter edges take precedence on `edge_type` /
+ * `quote` when both sources agree on the same `source → target`.
  */
-function resolveLinks(nodes: WikiNode[]): WikiEdge[] {
+function resolveLinks(
+	nodes: WikiNode[],
+	frontMatterLinks: Map<string, Array<{ target: string; edge_type?: WikiEdge["edge_type"]; quote?: string }>>,
+): WikiEdge[] {
 	const byId = new Map(nodes.map((n) => [n.id, n]));
 	const edges: WikiEdge[] = [];
 	const seen = new Set<string>();
 	for (const node of nodes) {
-		// The "directory" for a node is the parent folder of its id.
-		// E.g. `Reference/acronym` → `Reference/`. Cross-folder links
-		// (e.g. `../Opinion/foo.md`) resolve into a sibling id.
 		const lastSlash = node.id.lastIndexOf("/");
 		const fileDir = lastSlash >= 0 ? node.id.slice(0, lastSlash) : "";
+
+		// 1. In-body markdown links.
 		for (const target of extractMarkdownLinkTargets(node.body)) {
 			const resolved = resolveRelative(fileDir, target);
-			// Strip the trailing `.md` if present.
 			const targetId = resolved.replace(/\.md$/, "");
 			const targetNode = byId.get(targetId);
 			const key = `${node.id}\n${targetId}`;
 			if (!targetNode || targetId === node.id || seen.has(key)) continue;
 			seen.add(key);
 			edges.push({ source: node.id, target: targetId });
+			node.links.push(targetId);
+			targetNode.backlinks.push(node.id);
+		}
+
+		// 2. Front-matter `links:` block.
+		const fmLinks = frontMatterLinks.get(node.id) ?? [];
+		for (const link of fmLinks) {
+			const target = link.target.replace(/^\.\//, "");
+			const resolved = resolveRelative(fileDir, target);
+			const targetId = resolved.replace(/\.md$/, "");
+			const targetNode = byId.get(targetId);
+			if (!targetNode || targetId === node.id) continue;
+			const key = `${node.id}\n${targetId}`;
+			const edgeType = link.edge_type ?? "cites";
+			if (seen.has(key)) {
+				// Edge already exists via body link — upgrade its
+				// edge_type / quote when front-matter declares them.
+				const existing = edges.find((e) => e.source === node.id && e.target === targetId);
+				if (existing) {
+					existing.edge_type = edgeType;
+					if (link.quote) existing.quote = link.quote;
+				}
+				continue;
+			}
+			seen.add(key);
+			edges.push({ source: node.id, target: targetId, edge_type: edgeType, quote: link.quote });
 			node.links.push(targetId);
 			targetNode.backlinks.push(node.id);
 		}
@@ -165,7 +213,7 @@ export function buildGraphFromMessages(
 	options: BuildGraphOptions = {},
 ): WikiGraph {
 	const nodes = messages.map(buildNodeFromMessage);
-	const edges = resolveLinks(nodes);
+	const edges = resolveLinks(nodes, new Map());
 	const root = options.root ?? "opencontext";
 	const generatedAt = new Date().toISOString();
 	const types = [...new Set(nodes.map((n) => n.type))].sort();
@@ -175,7 +223,8 @@ export function buildGraphFromMessages(
 /**
  * Build a `WikiGraph` from an already-emitted OKF package directory
  * (frozen mode). Each `.md` file becomes one node; the same link /
- * backlink resolution as `buildGraphFromMessages` runs over them.
+ * backlink resolution as `buildGraphFromMessages` runs over them,
+ * with the additional front-matter `links:` block.
  */
 export async function buildGraphFromDir(dir: string, options: BuildGraphOptions = {}): Promise<WikiGraph> {
 	const pkg = await readOkfPackage(dir);
@@ -203,7 +252,37 @@ export async function buildGraphFromDir(dir: string, options: BuildGraphOptions 
 			backlinks: [],
 		};
 	});
-	const edges = resolveLinks(nodes);
+	// Index front-matter `links:` blocks per source node id.
+	const frontMatterLinks = new Map<
+		string,
+		Array<{ target: string; edge_type?: WikiEdge["edge_type"]; quote?: string }>
+	>();
+	for (const file of pkg.files) {
+		const fm = file.document.frontMatter as Record<string, unknown>;
+		const linksRaw = fm.links;
+		if (!Array.isArray(linksRaw)) continue;
+		const id = file.path.replace(/\\/g, "/").replace(/\.md$/, "");
+		const list: Array<{ target: string; edge_type?: WikiEdge["edge_type"]; quote?: string }> = [];
+		for (const item of linksRaw) {
+			if (!item || typeof item !== "object") continue;
+			const obj = item as Record<string, unknown>;
+			if (typeof obj.target !== "string") continue;
+			const edgeType =
+				obj.type === "cites" ||
+				obj.type === "supersedes" ||
+				obj.type === "amends" ||
+				obj.type === "relates-to"
+					? obj.type
+					: undefined;
+			list.push({
+				target: obj.target,
+				edge_type: edgeType,
+				quote: typeof obj.quote === "string" ? obj.quote : undefined,
+			});
+		}
+		if (list.length > 0) frontMatterLinks.set(id, list);
+	}
+	const edges = resolveLinks(nodes, frontMatterLinks);
 	const root = options.root ?? dir.split(sep).pop() ?? "wiki";
 	const generatedAt = new Date().toISOString();
 	const types = [...new Set(nodes.map((n) => n.type))].sort();

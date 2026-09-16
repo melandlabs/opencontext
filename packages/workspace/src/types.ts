@@ -20,8 +20,54 @@ export interface RuntimeContext {
 
 export type WorkspaceStorageKind = "okf_local_dir" | "inline";
 export type WorkspaceEdgeType = "cites" | "supersedes" | "amends" | "relates-to";
-export type WorkspaceIndexStatus = "pending" | "partial" | "ready" | "failed";
+export type WorkspaceIndexStatus = "pending" | "partial" | "ready" | "failed" | "dlq";
 export type WorkspaceSearchStrategy = "lexical" | "semantic" | "hybrid" | "cross-file";
+
+/**
+ * Edge provenance — who/what wrote it, and with what reasoning. Stored
+ * as a JSON blob on `workspace_reference_edges.provenance` (schema v2).
+ *
+ * `source` discriminates the writer so `reconcileResourceEdges` can
+ * safely prune edges from automated passes (LLM distillation, OKF
+ * link resolver, bulk import) without ever touching manually-authored
+ * edges (`source: "manual"`).
+ */
+export type EdgeProvenance =
+	| {
+			source: "manual";
+			created_by?: string;
+			rationale?: string;
+	  }
+	| {
+			source: "okf_link_resolver";
+			run_id: string;
+			resolved_at: number;
+	  }
+	| {
+			source: "okf_frontmatter";
+			run_id: string;
+			resolved_at: number;
+	  }
+	| {
+			source: "llm_distill";
+			run_id: string;
+			extractor_model?: string;
+			confidence?: number;
+			rationale?: string;
+			resolved_at: number;
+	  }
+	| {
+			source: "promote_facts";
+			run_id: string;
+			fact_ids: string[];
+			resolved_at: number;
+	  }
+	| {
+			source: "import";
+			importer: string;
+			run_id: string;
+			resolved_at: number;
+	  };
 
 export interface WorkspaceResource {
 	id: number;
@@ -78,6 +124,7 @@ export interface WorkspaceReferenceEdge {
 	target_version_id: number | null;
 	edge_type: WorkspaceEdgeType;
 	quote?: string | null;
+	provenance?: EdgeProvenance | null;
 	created_at: number;
 }
 
@@ -108,7 +155,23 @@ export interface WorkspaceSearchHit {
 		semantic?: number;
 		edge_boost?: number;
 	};
-	reference_edges: Array<{ edge_type: WorkspaceEdgeType; target_resource_id: number }>;
+	reference_edges: Array<{
+		edge_type: WorkspaceEdgeType;
+		target_resource_id: number;
+		provenance?: EdgeProvenance | null;
+	}>;
+	/**
+	 * Memory facts this chunk was promoted from (Tier 4.1). Empty
+	 * array when the chunk was authored directly in OKF and never
+	 * synthesised from a fact.
+	 */
+	promoted_fact_ids: string[];
+	/**
+	 * First-class citation envelope — see `packages/contracts/citation.ts`.
+	 * Identical shape across memory / workspace layers so the LLM
+	 * can render a uniform reference block.
+	 */
+	citation: import("@melandlabs/contracts").Citation;
 }
 
 export interface SearchWorkspaceContextOptions {
