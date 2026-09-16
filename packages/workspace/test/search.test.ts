@@ -211,7 +211,7 @@ describe("search pipeline", () => {
 		});
 		expect(hits[0]?.citation).toBeDefined();
 		const result = await resolveWorkspaceCitation({ user_id: "u1", request_id: "req-2" }, store, {
-			citation: hits[0]!.citation,
+			citation: hits[0]?.citation,
 		});
 		expect(result.status).toBe("resolved");
 		if (result.status === "resolved") {
@@ -231,7 +231,7 @@ describe("search pipeline", () => {
 			query: "limitation",
 			limit: 1,
 		});
-		const citation = hits[0]!.citation;
+		const citation = hits[0]?.citation;
 		// Mutate the chunk content directly to simulate a re-index that
 		// changed the underlying bytes without updating the citation.
 		store.__testDb

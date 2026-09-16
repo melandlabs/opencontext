@@ -15,6 +15,7 @@
  * `SqliteWorkspaceStore` and a mock embedding function.
  */
 
+import type { Citation } from "@melandlabs/contracts";
 import { workspaceEmbedQuery } from "./embedding-provider";
 import { indexOkfFolder } from "./okf-backend";
 import { searchCrossFile } from "./search/cross-file";
@@ -31,7 +32,6 @@ import type {
 	UpdateWorkspaceContextInput,
 	UpdateWorkspaceContextResult,
 } from "./types";
-import type { Citation } from "@melandlabs/contracts";
 
 /**
  * Only `okf_folder` is supported as a source today. Any other value

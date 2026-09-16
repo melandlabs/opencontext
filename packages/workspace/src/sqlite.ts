@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { type Citation, type CitationEdge, buildCitationId } from "@melandlabs/contracts";
 import { getOpenContextPath } from "@melandlabs/env-config";
 import {
 	RAW_MESSAGE_CHUNK_MAX_TOKENS,
@@ -34,7 +35,6 @@ import {
 	chunkTextByEstimatedTokens,
 } from "@melandlabs/shared";
 import { floatArrayToBuffer } from "@melandlabs/sqlite";
-import { buildCitationId, type Citation, type CitationEdge } from "@melandlabs/contracts";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { initializeWorkspaceSchema } from "./schema";
@@ -787,7 +787,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 
 		const tx = this.db.transaction(() => {
 			const resourceRow = this.db
-				.prepare(`SELECT id, current_version_id FROM workspace_resources WHERE workspace_id = ? AND id = ?`)
+				.prepare("SELECT id, current_version_id FROM workspace_resources WHERE workspace_id = ? AND id = ?")
 				.get(workspace_id, resource_id) as { id: number; current_version_id: number | null } | undefined;
 			if (!resourceRow) {
 				throw new Error(`resource_id ${resource_id} not found in workspace ${workspace_id}`);
@@ -795,7 +795,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			const previousVersionId = resourceRow.current_version_id;
 
 			const targetRow = this.db
-				.prepare(`SELECT id, sha256 FROM workspace_resource_versions WHERE id = ? AND resource_id = ?`)
+				.prepare("SELECT id, sha256 FROM workspace_resource_versions WHERE id = ? AND resource_id = ?")
 				.get(target_version_id, resource_id) as { id: number; sha256: string } | undefined;
 			if (!targetRow) {
 				throw new Error(
@@ -818,7 +818,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				// immutable version row.
 				const prevVersionRow = this.db
 					.prepare(
-						`SELECT resource_id, sha256, size_bytes, source_path, metadata FROM workspace_resource_versions WHERE id = ?`,
+						"SELECT resource_id, sha256, size_bytes, source_path, metadata FROM workspace_resource_versions WHERE id = ?",
 					)
 					.get(previousVersionId) as {
 					resource_id: number;
@@ -829,7 +829,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				};
 				const maxVersion = this.db
 					.prepare(
-						`SELECT COALESCE(MAX(version_number), 0) AS max_version FROM workspace_resource_versions WHERE resource_id = ?`,
+						"SELECT COALESCE(MAX(version_number), 0) AS max_version FROM workspace_resource_versions WHERE resource_id = ?",
 					)
 					.get(resource_id) as { max_version: number };
 				const insertSnapshot = this.db
@@ -859,7 +859,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			// UNIQUE (resource_id, version_id, chunk_index) constraint
 			// guarantees their isolation.
 			this.db
-				.prepare(`DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?`)
+				.prepare("DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?")
 				.run(resource_id, previousVersionId);
 
 			// Materialise target-version chunks into the current version
@@ -1010,7 +1010,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			// Stash reason in resource metadata so audit / UI can show
 			// "last edit reason".
 			const resourceRow = this.db
-				.prepare(`SELECT metadata FROM workspace_resources WHERE id = ?`)
+				.prepare("SELECT metadata FROM workspace_resources WHERE id = ?")
 				.get(chunkRow.resource_id) as { metadata: string | null };
 			const meta = resourceRow.metadata
 				? (parseJson<Record<string, unknown>>(resourceRow.metadata, {}) ?? {})
@@ -1027,7 +1027,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 
 			// Wipe and rewrite chunks for this version.
 			this.db
-				.prepare(`DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?`)
+				.prepare("DELETE FROM workspace_chunks WHERE resource_id = ? AND version_id = ?")
 				.run(chunkRow.resource_id, chunkRow.version_id);
 
 			const insertChunk = this.db.prepare(

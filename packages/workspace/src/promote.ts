@@ -14,7 +14,7 @@
  *      `linkPromotedFacts` to bind the page version to its source
  *      facts so future search hits can expose `promoted_fact_ids`.
  */
-import { type OkfFrontMatter } from "@melandlabs/contracts";
+import type { OkfFrontMatter } from "@melandlabs/contracts";
 import type { EdgeProvenance, OkfFolderResource } from "./types";
 
 export interface PromoteFactsInput {
