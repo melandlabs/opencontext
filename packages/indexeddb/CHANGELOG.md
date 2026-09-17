@@ -1,5 +1,12 @@
 # @melandlabs/indexeddb
 
+## 0.5.10
+
+### Patch Changes
+
+- Updated dependencies [52814fb]
+  - @melandlabs/contracts@0.8.0
+
 ## 0.5.9
 
 ### Patch Changes

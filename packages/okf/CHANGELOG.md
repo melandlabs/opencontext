@@ -1,5 +1,13 @@
 # @melandlabs/okf
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [52814fb]
+  - @melandlabs/contracts@0.8.0
+  - @melandlabs/indexeddb@0.5.10
+
 ## 0.3.3
 
 ### Patch Changes

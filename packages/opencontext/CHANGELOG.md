@@ -1,5 +1,40 @@
 # @melandlabs/opencontext
 
+## 0.12.0
+
+### Minor Changes
+
+- 52814fb: Add the v0.3 wiki-distillation surface to `@melandlabs/workspace`:
+
+  - **Citation envelope** (`@melandlabs/contracts/citation`): a unified `Citation` type across `workspace_chunk` / `memory_fact` / `raw_message` layers, with a deterministic `buildCitationId`. Workspace `WorkspaceSearchHit` now carries a first-class `citation` field and `promoted_fact_ids`, populated by every search strategy (lexical / semantic / hybrid / cross-file).
+  - **`resolveWorkspaceCitation`** — cross-layer citation resolver with `content_hash` drift detection. Workspace chunks are resolved natively; memory facts and raw messages delegate to host-injected resolvers.
+  - **`distillResource`** — resource-level LLM distillation. Caller supplies the LLM, the candidate target set, and an `autoUpsert` flag (defaults to `false` so proposals return for inspection before being written). Proposals are validated against the candidate set to close the LLM-hallucination loophole.
+  - **`promoteFactsToPage`** — Memory → Workspace promotion bridge. Materialises a cluster of memory facts as a single OKF page, links the new version back to its source facts via the new `workspace_resource_facts` table, and exposes the linkage on every future search hit.
+  - **`editChunk`** + **`rollbackToVersion`** — in-place chunk edits with re-embed flag, and version-chain rollback with optional `snapshotCurrent`.
+  - **`reconcileResourceEdges`** — trim a resource's edge set down to a known-keep list, filterable by edge `provenance`.
+  - **Edge `provenance`** — every `workspace_reference_edges` row now records its source (`okf_link_resolver`, `okf_frontmatter`, `llm_distill`, `promote_facts`, `manual`, `import`) so later reconciliation can target the right author.
+  - **EmbeddingQueue** upgraded with concurrency, per-batch timeout, exponential backoff, DLQ (`retryDlq`), and `stats()`.
+  - **OKF frontmatter `links:`** blocks now round-trip through the graph with `edge_type` (`cites` / `supersedes` / `amends` / `relates-to`) and optional `quote`.
+  - **Schema bumped** to `WORKSPACE_SCHEMA_VERSION = 2` (idempotent `addColumnIfMissing` + new `workspace_resource_facts` table).
+  - **New tutorial** `examples/src/tutorials/45-wiki-distillation.ts` exercising every new surface end-to-end.
+
+### Patch Changes
+
+- Fix three connected memory-search bugs and ship Node 22/24/26 install support.
+
+  - **`@melandlabs/memory-store`** — honour `asOf` (time-travel) and dedup warnings across the lexical + ANN recall paths.
+    - Historical (`asOf`) queries now return the historical revision, not the latest. `searchRawMessagesLexical` / `searchRawMessagesAnn` forward `asOf` to the SQLite lexical/semantic backends; the SQLite queries themselves apply a `created_at <= @asOf` window (normalising the seconds/milliseconds unit drift between `created_at` and `deprecated_at`).
+    - `includeDeprecated: true` now respects `asOf` — audits see the rows that existed at the snapshot instead of every revision ever stored.
+    - "No embedding provider configured" no longer fires twice per response (consolidated to a single `memory_lexical_search_fallback` warning).
+  - **`@melandlabs/sqlite`** — expose `asOf` on `SQLiteRawMessageSemanticSearchInput` / `SQLiteRawMessageLexicalSearchInput` and apply it across `searchChunksWithStoredEmbeddings`, `searchLegacyMessagesLexically`, `searchMessagesWithStoredEmbeddings`, and `matchesSemanticFilters`. Raise vitest timeout to 60 s so cold ONNX model downloads on fresh runners don't race the 5 s default.
+  - **Workspace-wide** — bump `better-sqlite3` from `^11.10.0` / `^11.7.0` to `^13.0.0` (N-API prebuilds cover Node 22, 24, and 26 — no more Visual Studio Build Tools required on Windows), widen `engines.node` to `>=22.0.0 <27.0.0`, add a `pnpm.overrides` pin so `@langchain/community` stops installing a nested better-sqlite3@11 copy that fails to compile against Node 26 V8 headers, drop the legacy `sqlite3` entry from `pnpm.onlyBuiltDependencies`, and add a `native-sqlite` CI matrix on Node 22/24/26.
+
+- Updated dependencies
+- Updated dependencies [52814fb]
+  - @melandlabs/workspace@0.4.0
+  - @melandlabs/okf@0.3.4
+  - @melandlabs/ai-rag@0.2.12
+
 ## 0.11.0
 
 ### Minor Changes

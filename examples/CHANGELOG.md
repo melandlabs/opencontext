@@ -1,5 +1,28 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.12
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies [52814fb]
+  - @melandlabs/sqlite@0.5.4
+  - @melandlabs/memory-store@1.3.2
+  - @melandlabs/rag@0.3.3
+  - @melandlabs/opencontext@0.12.0
+  - @melandlabs/contracts@0.8.0
+  - @melandlabs/ai@0.10.6
+  - @melandlabs/ai-rag@0.2.12
+  - @melandlabs/indexeddb@0.5.10
+  - @melandlabs/integrations-runtime@0.3.4
+  - @melandlabs/integrations-dingtalk@0.3.12
+  - @melandlabs/integrations-gmail@0.3.12
+  - @melandlabs/integrations-imessage@0.3.12
+  - @melandlabs/integrations-qqbot@0.3.12
+  - @melandlabs/integrations-telegram@0.3.12
+  - @melandlabs/integrations-weixin@0.3.12
+  - @melandlabs/integrations-whatsapp@0.3.12
+
 ## 0.3.11
 
 ### Patch Changes

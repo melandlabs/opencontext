@@ -1,5 +1,12 @@
 # @melandlabs/ai
 
+## 0.10.6
+
+### Patch Changes
+
+- Updated dependencies [52814fb]
+  - @melandlabs/contracts@0.8.0
+
 ## 0.10.5
 
 ### Patch Changes

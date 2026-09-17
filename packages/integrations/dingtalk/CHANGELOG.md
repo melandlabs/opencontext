@@ -1,5 +1,11 @@
 # @melandlabs/integrations-dingtalk
 
+## 0.3.12
+
+### Patch Changes
+
+- @melandlabs/ai@0.10.6
+
 ## 0.3.11
 
 ### Patch Changes

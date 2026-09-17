@@ -1,5 +1,28 @@
 # @melandlabs/memory-store
 
+## 1.3.2
+
+### Patch Changes
+
+- Fix three connected memory-search bugs and ship Node 22/24/26 install support.
+
+  - **`@melandlabs/memory-store`** — honour `asOf` (time-travel) and dedup warnings across the lexical + ANN recall paths.
+    - Historical (`asOf`) queries now return the historical revision, not the latest. `searchRawMessagesLexical` / `searchRawMessagesAnn` forward `asOf` to the SQLite lexical/semantic backends; the SQLite queries themselves apply a `created_at <= @asOf` window (normalising the seconds/milliseconds unit drift between `created_at` and `deprecated_at`).
+    - `includeDeprecated: true` now respects `asOf` — audits see the rows that existed at the snapshot instead of every revision ever stored.
+    - "No embedding provider configured" no longer fires twice per response (consolidated to a single `memory_lexical_search_fallback` warning).
+  - **`@melandlabs/sqlite`** — expose `asOf` on `SQLiteRawMessageSemanticSearchInput` / `SQLiteRawMessageLexicalSearchInput` and apply it across `searchChunksWithStoredEmbeddings`, `searchLegacyMessagesLexically`, `searchMessagesWithStoredEmbeddings`, and `matchesSemanticFilters`. Raise vitest timeout to 60 s so cold ONNX model downloads on fresh runners don't race the 5 s default.
+  - **Workspace-wide** — bump `better-sqlite3` from `^11.10.0` / `^11.7.0` to `^13.0.0` (N-API prebuilds cover Node 22, 24, and 26 — no more Visual Studio Build Tools required on Windows), widen `engines.node` to `>=22.0.0 <27.0.0`, add a `pnpm.overrides` pin so `@langchain/community` stops installing a nested better-sqlite3@11 copy that fails to compile against Node 26 V8 headers, drop the legacy `sqlite3` entry from `pnpm.onlyBuiltDependencies`, and add a `native-sqlite` CI matrix on Node 22/24/26.
+
+- Updated dependencies
+- Updated dependencies [52814fb]
+  - @melandlabs/sqlite@0.5.4
+  - @melandlabs/rag@0.3.3
+  - @melandlabs/contracts@0.8.0
+  - @melandlabs/okf@0.3.4
+  - @melandlabs/ai@0.10.6
+  - @melandlabs/ai-rag@0.2.12
+  - @melandlabs/indexeddb@0.5.10
+
 ## 1.3.1
 
 ### Patch Changes

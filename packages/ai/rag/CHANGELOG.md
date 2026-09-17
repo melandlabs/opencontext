@@ -1,5 +1,12 @@
 # @melandlabs/ai-rag
 
+## 0.2.12
+
+### Patch Changes
+
+- Updated dependencies [52814fb]
+  - @melandlabs/contracts@0.8.0
+
 ## 0.2.11
 
 ### Patch Changes
