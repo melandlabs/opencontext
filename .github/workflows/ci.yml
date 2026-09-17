@@ -248,8 +248,12 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Build consumers
-        run: pnpm -r --filter @melandlabs/sqlite --filter @melandlabs/workspace --filter @melandlabs/rag build
+      # Build every package: tsup's DTS step on @melandlabs/sqlite walks into
+      # @melandlabs/indexeddb → @melandlabs/contracts and needs those
+      # dist/.d.ts files to be built first. Filtering the build down to the
+      # test consumers breaks the DTS resolution.
+      - name: Build all packages
+        run: pnpm -r --filter './packages/**' build
       - name: Test SQLite consumers
         run: |
           pnpm --filter @melandlabs/sqlite test
