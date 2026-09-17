@@ -28,7 +28,7 @@
 	"dependencies": {
 		"@melandlabs/contracts": "workspace:*",
 		"@melandlabs/indexeddb": "workspace:*",
-		"better-sqlite3": "^11.10.0",
+		"better-sqlite3": "^13.0.0",
 		"sqlite-vec": "^0.1.9"
 	},
 	"devDependencies": {

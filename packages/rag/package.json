@@ -43,7 +43,7 @@
 		"@melandlabs/shared": "workspace:*",
 		"pdfjs-dist": "^4.9.155",
 		"jszip": "^3.10.1",
-		"better-sqlite3": "^11.7.0",
+		"better-sqlite3": "^13.0.0",
 		"sqlite-vec": "^0.1.6-alpha.5",
 		"pg": "^8.13.1",
 		"openai": "^4.85.2",

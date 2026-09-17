@@ -30,7 +30,7 @@
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"abort-controller": "^3.0.0",
 		"agentkeepalive": "^4.6.0",
-		"better-sqlite3": "^11.10.0",
+		"better-sqlite3": "^13.0.0",
 		"cross-spawn": "^7.0.3",
 		"encoding": "^0.1.13",
 		"fernet": "^0.4.0",

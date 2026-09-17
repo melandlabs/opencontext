@@ -32,7 +32,7 @@ opencontext/
 
 ### Prerequisites
 
-- **Node.js 22+** and **pnpm 10+**
+- **Node.js 22, 24, or 26** and **pnpm 10+**
 - **Git**
 
 ### Platform-Specific Prerequisites
@@ -47,7 +47,7 @@ Developing on Windows requires additional C++ build tools for native modules lik
 - **ARM64/ARM64EC MSVC build tools** (matching your device architecture)
 - **clang-related tooling** (LLVM)
 
-**Node.js:** Node.js **22.x** is required (`engines.node` is pinned to `>=22.0.0 <23.0.0`). Native modules such as `better-sqlite3@11.10.0` ship prebuilt binaries only for the Node 22 line; on Node 24 the postinstall falls back to compiling from source, which on Windows additionally requires Visual Studio C++ Build Tools. Use `nvm use` to switch to the version pinned in `.nvmrc`.
+**Node.js:** Node.js **22.x, 24.x, or 26.x** is supported (`engines.node` is set to `>=22.0.0 <27.0.0`). Native modules such as `better-sqlite3@13.x` ship **N-API** prebuilt binaries, so a single prebuild per OS/arch covers every supported Node major — no per-Node-version rebuilds and no Visual Studio Build Tools requirement on Windows. The version pinned in `.nvmrc` (22) is the CI baseline, not a hard runtime floor.
 
 **Installation steps:**
 
@@ -71,7 +71,7 @@ Developing on Windows requires additional C++ build tools for native modules lik
 ### Development Commands
 
 ```bash
-nvm use  # or verify Node 22+ is active
+nvm use  # or verify a supported Node major (22 / 24 / 26) is active
 pnpm install
 pnpm -r build              # Build all packages
 pnpm -r typecheck          # TypeScript validation

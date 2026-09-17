@@ -45,7 +45,7 @@
 		"@melandlabs/shared": "^0.4.2",
 		"@melandlabs/sqlite": "^0.5.3",
 		"@modelcontextprotocol/sdk": "^1.25.3",
-		"better-sqlite3": "^11.10.0",
+		"better-sqlite3": "^13.0.0",
 		"hono": "^4.6.14",
 		"mammoth": "^1.11.0",
 		"pdf-parse": "^2.0.0",
