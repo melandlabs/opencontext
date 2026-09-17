@@ -156,11 +156,16 @@ describe("createUnifiedSearch", () => {
 		);
 	});
 
-	it("reports semantic unavailable when only lexical retrieval can run", async () => {
+	it("reports lexical fallback once when no embedding provider is wired", async () => {
 		const search = createUnifiedSearch({ searchRawMessagesLexical: baseDeps.searchRawMessagesLexical });
 		const out = await search.search({ userId: "u1", query: "anything here", sources: ["memory"] });
 
-		expect(out.warnings).toContainEqual(expect.objectContaining({ code: "semantic_unavailable" }));
+		const fallbackWarnings = out.warnings.filter((w) => w.code === "memory_lexical_search_fallback");
+		// Single, consolidated warning — the previous implementation pushed
+		// both `semantic_unavailable` and `memory_lexical_search_fallback`
+		// for the same root cause, which doubled the noise per response.
+		expect(fallbackWarnings).toHaveLength(1);
+		expect(fallbackWarnings[0]?.message.toLowerCase()).toContain("embedding");
 		expect(out.results.length).toBeGreaterThan(0);
 	});
 
@@ -202,6 +207,46 @@ describe("createUnifiedSearch", () => {
 
 		expect(out.warnings).toContainEqual(expect.objectContaining({ code }));
 		expect(out.results.length).toBeGreaterThan(0);
+	});
+
+	it("forwards asOf to the lexical and ANN providers", async () => {
+		// Regression: previously `asOf` was parsed only for the graph
+		// applicability layer, so a time-travel search would still return
+		// the latest decision instead of the historical one.
+		const searchRawMessagesAnn = vi.fn(async () => []);
+		const searchRawMessagesLexical = vi.fn(async () => []);
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn,
+			searchRawMessagesLexical,
+		});
+		const asOf = "2026-09-17T11:30:00Z";
+		await search.search({ userId: "u1", query: "decision", sources: ["memory"], asOf });
+
+		expect(searchRawMessagesAnn).toHaveBeenCalledWith(expect.objectContaining({ asOf }));
+		expect(searchRawMessagesLexical).toHaveBeenCalledWith(expect.objectContaining({ asOf }));
+	});
+
+	it("still forwards asOf when includeDeprecated is true", async () => {
+		// Regression: with `includeDeprecated: true`, the previous code path
+		// dropped the `asOf` window entirely and returned every superseded
+		// revision regardless of the snapshot timestamp.
+		const searchRawMessagesLexical = vi.fn(async () => []);
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesLexical,
+		});
+		const asOf = "2024-12-01T00:00:00Z";
+		await search.search({
+			userId: "u1",
+			query: "decision",
+			sources: ["memory"],
+			asOf,
+			includeDeprecated: true,
+		});
+		expect(searchRawMessagesLexical).toHaveBeenCalledWith(
+			expect.objectContaining({ asOf, includeDeprecated: true }),
+		);
 	});
 
 	it("uses native hybrid for default RRF but honors an explicit threshold through dense candidates", async () => {

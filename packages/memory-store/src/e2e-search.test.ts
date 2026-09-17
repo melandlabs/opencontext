@@ -154,10 +154,78 @@ describe("Memory Store End-to-End", () => {
 		const pizzaResult = results.results.find((r) => r.content.toLowerCase().includes("pizza"));
 		expect(pizzaResult).toBeDefined();
 
-		// Should have lexical search warning
+		// Single consolidated warning — pre-fix this also fired a
+		// redundant `semantic_unavailable` warning for the same root cause.
 		expect(results.warnings.length).toBeGreaterThan(0);
 		const lexicalWarning = results.warnings.find((w) => w.code === "memory_lexical_search_fallback");
 		expect(lexicalWarning).toBeDefined();
+		const semanticUnavailableWarnings = results.warnings.filter((w) => w.code === "semantic_unavailable");
+		expect(semanticUnavailableWarnings).toHaveLength(0);
+
+		await rawStore.close();
+	});
+
+	it("honours `asOf` for lexical time-travel retrieval", async () => {
+		// Regression: previously `asOf` only filtered the graph's
+		// applicability layer, so lexical search still returned the
+		// latest revision regardless of the snapshot timestamp.
+		const dbPath = join(scratchDir, "asof-test.db");
+		const store = await createMemoryStore({
+			dbPath,
+			unified: {},
+		});
+		const rawStore = createRawMessageStore({ dbPath });
+		const messages = (await rawStore.getManager()) as SQLiteRawMessageManager;
+		const userId = "asof-test-user";
+
+		const secondsOf = (iso: string) => Math.floor(Date.parse(iso) / 1000);
+		await messages.storeMessages([
+			makeMessage({
+				messageId: "asof-mon",
+				content: "deploy on Mondays",
+				userId,
+				createdAt: secondsOf("2024-01-15T00:00:00Z"),
+			}),
+			makeMessage({
+				messageId: "asof-thu",
+				content: "deploy on Thursdays",
+				userId,
+				createdAt: secondsOf("2024-06-01T00:00:00Z"),
+			}),
+			makeMessage({
+				messageId: "asof-wed",
+				content: "deploy on Wednesdays",
+				userId,
+				createdAt: secondsOf("2025-03-01T00:00:00Z"),
+			}),
+		]);
+		await messages.deprecateMessages(["asof-mon"], { deprecatedAt: Date.parse("2024-06-01T00:00:00Z") });
+		await messages.deprecateMessages(["asof-thu"], { deprecatedAt: Date.parse("2025-03-01T00:00:00Z") });
+
+		// Snapshot 2025-01-15: Thursdays was current and not yet
+		// deprecated; Wednesdays didn't exist yet.
+		const snapshot = await store.search({
+			userId,
+			query: "deploy",
+			limit: 5,
+			asOf: "2025-01-15T00:00:00Z",
+		});
+		const ids = snapshot.results.map((r) => r.id);
+		expect(ids).toContain("asof-thu");
+		expect(ids).not.toContain("asof-mon");
+		expect(ids).not.toContain("asof-wed");
+
+		// includeDeprecated + asOf returns only revisions that existed at
+		// the snapshot — NOT every revision ever stored.
+		const audit = await store.search({
+			userId,
+			query: "deploy",
+			limit: 5,
+			asOf: "2024-12-01T00:00:00Z",
+			includeDeprecated: true,
+		});
+		const auditIds = audit.results.map((r) => r.id).sort();
+		expect(auditIds).toEqual(["asof-mon", "asof-thu"]);
 
 		await rawStore.close();
 	});

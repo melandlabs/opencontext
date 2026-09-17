@@ -47,7 +47,7 @@ Developing on Windows requires additional C++ build tools for native modules lik
 - **ARM64/ARM64EC MSVC build tools** (matching your device architecture)
 - **clang-related tooling** (LLVM)
 
-**Node.js:** Node.js 22+ is recommended. Node 24 may have compatibility issues with some native modules on Windows devices.
+**Node.js:** Node.js **22.x** is required (`engines.node` is pinned to `>=22.0.0 <23.0.0`). Native modules such as `better-sqlite3@11.10.0` ship prebuilt binaries only for the Node 22 line; on Node 24 the postinstall falls back to compiling from source, which on Windows additionally requires Visual Studio C++ Build Tools. Use `nvm use` to switch to the version pinned in `.nvmrc`.
 
 **Installation steps:**
 

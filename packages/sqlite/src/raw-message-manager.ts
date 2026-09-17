@@ -116,6 +116,14 @@ export interface SQLiteRawMessageSemanticSearchInput {
 	person?: string;
 	startTime?: number;
 	endTime?: number;
+	/**
+	 * Optional ISO-8601 point-in-time filter. When present, only rows that
+	 * were current at that instant are returned: the record must have been
+	 * created at or before `asOf`, and (when `includeDeprecated` is false)
+	 * must not yet have been deprecated at `asOf`. Records that did not
+	 * exist yet at `asOf` are excluded regardless of `includeDeprecated`.
+	 */
+	asOf?: string;
 	/** Optional `FactType` filter — narrows to rows whose `fact_type` is in this set. */
 	factTypes?: Array<"world" | "experience" | "mental_model">;
 }
@@ -153,6 +161,14 @@ export interface SQLiteRawMessageLexicalSearchInput {
 	includeDeprecated?: boolean;
 	platform?: string;
 	botId?: string;
+	/**
+	 * Optional ISO-8601 point-in-time filter. When present, only rows that
+	 * were current at that instant are returned: the record must have been
+	 * created at or before `asOf`, and (when `includeDeprecated` is false)
+	 * must not yet have been deprecated at `asOf`. Records that did not
+	 * exist yet at `asOf` are excluded regardless of `includeDeprecated`.
+	 */
+	asOf?: string;
 	/** Optional `FactType` filter — narrows to rows whose `fact_type` is in this set. */
 	factTypes?: Array<"world" | "experience" | "mental_model">;
 }
@@ -385,6 +401,78 @@ function normalizeTimestampToMs(value: number): number {
 
 function currentUnixSeconds(): number {
 	return Math.floor(Date.now() / 1000);
+}
+
+/**
+ * Parse the `asOf` ISO-8601 string into the column-aligned units needed
+ * by the raw-message store:
+ *
+ *   - `created_at` is stored in **unix seconds** (see `currentUnixSeconds`).
+ *   - `deprecated_at` is stored in **epoch milliseconds** (see
+ *     `deprecateMessages`, which writes `Date.now()` verbatim).
+ *
+ * `Date.parse` returns epoch milliseconds, so we convert once and hand back
+ * the two projections. `null` is returned for missing / unparseable input
+ * so callers can simply skip the time-aware filter, preserving the legacy
+ * current-truth behaviour.
+ */
+interface TimeTravelFilter {
+	createdAtSeconds: number;
+	deprecatedAtMs: number;
+}
+
+function resolveAsOfFilter(asOf: string | undefined): TimeTravelFilter | null {
+	if (typeof asOf !== "string" || asOf.length === 0) {
+		return null;
+	}
+	const ms = Date.parse(asOf);
+	if (!Number.isFinite(ms)) {
+		return null;
+	}
+	return {
+		createdAtSeconds: Math.floor(ms / 1000),
+		deprecatedAtMs: ms,
+	};
+}
+
+/**
+ * Build the SQL fragment that implements the `asOf` × `includeDeprecated`
+ * cross product. Returns the empty string when `asOf` is absent, keeping
+ * the original behaviour bit-for-bit. The fragment is returned **without**
+ * a leading connector — callers concatenate it into either a `where[]`
+ * array (joined by `" AND "`) or an inline SQL template (`" AND "` prefix).
+ */
+/**
+ * Build the SQL fragment that implements the `asOf` × `includeDeprecated`
+ * cross product. Returns the empty string when `asOf` is absent, keeping
+ * the original behaviour bit-for-bit. The fragment is returned **without**
+ * a leading connector — callers concatenate it into either a `where[]`
+ * array (joined by `" AND "`) or an inline SQL template (`" AND "` prefix).
+ *
+ * `ownsDeprecationFilter` reports whether the returned clause already
+ * enforces the deprecation window. When true, callers MUST skip their
+ * separate `deprecated_at IS NULL` predicate to avoid an over-strict
+ * filter (a deprecated record that was current at `asOf` would otherwise
+ * be silently dropped).
+ */
+function buildAsOfClause(input: { asOf?: string; includeDeprecated?: boolean }): {
+	clause: string;
+	params: Record<string, number>;
+	ownsDeprecationFilter: boolean;
+} {
+	const filter = resolveAsOfFilter(input.asOf);
+	if (!filter) {
+		return { clause: "", params: {}, ownsDeprecationFilter: false };
+	}
+	const parts: string[] = ["raw_messages.created_at <= @asOfCreatedAtSeconds"];
+	const params: Record<string, number> = {
+		asOfCreatedAtSeconds: filter.createdAtSeconds,
+	};
+	if (input.includeDeprecated !== true) {
+		parts.push("(raw_messages.deprecated_at IS NULL OR raw_messages.deprecated_at > @asOfDeprecatedAtMs)");
+		params.asOfDeprecatedAtMs = filter.deprecatedAtMs;
+	}
+	return { clause: parts.join(" AND "), params, ownsDeprecationFilter: true };
 }
 
 export class SQLiteRawMessageManager implements RawMessageStorageManager {
@@ -1344,7 +1432,14 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (!input.includeArchived) {
 			where.push("raw_messages.archived_at IS NULL");
 		}
-		if (!input.includeDeprecated) {
+		const asOf = buildAsOfClause(input);
+		if (asOf.clause) {
+			where.push(asOf.clause);
+			Object.assign(params, asOf.params);
+		} else if (!input.includeDeprecated) {
+			// Legacy current-truth filter — only emit when no asOf is in
+			// play, because the asOf clause already owns the deprecation
+			// window.
 			where.push("raw_messages.deprecated_at IS NULL");
 		}
 		if (input.platform) {
@@ -1453,6 +1548,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
 		const scanLimit = Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10));
 		const threshold = input.threshold ?? 0.7;
+		const asOf = buildAsOfClause(input);
 		const rows = this.db
 			.prepare(`
         SELECT raw_message_chunks.*
@@ -1462,7 +1558,14 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
           AND raw_message_chunks.embedding IS NOT NULL
           AND raw_message_chunks.embedding_dimensions = @dimensions
           ${input.includeArchived ? "" : "AND raw_messages.archived_at IS NULL"}
-          ${input.includeDeprecated ? "" : "AND raw_messages.deprecated_at IS NULL"}
+          ${
+						asOf.ownsDeprecationFilter
+							? ""
+							: input.includeDeprecated
+								? ""
+								: "AND raw_messages.deprecated_at IS NULL"
+					}
+          ${asOf.clause ? `AND ${asOf.clause}` : ""}
         ORDER BY raw_messages.timestamp DESC
         LIMIT @scanLimit
       `)
@@ -1470,6 +1573,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				userId: input.userId,
 				dimensions: input.queryEmbedding.length,
 				scanLimit,
+				...asOf.params,
 			}) as RawMessageSearchChunkRow[];
 		return this.hydrateSemanticChunkRows(
 			rows
@@ -1637,6 +1741,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		ftsQuery: string,
 		limit: number,
 	): SQLiteRawMessageLexicalSearchResult[] {
+		const asOf = buildAsOfClause(input);
 		const rows = this.db
 			.prepare(`
         SELECT raw_messages.*, raw_messages_fts.rank AS bm25_rank
@@ -1646,15 +1751,27 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
           AND raw_messages.user_id = @userId
           AND NOT EXISTS (SELECT 1 FROM raw_message_chunks WHERE raw_message_chunks.message_id = raw_messages.message_id)
           ${input.includeArchived ? "" : "AND raw_messages.archived_at IS NULL"}
-          ${input.includeDeprecated ? "" : "AND raw_messages.deprecated_at IS NULL"}
+          ${
+						asOf.ownsDeprecationFilter
+							? ""
+							: input.includeDeprecated
+								? ""
+								: "AND raw_messages.deprecated_at IS NULL"
+					}
+          ${asOf.clause ? `AND ${asOf.clause}` : ""}
           ${input.platform ? "AND raw_messages.platform = @platform" : ""}
           ${input.botId ? "AND raw_messages.bot_id = @botId" : ""}
         ORDER BY bm25_rank ASC
         LIMIT @limit
       `)
-			.all({ ftsQuery, userId: input.userId, platform: input.platform, botId: input.botId, limit }) as Array<
-			RawMessageRow & { bm25_rank: number }
-		>;
+			.all({
+				ftsQuery,
+				userId: input.userId,
+				platform: input.platform,
+				botId: input.botId,
+				limit,
+				...asOf.params,
+			}) as Array<RawMessageRow & { bm25_rank: number }>;
 		return rows.map((row) => {
 			const message = toRawMessage(row);
 			return {
@@ -2030,6 +2147,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
 		const scanLimit = Math.max(limit, Math.floor(input.scanLimit ?? limit * 10));
 		const threshold = input.threshold ?? 0.7;
+		const asOf = resolveAsOfFilter(input.asOf);
 
 		return this.queryMessagesSync({
 			userId: input.userId,
@@ -2044,6 +2162,22 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			startTime: input.startTime,
 			endTime: input.endTime,
 		})
+			.filter((message) => {
+				// In-memory `asOf` filter — `queryMessagesSync` doesn't know
+				// about time-travel, so we apply the created_at /
+				// deprecated_at window after the fact. The unit conversion
+				// mirrors `matchesSemanticFilters`.
+				if (!asOf) return true;
+				if (message.createdAt > asOf.createdAtSeconds) return false;
+				if (
+					input.includeDeprecated !== true &&
+					message.deprecatedAt !== undefined &&
+					message.deprecatedAt <= asOf.deprecatedAtMs
+				) {
+					return false;
+				}
+				return true;
+			})
 			.map((message) => {
 				if (!message.embedding || message.embedding.length === 0) {
 					return null;
@@ -2103,6 +2237,20 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			(message.factType === undefined || !input.factTypes.includes(message.factType))
 		) {
 			return false;
+		}
+		const asOf = resolveAsOfFilter(input.asOf);
+		if (asOf) {
+			// `created_at` is stored in unix seconds; `deprecated_at` is in ms.
+			if (message.createdAt > asOf.createdAtSeconds) {
+				return false;
+			}
+			if (
+				input.includeDeprecated !== true &&
+				message.deprecatedAt !== undefined &&
+				message.deprecatedAt <= asOf.deprecatedAtMs
+			) {
+				return false;
+			}
 		}
 		return true;
 	}
