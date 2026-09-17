@@ -221,6 +221,13 @@ export interface UnifiedSearchDeps {
 			 * audits. Default `false` preserves the current-truth behaviour.
 			 */
 			includeDeprecated?: boolean;
+			/**
+			 * Forward `asOf` from `UnifiedMemorySearchInput` so time-travel
+			 * callers can ask "what was true at this instant?". Implementations
+			 * that don't yet honour the field should ignore it — the rest of
+			 * the unified pipeline stays correct.
+			 */
+			asOf?: string;
 			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
 			peers?: ReadonlyArray<Peer>;
 			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */
@@ -294,6 +301,13 @@ export interface UnifiedSearchDeps {
 			 * audits. Default `false` preserves the current-truth behaviour.
 			 */
 			includeDeprecated?: boolean;
+			/**
+			 * Forward `asOf` from `UnifiedMemorySearchInput` so time-travel
+			 * callers can ask "what was true at this instant?". Implementations
+			 * that don't yet honour the field should ignore it — the rest of
+			 * the unified pipeline stays correct.
+			 */
+			asOf?: string;
 			/** Optional peer scope resolved from `UnifiedMemorySearchInput.peerFilter`. */
 			peers?: ReadonlyArray<Peer>;
 			/** Optional `FactType` filter resolved from `UnifiedMemorySearchInput.factTypes`. */

@@ -339,6 +339,7 @@ async function runSemanticSearchForEmbedding(
 						threshold,
 						botId: "botId" in filter ? filter.botId : undefined,
 						includeDeprecated,
+						...(input.asOf ? { asOf: input.asOf } : {}),
 						...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 						...(factTypes ? { factTypes } : {}),
 						...(runtimeContext ?? {}),
@@ -397,6 +398,7 @@ async function runSemanticSearchForEmbedding(
 					limit,
 					threshold,
 					includeDeprecated: input.includeDeprecated === true,
+					...(input.asOf ? { asOf: input.asOf } : {}),
 					...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 					...(factTypes ? { factTypes } : {}),
 				});
@@ -494,6 +496,7 @@ async function runLexicalSearchForKeywords(
 							limit: Math.ceil(limit / filters.length),
 							botId,
 							includeDeprecated,
+							...(input.asOf ? { asOf: input.asOf } : {}),
 							...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 							...(factTypes ? { factTypes } : {}),
 							...(runtimeContext ?? {}),
@@ -530,6 +533,7 @@ async function runLexicalSearchForKeywords(
 						limit: Math.ceil(limit / filters.length),
 						botId,
 						includeDeprecated,
+						...(input.asOf ? { asOf: input.asOf } : {}),
 						...(factTypes ? { factTypes } : {}),
 					}),
 				),
@@ -752,15 +756,15 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 
 		// When no embedding is configured, use default lexical search as fallback
 		if (typeof deps.embedQuery !== "function") {
-			warnings.push({
-				source: "memory",
-				code: "semantic_unavailable",
-				message: "Semantic search is unavailable because no embedding provider is configured.",
-			});
+			// Single warning that captures both the cause (no embedder wired)
+			// and the consequence (we fall back to lexical / BM25). Emitting
+			// two separate warnings — one for each half — used to fire a
+			// duplicate noise burst in every search response.
 			warnings.push({
 				source: "memory",
 				code: "memory_lexical_search_fallback",
-				message: "Semantic search not configured, using keyword search as fallback",
+				message:
+					"No embedding provider is configured; using lexical (BM25) search as fallback. Pass an `embedQuery` function via `unified.embedQuery` to enable semantic retrieval.",
 			});
 
 			const keywords = deriveLexicalKeywords(input.query);
@@ -896,6 +900,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 					const searchRawMessagesLexical = deps.searchRawMessagesLexical;
 					const factTypes = input.factTypes?.length ? input.factTypes : undefined;
+					const includeDeprecated = input.includeDeprecated === true;
 					lexical = (
 						await Promise.all(
 							lexFilters.map((botId) =>
@@ -904,6 +909,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 									keywords,
 									limit,
 									botId,
+									includeDeprecated,
+									...(input.asOf ? { asOf: input.asOf } : {}),
 									...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 									...(factTypes ? { factTypes } : {}),
 									...(runtimeContext ?? {}),

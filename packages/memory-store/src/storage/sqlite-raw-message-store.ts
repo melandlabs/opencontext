@@ -85,6 +85,12 @@ export async function lexicalSearchRawMessages(input: {
 	 * audits. Default `false` preserves the current-truth behaviour.
 	 */
 	includeDeprecated?: boolean;
+	/**
+	 * Forward `asOf` from `UnifiedMemorySearchInput` so time-travel
+	 * callers can ask "what was true at this instant?". Ignored by hosts
+	 * that don't yet honour the field.
+	 */
+	asOf?: string;
 	platform?: string;
 	botId?: string;
 	factTypes?: Array<"world" | "experience" | "mental_model">;

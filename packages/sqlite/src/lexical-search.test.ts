@@ -128,4 +128,146 @@ describe("SQLiteRawMessageManager.lexicalSearchMessages", () => {
 
 		await manager.close();
 	});
+
+	describe("asOf time-travel filter", () => {
+		// The user's bug report:
+		//   - "deploy on Mondays" (created 2024-01, deprecated 2024-06)
+		//   - "deploy on Thursdays" (created 2024-06, deprecated 2025-03)
+		//   - "deploy on Wednesdays" (created 2025-03, never deprecated)
+		//
+		// Current-truth (no asOf, no includeDeprecated) must yield Wednesdays.
+		// asOf="2025-01-15T00:00:00Z" must yield Thursdays — that revision was
+		// current at the snapshot and was not yet deprecated.
+		// asOf="2024-03-01T00:00:00Z" must yield Mondays.
+		// includeDeprecated + asOf="2024-12-01T00:00:00Z" must yield Mondays
+		// + Thursdays, NOT all three revisions.
+		function makeRevision(
+			overrides: Partial<RawMessage> & { messageId: string; content: string },
+		): RawMessage {
+			const now = Math.floor(Date.now() / 1000);
+			return {
+				platform: "test",
+				botId: "bot-1",
+				userId: "u1",
+				timestamp: now,
+				createdAt: now,
+				...overrides,
+			};
+		}
+
+		async function seedThreeRevisions(manager: SQLiteRawMessageManager): Promise<void> {
+			const mondaysSeconds = Math.floor(Date.parse("2024-01-15T00:00:00Z") / 1000);
+			const thursdaysSeconds = Math.floor(Date.parse("2024-06-01T00:00:00Z") / 1000);
+			const wednesdaysSeconds = Math.floor(Date.parse("2025-03-01T00:00:00Z") / 1000);
+			const mondaysDeprecatedMs = Date.parse("2024-06-01T00:00:00Z");
+			const thursdaysDeprecatedMs = Date.parse("2025-03-01T00:00:00Z");
+			await manager.storeMessages([
+				makeRevision({ messageId: "rev-mondays", content: "deploy on Mondays", createdAt: mondaysSeconds }),
+				makeRevision({
+					messageId: "rev-thursdays",
+					content: "deploy on Thursdays",
+					createdAt: thursdaysSeconds,
+				}),
+				makeRevision({
+					messageId: "rev-wednesdays",
+					content: "deploy on Wednesdays",
+					createdAt: wednesdaysSeconds,
+				}),
+			]);
+			// `deprecateMessages` writes a single timestamp per call, so deprecate
+			// each revision separately with its own timestamp. The Wednesday
+			// revision is intentionally left active.
+			await manager.deprecateMessages(["rev-mondays"], { deprecatedAt: mondaysDeprecatedMs });
+			await manager.deprecateMessages(["rev-thursdays"], { deprecatedAt: thursdaysDeprecatedMs });
+		}
+
+		it("current-truth returns the latest revision (no asOf)", async () => {
+			const manager = new SQLiteRawMessageManager({
+				dbPath: join(scratchDir, "store.db"),
+				enableVectorSearch: false,
+			});
+			await manager.init();
+			await seedThreeRevisions(manager);
+
+			const hits = await manager.lexicalSearchMessages({ userId: "u1", keywords: ["deploy"] });
+			expect(hits.map((hit) => hit.id)).toEqual(["rev-wednesdays"]);
+
+			await manager.close();
+		});
+
+		it("asOf selects the revision that was current at that instant", async () => {
+			const manager = new SQLiteRawMessageManager({
+				dbPath: join(scratchDir, "store.db"),
+				enableVectorSearch: false,
+			});
+			await manager.init();
+			await seedThreeRevisions(manager);
+
+			// 2024-03-01: only Mondays existed; it was not yet deprecated.
+			const hitsBeforeThursday = await manager.lexicalSearchMessages({
+				userId: "u1",
+				keywords: ["deploy"],
+				asOf: "2024-03-01T00:00:00Z",
+			});
+			expect(hitsBeforeThursday.map((hit) => hit.id)).toEqual(["rev-mondays"]);
+
+			// 2025-01-15: Thursdays existed and was not yet deprecated
+			// (deprecated 2025-03-01). Wednesdays didn't exist yet.
+			const hitsDuringThursday = await manager.lexicalSearchMessages({
+				userId: "u1",
+				keywords: ["deploy"],
+				asOf: "2025-01-15T00:00:00Z",
+			});
+			expect(hitsDuringThursday.map((hit) => hit.id)).toEqual(["rev-thursdays"]);
+
+			await manager.close();
+		});
+
+		it("asOf + includeDeprecated returns every revision that existed at the snapshot", async () => {
+			const manager = new SQLiteRawMessageManager({
+				dbPath: join(scratchDir, "store.db"),
+				enableVectorSearch: false,
+			});
+			await manager.init();
+			await seedThreeRevisions(manager);
+
+			// 2024-12-01: Mondays + Thursdays both existed. Mondays was
+			// deprecated 2024-06-01, so with includeDeprecated=true the
+			// audit-style query surfaces the full supersession chain. The
+			// pre-fix behaviour was to return all three revisions regardless
+			// of asOf; the fix applies the asOf upper bound to creation time.
+			const hits = await manager.lexicalSearchMessages({
+				userId: "u1",
+				keywords: ["deploy"],
+				asOf: "2024-12-01T00:00:00Z",
+				includeDeprecated: true,
+			});
+			const ids = hits.map((hit) => hit.id).sort();
+			expect(ids).toEqual(["rev-mondays", "rev-thursdays"]);
+			expect(ids).not.toContain("rev-wednesdays");
+
+			await manager.close();
+		});
+
+		it("asOf ignores records created strictly after the snapshot", async () => {
+			const manager = new SQLiteRawMessageManager({
+				dbPath: join(scratchDir, "store.db"),
+				enableVectorSearch: false,
+			});
+			await manager.init();
+			await seedThreeRevisions(manager);
+
+			// Before any revision exists, nothing is visible — even with
+			// includeDeprecated=true (because created_at > asOf in every row).
+			const hits = await manager.lexicalSearchMessages({
+				userId: "u1",
+				keywords: ["deploy"],
+				asOf: "1999-01-01T00:00:00Z",
+				includeDeprecated: true,
+			});
+			expect(hits).toEqual([]);
+
+			await manager.close();
+		});
+	});
 });

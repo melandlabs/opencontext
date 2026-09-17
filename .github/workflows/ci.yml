@@ -223,6 +223,44 @@ jobs:
           NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
 
+  native-sqlite:
+    # Targeted regression: validates the better-sqlite3 N-API prebuild loads
+    # and the SQLite-backed test suites (sqlite, memory-store, workspace, rag)
+    # pass on every supported Node major (22 / 24 / 26). N-API prebuilds are
+    # supposed to be ABI-stable across majors, but pinning the assertion here
+    # means a future better-sqlite3 regression fails fast on CI rather than
+    # on a developer's Node 24/26 laptop. Cheap — no full build, no lint.
+    name: Native sqlite (Node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22", "24", "26"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.14.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Build every package: tsup's DTS step on @melandlabs/sqlite walks into
+      # @melandlabs/indexeddb → @melandlabs/contracts and needs those
+      # dist/.d.ts files to be built first. Filtering the build down to the
+      # test consumers breaks the DTS resolution.
+      - name: Build all packages
+        run: pnpm -r --filter './packages/**' build
+      - name: Test SQLite consumers
+        run: |
+          pnpm --filter @melandlabs/sqlite test
+          pnpm --filter @melandlabs/memory-store test
+          pnpm --filter @melandlabs/workspace test
+          pnpm --filter @melandlabs/rag test
+
   build:
     name: Build packages
     runs-on: ubuntu-latest
