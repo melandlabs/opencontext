@@ -5,9 +5,18 @@
  *   - `.md` / `.markdown`       — pass-through (front-matter is parsed by
  *                                 `okf-backend` separately)
  *   - `.txt`                   — pass-through
+ *   - `.html` / `.htm`         — pass-through + best-effort HTML tag strip
+ *                                 so the embedder sees plain text, not raw
+ *                                 markup. `@melandlabs/rag`'s parser doesn't
+ *                                 have an HTML loader, so the strip happens
+ *                                 here.
+ *   - `.csv`                   — `parseFileToDocument` (`@melandlabs/rag`),
+ *                                 which routes `text/csv` through `CSVLoader`.
+ *                                 Each row becomes one Document; we join them
+ *                                 back into a single string below.
  *   - `.pdf`                   — `parseFileToDocument` (`@melandlabs/rag`)
  *   - `.docx`                  — `parseFileToDocument`
- *   - `.pages`                 — `parseFileToDocument` (via `AppleDocumentLoader`)
+ *   - `.pages` / `.keynote`    — `parseFileToDocument` (via `AppleDocumentLoader`)
  *   - `.xlsx` / `.xls`         — SheetJS (`xlsx`) — round-trips every sheet to
  *                                 CSV. `@langchain/community` does not ship an
  *                                 Excel loader, so we go straight to SheetJS
@@ -54,10 +63,37 @@ export interface ExtractedText {
 	metadata?: Record<string, unknown>;
 }
 
+/**
+ * Best-effort HTML tag strip. Removes `<script>` / `<style>` blocks
+ * wholesale (their text content isn't meaningful in semantic search),
+ * collapses comments, and decodes the most common named entities.
+ * Deliberately lossy — the goal is plain text the embedder can index,
+ * not a faithful DOM render. Used by the `.html` / `.htm` branch in
+ * `extractText` since `@melandlabs/rag`'s parser doesn't ship an HTML
+ * loader.
+ */
+export function stripHtmlTags(html: string): string {
+	return (
+		html
+			.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+			.replace(/<!--[\s\S]*?-->/g, " ")
+			// DOCTYPE, XML processing instructions, CDATA — anything that
+			// starts with `<!` or `<?` and closes with `>`. These don't
+			// match the `<tag>` regex below because they begin with `!`/`?`.
+			.replace(/<[!?][^>]*>/g, " ")
+			.replace(/<\/?[a-z][^>]*>/gi, " ")
+			.replace(/&nbsp;/gi, " ")
+			.replace(/&(amp|lt|gt|quot|#39);/gi, " ")
+			.replace(/\s+/g, " ")
+			.trim()
+	);
+}
+
 const MIME_BY_EXTENSION: Record<string, string> = {
 	".md": "text/markdown",
 	".markdown": "text/markdown",
 	".txt": "text/plain",
+	".csv": "text/csv",
 	".pdf": "application/pdf",
 	".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 	".doc": "application/msword",
@@ -154,6 +190,14 @@ export async function extractText(sourcePath: string, mimeType?: string): Promis
 		const text = await readFile(sourcePath, "utf8");
 		return { text, mimeType: mime };
 	}
+	// `.html` / `.htm` aren't supported by `@melandlabs/rag`'s parser
+	// (no loader registered for `text/html`), so we do a lightweight
+	// pass-through + tag-strip here. Good enough for lexical + semantic
+	// recall; not a faithful DOM render.
+	if (ext === ".html" || ext === ".htm") {
+		const raw = await readFile(sourcePath, "utf8");
+		return { text: stripHtmlTags(raw), mimeType: mime };
+	}
 	const buffer = await readFile(sourcePath);
 	// Spreadsheets: SheetJS handles .xlsx / .xls directly. .numbers
 	// gets a one-shot textutil conversion on macOS, then falls through
@@ -178,7 +222,9 @@ export async function extractText(sourcePath: string, mimeType?: string): Promis
 	// The RAG layer exposes `parseFile` (returns `{text, metadata}`) and
 	// `parseFileToDocument` (returns a LangChain `Document`). The latter
 	// also surfaces page-level metadata; prefer it when callers can
-	// surface metadata downstream.
+	// surface metadata downstream. This branch also covers `.csv`
+	// (CSVLoader via `text/csv`) and Apple iWork (`.pages` / `.keynote`
+	// via AppleDocumentLoader).
 	const document = await parseFileToDocument(buffer, mime, sourcePath);
 	return {
 		text: document.pageContent,
@@ -198,6 +244,10 @@ export async function extractTextRaw(sourcePath: string, mimeType?: string): Pro
 	if (ext === ".md" || ext === ".markdown" || ext === ".txt") {
 		const text = await readFile(sourcePath, "utf8");
 		return { text, mimeType: mime };
+	}
+	if (ext === ".html" || ext === ".htm") {
+		const raw = await readFile(sourcePath, "utf8");
+		return { text: stripHtmlTags(raw), mimeType: mime };
 	}
 	if (ext === ".xlsx" || ext === ".xls") {
 		const buffer = await readFile(sourcePath);
