@@ -1,5 +1,29 @@
 # @melandlabs/workspace
 
+## 0.5.0
+
+### Minor Changes
+
+- Extend the multi-format text extractor and barrel-export it so external callers (e.g. chokidar-based folder watchers) can route `.md` / `.txt` / `.html` / `.htm` / `.csv` / `.pdf` / `.docx` / `.xlsx` / `.xls` / `.pages` / `.numbers` / `.keynote` through the same `extractText` pipeline the OKF bulk indexer already uses.
+
+  - `parsers-adapter.ts`
+    - **New**: `.html` / `.htm` pass-through with a best-effort `stripHtmlTags` (removes `<script>` / `<style>` / `<!-- -->` / `<!doctype>` / `<?xml?>`, decodes `&nbsp;` / `&` / `<` / `>` / `"` / `&#39;`). `@melandlabs/rag`'s parser has no HTML loader, so the strip lives here.
+    - **New**: `.csv` routed through `parseFileToDocument` → `CSVLoader` (already wired in `@melandlabs/rag`).
+    - **New**: `.keynote` reaches `parseFileToDocument` → `AppleDocumentLoader` (already wired; previously dropped at the `SUPPORTED_EXTENSIONS` gate).
+    - **Added** `.csv` to `MIME_BY_EXTENSION` (was previously `application/octet-stream`).
+    - Header docstring updated to enumerate all 12 supported extensions.
+  - `okf-backend.ts`
+    - `SUPPORTED_EXTENSIONS` gains `.html`, `.htm`, `.csv`, `.keynote`.
+    - `resourceTypeForExtension` returns `"note"` for `.csv`, `"html"` for `.html` / `.htm`, `"document"` for `.keynote`.
+  - `index.ts`
+    - Exports `extractText`, `extractTextRaw`, `detectMimeType`, `stripHtmlTags`, and the `ExtractedText` type from the package barrel. These were previously internal — only `indexOkfFolder` / `listOkfFolderResources` were public.
+  - `test/parsers-adapter.test.ts`
+    - Covers MIME detection for `.html` / `.htm` / `.csv`.
+    - Covers `stripHtmlTags` (script / style / comment / DOCTYPE / entity removal).
+    - Covers `extractText` for `.html` end-to-end.
+
+  No schema change. No behaviour change for the bulk `indexOkfFolder` path beyond picking up four new extensions.
+
 ## 0.4.0
 
 ### Minor Changes

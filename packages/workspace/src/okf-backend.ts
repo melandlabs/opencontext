@@ -51,12 +51,16 @@ const SUPPORTED_EXTENSIONS = new Set([
 	".md",
 	".markdown",
 	".txt",
+	".html",
+	".htm",
+	".csv",
 	".pdf",
 	".docx",
 	".xlsx",
 	".xls",
 	".numbers",
 	".pages",
+	".keynote",
 ]);
 
 async function walk(dir: string): Promise<string[]> {
@@ -87,11 +91,13 @@ function resourceTypeForExtension(ext: string): string {
 	switch (ext) {
 		case ".md":
 		case ".markdown":
-			return "note";
 		case ".txt":
+		case ".csv":
 			return "note";
+		case ".html":
+		case ".htm":
+			return "html";
 		case ".pdf":
-			return "document";
 		case ".docx":
 			return "document";
 		case ".xlsx":
@@ -99,6 +105,7 @@ function resourceTypeForExtension(ext: string): string {
 		case ".numbers":
 			return "spreadsheet";
 		case ".pages":
+		case ".keynote":
 			return "document";
 		default:
 			return "document";

@@ -9,7 +9,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { detectMimeType, extractText } from "../src/parsers-adapter";
+import { detectMimeType, extractText, stripHtmlTags } from "../src/parsers-adapter";
 
 let scratchDir: string;
 
@@ -31,6 +31,9 @@ describe("parsers-adapter", () => {
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 		);
 		expect(detectMimeType("a.pages")).toBe("application/x-iwork-pages-sffpages");
+		expect(detectMimeType("a.html")).toBe("text/html");
+		expect(detectMimeType("a.htm")).toBe("text/html");
+		expect(detectMimeType("a.csv")).toBe("text/csv");
 		expect(detectMimeType("a.unknown")).toBe("application/octet-stream");
 	});
 
@@ -51,5 +54,41 @@ describe("parsers-adapter", () => {
 		const result = await extractText(filePath);
 		expect(result.text).toBe("first line\nsecond line\n");
 		expect(result.mimeType).toBe("text/plain");
+	});
+
+	it("strips HTML tags, scripts, styles, comments, and common entities", () => {
+		const html = `<!doctype html>
+<html><head><title>Smoke</title></head>
+<body>
+<script>alert('x')</script>
+<style>p { color: red; }</style>
+<h1>Hello & goodbye</h1>
+<p>Paragraph with <em>emphasis</em> and a&nbsp;space.</p>
+<!-- internal comment -->
+</body></html>`;
+		const stripped = stripHtmlTags(html);
+		expect(stripped).not.toMatch(/<[^>]+>/);
+		expect(stripped).not.toContain("alert(");
+		expect(stripped).not.toContain("color: red");
+		expect(stripped).not.toContain("internal comment");
+		expect(stripped).toContain("Hello");
+		expect(stripped).toContain("goodbye");
+		expect(stripped).toContain("emphasis");
+		expect(stripped).toContain("Paragraph");
+	});
+
+	it("extracts text from an HTML file via tag-strip", async () => {
+		const filePath = join(scratchDir, "page.html");
+		mkdirSync(scratchDir, { recursive: true });
+		writeFileSync(
+			filePath,
+			`<html><body><h1>服务条款</h1><p>第一段正文。</p></body></html>`,
+			"utf8",
+		);
+		const result = await extractText(filePath);
+		expect(result.mimeType).toBe("text/html");
+		expect(result.text).toContain("服务条款");
+		expect(result.text).toContain("第一段正文");
+		expect(result.text).not.toMatch(/<[^>]+>/);
 	});
 });

@@ -29,6 +29,13 @@ export type {
 } from "./api";
 
 export { indexOkfFolder, listOkfFolderResources } from "./okf-backend";
+export {
+	detectMimeType,
+	extractText,
+	extractTextRaw,
+	stripHtmlTags,
+} from "./parsers-adapter";
+export type { ExtractedText } from "./parsers-adapter";
 
 export { searchLexical } from "./search/lexical";
 export { searchSemantic } from "./search/semantic";
