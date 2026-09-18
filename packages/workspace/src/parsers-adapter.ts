@@ -73,18 +73,20 @@ export interface ExtractedText {
  * loader.
  */
 export function stripHtmlTags(html: string): string {
-	return html
-		.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-		.replace(/<!--[\s\S]*?-->/g, " ")
-		// DOCTYPE, XML processing instructions, CDATA — anything that
-		// starts with `<!` or `<?` and closes with `>`. These don't
-		// match the `<tag>` regex below because they begin with `!`/`?`.
-		.replace(/<[!?][^>]*>/g, " ")
-		.replace(/<\/?[a-z][^>]*>/gi, " ")
-		.replace(/&nbsp;/gi, " ")
-		.replace(/&(amp|lt|gt|quot|#39);/gi, " ")
-		.replace(/\s+/g, " ")
-		.trim();
+	return (
+		html
+			.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+			.replace(/<!--[\s\S]*?-->/g, " ")
+			// DOCTYPE, XML processing instructions, CDATA — anything that
+			// starts with `<!` or `<?` and closes with `>`. These don't
+			// match the `<tag>` regex below because they begin with `!`/`?`.
+			.replace(/<[!?][^>]*>/g, " ")
+			.replace(/<\/?[a-z][^>]*>/gi, " ")
+			.replace(/&nbsp;/gi, " ")
+			.replace(/&(amp|lt|gt|quot|#39);/gi, " ")
+			.replace(/\s+/g, " ")
+			.trim()
+	);
 }
 
 const MIME_BY_EXTENSION: Record<string, string> = {

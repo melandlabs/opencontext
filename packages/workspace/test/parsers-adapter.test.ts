@@ -80,11 +80,7 @@ describe("parsers-adapter", () => {
 	it("extracts text from an HTML file via tag-strip", async () => {
 		const filePath = join(scratchDir, "page.html");
 		mkdirSync(scratchDir, { recursive: true });
-		writeFileSync(
-			filePath,
-			`<html><body><h1>服务条款</h1><p>第一段正文。</p></body></html>`,
-			"utf8",
-		);
+		writeFileSync(filePath, "<html><body><h1>服务条款</h1><p>第一段正文。</p></body></html>", "utf8");
 		const result = await extractText(filePath);
 		expect(result.mimeType).toBe("text/html");
 		expect(result.text).toContain("服务条款");
