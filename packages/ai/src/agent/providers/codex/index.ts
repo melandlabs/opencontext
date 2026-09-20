@@ -71,7 +71,7 @@ export class CodexAgent extends BaseAgent {
 		return `codex_msg_${Date.now()}_${++this.messageCounter}`;
 	}
 
-	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const session = this.createSession("executing", {
 			abortController: options?.abortController,
 		});
@@ -209,7 +209,7 @@ export class CodexAgent extends BaseAgent {
 
 			let sawError = false;
 			let sawAbort = false;
-			for await (const message of this.run(executionPrompt, {
+			for await (const message of this.runCore(executionPrompt, {
 				...options,
 				cwd,
 				sessionId: options.sessionId,

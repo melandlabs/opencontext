@@ -154,6 +154,10 @@ export default async function demoAiAgent() {
 		check("the returned agent implements agent.getPlan (IAgent)", typeof agent.getPlan === "function");
 		check("the returned agent implements agent.deletePlan (IAgent)", typeof agent.deletePlan === "function");
 		check(
+			"the returned agent implements agent.compactContext (IAgent)",
+			typeof agent.compactContext === "function",
+		);
+		check(
 			"agent.getPlan always returns undefined (Standalone has no plan store)",
 			agent.getPlan("anything") === undefined,
 		);

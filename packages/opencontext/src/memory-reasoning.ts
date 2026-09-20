@@ -3,12 +3,13 @@
  * (@melandlabs/memory-store/query-rewriter and iterative-recall) to a concrete
  * LLM provider.
  *
- * These factories are intentionally thin: they create a `complete` callback
- * from an OpenAI-compatible endpoint and hand it to the provider-agnostic
- * reasoning primitives in memory-store.
+ * These factories are intentionally thin: they resolve a language model
+ * through the shared {@link createLanguageModel} helper (which supports
+ * OpenAI-compatible and Anthropic-compatible endpoints), build a `complete`
+ * callback around it, and hand that to the provider-agnostic reasoning
+ * primitives in memory-store.
  */
 
-import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import {
 	type IterativeRecallPlanner,
 	type IterativeRecallPlannerOptions,
@@ -21,10 +22,12 @@ import {
 } from "@melandlabs/memory-store";
 import { type LanguageModel, generateText } from "ai";
 
+import { type LLMProviderType, createLanguageModel } from "./llm-factory";
+
 export interface ReasoningModelOptions {
-	/** OpenAI-compatible API key. Falls back to OPENCONTEXT_LLM_API_KEY. */
+	/** OpenAI-compatible or Anthropic-compatible API key. Falls back to OPENCONTEXT_LLM_API_KEY. */
 	apiKey?: string;
-	/** OpenAI-compatible base URL. Falls back to OPENCONTEXT_LLM_BASE_URL. */
+	/** OpenAI-compatible or Anthropic-compatible base URL. Falls back to OPENCONTEXT_LLM_BASE_URL. */
 	baseUrl?: string;
 	/** Model identifier. Falls back to OPENCONTEXT_LLM_MODEL. */
 	model?: string;
@@ -33,6 +36,12 @@ export interface ReasoningModelOptions {
 	 * ignored.
 	 */
 	languageModel?: LanguageModel;
+	/**
+	 * Force a specific provider. When omitted, the factory detects from
+	 * baseUrl (substring `"anthropic"`, case-insensitive). Default is
+	 * `"openai_compatible"`.
+	 */
+	providerType?: LLMProviderType;
 	/**
 	 * Request timeout in milliseconds. @default 30000
 	 */
@@ -56,23 +65,23 @@ function resolveIntEnv(key: string, fallback: number): number {
 }
 
 function createModel(options: ReasoningModelOptions): LanguageModel {
-	if (options.languageModel) {
-		return options.languageModel;
+	try {
+		return createLanguageModel({
+			apiKey: options.apiKey,
+			baseUrl: options.baseUrl,
+			model: options.model,
+			languageModel: options.languageModel,
+			providerType: options.providerType,
+			providerName: "opencontext-reasoning",
+		});
+	} catch (err) {
+		// Preserve the historical error message ("Reasoning model API key is required")
+		// so existing callers / tests don't break.
+		if (err instanceof Error && /LLM API key is required/.test(err.message)) {
+			throw new Error("Reasoning model API key is required. Set OPENCONTEXT_LLM_API_KEY or pass apiKey.");
+		}
+		throw err;
 	}
-
-	const apiKey = options.apiKey ?? resolveEnv("OPENCONTEXT_LLM_API_KEY") ?? "";
-	const baseUrl = options.baseUrl ?? resolveEnv("OPENCONTEXT_LLM_BASE_URL") ?? "https://openrouter.ai/api/v1";
-	const modelName = options.model ?? resolveEnv("OPENCONTEXT_LLM_MODEL") ?? "openai/gpt-4o-mini";
-
-	if (!apiKey) {
-		throw new Error("Reasoning model API key is required. Set OPENCONTEXT_LLM_API_KEY or pass apiKey.");
-	}
-
-	return createOpenAICompatible({
-		baseURL: baseUrl,
-		apiKey,
-		name: "opencontext-reasoning",
-	}).chatModel(modelName);
 }
 
 function createComplete(options: ReasoningModelOptions) {

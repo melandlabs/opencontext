@@ -92,12 +92,17 @@ The stream yielded by every provider uses the `AgentMessage` union defined in
 
 ```typescript
 import { BaseAgent, defineAgentPlugin } from "@melandlabs/ai/agent";
-import type { AgentConfig, AgentMessage } from "@melandlabs/ai/agent/types";
+import type { AgentConfig, AgentMessage, AgentOptions } from "@melandlabs/ai/agent/types";
 
 export class MyAgent extends BaseAgent {
 	readonly provider = "my-provider";
 
-	async *run(prompt: string): AsyncGenerator<AgentMessage> {
+	// Provider-specific primitive. `BaseAgent.run` is the public entry point
+	// and transparently wraps this with the auto-compact recovery loop when
+	// `providerConfig.compactor` is configured. Do NOT call `this.run(...)`
+	// from inside — it would re-enter the wrapper and infinite-loop on
+	// persistent overflow.
+	async *runCore(prompt: string, _options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		yield { type: "session", sessionId: "session-1" };
 		yield { type: "text", content: `Echo: ${prompt}` };
 		yield { type: "done" };

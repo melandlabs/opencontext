@@ -37,6 +37,46 @@ import {
 } from "../index";
 import { createDynamicModel } from "../model/providers";
 
+/**
+ * Heuristic for "this looks like the model refused because the prompt is
+ * too large". The AI SDK exposes `APICallError` with a status code, so we
+ * honour the upstream status (400 for OpenAI-compatible, 413 for some
+ * Anthropic-compatible gateways) when present and fall back to the message
+ * for providers that don't surface a clean code.
+ *
+ * Exported for unit tests + the `runWithAutoCompact` wrapper (which is the
+ * canonical consumer of this classification).
+ */
+export function isContextOverflowError(err: unknown): boolean {
+	if (!err || typeof err !== "object") return false;
+	const maybeError = err as { status?: number; statusCode?: number; message?: string; name?: string };
+	const status = maybeError.status ?? maybeError.statusCode;
+	if (status === 400 || status === 413) {
+		// 400 / 413 alone aren't sufficient — we still need the message to
+		// look like an overflow. Many other 400s (bad request, missing
+		// tool) should NOT be classified as overflow.
+		const message = (maybeError.message ?? "").toLowerCase();
+		return (
+			message.includes("context") ||
+			message.includes("too long") ||
+			message.includes("too many") ||
+			message.includes("maximum context") ||
+			message.includes("max tokens") ||
+			message.includes("tokens") ||
+			message.includes("prompt is too")
+		);
+	}
+	const message = (maybeError.message ?? "").toLowerCase();
+	return (
+		(message.includes("context length") && message.includes("exceeded")) ||
+		message.includes("context_length_exceeded") ||
+		message.includes("maximum context length") ||
+		message.includes("prompt is too long") ||
+		(message.includes("context window") && message.includes("exceeded")) ||
+		(message.includes("reduce the length") && message.includes("messages"))
+	);
+}
+
 /** Provider type discriminator. Matches `STANDALONE_METADATA.type`. */
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;
 
@@ -61,7 +101,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * prompt straight to the model and return its reply as a single
 	 * `text` message.
 	 */
-	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const session = this.createSession("executing");
 		const sessionId = session.id;
 
@@ -110,7 +150,16 @@ export class StandaloneAgent extends BaseAgent {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			yield { type: "error", sessionId, message };
+			// Classify context-window overflow errors so the
+			// `runWithAutoCompact` wrapper can detect them and re-issue the
+			// request after a compaction pass. We match the AI SDK's error
+			// shape (the upstream provider's status code + "context" /
+			// "too long" / "tokens" hints) rather than trusting provider-
+			// specific strings.
+			const kind = isContextOverflowError(error)
+				? ({ kind: "context_overflow", message } as const)
+				: ({ kind: "upstream_error", message } as const);
+			yield { type: "error", sessionId, message, kind };
 		}
 	}
 
@@ -120,7 +169,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * that need a real plan should use a different provider.
 	 */
 	async *plan(prompt: string, _options?: PlanOptions): AsyncGenerator<AgentMessage> {
-		yield* this.run(prompt, _options);
+		yield* this.runCore(prompt, _options);
 	}
 
 	/**
@@ -128,7 +177,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * so we just call the model with the original prompt.
 	 */
 	async *execute(options: ExecuteOptions): AsyncGenerator<AgentMessage> {
-		yield* this.run(options.originalPrompt, options);
+		yield* this.runCore(options.originalPrompt, options);
 	}
 
 	/**

@@ -90,7 +90,9 @@ import demoContractsTutorial from "./tutorials/40-contracts-example.ts";
 import demoPeerProfile from "./tutorials/41-peer-profile-example.ts";
 import demoExtractDerive from "./tutorials/42-extract-derive.ts";
 import demoOkfServeLive from "./tutorials/43-okf-serve-live.ts";
+import demoCompactContext from "./tutorials/44-compact-context-example.ts";
 import demoWikiDistillation from "./tutorials/45-wiki-distillation.ts";
+import demoAutoCompact from "./tutorials/46-auto-compact-example.ts";
 import demoPersonalMemoryAssistant from "./tutorials/use-cases/30-personal-memory-assistant.ts";
 import demoCustomerSupportAgent from "./tutorials/use-cases/31-customer-support-agent.ts";
 import demoResearchKnowledgeTracker from "./tutorials/use-cases/32-research-knowledge-tracker.ts";
@@ -181,6 +183,8 @@ const demos: Array<[string, () => Promise<void>]> = [
 		demoCustomerHealthScoring,
 	],
 	["demo: tutorial — OKF serve live (Northwind Labs: 5 fixtures → store → /api/graph)", demoOkfServeLive],
+	["demo: tutorial — IAgent.compactContext (createCompactor + soft/hard/emergency + agent-loop)", demoCompactContext],
+	["demo: tutorial — runWithAutoCompact (overflow → compact → retry)", demoAutoCompact],
 ];
 
 /**

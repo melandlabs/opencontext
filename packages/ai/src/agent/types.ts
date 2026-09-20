@@ -11,10 +11,14 @@
 
 import type { WorkspaceArtifactManifest } from "@melandlabs/shared";
 import type { PromptCacheStats } from "./billing/model-pricing";
+import type { CompactContextInput, CompactContextResult, Compactor } from "./compaction/compactor";
 import type { SandboxConfig, SandboxProviderType } from "./sandbox/types";
 
 // Re-export as types (for external consumers)
 export type { SandboxConfig, SandboxProviderType };
+// Re-export compaction types so consumers can `import type { CompactContextInput }
+// from "@melandlabs/ai"` without reaching into the compaction subpath.
+export type { Compactor, CompactContextInput, CompactContextResult };
 
 // ============================================================================
 // Minimal inlined types (from provider-core)
@@ -312,6 +316,18 @@ export interface ConversationMessage {
 }
 
 /**
+ * Conversation message shape consumed by the auto-compact recovery loop
+ * inside `BaseAgent.run`. Identical to {@link ConversationMessage} but lives
+ * in the agent SDK namespace (so the auto-compact surface does not have
+ * to depend on any host-specific types) and is what `AgentOptions.history`
+ * types against.
+ */
+export interface AgentHistoryMessage {
+	role: "user" | "assistant" | "system";
+	content: string;
+}
+
+/**
  * Delivery semantics for input that arrives while a run is active.
  *
  * - "steer": the user wants to redirect the agent NOW. The host interrupts the
@@ -555,6 +571,7 @@ export type AgentErrorKind =
 	| { kind: "auth_failure"; status?: number; message: string }
 	| { kind: "quota_exhausted"; message: string }
 	| { kind: "aborted"; message?: string }
+	| { kind: "context_overflow"; message: string }
 	| { kind: "upstream_error"; message: string }
 	| { kind: "unknown"; message: string };
 
@@ -717,6 +734,12 @@ export interface AgentOptions {
 	authToken?: string;
 	/** Conversation history */
 	conversation?: ConversationMessage[];
+	/**
+	 * Conversation history before `prompt`. Surfaced to the auto-compact
+	 * recovery loop inside `BaseAgent.run`. Only meaningful when the agent
+	 * has `providerConfig.compactor` configured; ignored otherwise.
+	 */
+	history?: AgentHistoryMessage[];
 	/** Additional user inputs delivered to an already-active run. */
 	supplementalInput?: AgentSupplementalInputSource;
 	/** Trusted host-only restart recovery state; never accepted from HTTP. */
@@ -1007,6 +1030,16 @@ export interface IAgent {
 	 * Execute an approved plan
 	 */
 	execute(options: ExecuteOptions): AsyncGenerator<AgentMessage>;
+
+	/**
+	 * Compact the conversation history by summarizing older messages. The model
+	 * is configured once at agent creation time via `AgentConfig.providerConfig.compactor`
+	 * (built with `createCompactor` from `@melandlabs/opencontext`). Mirrors the
+	 * `memory-reasoning` factory pattern: never hardcodes an HTTP endpoint or model id.
+	 *
+	 * Throws if `providerConfig.compactor` is not configured.
+	 */
+	compactContext(input: CompactContextInput): Promise<CompactContextResult>;
 
 	/**
 	 * Stop the current execution

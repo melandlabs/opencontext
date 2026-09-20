@@ -19,6 +19,13 @@ export type {
 	CompactionOptions,
 	CompactionResponse,
 } from "./compaction-client";
+export { runCompactor } from "./compactor";
+export type {
+	Compactor,
+	CompactContextInput,
+	CompactContextResult,
+	RunCompactorOptions,
+} from "./compactor";
 export {
 	prepareConversationWindows,
 	estimateConversationTokens,
