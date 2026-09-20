@@ -1,5 +1,22 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.13
+
+### Patch Changes
+
+- Updated dependencies [780db7f]
+- Updated dependencies [85f0aa4]
+  - @melandlabs/ai@0.11.0
+  - @melandlabs/opencontext@0.13.0
+  - @melandlabs/integrations-dingtalk@0.3.13
+  - @melandlabs/integrations-gmail@0.3.13
+  - @melandlabs/integrations-imessage@0.3.13
+  - @melandlabs/integrations-qqbot@0.3.13
+  - @melandlabs/integrations-telegram@0.3.13
+  - @melandlabs/integrations-weixin@0.3.13
+  - @melandlabs/integrations-whatsapp@0.3.13
+  - @melandlabs/memory-store@1.3.3
+
 ## 0.3.12
 
 ### Patch Changes
