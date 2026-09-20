@@ -1,5 +1,11 @@
 // Auto-generated from @melandlabs/ai/dist/index.d.ts
 // UserType excluded (canonical UserType comes from @melandlabs/contracts).
+//
+// Hand-edited additions: `Compactor`, `CompactContextInput`, `CompactContextResult`,
+// `runCompactor`, and `runWithAutoCompact` were added by the `compactContext`
+// plan (#46 follow-up). They are exported from `@melandlabs/ai` directly; this
+// re-export keeps the `opencontext` facade single-import for hosts that already
+// depend on it.
 export {
 	AIUserContext,
 	AUDIO_MODEL_PRICING,
@@ -14,6 +20,9 @@ export {
 	CompactionPlatform,
 	CompactionResponse,
 	CompactionResult,
+	CompactContextInput,
+	CompactContextResult,
+	Compactor,
 	ConversationWindowBucket,
 	ConversationWindowBucketStats,
 	ConversationWindowConfig,
@@ -144,6 +153,8 @@ export {
 	prepareConversationWindows,
 	resolveMemoryForgettingPolicy,
 	routeModelCall,
+	runCompactor,
+	runWithAutoCompact,
 	setAIUserContext,
 	summaryTierForTransition,
 	transitionTargetTier,

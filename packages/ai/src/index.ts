@@ -44,6 +44,7 @@ export {
 	COMPACTION_MODEL,
 	COMPACTION_SOFT_RATIO,
 	buildCompactionPrompt,
+	runCompactor,
 	triggerCompaction,
 	triggerCompactionAsync,
 } from "./agent/compaction";
@@ -53,6 +54,10 @@ export type {
 	CompactionPlatform,
 	CompactionResponse,
 	CompactionResult,
+	Compactor,
+	CompactContextInput,
+	CompactContextResult,
+	RunCompactorOptions,
 } from "./agent/compaction";
 
 // Structured call (single forced-tool LLM call primitive)

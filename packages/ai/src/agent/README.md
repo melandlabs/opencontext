@@ -92,12 +92,17 @@ The stream yielded by every provider uses the `AgentMessage` union defined in
 
 ```typescript
 import { BaseAgent, defineAgentPlugin } from "@melandlabs/ai/agent";
-import type { AgentConfig, AgentMessage } from "@melandlabs/ai/agent/types";
+import type { AgentConfig, AgentMessage, AgentOptions } from "@melandlabs/ai/agent/types";
 
 export class MyAgent extends BaseAgent {
 	readonly provider = "my-provider";
 
-	async *run(prompt: string): AsyncGenerator<AgentMessage> {
+	// Provider-specific primitive. `BaseAgent.run` is the public entry point
+	// and transparently wraps this with the auto-compact recovery loop when
+	// `providerConfig.compactor` is configured. Do NOT call `this.run(...)`
+	// from inside — it would re-enter the wrapper and infinite-loop on
+	// persistent overflow.
+	async *runCore(prompt: string, _options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		yield { type: "session", sessionId: "session-1" };
 		yield { type: "text", content: `Echo: ${prompt}` };
 		yield { type: "done" };
@@ -123,6 +128,52 @@ export const myAgentPlugin = defineAgentPlugin({
 	factory: (config) => new MyAgent(config),
 });
 ```
+
+## Transparent auto-compact (context-overflow recovery)
+
+When `AgentConfig.providerConfig.compactor` is set (build one with
+`createCompactor(...)` from `@melandlabs/opencontext`), `BaseAgent.run`
+manages context pressure with the industry-standard trigger split
+(Codex / OpenClaw / Cline / Roo / OpenHands all use the same shape):
+
+- **Proactive** — with `providerConfig.compactThresholdTokens` set, the
+  estimated tokens of `options.conversation` are checked before the first
+  attempt; if they exceed the threshold, a compaction pass runs up front
+  so the model never sees an overflow in the common case.
+- **Reactive** — the stream is watched for `kind: "context_overflow"`
+  errors; on detection a compaction pass recovers the run.
+
+A compaction pass summarizes `options.conversation` via
+`agent.compactContext(...)` and re-issues the run with the summary
+embedded in the prompt as a `[carry-forward]` block PLUS the most recent
+messages kept verbatim (`providerConfig.compactKeepRecentTokens`, default
+4000 — the keep-recent-tail pattern; the newest turns carry the highest
+task-relevant detail). `providerConfig.compactMaxSummaryTokens` (default
+2000) hard-caps the summary length.
+
+Scope and host responsibilities:
+
+- Recovery only triggers for providers that classify overflow as
+  `kind: "context_overflow"` — currently only `StandaloneAgent`. Other
+  providers surface overflow errors unchanged even with a compactor
+  attached. `plan()` / `execute()` are not wrapped.
+- Around every compaction the wrapper yields a synthetic `type: "retry"`
+  message (`attempt` / `maxAttempts` set, human-readable `message`
+  prefixed with `[auto-compact]`). Treat it like any other retry notice:
+  **drop the aborted attempt's partial output** — the retry re-emits a
+  fresh stream from scratch.
+- **Adopt the baseline**: pass `AgentOptions.onCompactionBaseline` and
+  replace your conversation with the returned
+  `[system: carry-forward summary, ...verbatim tail]` history. Without
+  this, every subsequent turn re-sends the original oversized history
+  and compaction re-runs from scratch.
+- Failure semantics: if the compaction LLM call fails, the wrapper first
+  retries once with a deterministic fallback (oldest half dropped, no LLM
+  involved — recovery must not depend on another successful LLM request);
+  if that also overflows, or the budget runs out, the original overflow
+  error is surfaced verbatim with the reason noted. The compactor itself
+  retries with its oldest messages dropped when the summarizer call
+  overflows.
 
 ## Running tests
 

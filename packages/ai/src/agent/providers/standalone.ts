@@ -37,6 +37,18 @@ import {
 } from "../index";
 import { createDynamicModel } from "../model/providers";
 
+import { isContextOverflowError } from "../compaction/overflow";
+
+/**
+ * Heuristic for "this looks like the model refused because the prompt is
+ * too large" — re-exported from the compaction module (canonical
+ * definition lives there so `runCompactor` can share it).
+ *
+ * Exported for unit tests + the `runWithAutoCompact` wrapper (which is the
+ * canonical consumer of this classification).
+ */
+export { isContextOverflowError };
+
 /** Provider type discriminator. Matches `STANDALONE_METADATA.type`. */
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;
 
@@ -61,7 +73,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * prompt straight to the model and return its reply as a single
 	 * `text` message.
 	 */
-	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const session = this.createSession("executing");
 		const sessionId = session.id;
 
@@ -110,7 +122,16 @@ export class StandaloneAgent extends BaseAgent {
 			};
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			yield { type: "error", sessionId, message };
+			// Classify context-window overflow errors so the
+			// `runWithAutoCompact` wrapper can detect them and re-issue the
+			// request after a compaction pass. We match the AI SDK's error
+			// shape (the upstream provider's status code + "context" /
+			// "too long" / "tokens" hints) rather than trusting provider-
+			// specific strings.
+			const kind = isContextOverflowError(error)
+				? ({ kind: "context_overflow", message } as const)
+				: ({ kind: "upstream_error", message } as const);
+			yield { type: "error", sessionId, message, kind };
 		}
 	}
 
@@ -120,7 +141,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * that need a real plan should use a different provider.
 	 */
 	async *plan(prompt: string, _options?: PlanOptions): AsyncGenerator<AgentMessage> {
-		yield* this.run(prompt, _options);
+		yield* this.runCore(prompt, _options);
 	}
 
 	/**
@@ -128,7 +149,7 @@ export class StandaloneAgent extends BaseAgent {
 	 * so we just call the model with the original prompt.
 	 */
 	async *execute(options: ExecuteOptions): AsyncGenerator<AgentMessage> {
-		yield* this.run(options.originalPrompt, options);
+		yield* this.runCore(options.originalPrompt, options);
 	}
 
 	/**

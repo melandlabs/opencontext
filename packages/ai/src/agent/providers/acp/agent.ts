@@ -80,7 +80,7 @@ export class AcpAgent extends BaseAgent {
 		this.provider = runtime.provider;
 	}
 
-	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const session = this.createSession("executing", {
 			abortController: options?.abortController,
 		});
@@ -208,7 +208,7 @@ export class AcpAgent extends BaseAgent {
 			)}\n\nOriginal request: ${options.originalPrompt}`;
 
 			let sawError = false;
-			for await (const message of this.run(executionPrompt, {
+			for await (const message of this.runCore(executionPrompt, {
 				...options,
 				cwd,
 			})) {

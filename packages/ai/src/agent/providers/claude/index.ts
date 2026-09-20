@@ -64,7 +64,7 @@ export class ClaudeAgent extends BaseAgent {
 		return `claude_msg_${Date.now()}_${++this.messageCounter}`;
 	}
 
-	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const session = this.createSession("executing", {
 			abortController: options?.abortController,
 		});
@@ -188,7 +188,7 @@ export class ClaudeAgent extends BaseAgent {
 			)}\n\nOriginal request: ${options.originalPrompt}`;
 
 			let sawError = false;
-			for await (const message of this.run(executionPrompt, { ...options, cwd })) {
+			for await (const message of this.runCore(executionPrompt, { ...options, cwd })) {
 				if (message.type === "error") {
 					sawError = true;
 				}

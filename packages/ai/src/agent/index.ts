@@ -116,6 +116,9 @@ export {
 	type PlanningResponse,
 } from "./base";
 
+// Auto-compact (transparent overflow-recovery wrapper around IAgent.run)
+export { runWithAutoCompact, type RunWithAutoCompactOptions } from "./auto-compact";
+
 // Registry
 export {
 	AgentRegistry,
@@ -173,6 +176,7 @@ export * from "./image-gen";
 export {
 	StandaloneAgent,
 	standaloneAgentPlugin,
+	isContextOverflowError,
 } from "./providers/standalone";
 export {
 	ClaudeAgent,

@@ -9,6 +9,8 @@ import { nanoid } from "nanoid";
 import { UserLocale } from "@melandlabs/shared";
 
 import { defaultLanguageDirectiveBuilder } from "./adapters/default-language-directive-builder";
+import { runWithAutoCompactCore } from "./auto-compact";
+import type { CompactContextInput, CompactContextResult, Compactor } from "./compaction/compactor";
 import type {
 	AgentConfig,
 	AgentMessage,
@@ -220,6 +222,26 @@ export abstract class BaseAgent implements IAgent {
 	}
 
 	/**
+	 * Compact the conversation history by summarizing older messages.
+	 *
+	 * The compactor is read from `config.providerConfig.compactor` (a
+	 * {@link Compactor} built once via `createCompactor(...)` from
+	 * `@melandlabs/opencontext`). Subclasses inherit this default — providers
+	 * do not need their own override.
+	 *
+	 * Throws if no compactor is configured.
+	 */
+	async compactContext(input: CompactContextInput): Promise<CompactContextResult> {
+		const compactor = this.config.providerConfig?.compactor as Compactor | undefined;
+		if (!compactor) {
+			throw new Error(
+				`compactContext is not configured for provider "${this.provider}". Pass a Compactor via AgentConfig.providerConfig.compactor — build one with createCompactor(...) from "@melandlabs/opencontext".`,
+			);
+		}
+		return compactor.compact(input);
+	}
+
+	/**
 	 * Stop execution for a session
 	 */
 	async stop(sessionId: string): Promise<void> {
@@ -292,7 +314,50 @@ export abstract class BaseAgent implements IAgent {
 	}
 
 	// Abstract methods to be implemented by providers
-	abstract run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage>;
+
+	/**
+	 * Provider-specific run implementation. No overflow recovery — this is
+	 * the primitive `BaseAgent.run` wraps with the auto-compact loop when
+	 * `providerConfig.compactor` is configured. Subclasses must implement
+	 * this and must NOT call back into `this.run(...)` (it would re-enter
+	 * the transparent wrapper and infinite-loop on persistent overflow).
+	 */
+	protected abstract runCore(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage>;
+
+	/**
+	 * Public entry point. When `providerConfig.compactor` is configured,
+	 * wraps the underlying {@link runCore} stream with the
+	 * {@link runWithAutoCompactCore} overflow-recovery loop so callers
+	 * never have to invoke `runWithAutoCompact` manually. When no
+	 * compactor is configured this is a pure pass-through to `runCore`.
+	 *
+	 * Scope: recovery only triggers for providers that classify overflow
+	 * as `kind: "context_overflow"` (currently only StandaloneAgent) —
+	 * other providers pass overflow errors through unchanged even with a
+	 * compactor attached. `plan()` / `execute()` are not wrapped.
+	 */
+	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
+		const compactor = this.config.providerConfig?.compactor;
+		if (!compactor) {
+			yield* this.runCore(prompt, options);
+			return;
+		}
+		// Feed `options.conversation` into the auto-compact loop so the
+		// recovery path has the prior conversation to summarize. The retry
+		// primitive points at `runCore` directly — never `this.run` — so the
+		// wrapper is not re-entered on overflow. Tuning knobs ride in the
+		// same providerConfig bag as the compactor itself.
+		const providerConfig = this.config.providerConfig ?? {};
+		yield* runWithAutoCompactCore(this, (p, o) => this.runCore(p, o), {
+			prompt,
+			history: options?.conversation ?? [],
+			agentOptions: options,
+			compactThresholdTokens: providerConfig.compactThresholdTokens as number | undefined,
+			keepRecentTokens: providerConfig.compactKeepRecentTokens as number | undefined,
+			maxSummaryTokens: providerConfig.compactMaxSummaryTokens as number | undefined,
+			onCompactionBaseline: options?.onCompactionBaseline,
+		});
+	}
 
 	abstract plan(prompt: string, options?: PlanOptions): AsyncGenerator<AgentMessage>;
 

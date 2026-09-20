@@ -1168,6 +1168,9 @@ importers:
 
   packages/opencontext:
     dependencies:
+      '@ai-sdk/anthropic':
+        specifier: 4.0.0-beta.67
+        version: 4.0.0-beta.67(zod@4.4.3)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.0
         version: 1.0.47(zod@4.4.3)
@@ -11158,7 +11161,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
+      retry-axios: 2.6.0(axios@1.18.0)
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -12230,7 +12233,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
+  retry-axios@2.6.0(axios@1.18.0):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 

@@ -121,6 +121,22 @@ export type {
 	MemoryReasoningProviders,
 } from "./memory-reasoning";
 
+// In-process context compaction factory for `IAgent.compactContext`. Hosts
+// attach the returned object to `AgentConfig.providerConfig.compactor`.
+export { createCompactor, createDisabledCompactor } from "./context-compaction";
+export type { CompactorModelOptions } from "./context-compaction";
+
+// Shared LLM factory for both OpenAI-compatible and Anthropic-compatible
+// endpoints. Auto-detects Anthropic via baseUrl substring; explicit
+// `providerType` overrides.
+export {
+	createLanguageModel,
+	detectProviderType,
+	normalizeAnthropicBaseUrl,
+	readLLMEnv,
+} from "./llm-factory";
+export type { LLMEnvDefaults, LLMProviderType, LanguageModelFactoryOptions } from "./llm-factory";
+
 // ─── 3. Retrieval: chunking, embeddings, vector stores, parsers ──────────
 export {
 	chunkText,
