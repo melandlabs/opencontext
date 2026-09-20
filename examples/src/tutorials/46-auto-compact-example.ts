@@ -43,7 +43,6 @@ import {
 	type IAgent,
 	getAgentRegistry,
 	registerAgentPlugin,
-	runWithAutoCompact,
 	standaloneAgentPlugin,
 } from "@melandlabs/ai";
 
@@ -51,17 +50,24 @@ import { info, runIfMain } from "../_helpers.ts";
 
 /**
  * `createCompactor` is not part of the published `@melandlabs/opencontext`
- * until this PR is merged and a new version is released. We resolve it
+ * and `runWithAutoCompact` is not on the published `@melandlabs/ai` until
+ * this PR is merged and a new version is released. We resolve both
  * dynamically inside `main()` so the demo gracefully skips against a
  * pre-release smoke-test install. See commit 62ab2d63 for the OKF
  * precedent that established this pattern.
  */
-async function resolveCreateCompactor(): Promise<
-	typeof import("@melandlabs/opencontext").createCompactor | undefined
-> {
+type CreateCompactorFn = typeof import("@melandlabs/opencontext").createCompactor;
+type RunWithAutoCompactFn = typeof import("@melandlabs/ai").runWithAutoCompact;
+async function resolveCreateCompactor(): Promise<CreateCompactorFn | undefined> {
 	const namespace = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
 	return typeof namespace.createCompactor === "function"
-		? (namespace.createCompactor as typeof import("@melandlabs/opencontext").createCompactor)
+		? (namespace.createCompactor as CreateCompactorFn)
+		: undefined;
+}
+async function resolveRunWithAutoCompact(): Promise<RunWithAutoCompactFn | undefined> {
+	const namespace = (await import("@melandlabs/ai")) as Record<string, unknown>;
+	return typeof namespace.runWithAutoCompact === "function"
+		? (namespace.runWithAutoCompact as RunWithAutoCompactFn)
 		: undefined;
 }
 
@@ -163,6 +169,17 @@ class PassThroughAgent implements Pick<IAgent, "run" | "compactContext"> {
 
 async function main() {
 	console.log("\n── runWithAutoCompact e2e ────────────────────────────────────\n");
+
+	// Resolve `runWithAutoCompact` dynamically — see top-of-file note.
+	// Sections 1 + 2 drive the wrapper directly; if it's missing from the
+	// published `@melandlabs/ai`, skip them.
+	const runWithAutoCompact = await resolveRunWithAutoCompact();
+	if (!runWithAutoCompact) {
+		console.log(
+			"[SKIP] @melandlabs/ai is published without runWithAutoCompact yet — sections 1 + 2 + 3 cannot run",
+		);
+		return;
+	}
 
 	// Resolve `createCompactor` dynamically — see top-of-file note. Sections
 	// 1 + 2 don't need it (they drive stubs); section 3 onwards does.

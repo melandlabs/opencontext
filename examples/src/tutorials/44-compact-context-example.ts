@@ -43,27 +43,23 @@
 import process from "node:process";
 
 import { type CompactContextInput, type CompactContextResult, type Compactor } from "@melandlabs/opencontext";
-import {
-	type AgentConfig,
-	type AgentProvider,
-	type IAgent,
-	buildCompactionPrompt,
-	runCompactor,
-} from "@melandlabs/ai";
+import { type AgentConfig, type AgentProvider, type IAgent, buildCompactionPrompt } from "@melandlabs/ai";
 
 import { info, runIfMain } from "../_helpers.ts";
 
 /**
  * `createCompactor` / `createDisabledCompactor` are not part of the published
  * `@melandlabs/opencontext` until this PR is merged and a new version is
- * released. Static `import { createCompactor } from "@melandlabs/opencontext"`
- * throws `SyntaxError: ... does not provide an export named ...` at module
- * load; a dynamic `await import(...)` instead exposes missing symbols as
+ * released. `runCompactor` similarly isn't in the published main entry of
+ * `@melandlabs/ai` until the next release. Static imports throw
+ * `SyntaxError: ... does not provide an export named ...` at module load;
+ * a dynamic `await import(...)` instead exposes missing symbols as
  * `undefined` on the namespace, so we can detect the gap with
  * `typeof === "function"` and skip the demo gracefully — see the OKF
  * precedent in `examples/src/simple/20-okf.ts` (commit 62ab2d63).
  */
-const REQUIRED_COMPACTION_EXPORTS = ["createCompactor", "createDisabledCompactor"] as const;
+const REQUIRED_OPENCONTEXT_EXPORTS = ["createCompactor", "createDisabledCompactor"] as const;
+const REQUIRED_AI_EXPORTS = ["runCompactor"] as const;
 
 /** Synthetic 12-message conversation about adopting a cat + a related deployment. */
 const CONVERSATION: CompactContextInput["messages"] = [
@@ -103,18 +99,33 @@ async function main() {
 	// Workspace + post-release builds pass all assertions; pre-release
 	// smoke tests against the published `@melandlabs/opencontext` skip.
 	const compactionNamespace = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
-	const missing = REQUIRED_COMPACTION_EXPORTS.filter(
+	const missingOc = REQUIRED_OPENCONTEXT_EXPORTS.filter(
 		(name) => typeof compactionNamespace[name] !== "function",
 	);
-	if (missing.length > 0) {
+	if (missingOc.length > 0) {
 		console.log(
-			`[SKIP] @melandlabs/opencontext is published without the compactor factories yet — missing: ${missing.join(", ")}`,
+			`[SKIP] @melandlabs/opencontext is published without the compactor factories yet — missing: ${missingOc.join(", ")}`,
 		);
 		return;
 	}
 	const { createCompactor, createDisabledCompactor } = compactionNamespace as {
 		createCompactor: typeof import("@melandlabs/opencontext").createCompactor;
 		createDisabledCompactor: typeof import("@melandlabs/opencontext").createDisabledCompactor;
+	};
+
+	// Same defensive pattern for `runCompactor` — it isn't on the published
+	// `@melandlabs/ai` (main or agent/compaction subpath) until this PR
+	// is merged and a new version is released.
+	const aiNamespace = (await import("@melandlabs/ai")) as Record<string, unknown>;
+	const missingAi = REQUIRED_AI_EXPORTS.filter((name) => typeof aiNamespace[name] !== "function");
+	if (missingAi.length > 0) {
+		console.log(
+			`[SKIP] @melandlabs/ai is published without the compactor primitives yet — missing: ${missingAi.join(", ")}`,
+		);
+		return;
+	}
+	const { runCompactor } = aiNamespace as {
+		runCompactor: typeof import("@melandlabs/ai").runCompactor;
 	};
 
 	// ─── 1. Static surface ──────────────────────────────────────────────
