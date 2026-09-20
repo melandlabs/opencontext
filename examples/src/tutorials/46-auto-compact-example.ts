@@ -37,6 +37,7 @@ import process from "node:process";
 
 import { createCompactor } from "@melandlabs/opencontext";
 import {
+	type AgentHistoryMessage,
 	type AgentMessage,
 	type AgentOptions,
 	type CompactContextResult,
@@ -233,10 +234,16 @@ async function main() {
 
 	// StandaloneAgent reads LLM settings from the AI user context. Wire the
 	// resolved key into both `anthropicCompatible` (when the source key is
-	// an Anthropic-style token) and `openaiCompatible` (everything else)
-	// so the live call reaches the configured endpoint.
+	// an Anthropic-style token, OR when the baseUrl looks anthropic-shaped)
+	// and `openaiCompatible` (everything else) so the live call reaches
+	// the configured endpoint.
 	const { setAIUserContext } = await import("@melandlabs/ai");
-	const anthropicLike = live.envVar === "ANTHROPIC_API_KEY";
+	const baseUrlHint =
+		process.env.ANTHROPIC_BASE_URL ??
+		process.env.OPENCONTEXT_LLM_BASE_URL ??
+		process.env.OPENAI_BASE_URL ??
+		"";
+	const anthropicLike = live.envVar === "ANTHROPIC_API_KEY" || /anthropic/i.test(baseUrlHint);
 	setAIUserContext({
 		id: "tutorial-46-demo",
 		email: null,
@@ -247,7 +254,10 @@ async function main() {
 			? {
 					anthropicCompatible: {
 						apiKey: process.env[live.envVar] ?? "",
-						baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com/v1",
+						baseUrl:
+							process.env.ANTHROPIC_BASE_URL ??
+							process.env.OPENCONTEXT_LLM_BASE_URL ??
+							"https://api.anthropic.com/v1",
 						model: live.model,
 					},
 				}
@@ -291,6 +301,45 @@ async function main() {
 	info(
 		"auto-compact",
 		`live happy path (via ${live.envVar}): ${collected.length} message(s), result=${JSON.stringify(result?.content?.slice(0, 60))}`,
+	);
+
+	// ─── 4. User-facing: "configure once, just keep running" ───────────
+	// The minimum code a host writes to enable auto-compact:
+	//
+	//   1. Build a compactor.
+	//   2. Attach it via providerConfig.compactor.
+	//   3. Just call agent.run() in your loop.
+	//
+	// That's it. Every call gets transparent overflow recovery for free.
+	console.log("\n── 4. user-facing: 'configure once, just keep running' ──");
+
+	const hostCompactor = createCompactor({});
+	const hostAgent: IAgent = getAgentRegistry().create({
+		provider: "standalone",
+		model: live.model,
+		providerConfig: { compactor: hostCompactor },
+	});
+
+	// Just run() in a loop — auto-compact stays invisible in the background.
+	const hostHistory: AgentHistoryMessage[] = [
+		{ role: "user", content: "I'm starting a vet-tracking app for my cat Luna." },
+		{ role: "assistant", content: "Sounds good. What's the project name?" },
+	];
+	const hostPrompts = [
+		"Let's call it LunaVet. What's a good stack?",
+		"Anything else to remember before we start coding?",
+	];
+	for (const prompt of hostPrompts) {
+		const collected4: AgentMessage[] = [];
+		for await (const msg of hostAgent.run(prompt, { history: hostHistory })) {
+			collected4.push(msg);
+		}
+		const result4 = collected4.find((m) => m.type === "result");
+		info("user-demo", `Q: ${prompt.slice(0, 50)} → A: ${JSON.stringify(result4?.content?.slice(0, 80))}`);
+	}
+	info(
+		"user-demo",
+		`ran ${hostPrompts.length} turns — auto-compact is configured but invisible to the host loop`,
 	);
 
 	console.log("\n✓ BaseAgent.run auto-compact e2e completed");

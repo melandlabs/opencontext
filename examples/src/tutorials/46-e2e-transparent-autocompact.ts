@@ -15,23 +15,14 @@
 
 import process from "node:process";
 
-import {
-	createCompactor,
-} from "@melandlabs/opencontext";
-import {
-	type AgentMessage,
-	type IAgent,
-	setAIUserContext,
-	StandaloneAgent,
-} from "@melandlabs/ai";
+import { createCompactor } from "@melandlabs/opencontext";
+import { type AgentMessage, type IAgent, setAIUserContext, StandaloneAgent } from "@melandlabs/ai";
 
 import { info, runIfMain } from "../_helpers.ts";
 
 async function main(): Promise<void> {
 	if (!process.env.ANTHROPIC_API_KEY) {
-		console.log(
-			"Skipping e2e: set ANTHROPIC_API_KEY (+ ANTHROPIC_BASE_URL + ANTHROPIC_MODEL) and re-run.",
-		);
+		console.log("Skipping e2e: set ANTHROPIC_API_KEY (+ ANTHROPIC_BASE_URL + ANTHROPIC_MODEL) and re-run.");
 		return;
 	}
 
@@ -112,7 +103,10 @@ async function main(): Promise<void> {
 		level: "hard",
 	});
 
-	console.assert(typeof synth.summary === "string" && synth.summary.length > 0, "B: summary must be non-empty");
+	console.assert(
+		typeof synth.summary === "string" && synth.summary.length > 0,
+		"B: summary must be non-empty",
+	);
 	console.assert(synth.messageCount === 2, `B: messageCount=${synth.messageCount}, expected 2`);
 	console.assert(synth.summaryTokens > 0, `B: summaryTokens=${synth.summaryTokens}, expected > 0`);
 	info(

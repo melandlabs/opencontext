@@ -105,7 +105,10 @@ async function main() {
 	info("compact", `runCompactor (in-process primitive) is exported: ${typeof runCompactor}`);
 	console.assert(typeof runCompactor === "function", "runCompactor must be a function");
 
-	info("compact", `buildCompactionPrompt (system prompt builder) is exported: ${typeof buildCompactionPrompt}`);
+	info(
+		"compact",
+		`buildCompactionPrompt (system prompt builder) is exported: ${typeof buildCompactionPrompt}`,
+	);
 	const softPrompt = buildCompactionPrompt("soft");
 	const emergencyPrompt = buildCompactionPrompt("emergency");
 	console.assert(softPrompt.includes("SOFT"), "soft prompt must mention SOFT");
@@ -162,8 +165,14 @@ async function main() {
 		console.assert(result.messageCount === CONVERSATION.length, "all messages must survive sanitization");
 		console.assert(result.originalTokens > 0, "originalTokens must be > 0");
 		console.assert(result.summaryTokens > 0, "summaryTokens must be > 0");
-		console.assert(typeof result.summary === "string" && result.summary.length > 0, "summary must be a non-empty string");
-		console.assert(result.summary.includes("[COMPACTED:"), "summary must include the [COMPACTED: ...] header");
+		console.assert(
+			typeof result.summary === "string" && result.summary.length > 0,
+			"summary must be a non-empty string",
+		);
+		console.assert(
+			result.summary.includes("[COMPACTED:"),
+			"summary must include the [COMPACTED: ...] header",
+		);
 	}
 
 	// ─── 3. Error contract ──────────────────────────────────────────────
@@ -249,9 +258,15 @@ async function main() {
 		level: "soft",
 	});
 	console.assert(agentResult.level === "soft", "IAgent.compactContext must honor level=soft");
-	console.assert(agentResult.messageCount === CONVERSATION.length, "IAgent.compactContext must report messageCount");
+	console.assert(
+		agentResult.messageCount === CONVERSATION.length,
+		"IAgent.compactContext must report messageCount",
+	);
 	console.assert(agentResult.summary.length > 0, "IAgent.compactContext must return a non-empty summary");
-	info("compact", `IAgent.compactContext → ${agentResult.messageCount} messages → ${agentResult.summaryTokens} tokens out`);
+	info(
+		"compact",
+		`IAgent.compactContext → ${agentResult.messageCount} messages → ${agentResult.summaryTokens} tokens out`,
+	);
 	info("compact", `summary head: ${agentResult.summary.split("\n")[0]}`);
 
 	// ─── 5. Realistic agent-loop pattern ────────────────────────────────
@@ -285,7 +300,10 @@ async function main() {
 	];
 
 	info("compact", `trimmed: kept ${trimmed.length} recent turns, summarized ${dropped.length} older turns`);
-	info("compact", `carry-forward block: ${summaryBlock.messageCount} → ${summaryBlock.summaryTokens} tokens out`);
+	info(
+		"compact",
+		`carry-forward block: ${summaryBlock.messageCount} → ${summaryBlock.summaryTokens} tokens out`,
+	);
 	info("compact", `final history size: ${carryForward.length} entries`);
 	console.assert(carryForward.length === 5, "carry-forward history must be 1 system + 4 recent");
 	console.assert(carryForward[0].role === "system", "first entry must be the system carry-forward");
@@ -293,8 +311,14 @@ async function main() {
 		carryForward[0].content.startsWith("[Carry-forward summary from earlier"),
 		"system entry must be the carry-forward summary",
 	);
-	console.assert(carryForward[0].content.includes(summaryBlock.summary), "system entry must include the full summary");
-	info("compact", `carry-forward summary preview:\n${summaryBlock.summary.split("\n").slice(0, 3).join("\n")}`);
+	console.assert(
+		carryForward[0].content.includes(summaryBlock.summary),
+		"system entry must include the full summary",
+	);
+	info(
+		"compact",
+		`carry-forward summary preview:\n${summaryBlock.summary.split("\n").slice(0, 3).join("\n")}`,
+	);
 
 	// ─── 6. Wire through IAgent + simulate the loop ─────────────────────
 	console.log("\n── 6. loop simulation through IAgent.compactContext ──");
@@ -305,9 +329,15 @@ async function main() {
 		messages: dropped,
 		level: "soft",
 	});
-	console.assert(loopResult.messageCount === dropped.length, "IAgent.compactContext must respect messageCount");
+	console.assert(
+		loopResult.messageCount === dropped.length,
+		"IAgent.compactContext must respect messageCount",
+	);
 	console.assert(loopResult.level === "soft", "IAgent.compactContext must respect level");
-	info("compact", `IAgent.compactContext on the ${dropped.length}-message prefix → level=${loopResult.level}`);
+	info(
+		"compact",
+		`IAgent.compactContext on the ${dropped.length}-message prefix → level=${loopResult.level}`,
+	);
 	info("compact", `summary head: ${loopResult.summary.split("\n")[0]}`);
 
 	console.log("\n✓ compactContext e2e completed");
