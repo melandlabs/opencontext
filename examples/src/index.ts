@@ -183,7 +183,10 @@ const demos: Array<[string, () => Promise<void>]> = [
 		demoCustomerHealthScoring,
 	],
 	["demo: tutorial — OKF serve live (Northwind Labs: 5 fixtures → store → /api/graph)", demoOkfServeLive],
-	["demo: tutorial — IAgent.compactContext (createCompactor + soft/hard/emergency + agent-loop)", demoCompactContext],
+	[
+		"demo: tutorial — IAgent.compactContext (createCompactor + soft/hard/emergency + agent-loop)",
+		demoCompactContext,
+	],
 	["demo: tutorial — runWithAutoCompact (overflow → compact → retry)", demoAutoCompact],
 ];
 

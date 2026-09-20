@@ -35,7 +35,6 @@
 
 import process from "node:process";
 
-import { createCompactor } from "@melandlabs/opencontext";
 import {
 	type AgentHistoryMessage,
 	type AgentMessage,
@@ -49,6 +48,22 @@ import {
 } from "@melandlabs/ai";
 
 import { info, runIfMain } from "../_helpers.ts";
+
+/**
+ * `createCompactor` is not part of the published `@melandlabs/opencontext`
+ * until this PR is merged and a new version is released. We resolve it
+ * dynamically inside `main()` so the demo gracefully skips against a
+ * pre-release smoke-test install. See commit 62ab2d63 for the OKF
+ * precedent that established this pattern.
+ */
+async function resolveCreateCompactor(): Promise<
+	typeof import("@melandlabs/opencontext").createCompactor | undefined
+> {
+	const namespace = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
+	return typeof namespace.createCompactor === "function"
+		? (namespace.createCompactor as typeof import("@melandlabs/opencontext").createCompactor)
+		: undefined;
+}
 
 /**
  * Pick the cheapest env-driven LLM endpoint that's actually configured.
@@ -149,6 +164,18 @@ class PassThroughAgent implements Pick<IAgent, "run" | "compactContext"> {
 async function main() {
 	console.log("\n── runWithAutoCompact e2e ────────────────────────────────────\n");
 
+	// Resolve `createCompactor` dynamically — see top-of-file note. Sections
+	// 1 + 2 don't need it (they drive stubs); section 3 onwards does.
+	const createCompactor = await resolveCreateCompactor();
+	if (!createCompactor) {
+		console.log(
+			"[SKIP] @melandlabs/opencontext is published without createCompactor yet — sections 1 + 2 still pass against the stubs",
+		);
+		// Fall through: sections 1 + 2 don't call createCompactor. Section 3
+		// and beyond will gate themselves on whether the live LLM env is set
+		// AND on whether createCompactor is present, so this run is safe.
+	}
+
 	// ─── 1. Pass-through (no overflow) ─────────────────────────────────
 	console.log("── 1. pass-through (no overflow) ──");
 
@@ -215,6 +242,12 @@ async function main() {
 			"Skipping live auto-compact demo: set ANTHROPIC_API_KEY / OPENAI_API_KEY / OPENROUTER_API_KEY",
 		);
 		console.log("(or OPENCONTEXT_LLM_API_KEY + _BASE_URL + _MODEL) and re-run.");
+		return;
+	}
+	if (!createCompactor) {
+		console.log(
+			"Skipping live auto-compact demo: createCompactor is not in the published @melandlabs/opencontext yet",
+		);
 		return;
 	}
 

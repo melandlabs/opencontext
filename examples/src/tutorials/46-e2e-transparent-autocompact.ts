@@ -15,12 +15,26 @@
 
 import process from "node:process";
 
-import { createCompactor } from "@melandlabs/opencontext";
 import { type AgentMessage, type IAgent, setAIUserContext, StandaloneAgent } from "@melandlabs/ai";
 
 import { info, runIfMain } from "../_helpers.ts";
 
 async function main(): Promise<void> {
+	// `createCompactor` is not in the published `@melandlabs/opencontext`
+	// until this PR is merged and a new version is released. Resolve it
+	// dynamically so pre-release smoke tests skip gracefully. See commit
+	// 62ab2d63 for the OKF precedent.
+	const compactionNamespace = (await import("@melandlabs/opencontext")) as Record<string, unknown>;
+	if (typeof compactionNamespace.createCompactor !== "function") {
+		console.log(
+			"[SKIP] @melandlabs/opencontext is published without createCompactor yet — e2e transparent auto-compact skipped",
+		);
+		return;
+	}
+	const { createCompactor } = compactionNamespace as {
+		createCompactor: typeof import("@melandlabs/opencontext").createCompactor;
+	};
+
 	if (!process.env.ANTHROPIC_API_KEY) {
 		console.log("Skipping e2e: set ANTHROPIC_API_KEY (+ ANTHROPIC_BASE_URL + ANTHROPIC_MODEL) and re-run.");
 		return;
