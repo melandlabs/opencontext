@@ -37,45 +37,17 @@ import {
 } from "../index";
 import { createDynamicModel } from "../model/providers";
 
+import { isContextOverflowError } from "../compaction/overflow";
+
 /**
  * Heuristic for "this looks like the model refused because the prompt is
- * too large". The AI SDK exposes `APICallError` with a status code, so we
- * honour the upstream status (400 for OpenAI-compatible, 413 for some
- * Anthropic-compatible gateways) when present and fall back to the message
- * for providers that don't surface a clean code.
+ * too large" — re-exported from the compaction module (canonical
+ * definition lives there so `runCompactor` can share it).
  *
  * Exported for unit tests + the `runWithAutoCompact` wrapper (which is the
  * canonical consumer of this classification).
  */
-export function isContextOverflowError(err: unknown): boolean {
-	if (!err || typeof err !== "object") return false;
-	const maybeError = err as { status?: number; statusCode?: number; message?: string; name?: string };
-	const status = maybeError.status ?? maybeError.statusCode;
-	if (status === 400 || status === 413) {
-		// 400 / 413 alone aren't sufficient — we still need the message to
-		// look like an overflow. Many other 400s (bad request, missing
-		// tool) should NOT be classified as overflow.
-		const message = (maybeError.message ?? "").toLowerCase();
-		return (
-			message.includes("context") ||
-			message.includes("too long") ||
-			message.includes("too many") ||
-			message.includes("maximum context") ||
-			message.includes("max tokens") ||
-			message.includes("tokens") ||
-			message.includes("prompt is too")
-		);
-	}
-	const message = (maybeError.message ?? "").toLowerCase();
-	return (
-		(message.includes("context length") && message.includes("exceeded")) ||
-		message.includes("context_length_exceeded") ||
-		message.includes("maximum context length") ||
-		message.includes("prompt is too long") ||
-		(message.includes("context window") && message.includes("exceeded")) ||
-		(message.includes("reduce the length") && message.includes("messages"))
-	);
-}
+export { isContextOverflowError };
 
 /** Provider type discriminator. Matches `STANDALONE_METADATA.type`. */
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;

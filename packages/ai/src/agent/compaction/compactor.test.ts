@@ -118,4 +118,53 @@ describe("runCompactor", () => {
 		expect(result.originalTokens).toBe(0);
 		expect(result.summaryTokens).toBe(0);
 	});
+
+	it("caps the summary length via maxOutputTokens (input overrides default)", async () => {
+		generateTextMock.mockResolvedValueOnce({ text: "ok", usage: { inputTokens: 1, outputTokens: 1 } });
+		await runCompactor(fakeModel(), {
+			messages: [{ role: "user", content: "hi" }],
+		});
+		expect(generateTextMock.mock.calls[0][0].maxOutputTokens).toBe(2000);
+
+		generateTextMock.mockResolvedValueOnce({ text: "ok", usage: { inputTokens: 1, outputTokens: 1 } });
+		await runCompactor(fakeModel(), {
+			messages: [{ role: "user", content: "hi" }],
+			maxSummaryTokens: 512,
+		});
+		expect(generateTextMock.mock.calls[1][0].maxOutputTokens).toBe(512);
+	});
+
+	it("drops the oldest messages and retries when the summarizer call itself overflows", async () => {
+		const overflow = Object.assign(
+			new Error("400 Bad Request: prompt is too long, reduce the length of your messages"),
+			{ status: 400 },
+		);
+		generateTextMock
+			.mockRejectedValueOnce(overflow)
+			.mockResolvedValueOnce({ text: "partial summary", usage: { inputTokens: 10, outputTokens: 5 } });
+
+		const messages = Array.from({ length: 8 }, (_, i) => ({
+			role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+			content: `message ${i + 1}`,
+		}));
+		const result = await runCompactor(fakeModel(), { messages });
+
+		expect(generateTextMock).toHaveBeenCalledTimes(2);
+		// Oldest quarter (2 of 8) dropped on the retry.
+		expect(generateTextMock.mock.calls[1][0].messages).toHaveLength(6);
+		expect(generateTextMock.mock.calls[1][0].messages[0].content).toBe("message 3");
+		expect(result.messageCount).toBe(6);
+		expect(result.summary).toBe("partial summary");
+	});
+
+	it("does not retry non-overflow summarizer failures", async () => {
+		generateTextMock.mockRejectedValueOnce(new Error("rate limited"));
+
+		const messages = Array.from({ length: 8 }, (_, i) => ({
+			role: (i % 2 === 0 ? "user" : "assistant") as "user" | "assistant",
+			content: `message ${i + 1}`,
+		}));
+		await expect(runCompactor(fakeModel(), { messages })).rejects.toThrow(/rate limited/);
+		expect(generateTextMock).toHaveBeenCalledTimes(1);
+	});
 });

@@ -20,7 +20,7 @@
 		"directory": "packages/opencontext"
 	},
 	"dependencies": {
-		"@ai-sdk/anthropic": "^2.0.0",
+		"@ai-sdk/anthropic": "4.0.0-beta.67",
 		"@ai-sdk/openai-compatible": "^1.0.0",
 		"@hono/node-server": "^1.13.7",
 		"@melandlabs/ai-rag": "^0.2.12",

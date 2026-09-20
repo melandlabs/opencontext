@@ -11,7 +11,6 @@
 // different files as distinct identifiers.
 export type {
 	AgentConfig,
-	AgentHistoryMessage,
 	AgentMessage,
 	AgentMessageType,
 	AgentOptions,
@@ -118,11 +117,7 @@ export {
 } from "./base";
 
 // Auto-compact (transparent overflow-recovery wrapper around IAgent.run)
-export {
-	runWithAutoCompact,
-	type AutoCompactHistoryMessage,
-	type RunWithAutoCompactOptions,
-} from "./auto-compact";
+export { runWithAutoCompact, type RunWithAutoCompactOptions } from "./auto-compact";
 
 // Registry
 export {

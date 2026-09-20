@@ -271,11 +271,13 @@ export interface AgentMessage {
 	artifactBaselineAt?: string;
 	/**
 	 * Retry fields — emitted on 'retry' messages when the provider restarts a
-	 * query after a transient error (issue #2488). `attempt` is the 1-based
-	 * number of the upcoming attempt and `maxAttempts` the total it may run.
-	 * The UI uses these to surface a clear, localized retry notice and to drop
-	 * the reasoning accumulated in the aborted round (which the restart
-	 * re-generates) so duplicate thinking does not stack up.
+	 * query after a transient error (issue #2488), and by the auto-compact
+	 * overflow-recovery loop before it re-issues a run with a compaction
+	 * summary (`message` prefixed with `[auto-compact]`). `attempt` is the
+	 * 1-based number of the upcoming attempt and `maxAttempts` the total it
+	 * may run. The UI uses these to surface a clear, localized retry notice
+	 * and to drop the output accumulated in the aborted round (which the
+	 * restart re-generates) so duplicate content does not stack up.
 	 */
 	attempt?: number;
 	maxAttempts?: number;
@@ -313,18 +315,6 @@ export interface ConversationMessage {
 	content: string;
 	/** Image file paths attached to this message (saved to workspace) */
 	imagePaths?: string[];
-}
-
-/**
- * Conversation message shape consumed by the auto-compact recovery loop
- * inside `BaseAgent.run`. Identical to {@link ConversationMessage} but lives
- * in the agent SDK namespace (so the auto-compact surface does not have
- * to depend on any host-specific types) and is what `AgentOptions.history`
- * types against.
- */
-export interface AgentHistoryMessage {
-	role: "user" | "assistant" | "system";
-	content: string;
 }
 
 /**
@@ -621,7 +611,18 @@ export interface AgentConfig {
 	thinkingLevel?: "disabled" | "low" | "adaptive";
 	/** Working directory for file operations */
 	workDir?: string;
-	/** Custom configuration for the provider */
+	/**
+	 * Custom configuration for the provider. Auto-compact related keys
+	 * recognized by `BaseAgent.run`:
+	 * - `compactor`: a {@link Compactor} (from `createCompactor(...)` in
+	 *   `@melandlabs/opencontext`) enabling transparent overflow recovery.
+	 * - `compactThresholdTokens`: number — proactive trigger; compact before
+	 *   the run when the estimated conversation tokens exceed this.
+	 * - `compactKeepRecentTokens`: number — verbatim-tail budget kept in the
+	 *   retry prompt and the `onCompactionBaseline` history (default 4000).
+	 * - `compactMaxSummaryTokens`: number — hard cap on the generated
+	 *   summary length (default 2000).
+	 */
 	providerConfig?: Record<string, unknown>;
 }
 
@@ -732,14 +733,22 @@ export interface AgentOptions {
 	session?: AgentAuthSession;
 	/** Cloud auth token for embeddings API (needed in native mode) */
 	authToken?: string;
-	/** Conversation history */
+	/** Conversation history before `prompt`. Also the input the transparent
+	 * auto-compact recovery loop inside `BaseAgent.run` summarizes when the
+	 * agent signals context overflow (only meaningful when
+	 * `providerConfig.compactor` is configured). */
 	conversation?: ConversationMessage[];
 	/**
-	 * Conversation history before `prompt`. Surfaced to the auto-compact
-	 * recovery loop inside `BaseAgent.run`. Only meaningful when the agent
-	 * has `providerConfig.compactor` configured; ignored otherwise.
+	 * Called after the transparent auto-compact loop finishes a compaction
+	 * pass with a structured replacement history the host can adopt: a
+	 * leading system entry carrying the carry-forward summary, followed by
+	 * the most recent messages kept verbatim. Stateful hosts should
+	 * replace their conversation with this baseline — otherwise every
+	 * subsequent turn re-sends the original oversized history and compaction
+	 * runs again from scratch. Only meaningful when
+	 * `providerConfig.compactor` is configured.
 	 */
-	history?: AgentHistoryMessage[];
+	onCompactionBaseline?: (baseline: ConversationMessage[], result: CompactContextResult) => void;
 	/** Additional user inputs delivered to an already-active run. */
 	supplementalInput?: AgentSupplementalInputSource;
 	/** Trusted host-only restart recovery state; never accepted from HTTP. */

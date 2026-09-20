@@ -4,7 +4,7 @@
  * When `providerConfig.compactor` is set, `BaseAgent.run` must:
  *   - Forward to `runCore` on the first attempt.
  *   - On `kind: "context_overflow"`, call `agent.compactContext` over
- *     `options.history`, yield a synthetic `scheduleNotice`, then
+ *     `options.conversation`, yield a synthetic `retry` notice, then
  *     re-issue `runCore` (NOT `run` — re-entry would infinite-loop).
  *   - Pass the retry prompt through the loop unchanged (the caller
  *     never sees the overflow error itself).
@@ -126,7 +126,7 @@ describe("BaseAgent.run auto-compact", () => {
 		expect(agent.coreCalls).toBe(1);
 	});
 
-	it("transparently compacts on overflow and yields a scheduleNotice before the retry stream", async () => {
+	it("transparently compacts on overflow and yields a retry notice before the retry stream", async () => {
 		const { compactor, compactSpy } = makeCompactorStub();
 		const agent = makeAgent({ compactor });
 		agent.coreStreams.push(overflowStream());
@@ -139,17 +139,19 @@ describe("BaseAgent.run auto-compact", () => {
 		];
 
 		const collected: AgentMessage[] = [];
-		for await (const msg of agent.run("summarize what we discussed", { history })) {
+		for await (const msg of agent.run("summarize what we discussed", { conversation: history })) {
 			collected.push(msg);
 		}
 
 		// First attempt: session only (overflow suppressed).
-		// Then: synthetic notice.
+		// Then: synthetic retry notice.
 		// Then: retry stream (session + text + result).
-		expect(collected.map((m) => m.type)).toEqual(["session", "scheduleNotice", "session", "text", "result"]);
-		expect((collected[1] as { message?: string }).message ?? "").toMatch(/\[auto-compact\] Compacted/);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "text", "result"]);
+		expect((collected[1] as { message?: string }).message ?? "").toMatch(/\[auto-compact\] compacted/);
+		expect(collected[1].attempt).toBe(2);
+		expect(collected[1].maxAttempts).toBe(2);
 		expect(agent.coreCalls).toBe(2);
-		// compactor was invoked with the caller-supplied history.
+		// compactor was invoked with the caller-supplied conversation.
 		expect(compactSpy).toHaveBeenCalledTimes(1);
 		const call = compactSpy.mock.calls[0][0] as CompactContextInput;
 		expect(call.messages).toEqual(history);
@@ -171,7 +173,7 @@ describe("BaseAgent.run auto-compact", () => {
 		agent.coreStreams.push(overflowStream());
 
 		const collected: AgentMessage[] = [];
-		for await (const msg of agent.run("p", { history: [{ role: "user", content: "h" }] })) {
+		for await (const msg of agent.run("p", { conversation: [{ role: "user", content: "h" }] })) {
 			collected.push(msg);
 		}
 
@@ -180,7 +182,7 @@ describe("BaseAgent.run auto-compact", () => {
 		// runCore, not run.
 		expect(runSpy).toHaveBeenCalledTimes(1);
 		expect(agent.coreCalls).toBe(2);
-		expect(collected.map((m) => m.type)).toEqual(["session", "scheduleNotice", "session", "error"]);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "error"]);
 		expect((collected.at(-1) as { kind?: { kind: string } }).kind?.kind).toBe("context_overflow");
 	});
 
@@ -190,7 +192,7 @@ describe("BaseAgent.run auto-compact", () => {
 		agent.coreStreams.push(textStream("hello"));
 
 		const collected: AgentMessage[] = [];
-		for await (const msg of agent.run("hi", { history: [{ role: "user", content: "h" }] })) {
+		for await (const msg of agent.run("hi", { conversation: [{ role: "user", content: "h" }] })) {
 			collected.push(msg);
 		}
 
@@ -206,11 +208,54 @@ describe("BaseAgent.run auto-compact", () => {
 
 		const ac = new AbortController();
 		const collected: AgentMessage[] = [];
-		for await (const msg of agent.run("hi", { abortController: ac, history: [] })) {
+		for await (const msg of agent.run("hi", { abortController: ac, conversation: [] })) {
 			collected.push(msg);
 		}
 
 		expect(collected.map((m) => m.type)).toEqual(["session", "text", "result"]);
 		expect(agent.coreCalls).toBe(1);
+	});
+
+	it("wires providerConfig.compactThresholdTokens into the proactive path", async () => {
+		const { compactor, compactSpy } = makeCompactorStub();
+		const agent = makeAgent({ compactor, compactThresholdTokens: 10 });
+		agent.coreStreams.push(textStream("ok"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of agent.run("hi", {
+			conversation: [
+				{ role: "user", content: "a long earlier message exceeding ten estimated tokens easily" },
+			],
+		})) {
+			collected.push(msg);
+		}
+
+		// Proactive compaction fired before the first attempt — no overflow
+		// error was needed.
+		expect(compactSpy).toHaveBeenCalledTimes(1);
+		expect(collected.map((m) => m.type)).toEqual(["retry", "session", "text", "result"]);
+		expect((collected[0] as { message?: string }).message ?? "").toMatch(/proactively compacted/);
+	});
+
+	it("threads AgentOptions.onCompactionBaseline through to the recovery loop", async () => {
+		const { compactor } = makeCompactorStub();
+		const agent = makeAgent({ compactor });
+		agent.coreStreams.push(overflowStream());
+		agent.coreStreams.push(textStream("after compaction"));
+
+		const baselines: Array<Array<{ role: string; content: string }>> = [];
+		for await (const _msg of agent.run("p", {
+			conversation: [
+				{ role: "user", content: "earlier 1" },
+				{ role: "assistant", content: "earlier 2" },
+			],
+			onCompactionBaseline: (baseline) => baselines.push(baseline),
+		})) {
+			void _msg;
+		}
+
+		expect(baselines).toHaveLength(1);
+		expect(baselines[0][0].role).toBe("system");
+		expect(baselines[0][0].content).toContain("[Carry-forward summary from earlier 2 message(s)]");
 	});
 });

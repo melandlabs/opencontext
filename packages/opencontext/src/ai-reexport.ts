@@ -2,11 +2,10 @@
 // UserType excluded (canonical UserType comes from @melandlabs/contracts).
 //
 // Hand-edited additions: `Compactor`, `CompactContextInput`, `CompactContextResult`,
-// `runCompactor`, `runWithAutoCompact`, `AutoCompactHistoryMessage`,
-// `RunWithAutoCompactOptions`, and `isContextOverflowError` were added by the
-// `compactContext` plan (#46 follow-up). They are exported from
-// `@melandlabs/ai` directly; this re-export keeps the `opencontext` facade
-// single-import for hosts that already depend on it.
+// `runCompactor`, and `runWithAutoCompact` were added by the `compactContext`
+// plan (#46 follow-up). They are exported from `@melandlabs/ai` directly; this
+// re-export keeps the `opencontext` facade single-import for hosts that already
+// depend on it.
 export {
 	AIUserContext,
 	AUDIO_MODEL_PRICING,

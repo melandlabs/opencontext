@@ -15,7 +15,7 @@
 
 import process from "node:process";
 
-import { type AgentMessage, type IAgent, setAIUserContext, StandaloneAgent } from "@melandlabs/ai";
+import { type AgentMessage, type IAgent, StandaloneAgent, setAIUserContext } from "@melandlabs/ai";
 
 import { info, runIfMain } from "../_helpers.ts";
 
@@ -77,7 +77,7 @@ async function main(): Promise<void> {
 
 	const shortMessages: AgentMessage[] = [];
 	for await (const msg of agent.run("Reply with the single word 'pong' and nothing else.", {
-		history: [
+		conversation: [
 			{ role: "user", content: "hi" },
 			{ role: "assistant", content: "hello" },
 		],

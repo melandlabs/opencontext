@@ -4,16 +4,17 @@
  * Uses a hand-rolled IAgent stub so we can deterministically:
  *   - emit a `kind: "context_overflow"` error on the first attempt
  *   - emit a normal text+result stream on the retry
- *   - assert the wrapper interleaves the synthetic notice + retry messages
- *     correctly, and never re-emits the underlying overflow error.
+ *   - assert the wrapper interleaves the synthetic retry notice + retry
+ *     messages correctly, and never re-emits the underlying overflow error.
  */
 import { describe, expect, it, vi } from "vitest";
 
 import { runWithAutoCompact } from "./auto-compact";
-import type { AgentMessage, AgentOptions, CompactContextResult, IAgent } from "./types";
+import type { AgentMessage, AgentOptions, CompactContextResult, ConversationMessage, IAgent } from "./types";
 
 class StubAgent implements Pick<IAgent, "run" | "compactContext"> {
 	runStreams: Array<AsyncGenerator<AgentMessage>> = [];
+	runPrompts: string[] = [];
 	compactResults: CompactContextResult[] = [];
 	compactSpy = vi.fn(async (_input: unknown): Promise<CompactContextResult> => {
 		return (
@@ -27,7 +28,8 @@ class StubAgent implements Pick<IAgent, "run" | "compactContext"> {
 		);
 	});
 
-	async *run(_prompt: string, _options?: AgentOptions): AsyncGenerator<AgentMessage> {
+	async *run(prompt: string, _options?: AgentOptions): AsyncGenerator<AgentMessage> {
+		this.runPrompts.push(prompt);
 		const stream = this.runStreams.shift();
 		if (!stream) throw new Error("StubAgent: no run stream queued");
 		yield* stream;
@@ -44,13 +46,15 @@ async function* textStream(text: string): AsyncGenerator<AgentMessage> {
 	yield { type: "result", sessionId: "s1", content: text, duration: 100 };
 }
 
-async function* overflowStream(): AsyncGenerator<AgentMessage> {
+async function* overflowStream(
+	message = "context_length_exceeded: prompt too large",
+): AsyncGenerator<AgentMessage> {
 	yield { type: "session", sessionId: "s1" };
 	yield {
 		type: "error",
 		sessionId: "s1",
-		message: "context_length_exceeded: prompt too large",
-		kind: { kind: "context_overflow", message: "context_length_exceeded: prompt too large" },
+		message,
+		kind: { kind: "context_overflow", message },
 	};
 }
 
@@ -72,7 +76,7 @@ describe("runWithAutoCompact", () => {
 		expect(stub.compactSpy).not.toHaveBeenCalled();
 	});
 
-	it("compacts on overflow and yields a synthetic notice before the retry stream", async () => {
+	it("compacts on overflow and yields a retry notice before the retry stream", async () => {
 		const stub = new StubAgent();
 		stub.runStreams.push(overflowStream());
 		stub.runStreams.push(textStream("after compaction"));
@@ -91,12 +95,17 @@ describe("runWithAutoCompact", () => {
 		}
 
 		// First attempt: session only (overflow error suppressed).
-		// Then: synthetic notice.
+		// Then: synthetic retry notice.
 		// Then: retry stream (session + text + result).
-		expect(collected.map((m) => m.type)).toEqual(["session", "scheduleNotice", "session", "text", "result"]);
-		expect(collected[1].type).toBe("scheduleNotice");
-		expect((collected[1] as { message?: string }).message ?? "").toMatch(/\[auto-compact\] Compacted/);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "text", "result"]);
+		const notice = collected[1];
+		expect(notice.attempt).toBe(2);
+		expect(notice.maxAttempts).toBe(2);
+		expect(notice.message ?? "").toMatch(/\[auto-compact\] compacted 4 prior message\(s\) → 80 tokens/);
 		expect(stub.compactSpy).toHaveBeenCalledTimes(1);
+		// The retry prompt folds the compaction summary in front of the original prompt.
+		expect(stub.runPrompts[1]).toContain("[carry-forward summary from earlier 4 message(s)]");
+		expect(stub.runPrompts[1]).toContain("what now?");
 	});
 
 	it("passes the original history + level into compactContext", async () => {
@@ -104,9 +113,9 @@ describe("runWithAutoCompact", () => {
 		stub.runStreams.push(overflowStream());
 		stub.runStreams.push(textStream("ok"));
 
-		const history = [
-			{ role: "user" as const, content: "m1" },
-			{ role: "assistant" as const, content: "m2" },
+		const history: ConversationMessage[] = [
+			{ role: "user", content: "m1" },
+			{ role: "assistant", content: "m2" },
 		];
 
 		for await (const _msg of runWithAutoCompact(stub as unknown as IAgent, {
@@ -143,7 +152,162 @@ describe("runWithAutoCompact", () => {
 		expect(attempt).toBe(1);
 	});
 
-	it("surfaces a final context_overflow error when the budget is exhausted", async () => {
+	it("retries the original prompt unchanged when there is no history (no compaction call)", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(overflowStream());
+		stub.runStreams.push(textStream("ok"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "one-shot oversized prompt",
+		})) {
+			collected.push(msg);
+		}
+
+		// Empty history must NOT reach the compactor (it would throw on an
+		// empty message list) — the wrapper retries the original prompt as-is.
+		expect(stub.compactSpy).not.toHaveBeenCalled();
+		expect(stub.runPrompts).toEqual(["one-shot oversized prompt", "one-shot oversized prompt"]);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "text", "result"]);
+		expect(collected[1].message ?? "").toMatch(/no prior history to compact/);
+	});
+
+	it("falls back to deterministic truncation when compaction fails, then retries", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(overflowStream("context_length_exceeded: prompt too large"));
+		stub.runStreams.push(textStream("ok"));
+		stub.compactSpy.mockRejectedValueOnce(new Error("compactor LLM unreachable"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "m1" },
+				{ role: "assistant", content: "m2" },
+			],
+		})) {
+			collected.push(msg);
+		}
+
+		// Cline-style rule: recovery must not depend on another successful
+		// LLM request — the wrapper drops the oldest half once and retries
+		// with a truncation notice instead of surfacing the overflow.
+		expect(stub.compactSpy).toHaveBeenCalledTimes(1);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "text", "result"]);
+		expect(collected[1].message ?? "").toMatch(/summarizer failed .* dropped the oldest 1 message\(s\)/);
+		// The retry prompt carries the truncation notice + the verbatim tail.
+		expect(stub.runPrompts[1]).toContain("truncated automatically after summarization failed");
+		expect(stub.runPrompts[1]).toContain("assistant: m2");
+	});
+
+	it("surfaces the original overflow error when both compaction and the truncation fallback fail", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(overflowStream("context_length_exceeded: prompt too large"));
+		stub.runStreams.push(overflowStream("context_length_exceeded: prompt too large"));
+		stub.compactSpy.mockRejectedValue(new Error("compactor LLM unreachable"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "m1" },
+				{ role: "assistant", content: "m2" },
+			],
+			maxAttempts: 2,
+		})) {
+			collected.push(msg);
+		}
+
+		// Attempt 1: overflow → summarizer fails → truncation fallback notice.
+		// Attempt 2: overflow again → budget exhausted → original overflow error.
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "error"]);
+		const last = collected.at(-1);
+		expect(last?.kind?.kind).toBe("context_overflow");
+		expect(last?.message).toContain("context_length_exceeded: prompt too large");
+		expect(last?.message).toMatch(/budget exhausted after 2 attempt\(s\)/);
+	});
+
+	it("compacts proactively before the first attempt when the token threshold is exceeded", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(textStream("ok"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "a fairly long earlier message that will surely exceed ten tokens" },
+				{ role: "assistant", content: "an equally long assistant reply that will surely exceed ten tokens" },
+			],
+			compactThresholdTokens: 10,
+		})) {
+			collected.push(msg);
+		}
+
+		// No overflow happened — the proactive path compacted first, then the
+		// single attempt ran with the carry-forward prompt (the stub's canned
+		// compaction reports messageCount 4 — the count is not under test here).
+		expect(stub.compactSpy).toHaveBeenCalledTimes(1);
+		expect(stub.runPrompts).toHaveLength(1);
+		expect(stub.runPrompts[0]).toMatch(/\[carry-forward summary from earlier \d+ message\(s\)\]/);
+		expect(collected.map((m) => m.type)).toEqual(["retry", "session", "text", "result"]);
+		expect(collected[0].message ?? "").toMatch(/proactively compacted 2 prior message\(s\)/);
+		expect(collected[0].attempt).toBe(1);
+	});
+
+	it("proceeds un-compacted when proactive compaction fails", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(textStream("ok"));
+		stub.compactSpy.mockRejectedValueOnce(new Error("compactor LLM unreachable"));
+
+		const collected: AgentMessage[] = [];
+		for await (const msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "a fairly long earlier message that will surely exceed ten tokens" },
+			],
+			compactThresholdTokens: 10,
+		})) {
+			collected.push(msg);
+		}
+
+		// Proactive compaction is best-effort: nothing has overflowed yet, so
+		// the run proceeds with the original prompt.
+		expect(collected.map((m) => m.type)).toEqual(["retry", "session", "text", "result"]);
+		expect(collected[0].message ?? "").toMatch(/proactive compaction failed .* proceeding un-compacted/);
+		expect(stub.runPrompts).toEqual(["p"]);
+	});
+
+	it("emits a structured baseline (summary + verbatim tail) via onCompactionBaseline", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(overflowStream());
+		stub.runStreams.push(textStream("ok"));
+
+		const baselines: Array<{ baseline: ConversationMessage[]; result: CompactContextResult }> = [];
+		for await (const _msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "earlier 1" },
+				{ role: "assistant", content: "earlier 2" },
+				{ role: "user", content: "earlier 3" },
+				{ role: "assistant", content: "earlier 4" },
+			],
+			keepRecentTokens: 1, // tiny budget → only the newest message survives verbatim
+			onCompactionBaseline: (baseline, result) => baselines.push({ baseline, result }),
+		})) {
+			void _msg;
+		}
+
+		expect(baselines).toHaveLength(1);
+		const { baseline, result } = baselines[0];
+		expect(result.summary).toContain("[COMPACTED: HARD");
+		// baseline = [system carry-forward summary, ...verbatim tail]
+		expect(baseline[0].role).toBe("system");
+		expect(baseline[0].content).toContain("[Carry-forward summary from earlier 4 message(s)]");
+		expect(baseline[0].content).toContain(result.summary);
+		expect(baseline.slice(1)).toEqual([{ role: "assistant", content: "earlier 4" }]);
+	});
+
+	it("surfaces the last overflow error annotated with the exhausted budget", async () => {
 		const stub = new StubAgent();
 		stub.runStreams.push(overflowStream());
 		stub.runStreams.push(overflowStream());
@@ -161,10 +325,11 @@ describe("runWithAutoCompact", () => {
 		// First attempt: session only (overflow suppressed).
 		// Notice. Second attempt: session only (overflow suppressed).
 		// Budget exhausted → final error.
-		expect(collected.map((m) => m.type)).toEqual(["session", "scheduleNotice", "session", "error"]);
+		expect(collected.map((m) => m.type)).toEqual(["session", "retry", "session", "error"]);
 		const last = collected.at(-1);
 		expect(last?.kind?.kind).toBe("context_overflow");
-		expect((last as { message?: string }).message).toMatch(/budget exhausted/);
+		expect(last?.message).toContain("context_length_exceeded: prompt too large");
+		expect(last?.message).toMatch(/budget exhausted after 2 attempt\(s\)/);
 	});
 
 	it("respects a non-overflow error and surfaces it unchanged", async () => {

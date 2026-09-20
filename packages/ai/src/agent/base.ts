@@ -330,6 +330,11 @@ export abstract class BaseAgent implements IAgent {
 	 * {@link runWithAutoCompactCore} overflow-recovery loop so callers
 	 * never have to invoke `runWithAutoCompact` manually. When no
 	 * compactor is configured this is a pure pass-through to `runCore`.
+	 *
+	 * Scope: recovery only triggers for providers that classify overflow
+	 * as `kind: "context_overflow"` (currently only StandaloneAgent) —
+	 * other providers pass overflow errors through unchanged even with a
+	 * compactor attached. `plan()` / `execute()` are not wrapped.
 	 */
 	async *run(prompt: string, options?: AgentOptions): AsyncGenerator<AgentMessage> {
 		const compactor = this.config.providerConfig?.compactor;
@@ -337,14 +342,20 @@ export abstract class BaseAgent implements IAgent {
 			yield* this.runCore(prompt, options);
 			return;
 		}
-		// Feed `options.history` into the auto-compact loop so the recovery
-		// path has the prior conversation to summarize. The retry primitive
-		// points at `runCore` directly — never `this.run` — so the wrapper
-		// is not re-entered on overflow.
+		// Feed `options.conversation` into the auto-compact loop so the
+		// recovery path has the prior conversation to summarize. The retry
+		// primitive points at `runCore` directly — never `this.run` — so the
+		// wrapper is not re-entered on overflow. Tuning knobs ride in the
+		// same providerConfig bag as the compactor itself.
+		const providerConfig = this.config.providerConfig ?? {};
 		yield* runWithAutoCompactCore(this, (p, o) => this.runCore(p, o), {
 			prompt,
-			history: options?.history ?? [],
+			history: options?.conversation ?? [],
 			agentOptions: options,
+			compactThresholdTokens: providerConfig.compactThresholdTokens as number | undefined,
+			keepRecentTokens: providerConfig.compactKeepRecentTokens as number | undefined,
+			maxSummaryTokens: providerConfig.compactMaxSummaryTokens as number | undefined,
+			onCompactionBaseline: options?.onCompactionBaseline,
 		});
 	}
 

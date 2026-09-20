@@ -4,10 +4,11 @@
  * `BaseAgent.run` wraps the provider-specific `runCore` with an
  * overflow-recovery loop when `providerConfig.compactor` is configured.
  * On a `kind: "context_overflow"` error, the wrapper calls
- * `agent.compactContext({ messages: history })` and re-issues `runCore`
- * with the summary prefixed. A synthetic `scheduleNotice` is yielded
- * between the first stream and the retry stream so the caller can surface
- * a "compacted N → M tokens" toast.
+ * `agent.compactContext({ messages: conversation })` and re-issues `runCore`
+ * with the summary prefixed. A synthetic `retry` notice is yielded between
+ * the first stream and the retry stream so the caller can surface a
+ * "compacted N → M tokens" toast and drop the aborted attempt's partial
+ * output (the retry re-emits a fresh stream from scratch).
  *
  * For tests / advanced callers that want to drive the same loop from an
  * external `IAgent` stub, `runWithAutoCompact` is still exported and
@@ -36,10 +37,10 @@
 import process from "node:process";
 
 import {
-	type AgentHistoryMessage,
 	type AgentMessage,
 	type AgentOptions,
 	type CompactContextResult,
+	type ConversationMessage,
 	type IAgent,
 	getAgentRegistry,
 	registerAgentPlugin,
@@ -243,11 +244,15 @@ async function main() {
 	console.assert(overflowAgent.runCalls === 2, "wrapper must have retried exactly once");
 	console.assert(overflowAgent.compactCalls.length === 1, "wrapper must compact exactly once");
 	console.assert(
-		recoveredMessages.map((m) => m.type).join(",") === "session,scheduleNotice,session,text,result",
-		"interleaved message shape must be: first session, notice, retry stream",
+		recoveredMessages.map((m) => m.type).join(",") === "session,retry,session,text,result",
+		"interleaved message shape must be: first session, retry notice, retry stream",
 	);
 	const notice = recoveredMessages[1];
-	console.assert(notice.type === "scheduleNotice", "second message must be the synthetic notice");
+	console.assert(notice.type === "retry", "second message must be the synthetic retry notice");
+	console.assert(
+		notice.attempt === 2 && notice.maxAttempts === 2,
+		"retry notice must carry attempt/maxAttempts",
+	);
 	info("auto-compact", `recovered stream: ${recoveredMessages.map((m) => m.type).join(",")}`);
 
 	// ─── 3. Real LLM-backed happy path ─────────────────────────────────
@@ -326,13 +331,13 @@ async function main() {
 		providerConfig: { compactor },
 	});
 
-	// Transparent auto-compact: just call agent.run(prompt, { history }).
+	// Transparent auto-compact: just call agent.run(prompt, { conversation }).
 	// No runWithAutoCompact wrapper, no setAIUserContext dance — when
 	// `providerConfig.compactor` is set, `BaseAgent.run` handles overflow
 	// recovery internally.
 	const collected: AgentMessage[] = [];
 	for await (const msg of liveAgent.run("Reply with the single word 'pong' and nothing else.", {
-		history: [
+		conversation: [
 			{ role: "user" as const, content: "earlier turn 1" },
 			{ role: "assistant" as const, content: "earlier turn 2" },
 		],
@@ -357,21 +362,34 @@ async function main() {
 	// The minimum code a host writes to enable auto-compact:
 	//
 	//   1. Build a compactor.
-	//   2. Attach it via providerConfig.compactor.
+	//   2. Attach it via providerConfig.compactor (+ optional tuning knobs).
 	//   3. Just call agent.run() in your loop.
 	//
-	// That's it. Every call gets transparent overflow recovery for free.
+	// That's it. Every call gets overflow recovery for free.
+	//
+	// The host also adopts `onCompactionBaseline`: whenever a compaction
+	// pass finishes, the wrapper hands back a replacement history (system
+	// carry-forward summary + verbatim recent tail). Replacing the host's
+	// own history with it means subsequent turns don't re-send the original
+	// oversized conversation — without this, compaction would re-run from
+	// scratch on every turn. `compactThresholdTokens` switches the trigger
+	// from reactive (overflow first) to proactive (compact before the run
+	// once the estimated history exceeds the threshold), matching how
+	// Codex / OpenClaw / Cline behave.
 	console.log("\n── 4. user-facing: 'configure once, just keep running' ──");
 
 	const hostCompactor = createCompactor({});
 	const hostAgent: IAgent = getAgentRegistry().create({
 		provider: "standalone",
 		model: live.model,
-		providerConfig: { compactor: hostCompactor },
+		providerConfig: {
+			compactor: hostCompactor,
+			compactThresholdTokens: 20_000, // proactive: compact before overflowing
+		},
 	});
 
 	// Just run() in a loop — auto-compact stays invisible in the background.
-	const hostHistory: AgentHistoryMessage[] = [
+	let hostHistory: ConversationMessage[] = [
 		{ role: "user", content: "I'm starting a vet-tracking app for my cat Luna." },
 		{ role: "assistant", content: "Sounds good. What's the project name?" },
 	];
@@ -381,7 +399,12 @@ async function main() {
 	];
 	for (const prompt of hostPrompts) {
 		const collected4: AgentMessage[] = [];
-		for await (const msg of hostAgent.run(prompt, { history: hostHistory })) {
+		for await (const msg of hostAgent.run(prompt, {
+			conversation: hostHistory,
+			onCompactionBaseline: (baseline) => {
+				hostHistory = baseline;
+			},
+		})) {
 			collected4.push(msg);
 		}
 		const result4 = collected4.find((m) => m.type === "result");
