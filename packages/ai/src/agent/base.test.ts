@@ -13,7 +13,7 @@
  * pass-through to `runCore`: no compact call, no notice, no second
  * attempt on overflow.
  */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BaseAgent } from "./base";
 import type {
@@ -257,5 +257,340 @@ describe("BaseAgent.run auto-compact", () => {
 		expect(baselines).toHaveLength(1);
 		expect(baselines[0][0].role).toBe("system");
 		expect(baselines[0][0].content).toContain("[Carry-forward summary from earlier 2 message(s)]");
+	});
+});
+
+/**
+ * HTTP-first path tests.
+ *
+ * When `providerConfig.compactor` is NOT configured, `BaseAgent.compactContext`
+ * POSTs the conversation to a resolved HTTP endpoint carrying the user's
+ * bearer token plus whatever else the caller attached via
+ * `compactionEndpoint.headers` (agent-level) or `extraHeaders` (per-call).
+ * Resolution order:
+ *
+ *   input.compactionEndpoint → providerConfig.compactionEndpoint.baseUrl
+ *     → process.env.COMPACTION_HTTP_ENDPOINT
+ *   input.userToken → providerConfig.compactionUserToken
+ *     → process.env.COMPACTION_HTTP_USER_TOKEN
+ *
+ * opencontext does NOT default any host-specific header (e.g. usage-task
+ * attribution) — callers are responsible for attaching those via
+ * `compactionEndpoint.headers` or `extraHeaders`.
+ *
+ * Tests stub `fetch` so no real network happens; they verify request shape
+ * (URL, headers, body) and the `CompactContextResult` mapping.
+ */
+describe("BaseAgent.compactContext HTTP-first path", () => {
+	type FetchFn = (
+		input: string | URL,
+		init?: { method?: string; headers?: Record<string, string>; body?: string; signal?: AbortSignal },
+	) => Promise<Response>;
+
+	function jsonResponse(body: unknown, status = 200): Response {
+		return new Response(JSON.stringify(body), {
+			status,
+			headers: { "content-type": "application/json" },
+		});
+	}
+
+	// Snapshot the env vars we mutate so a stray `beforeEach` in any other
+	// suite can't leak COMPACTION_HTTP_* into this one (and vice versa).
+	const SAVED_COMPACTION_ENDPOINT = process.env.COMPACTION_HTTP_ENDPOINT;
+	const SAVED_COMPACTION_USER_TOKEN = process.env.COMPACTION_HTTP_USER_TOKEN;
+	beforeEach(() => {
+		process.env.COMPACTION_HTTP_ENDPOINT = "";
+		process.env.COMPACTION_HTTP_USER_TOKEN = "";
+	});
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		if (SAVED_COMPACTION_ENDPOINT === undefined) {
+			process.env.COMPACTION_HTTP_ENDPOINT = "";
+		} else {
+			process.env.COMPACTION_HTTP_ENDPOINT = SAVED_COMPACTION_ENDPOINT;
+		}
+		if (SAVED_COMPACTION_USER_TOKEN === undefined) {
+			process.env.COMPACTION_HTTP_USER_TOKEN = "";
+		} else {
+			process.env.COMPACTION_HTTP_USER_TOKEN = SAVED_COMPACTION_USER_TOKEN;
+		}
+	});
+
+	it("POSTs the conversation to providerConfig.compactionEndpoint.baseUrl with bearer + caller-supplied headers", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () =>
+			jsonResponse({
+				content: [{ type: "text", text: "[HTTP SUMMARY]" }],
+				usage: { input_tokens: 120, output_tokens: 33 },
+				stop_reason: "end_turn",
+			}),
+		);
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: {
+				baseUrl: "https://compaction.example/api/ai/v1/messages",
+				headers: { "x-test-task": "compact_context:agent:my-run" },
+			},
+			compactionUserToken: "user-tok-123",
+		});
+
+		const result = await agent.compactContext({
+			messages: [
+				{ role: "user", content: "hi" },
+				{ role: "assistant", content: "hello" },
+			],
+			level: "hard",
+		});
+
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [
+			string,
+			{ method?: string; headers?: Record<string, string>; body?: string },
+		];
+		expect(calledUrl).toBe("https://compaction.example/api/ai/v1/messages");
+		expect(calledInit.method).toBe("POST");
+		expect(calledInit.headers?.Authorization).toBe("Bearer user-tok-123");
+		expect(calledInit.headers?.["x-test-task"]).toBe("compact_context:agent:my-run");
+		expect(calledInit.headers?.["anthropic-version"]).toBe("2023-06-01");
+		expect(calledInit.headers?.["Content-Type"]).toBe("application/json");
+		const body = JSON.parse(calledInit.body ?? "{}");
+		expect(body.model).toBeDefined();
+		expect(body.max_tokens).toBe(2000);
+		expect(body.system).toMatch(/HARD/);
+		expect(body.messages).toEqual([
+			{ role: "user", content: "hi" },
+			{ role: "assistant", content: "hello" },
+		]);
+
+		expect(result.summary).toBe("[HTTP SUMMARY]");
+		expect(result.messageCount).toBe(2);
+		expect(result.level).toBe("hard");
+		expect(result.originalTokens).toBe(120);
+		expect(result.summaryTokens).toBe(33);
+	});
+
+	it("falls back to COMPACTION_HTTP_ENDPOINT + COMPACTION_HTTP_USER_TOKEN env vars", async () => {
+		process.env.COMPACTION_HTTP_ENDPOINT = "https://compaction.example/env/v1/messages";
+		process.env.COMPACTION_HTTP_USER_TOKEN = "env-tok-456";
+
+		const fetchSpy = vi.fn<FetchFn>(async () =>
+			jsonResponse({ content: [{ type: "text", text: "summary" }] }),
+		);
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent(undefined);
+		const result = await agent.compactContext({ messages: [{ role: "user", content: "m" }] });
+
+		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [string, { headers?: Record<string, string> }];
+		expect(calledUrl).toBe("https://compaction.example/env/v1/messages");
+		expect(calledInit.headers?.Authorization).toBe("Bearer env-tok-456");
+		// opencontext does NOT default any host-specific header. Callers
+		// are responsible for attaching the ones they need via
+		// `compactionEndpoint.headers` or `extraHeaders`.
+		expect(calledInit.headers?.["x-test-task"]).toBeUndefined();
+		expect(result.summary).toBe("summary");
+	});
+
+	it("per-call overrides win over providerConfig + env (compactionEndpoint, userToken)", async () => {
+		process.env.COMPACTION_HTTP_ENDPOINT = "https://compaction.example/env/v1/messages";
+		process.env.COMPACTION_HTTP_USER_TOKEN = "env-tok";
+
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: {
+				baseUrl: "https://compaction.example/agent/v1/messages",
+				headers: { "x-test-task": "compact_context:agent:agent" },
+			},
+			compactionUserToken: "agent-tok",
+		});
+
+		await agent.compactContext({
+			messages: [{ role: "user", content: "x" }],
+			compactionEndpoint: "https://compaction.example/percall/v1/messages",
+			userToken: "percall-tok",
+		});
+
+		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [string, { headers?: Record<string, string> }];
+		expect(calledUrl).toBe("https://compaction.example/percall/v1/messages");
+		expect(calledInit.headers?.Authorization).toBe("Bearer percall-tok");
+		// caller-supplied headers at the agent level stay put unless
+		// overridden via `extraHeaders` (which is a per-call-only field).
+		expect(calledInit.headers?.["x-test-task"]).toBe("compact_context:agent:agent");
+	});
+
+	it("omits the Authorization header when no userToken is available at any level", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: { baseUrl: "https://compaction.example/v1/messages" },
+		});
+
+		await agent.compactContext({ messages: [{ role: "user", content: "x" }] });
+
+		const [, calledInit] = fetchSpy.mock.calls[0] as [string, { headers?: Record<string, string> }];
+		expect(calledInit.headers?.Authorization).toBeUndefined();
+		// opencontext does NOT default any host-specific header.
+		expect(calledInit.headers?.["x-test-task"]).toBeUndefined();
+	});
+
+	it("merges input.extraHeaders LAST so callers can override defaults", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: {
+				baseUrl: "https://compaction.example/v1/messages",
+				headers: { "x-trace-id": "agent-trace" },
+			},
+		});
+
+		await agent.compactContext({
+			messages: [{ role: "user", content: "x" }],
+			extraHeaders: { "x-trace-id": "percall-trace" },
+		});
+
+		const [, calledInit] = fetchSpy.mock.calls[0] as [string, { headers?: Record<string, string> }];
+		expect(calledInit.headers?.["x-trace-id"]).toBe("percall-trace");
+	});
+
+	it("uses maxSummaryTokens from input as max_tokens in the request body", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: { baseUrl: "https://compaction.example/v1/messages" },
+		});
+
+		await agent.compactContext({
+			messages: [{ role: "user", content: "x" }],
+			maxSummaryTokens: 512,
+		});
+
+		const [, calledInit] = fetchSpy.mock.calls[0] as [string, { body?: string }];
+		const body = JSON.parse(calledInit.body ?? "{}");
+		expect(body.max_tokens).toBe(512);
+	});
+
+	it("throws an actionable error when no compactor and no endpoint are configured", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "never" }] }));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent(undefined);
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactionEndpoint|Compactor/,
+		);
+		expect(fetchSpy).not.toHaveBeenCalled();
+	});
+
+	it("throws when the endpoint returns a non-2xx status, surfacing the response body", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ error: "bad request" }, 400));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: { baseUrl: "https://compaction.example/v1/messages" },
+		});
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactContext HTTP 400/,
+		);
+	});
+
+	it("preserves the providerConfig.compactor fallback — does NOT issue an HTTP call", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () =>
+			jsonResponse({ content: [{ type: "text", text: "should-not-fire" }] }),
+		);
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const { compactor, compactSpy } = makeCompactorStub();
+		const agent = makeAgent({
+			compactor,
+			compactionEndpoint: { baseUrl: "https://compaction.example/v1/messages" },
+			compactionUserToken: "user-tok",
+		});
+
+		const result = await agent.compactContext({ messages: [{ role: "user", content: "x" }] });
+
+		expect(compactSpy).toHaveBeenCalledTimes(1);
+		expect(fetchSpy).not.toHaveBeenCalled();
+		expect(result.summary).toBe("[COMPACTED]");
+	});
+
+	it("POSTs to the OpenAI Chat Completions API when protocol is 'openai'", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () =>
+			jsonResponse({
+				choices: [
+					{
+						message: { role: "assistant", content: "[OPENAI SUMMARY]" },
+						finish_reason: "stop",
+					},
+				],
+				usage: { prompt_tokens: 88, completion_tokens: 22 },
+			}),
+		);
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: {
+				baseUrl: "https://compaction.example/v1/chat/completions",
+				protocol: "openai",
+			},
+			compactionUserToken: "user-tok",
+		});
+
+		const result = await agent.compactContext({
+			messages: [
+				{ role: "user", content: "hi" },
+				{ role: "assistant", content: "hello" },
+			],
+			level: "hard",
+		});
+
+		expect(fetchSpy).toHaveBeenCalledTimes(1);
+		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [
+			string,
+			{ method?: string; headers?: Record<string, string>; body?: string },
+		];
+		expect(calledUrl).toBe("https://compaction.example/v1/chat/completions");
+		expect(calledInit.method).toBe("POST");
+		expect(calledInit.headers?.Authorization).toBe("Bearer user-tok");
+		// OpenAI mode does NOT add anthropic-version — the caller is free to
+		// add their own via `compactionEndpoint.headers`.
+		expect(calledInit.headers?.["anthropic-version"]).toBeUndefined();
+		expect(calledInit.headers?.["Content-Type"]).toBe("application/json");
+		const body = JSON.parse(calledInit.body ?? "{}");
+		expect(body.model).toBeDefined();
+		expect(body.max_tokens).toBe(2000);
+		// OpenAI carries the system prompt as the first message — there is
+		// NO separate `system` field.
+		expect(body.system).toBeUndefined();
+		expect(body.messages[0]).toMatchObject({ role: "system" });
+		expect(body.messages[0].content).toMatch(/HARD/);
+		expect(body.messages.slice(1)).toEqual([
+			{ role: "user", content: "hi" },
+			{ role: "assistant", content: "hello" },
+		]);
+
+		expect(result.summary).toBe("[OPENAI SUMMARY]");
+		expect(result.messageCount).toBe(2);
+		expect(result.level).toBe("hard");
+		expect(result.originalTokens).toBe(88);
+		expect(result.summaryTokens).toBe(22);
+	});
+
+	it("OpenAI path surfaces non-2xx HTTP status with the same error shape", async () => {
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ error: "rate limited" }, 429));
+		vi.stubGlobal("fetch", fetchSpy);
+
+		const agent = makeAgent({
+			compactionEndpoint: {
+				baseUrl: "https://compaction.example/v1/chat/completions",
+				protocol: "openai",
+			},
+		});
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactContext HTTP 429/,
+		);
 	});
 });

@@ -34,6 +34,30 @@ export interface CompactContextInput {
 	 * Defaults to 2000 when neither input nor options supply a value.
 	 */
 	maxSummaryTokens?: number;
+	/**
+	 * Bearer token forwarded as `Authorization: Bearer <token>` to the
+	 * HTTP compaction endpoint (when one is configured). Per-call
+	 * override; agent-level fallback lives in
+	 * `AgentConfig.providerConfig.compactionUserToken`.
+	 */
+	userToken?: string;
+	/**
+	 * Override the HTTP compaction endpoint URL for this call. Per-call
+	 * override; agent-level fallback lives in
+	 * `AgentConfig.providerConfig.compactionEndpoint`. When the
+	 * `providerConfig.compactor` slot is configured, this field is ignored
+	 * (the in-process compactor takes precedence).
+	 */
+	compactionEndpoint?: string;
+	/**
+	 * Extra headers attached to the HTTP compaction call (e.g. trace ids,
+	 * first-party billing attribution). Merged AFTER
+	 * `providerConfig.compactionEndpoint.headers` and AFTER
+	 * `Authorization`, so a caller can override any of those values
+	 * explicitly. When the `providerConfig.compactor` slot is configured,
+	 * this field is ignored.
+	 */
+	extraHeaders?: Record<string, string>;
 }
 
 export interface CompactContextResult {
