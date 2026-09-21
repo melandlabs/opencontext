@@ -1,15 +1,32 @@
 /**
  * Tests for `okf-backend.indexOkfFolder` — sha256 dedup, cites-edge
- * extraction, and soft-delete detection across re-runs.
+ * extraction, soft-delete detection across re-runs, and the mtime/size
+ * reconcile fast path.
  */
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, truncateSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { indexOkfFolder } from "../src/okf-backend";
+import { OKF_MAX_EXTRACT_BYTES, indexOkfFolder } from "../src/okf-backend";
 import { SqliteWorkspaceStore } from "../src/sqlite";
+
+// Wrap the real extractor with a call counter so fast-path tests can
+// assert extraction was skipped. The wrapper delegates to the actual
+// implementation, so parsing behaviour is unchanged.
+const { extractTextCalls } = vi.hoisted(() => ({ extractTextCalls: [] as string[] }));
+
+vi.mock("../src/parsers-adapter", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../src/parsers-adapter")>();
+	return {
+		...actual,
+		extractText: async (sourcePath: string, mimeType?: string) => {
+			extractTextCalls.push(sourcePath);
+			return actual.extractText(sourcePath, mimeType);
+		},
+	};
+});
 
 let scratchDir: string;
 
@@ -219,5 +236,187 @@ describe("indexOkfFolder", () => {
 		expect(barrel.resourceTypeForExtension(".xlsx")).toBe("spreadsheet");
 		expect(barrel.resourceTypeForExtension(".docx")).toBe("document");
 		expect(barrel.DEFAULT_IGNORED_DIR_NAMES.has("node_modules")).toBe(true);
+	});
+
+	it("exposes OKF_MAX_EXTRACT_BYTES from the barrel", async () => {
+		const barrel = await import("../src/index");
+		expect(barrel.OKF_MAX_EXTRACT_BYTES).toBe(32 * 1024 * 1024);
+	});
+
+	it("skips extractText for unchanged files on the second reconcile (stat fast path)", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "a.md", "# A\n\nalpha body\n");
+		writeFile(okfRoot, "b.md", "# B\n\nbravo body\n");
+
+		extractTextCalls.length = 0;
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const first = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(first.filesAdded).toBe(2);
+		expect(extractTextCalls.length).toBe(2);
+
+		extractTextCalls.length = 0;
+		const second = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(second.filesScanned).toBe(2);
+		expect(second.filesAdded).toBe(0);
+		expect(second.filesModified).toBe(0);
+		expect(second.filesUnchanged).toBe(2);
+		expect(second.filesDeleted).toBe(0);
+		expect(extractTextCalls).toEqual([]);
+		await store.close();
+	});
+
+	it("re-extracts when mtime or size changes (sha dedup still governs change_kind)", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "a.md", "# A\n\nalpha body\n");
+		writeFile(okfRoot, "b.md", "# B\n\nbravo body\n");
+
+		extractTextCalls.length = 0;
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const first = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(first.filesAdded).toBe(2);
+		extractTextCalls.length = 0;
+
+		// a.md: content identical, mtime bumped (touch) — the fast path no
+		// longer trusts the stored mtime, so the file IS re-extracted; the
+		// body sha then dedups it to "unchanged". b.md: content grows →
+		// "modified".
+		const future = new Date(Date.now() + 60_000);
+		utimesSync(join(okfRoot, "a.md"), future, future);
+		writeFile(okfRoot, "b.md", "# B\n\nbravo body, now much longer than before\n");
+
+		const second = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(second.filesScanned).toBe(2);
+		expect(second.filesAdded).toBe(0);
+		expect(second.filesModified).toBe(1);
+		expect(second.filesUnchanged).toBe(1);
+		expect(extractTextCalls.length).toBe(2);
+		expect(extractTextCalls.filter((path) => path.endsWith("a.md"))).toHaveLength(1);
+		expect(extractTextCalls.filter((path) => path.endsWith("b.md"))).toHaveLength(1);
+		await store.close();
+	});
+
+	it("trusts a same-length rewrite with a restored mtime (documented fast-path trade-off)", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "a.md", "original body content");
+		// Pin mtime to an exact integer-ms value so it round-trips cleanly
+		// through utimes + stat + JSON storage.
+		const pinnedMtime = new Date(1_700_000_000_000);
+		utimesSync(join(okfRoot, "a.md"), pinnedMtime, pinnedMtime);
+
+		extractTextCalls.length = 0;
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const first = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(first.filesAdded).toBe(1);
+		const resourceRow = store.__testDb
+			.prepare("SELECT id FROM workspace_resources WHERE canonical_key = 'a.md'")
+			.get() as { id: number };
+
+		// Craft the undetectable edit: same byte length, mtime restored.
+		writeFile(okfRoot, "a.md", "tampered body content");
+		expect("tampered body content".length).toBe("original body content".length);
+		utimesSync(join(okfRoot, "a.md"), pinnedMtime, pinnedMtime);
+
+		extractTextCalls.length = 0;
+		const second = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		// Known trade-off (git/rsync-level): mtime+size hit ⇒ trusted. The
+		// file is treated as unchanged and extraction is skipped.
+		expect(second.filesUnchanged).toBe(1);
+		expect(second.filesModified).toBe(0);
+		expect(extractTextCalls).toEqual([]);
+
+		// Stored body is still the original — the new content is not picked
+		// up until mtime or size changes.
+		const versionCount = store.__testDb
+			.prepare("SELECT COUNT(*) AS count FROM workspace_resource_versions WHERE resource_id = ?")
+			.get(resourceRow.id) as { count: number };
+		expect(versionCount.count).toBe(1);
+		const chunks = store.__testDb
+			.prepare("SELECT content FROM workspace_chunks WHERE resource_id = ?")
+			.all(resourceRow.id) as Array<{ content: string }>;
+		expect(chunks.map((chunk) => chunk.content).join("")).toContain("original body content");
+		await store.close();
+	});
+
+	it("skips files over OKF_MAX_EXTRACT_BYTES and soft-deletes them if previously indexed", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "small.txt", "tiny body");
+
+		extractTextCalls.length = 0;
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+		const first = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(first.filesScanned).toBe(1);
+		expect(first.filesAdded).toBe(1);
+
+		// Grow the file past the cap. truncateSync creates a sparse file,
+		// so the oversized body costs no real disk / CPU.
+		truncateSync(join(okfRoot, "small.txt"), OKF_MAX_EXTRACT_BYTES + 1);
+		extractTextCalls.length = 0;
+		const second = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(second.filesScanned).toBe(0);
+		expect(second.filesAdded).toBe(0);
+		expect(second.filesDeleted).toBe(1);
+		expect(extractTextCalls).toEqual([]);
+		expect(warnSpy.mock.calls.some((call) => String(call[0]).includes("small.txt"))).toBe(true);
+
+		// The previously-indexed file is soft-deleted because the oversized
+		// file never enters presentKeys — documented behaviour for the cap.
+		const row = store.__testDb
+			.prepare("SELECT metadata FROM workspace_resources WHERE canonical_key = 'small.txt'")
+			.get() as { metadata: string | null };
+		const meta = JSON.parse(row.metadata ?? "{}") as { deleted_at?: number };
+		expect(typeof meta.deleted_at).toBe("number");
+
+		warnSpy.mockRestore();
+		await store.close();
 	});
 });

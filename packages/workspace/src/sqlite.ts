@@ -322,6 +322,20 @@ export interface ISqliteWorkspaceStore {
 		canonical_key: string;
 	}): { deleted: boolean; resource_id: number | null };
 
+	/**
+	 * Freshness snapshot for the OKF reconcile fast path: canonical key →
+	 * `{ resource_id, size_bytes, source_mtime }` for every resource that
+	 * is not soft-deleted AND whose metadata carries a numeric
+	 * `source_mtime` marker. Rows without the marker (e.g. indexed before
+	 * the fast path existed) don't appear, so their files take the full
+	 * extraction path once and get stamped on the way through. `size_bytes`
+	 * comes from the current version row. `resource_id` is included so the
+	 * edge pass can resolve endpoints for fast-path-skipped files.
+	 */
+	getOkfSourceFreshness(input: {
+		workspace_id: string;
+	}): Map<string, { resource_id: number; size_bytes: number; source_mtime: number | null }>;
+
 	listResources(input: ListWorkspaceResourcesInput): ListWorkspaceResourcesResult;
 
 	searchLexical(input: {
@@ -662,6 +676,15 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			let changeKind: WorkspaceResourceVersion["change_kind"];
 
 			if (!existing) {
+				// Created rows stamp source_mtime into the same metadata
+				// JSON that has historically carried front_matter, so both
+				// ride the resource row without an extra UPDATE.
+				const createdMeta: Record<string, unknown> = {
+					...(resource.front_matter as Record<string, unknown> | undefined),
+				};
+				if (typeof resource.source_mtime === "number" && Number.isFinite(resource.source_mtime)) {
+					createdMeta.source_mtime = resource.source_mtime;
+				}
 				const insertResource = this.db
 					.prepare(
 						`INSERT INTO workspace_resources(
@@ -678,7 +701,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 						"okf_local_dir",
 						now,
 						now,
-						stringifyJson(resource.front_matter),
+						stringifyJson(Object.keys(createdMeta).length > 0 ? createdMeta : undefined),
 					);
 				resourceId = Number(insertResource.lastInsertRowid);
 				changeKind = "created";
@@ -694,6 +717,11 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 						// away must become visible again even though the body
 						// did not change.
 						this.clearSoftDeleteMarker(resourceId);
+						// Refresh the fast-path marker even when the body is
+						// unchanged: if the stored mtime float ever drifts
+						// from the on-disk value (JSON round-trip), this
+						// self-heals instead of forcing extraction forever.
+						this.writeSourceMtimeMarker(resourceId, resource.source_mtime);
 						// Touch updated_at so the resource stays "fresh" without
 						// re-indexing — callers may want to detect staleness
 						// via `updated_at` vs. `current_version_id.created_at`.
@@ -768,6 +796,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			// Re-indexing a soft-deleted resource (file came back with a new
 			// body) restores it to list/search results.
 			this.clearSoftDeleteMarker(resourceId);
+			// Modified rows must re-stamp the fast-path marker: read the
+			// current metadata JSON, merge source_mtime over it (preserving
+			// front_matter keys and any other markers), and write it back.
+			this.writeSourceMtimeMarker(resourceId, resource.source_mtime);
 
 			this.db
 				.prepare(
@@ -1786,6 +1818,49 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	}
 
 	// -------------------------------------------------------------------------
+	// Reconcile freshness (stat fast path)
+	// -------------------------------------------------------------------------
+
+	getOkfSourceFreshness(input: {
+		workspace_id: string;
+	}): Map<string, { resource_id: number; size_bytes: number; source_mtime: number | null }> {
+		this.ensureInitialized();
+		const rows = this.db
+			.prepare(
+				`SELECT r.id AS resource_id,
+                        r.canonical_key AS canonical_key,
+                        v.size_bytes AS size_bytes,
+                        json_extract(r.metadata, '$.source_mtime') AS source_mtime
+                 FROM workspace_resources r
+                 LEFT JOIN workspace_resource_versions v ON v.id = r.current_version_id
+                 WHERE r.workspace_id = ?
+                   AND r.current_version_id IS NOT NULL
+                   AND json_extract(r.metadata, '$.deleted_at') IS NULL
+                   AND typeof(json_extract(r.metadata, '$.source_mtime')) IN ('integer', 'real')`,
+			)
+			.all(input.workspace_id) as Array<{
+			resource_id: number;
+			canonical_key: string;
+			size_bytes: number | null;
+			source_mtime: number | null;
+		}>;
+		const freshness = new Map<
+			string,
+			{ resource_id: number; size_bytes: number; source_mtime: number | null }
+		>();
+		for (const row of rows) {
+			freshness.set(row.canonical_key, {
+				resource_id: row.resource_id,
+				// current_version_id IS NOT NULL guarantees the join hits;
+				// the fallback only papers over a corrupted version chain.
+				size_bytes: row.size_bytes ?? 0,
+				source_mtime: row.source_mtime,
+			});
+		}
+		return freshness;
+	}
+
+	// -------------------------------------------------------------------------
 	// Soft-delete
 	// -------------------------------------------------------------------------
 
@@ -1846,6 +1921,26 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		this.db
 			.prepare("UPDATE workspace_resources SET metadata = ? WHERE id = ?")
 			.run(stringifyJson(rest), resourceId);
+	}
+
+	/**
+	 * Stamp `source_mtime` onto a resource's metadata JSON, preserving
+	 * every other key (front_matter fields, soft-delete markers). No-op
+	 * when `sourceMtime` is not a finite number, so non-OKF callers of
+	 * `indexResource` keep writing metadata exactly as before.
+	 */
+	private writeSourceMtimeMarker(resourceId: number, sourceMtime: number | undefined): void {
+		if (typeof sourceMtime !== "number" || !Number.isFinite(sourceMtime)) return;
+		const row = this.db.prepare("SELECT metadata FROM workspace_resources WHERE id = ?").get(resourceId) as
+			| { metadata: string | null }
+			| undefined;
+		if (!row) return;
+		const meta = parseJson<Record<string, unknown>>(row.metadata, {}) ?? {};
+		if (meta.source_mtime === sourceMtime) return;
+		meta.source_mtime = sourceMtime;
+		this.db
+			.prepare("UPDATE workspace_resources SET metadata = ? WHERE id = ?")
+			.run(stringifyJson(meta), resourceId);
 	}
 
 	// -------------------------------------------------------------------------

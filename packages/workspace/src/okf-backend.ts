@@ -80,6 +80,17 @@ export const DEFAULT_IGNORED_DIR_NAMES: ReadonlySet<string> = new Set([
 	"venv",
 ]);
 
+/**
+ * Maximum source-file size the bulk walk will attempt to extract. Files
+ * larger than this are skipped with a warning — parsing a multi-hundred-MB
+ * document dominates reconcile cost and blows up memory for zero useful
+ * recall. Skipped files never enter the reconcile's `presentKeys`, so a
+ * file that was indexed before it grew past the cap is soft-deleted on
+ * the next reconcile; shrink it back under the cap and a later reconcile
+ * resurrects it.
+ */
+export const OKF_MAX_EXTRACT_BYTES = 32 * 1024 * 1024;
+
 export interface OkfFolderWalkOptions {
 	/**
 	 * Extra directory names to skip at every level, on top of the
@@ -87,6 +98,18 @@ export interface OkfFolderWalkOptions {
 	 * {@link DEFAULT_IGNORED_DIR_NAMES}.
 	 */
 	ignoreDirNames?: ReadonlySet<string>;
+}
+
+/**
+ * One walkable candidate file: absolute path plus the stat fields the
+ * reconcile fast path compares against the store. Produced by
+ * {@link walkOkfFolderEntries} without any text extraction.
+ */
+export interface OkfFolderWalkEntry {
+	absolute: string;
+	canonicalKey: string;
+	size: number;
+	mtimeMs: number;
 }
 
 function isSkippedWalkDir(name: string, options?: OkfFolderWalkOptions): boolean {
@@ -117,6 +140,39 @@ async function walk(dir: string, options?: OkfFolderWalkOptions): Promise<string
 		}
 	}
 	return out;
+}
+
+/**
+ * Walk `dir` and stat every supported file WITHOUT extracting text.
+ * Returns the candidate entries (`walk` + `stat` only) so reconciles can
+ * compare mtime/size against the store before paying for extraction.
+ * Files over {@link OKF_MAX_EXTRACT_BYTES} are skipped here with a
+ * warning, as are files that vanish between `readdir` and `stat`.
+ */
+async function walkOkfFolderEntries(
+	dir: string,
+	options?: OkfFolderWalkOptions,
+): Promise<OkfFolderWalkEntry[]> {
+	const files = await walk(dir, options);
+	const entries: OkfFolderWalkEntry[] = [];
+	for (const absolute of files) {
+		try {
+			const statResult = await stat(absolute);
+			if (statResult.size > OKF_MAX_EXTRACT_BYTES) {
+				// biome-ignore lint/suspicious/noConsole: server-side warning surfaced to ops
+				console.warn(
+					`[workspace/okf] skipping ${absolute}: ${statResult.size} bytes exceeds OKF_MAX_EXTRACT_BYTES (${OKF_MAX_EXTRACT_BYTES})`,
+				);
+				continue;
+			}
+			const canonicalKey = relative(dir, absolute).split(sep).join("/");
+			entries.push({ absolute, canonicalKey, size: statResult.size, mtimeMs: statResult.mtimeMs });
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: server-side warning surfaced to ops
+			console.warn(`[workspace/okf] failed to stat ${absolute}:`, error);
+		}
+	}
+	return entries;
 }
 
 /**
@@ -161,26 +217,25 @@ export async function listOkfFolderResources(
 	dir: string,
 	options?: OkfFolderWalkOptions,
 ): Promise<OkfFolderResource[]> {
-	const files = await walk(dir, options);
+	const entries = await walkOkfFolderEntries(dir, options);
 	const results: OkfFolderResource[] = [];
-	for (const absolute of files) {
+	for (const entry of entries) {
 		try {
-			const extracted = await extractText(absolute);
-			const ext = extname(absolute).toLowerCase();
-			const canonical = relative(dir, absolute).split(sep).join("/");
-			const statResult = await stat(absolute);
+			const extracted = await extractText(entry.absolute);
+			const ext = extname(entry.absolute).toLowerCase();
 			const resourceType = ext === ".md" || ext === ".markdown" ? "note" : resourceTypeForExtension(ext);
 			results.push({
-				canonical_key: canonical,
-				absolute_path: absolute,
-				title: canonical.replace(/\.[^.]+$/, ""),
+				canonical_key: entry.canonicalKey,
+				absolute_path: entry.absolute,
+				title: entry.canonicalKey.replace(/\.[^.]+$/, ""),
 				resource_type: resourceType,
 				body: extracted.text,
-				size_bytes: statResult.size,
+				size_bytes: entry.size,
+				source_mtime: entry.mtimeMs,
 			});
 		} catch (error) {
 			// biome-ignore lint/suspicious/noConsole: server-side warning surfaced to ops
-			console.warn(`[workspace/okf] failed to read ${absolute}:`, error);
+			console.warn(`[workspace/okf] failed to read ${entry.absolute}:`, error);
 		}
 	}
 	return results;
@@ -192,6 +247,17 @@ export async function listOkfFolderResources(
  *
  * The job id is created up-front so the embedding queue can attach
  * completion / failure to it.
+ *
+ * Reconcile fast path: files whose stored `source_mtime` + `size_bytes`
+ * match the on-disk stat skip `extractText` entirely — the previous
+ * implementation re-extracted every file on every reconcile, which made
+ * boot reconcile of large folders (thousands of files / hundreds of MB)
+ * dominate startup. An mtime+size hit is trusted the way git / rsync
+ * trust it: a content edit that deliberately preserves both (e.g.
+ * same-length rewrite with a reset mtime) is NOT detected until the
+ * file's mtime or size changes. Live watcher writes still go through
+ * per-file sha256 dedup in `indexResource`, so their semantics are
+ * unchanged.
  */
 export async function indexOkfFolder(
 	store: SqliteWorkspaceStore,
@@ -204,20 +270,64 @@ export async function indexOkfFolder(
 		ignoreDirNames?: ReadonlySet<string>;
 	},
 ): Promise<UpdateWorkspaceContextResult> {
-	const resources = await listOkfFolderResources(input.path, {
+	const entries = await walkOkfFolderEntries(input.path, {
 		ignoreDirNames: input.ignoreDirNames,
 	});
-	const job = store.createJob({ workspace_id: input.workspace_id, kind: "index", total: resources.length });
-	store.updateJobTotal(job.id, resources.length);
+	const freshness = store.getOkfSourceFreshness({ workspace_id: input.workspace_id });
 
 	const presentKeys = new Set<string>();
 	let filesAdded = 0;
 	let filesModified = 0;
 	let filesUnchanged = 0;
 
+	// Fast-path split: entries whose canonical key, size, and mtime all
+	// match the store are known-unchanged — count them, mark them present,
+	// and skip extraction + indexing + embedding enqueue. Soft-deleted
+	// rows are absent from the freshness map (see getOkfSourceFreshness),
+	// so a file that returns after being deleted always takes the full
+	// path and gets resurrected by indexResource.
+	const toIndex: OkfFolderWalkEntry[] = [];
+	for (const entry of entries) {
+		const fresh = freshness.get(entry.canonicalKey);
+		if (fresh && fresh.size_bytes === entry.size && fresh.source_mtime === entry.mtimeMs) {
+			filesUnchanged += 1;
+			presentKeys.add(entry.canonicalKey);
+			continue;
+		}
+		toIndex.push(entry);
+	}
+
+	const job = store.createJob({ workspace_id: input.workspace_id, kind: "index", total: toIndex.length });
+
 	const indexedIds: Array<{ resource_id: number; version_id: number; canonical_key: string }> = [];
 
-	for (const resource of resources) {
+	// Map of canonical_key → extracted body for non-.md files so we
+	// can mine markdown links from extracted text. (.md files are
+	// already covered by buildGraphFromDir below.) Only newly extracted
+	// bodies appear here: fast-path files are unchanged by definition,
+	// so their mined edges are already persisted from an earlier run.
+	const bodyByCanonical = new Map<string, string>();
+
+	let indexedCount = 0;
+	for (const entry of toIndex) {
+		let body: string;
+		try {
+			body = (await extractText(entry.absolute)).text;
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: server-side warning surfaced to ops
+			console.warn(`[workspace/okf] failed to read ${entry.absolute}:`, error);
+			continue;
+		}
+		const ext = extname(entry.absolute).toLowerCase();
+		const resource: OkfFolderResource = {
+			canonical_key: entry.canonicalKey,
+			absolute_path: entry.absolute,
+			title: entry.canonicalKey.replace(/\.[^.]+$/, ""),
+			resource_type: ext === ".md" || ext === ".markdown" ? "note" : resourceTypeForExtension(ext),
+			body,
+			size_bytes: entry.size,
+			source_mtime: entry.mtimeMs,
+		};
 		presentKeys.add(resource.canonical_key);
 		const result = await store.indexResource({
 			workspace_id: input.workspace_id,
@@ -232,12 +342,18 @@ export async function indexOkfFolder(
 		if (result.change_kind === "created") filesAdded += 1;
 		else if (result.change_kind === "modified") filesModified += 1;
 		else filesUnchanged += 1;
+		indexedCount += 1;
 		await input.enqueueEmbedding({
 			resource_id: result.resource_id,
 			version_id: result.version_id,
 			jobId: job.id,
 		});
+		if (ext !== ".md") bodyByCanonical.set(resource.canonical_key, body);
 	}
+	// Extraction failures above never reach indexResource, so the job
+	// total tracks successfully indexed files (matches pre-fast-path
+	// semantics where listOkfFolderResources had already swallowed them).
+	store.updateJobTotal(job.id, indexedCount);
 
 	// Edge pass: rebuild cites edges from BOTH the on-disk markdown
 	// graph (via buildGraphFromDir) AND from markdown links inside
@@ -250,20 +366,18 @@ export async function indexOkfFolder(
 		console.warn(`[workspace/okf] buildGraphFromDir failed for ${input.path}:`, error);
 		graph = { nodes: [], edges: [], types: [], generatedAt: new Date().toISOString(), root: input.path };
 	}
+	// Resource ids for edge endpoints come from BOTH the freshness map
+	// (fast-path files) and this run's indexResource results — an
+	// unchanged .md file's outgoing links must still resolve.
 	const idByCanonical = new Map<string, number>();
+	for (const entry of entries) {
+		const fresh = freshness.get(entry.canonicalKey);
+		if (fresh) idByCanonical.set(entry.canonicalKey, fresh.resource_id);
+	}
 	const canonicalByResourceId = new Map<number, string>();
 	for (const indexed of indexedIds) {
 		idByCanonical.set(indexed.canonical_key, indexed.resource_id);
 		canonicalByResourceId.set(indexed.resource_id, indexed.canonical_key);
-	}
-
-	// Map of canonical_key → extracted body for non-.md files so we
-	// can mine markdown links from extracted text. (.md files are
-	// already covered by buildGraphFromDir above.)
-	const bodyByCanonical = new Map<string, string>();
-	for (const resource of resources) {
-		if (extname(resource.canonical_key).toLowerCase() === ".md") continue;
-		bodyByCanonical.set(resource.canonical_key, resource.body);
 	}
 
 	const wikiEdges: Array<{
@@ -355,7 +469,7 @@ export async function indexOkfFolder(
 		jobId: job.id,
 		triggered: true,
 		status: "pending",
-		filesScanned: resources.length,
+		filesScanned: entries.length,
 		filesAdded,
 		filesModified,
 		filesUnchanged,

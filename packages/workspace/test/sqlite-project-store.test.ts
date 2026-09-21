@@ -236,4 +236,88 @@ describe("SqliteWorkspaceStore", () => {
 		await expect(second.init()).resolves.toBeUndefined();
 		await second.close();
 	});
+
+	it("persists source_mtime across created / modified / unchanged indexResource branches", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const readMeta = (resourceId: number): Record<string, unknown> => {
+			const row = store.__testDb
+				.prepare("SELECT metadata FROM workspace_resources WHERE id = ?")
+				.get(resourceId) as { metadata: string | null };
+			return JSON.parse(row.metadata ?? "{}") as Record<string, unknown>;
+		};
+
+		// Created branch: source_mtime rides the insert alongside front_matter.
+		const first = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({
+				canonical_key: "docs/a.md",
+				body: "alpha",
+				source_mtime: 111,
+				front_matter: { type: "Reference" },
+			}),
+		});
+		expect(readMeta(first.resource_id)).toEqual({ type: "Reference", source_mtime: 111 });
+
+		// Modified branch: marker re-stamped, pre-existing metadata keys kept.
+		const second = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha v2", source_mtime: 222 }),
+		});
+		expect(second.change_kind).toBe("modified");
+		expect(readMeta(second.resource_id)).toEqual({ type: "Reference", source_mtime: 222 });
+
+		// Unchanged branch: marker refreshed even though the body sha matches.
+		const third = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha v2", source_mtime: 333 }),
+		});
+		expect(third.change_kind).toBe("unchanged");
+		expect(readMeta(third.resource_id)).toEqual({ type: "Reference", source_mtime: 333 });
+
+		// Callers that don't pass source_mtime leave metadata untouched.
+		const other = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/b.md", body: "bravo" }),
+		});
+		expect(readMeta(other.resource_id)).toEqual({});
+		await store.close();
+	});
+
+	it("getOkfSourceFreshness returns stamped rows and excludes soft-deleted / unstamped rows", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const a = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha", source_mtime: 1000 }),
+		});
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/b.md", body: "bravo", source_mtime: 2000 }),
+		});
+		// No source_mtime marker → never eligible for the fast path.
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/c.md", body: "charlie" }),
+		});
+		store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/b.md" });
+
+		const freshness = store.getOkfSourceFreshness({ workspace_id: "p1" });
+		expect(freshness.size).toBe(1);
+		expect(freshness.get("docs/a.md")).toEqual({
+			resource_id: a.resource_id,
+			size_bytes: "alpha".length,
+			source_mtime: 1000,
+		});
+		expect(freshness.has("docs/b.md")).toBe(false);
+		expect(freshness.has("docs/c.md")).toBe(false);
+		await store.close();
+	});
 });
