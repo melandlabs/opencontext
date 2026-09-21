@@ -163,4 +163,61 @@ describe("indexOkfFolder", () => {
 		expect(typeof meta.deleted_at).toBe("number");
 		await store.close();
 	});
+
+	it("skips dot-directories and dependency dirs during the walk", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "visible.md", "hello");
+		writeFile(okfRoot, "deep/nested/visible2.md", "hello too");
+		writeFile(okfRoot, "node_modules/pkg/README.md", "noise");
+		writeFile(okfRoot, ".hidden/secret.md", "noise");
+		writeFile(okfRoot, "venv/notes.md", "noise");
+		writeFile(okfRoot, "__pycache__/cache.md", "noise");
+
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const result = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+		});
+		expect(result.filesScanned).toBe(2);
+		expect(result.filesAdded).toBe(2);
+		const listed = store.listResources({ workspace_id: "p1", limit: 50 });
+		expect(listed.resources.map((resource) => resource.canonical_key).sort()).toEqual([
+			"deep/nested/visible2.md",
+			"visible.md",
+		]);
+		await store.close();
+	});
+
+	it("honours extra ignoreDirNames on top of the defaults", async () => {
+		const okfRoot = join(scratchDir, "wiki");
+		mkdirSync(okfRoot, { recursive: true });
+		writeFile(okfRoot, "keep.md", "keep");
+		writeFile(okfRoot, "build/out.md", "generated noise");
+
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const result = await indexOkfFolder(store, {
+			workspace_id: "p1",
+			user_id: "u1",
+			path: okfRoot,
+			enqueueEmbedding: async () => {},
+			ignoreDirNames: new Set(["build"]),
+		});
+		expect(result.filesScanned).toBe(1);
+		expect(result.filesAdded).toBe(1);
+		await store.close();
+	});
+
+	it("exposes SUPPORTED_EXTENSIONS / resourceTypeForExtension / DEFAULT_IGNORED_DIR_NAMES from the barrel", async () => {
+		const barrel = await import("../src/index");
+		expect(barrel.SUPPORTED_EXTENSIONS.has(".md")).toBe(true);
+		expect(barrel.SUPPORTED_EXTENSIONS.has(".doc")).toBe(false);
+		expect(barrel.resourceTypeForExtension(".xlsx")).toBe("spreadsheet");
+		expect(barrel.resourceTypeForExtension(".docx")).toBe("document");
+		expect(barrel.DEFAULT_IGNORED_DIR_NAMES.has("node_modules")).toBe(true);
+	});
 });

@@ -28,7 +28,14 @@ export type {
 	CrossLayerResolvedCitation,
 } from "./api";
 
-export { indexOkfFolder, listOkfFolderResources } from "./okf-backend";
+export {
+	SUPPORTED_EXTENSIONS,
+	DEFAULT_IGNORED_DIR_NAMES,
+	resourceTypeForExtension,
+	indexOkfFolder,
+	listOkfFolderResources,
+} from "./okf-backend";
+export type { OkfFolderWalkOptions } from "./okf-backend";
 export {
 	detectMimeType,
 	extractText,

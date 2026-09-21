@@ -147,6 +147,86 @@ describe("SqliteWorkspaceStore", () => {
 		await store.close();
 	});
 
+	it("softDeleteResource hides one resource from list and search, idempotently", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha keep" }),
+		});
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/b.md", body: "bravo drop" }),
+		});
+
+		const first = store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/b.md" });
+		expect(first.deleted).toBe(true);
+		expect(first.resource_id).not.toBeNull();
+		const again = store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/b.md" });
+		expect(again.deleted).toBe(false);
+		expect(again.resource_id).toBe(first.resource_id);
+		expect(store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/nope.md" })).toEqual({
+			deleted: false,
+			resource_id: null,
+		});
+
+		const listed = store.listResources({ workspace_id: "p1", limit: 50 });
+		expect(listed.resources.map((resource) => resource.canonical_key)).toEqual(["docs/a.md"]);
+
+		const hits = store.searchLexical({ workspace_id: "p1", user_id: "u1", query: "bravo", limit: 10 });
+		expect(hits).toEqual([]);
+		await store.close();
+	});
+
+	it("indexResource resurrects a soft-deleted resource without a body change", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		const first = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha body" }),
+		});
+		store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/a.md" });
+		expect(store.listResources({ workspace_id: "p1", limit: 50 }).resources).toHaveLength(0);
+
+		const second = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha body" }),
+		});
+		expect(second.change_kind).toBe("unchanged");
+		expect(second.version_id).toBe(first.version_id);
+
+		const listed = store.listResources({ workspace_id: "p1", limit: 50 });
+		expect(listed.resources.map((resource) => resource.canonical_key)).toEqual(["docs/a.md"]);
+		const hits = store.searchLexical({ workspace_id: "p1", user_id: "u1", query: "alpha", limit: 10 });
+		expect(hits.length).toBeGreaterThan(0);
+		await store.close();
+	});
+
+	it("indexResource resurrects a soft-deleted resource whose body changed", async () => {
+		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		await store.init();
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha v1" }),
+		});
+		store.softDeleteResource({ workspace_id: "p1", canonical_key: "docs/a.md" });
+
+		const second = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha v2" }),
+		});
+		expect(second.change_kind).toBe("modified");
+		const listed = store.listResources({ workspace_id: "p1", limit: 50 });
+		expect(listed.resources.map((resource) => resource.canonical_key)).toEqual(["docs/a.md"]);
+		await store.close();
+	});
+
 	it("reuses init() safely across multiple new instances on the same DB", async () => {
 		const dbPath = join(scratchDir, "store.db");
 		const first = new SqliteWorkspaceStore({ dbPath });
