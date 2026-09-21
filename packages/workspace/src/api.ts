@@ -57,6 +57,7 @@ export async function updateWorkspaceContext(
 		user_id: ctx_rt.user_id,
 		path: input.path,
 		enqueueEmbedding,
+		ignoreDirNames: input.ignoreDirNames,
 	});
 }
 

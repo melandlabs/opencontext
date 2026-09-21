@@ -47,7 +47,13 @@ function extractMarkdownLinksFromText(
 	return links;
 }
 
-const SUPPORTED_EXTENSIONS = new Set([
+/**
+ * File extensions the bulk folder walk indexes. Exported so live
+ * watchers (e.g. alloomi's project watcher) can gate on exactly the set
+ * the walk will reconcile against — a file the walk never sees is
+ * soft-deleted at the next reconcile's present-key check.
+ */
+export const SUPPORTED_EXTENSIONS: ReadonlySet<string> = new Set([
 	".md",
 	".markdown",
 	".txt",
@@ -63,7 +69,33 @@ const SUPPORTED_EXTENSIONS = new Set([
 	".keynote",
 ]);
 
-async function walk(dir: string): Promise<string[]> {
+/**
+ * Non-hidden directory names the bulk walk never descends into —
+ * dependency / cache trees whose text files (README.md, LICENSE.txt, …)
+ * would otherwise drown the workspace index in noise.
+ */
+export const DEFAULT_IGNORED_DIR_NAMES: ReadonlySet<string> = new Set([
+	"node_modules",
+	"__pycache__",
+	"venv",
+]);
+
+export interface OkfFolderWalkOptions {
+	/**
+	 * Extra directory names to skip at every level, on top of the
+	 * dot-directory rule (always applied) and
+	 * {@link DEFAULT_IGNORED_DIR_NAMES}.
+	 */
+	ignoreDirNames?: ReadonlySet<string>;
+}
+
+function isSkippedWalkDir(name: string, options?: OkfFolderWalkOptions): boolean {
+	if (name.startsWith(".")) return true;
+	if (DEFAULT_IGNORED_DIR_NAMES.has(name)) return true;
+	return options?.ignoreDirNames?.has(name) ?? false;
+}
+
+async function walk(dir: string, options?: OkfFolderWalkOptions): Promise<string[]> {
 	const out: string[] = [];
 	const stack = [dir];
 	while (stack.length > 0) {
@@ -78,7 +110,7 @@ async function walk(dir: string): Promise<string[]> {
 		for (const entry of entries) {
 			const full = join(head, entry.name);
 			if (entry.isDirectory()) {
-				stack.push(full);
+				if (!isSkippedWalkDir(entry.name, options)) stack.push(full);
 			} else if (entry.isFile() && SUPPORTED_EXTENSIONS.has(extname(entry.name).toLowerCase())) {
 				out.push(full);
 			}
@@ -87,7 +119,12 @@ async function walk(dir: string): Promise<string[]> {
 	return out;
 }
 
-function resourceTypeForExtension(ext: string): string {
+/**
+ * Resource-type tag stamped onto `workspace_resources.resource_type`,
+ * keyed by lower-cased extension. Exported so live watchers stamp the
+ * same vocabulary the bulk walk writes.
+ */
+export function resourceTypeForExtension(ext: string): string {
 	switch (ext) {
 		case ".md":
 		case ".markdown":
@@ -116,10 +153,15 @@ function resourceTypeForExtension(ext: string): string {
  * List every supported file under `dir`, parse it, and return the
  * `OkfFolderResource[]` shape that `indexResource` consumes. Errors
  * per-file are swallowed (logged via stderr) so one broken file doesn't
- * abort the whole scan.
+ * abort the whole scan. Dot-directories, dependency dirs
+ * ({@link DEFAULT_IGNORED_DIR_NAMES}), and any `ignoreDirNames` are not
+ * descended into.
  */
-export async function listOkfFolderResources(dir: string): Promise<OkfFolderResource[]> {
-	const files = await walk(dir);
+export async function listOkfFolderResources(
+	dir: string,
+	options?: OkfFolderWalkOptions,
+): Promise<OkfFolderResource[]> {
+	const files = await walk(dir, options);
 	const results: OkfFolderResource[] = [];
 	for (const absolute of files) {
 		try {
@@ -158,9 +200,13 @@ export async function indexOkfFolder(
 		user_id: string;
 		path: string;
 		enqueueEmbedding: (input: { resource_id: number; version_id: number; jobId?: number }) => Promise<void>;
+		/** Extra directory names for the walk to skip (see {@link OkfFolderWalkOptions}). */
+		ignoreDirNames?: ReadonlySet<string>;
 	},
 ): Promise<UpdateWorkspaceContextResult> {
-	const resources = await listOkfFolderResources(input.path);
+	const resources = await listOkfFolderResources(input.path, {
+		ignoreDirNames: input.ignoreDirNames,
+	});
 	const job = store.createJob({ workspace_id: input.workspace_id, kind: "index", total: resources.length });
 	store.updateJobTotal(job.id, resources.length);
 

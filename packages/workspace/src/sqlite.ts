@@ -311,6 +311,17 @@ export interface ISqliteWorkspaceStore {
 		presentKeys: Set<string>;
 	}): Array<{ canonical_key: string }>;
 
+	/**
+	 * Soft-delete a single resource by canonical key. Idempotent: returns
+	 * `deleted: false` when the resource is missing or already marked.
+	 * Live watchers (e.g. file-unlink mirroring) use this to drop one
+	 * file from list/search results between bulk reconciles.
+	 */
+	softDeleteResource(input: {
+		workspace_id: string;
+		canonical_key: string;
+	}): { deleted: boolean; resource_id: number | null };
+
 	listResources(input: ListWorkspaceResourcesInput): ListWorkspaceResourcesResult;
 
 	searchLexical(input: {
@@ -679,6 +690,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 						.get(currentVersionId) as { sha256: string } | undefined;
 					if (prevVersion?.sha256 === contentHash) {
 						changeKind = "unchanged";
+						// A resource that was soft-deleted while its file was
+						// away must become visible again even though the body
+						// did not change.
+						this.clearSoftDeleteMarker(resourceId);
 						// Touch updated_at so the resource stays "fresh" without
 						// re-indexing — callers may want to detect staleness
 						// via `updated_at` vs. `current_version_id.created_at`.
@@ -749,6 +764,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					pieceHash,
 				);
 			}
+
+			// Re-indexing a soft-deleted resource (file came back with a new
+			// body) restores it to list/search results.
+			this.clearSoftDeleteMarker(resourceId);
 
 			this.db
 				.prepare(
@@ -1246,7 +1265,9 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	// -------------------------------------------------------------------------
 
 	listResources(input: ListWorkspaceResourcesInput): ListWorkspaceResourcesResult {
-		const where: string[] = ["workspace_id = ?"];
+		// Soft-deleted resources (deleted_at marker in metadata) stay in
+		// the table for audit / resurrection, but are invisible here.
+		const where: string[] = ["workspace_id = ?", "json_extract(metadata, '$.deleted_at') IS NULL"];
 		const params: Array<string | number> = [input.workspace_id];
 		if (input.resource_type) {
 			where.push("resource_type = ?");
@@ -1322,6 +1343,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
             JOIN workspace_resources pr ON pr.id = pc.resource_id
             WHERE workspace_chunks_fts MATCH ?
               AND pc.workspace_id = ?
+              AND json_extract(pr.metadata, '$.deleted_at') IS NULL
               ${resourceTypeFilter}
             ORDER BY bm25_score ASC
             LIMIT ?
@@ -1432,6 +1454,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                      JOIN workspace_resources pr ON pr.id = pc.resource_id
                      WHERE pc.workspace_id = ?
                        AND pc.chunk_id IN (${vecRows.map(() => "?").join(",")})
+                       AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                        ${resourceTypeFilter}
                      ORDER BY pc.id ASC
                      LIMIT ?`,
@@ -1622,6 +1645,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                          FROM workspace_chunks pc
                          JOIN workspace_resources pr ON pr.id = pc.resource_id
                          WHERE pc.resource_id = ?
+                         AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                          ORDER BY pc.chunk_index ASC
                          LIMIT 1`,
 					)
@@ -1785,6 +1809,43 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			missing.push({ canonical_key: row.canonical_key });
 		}
 		return missing;
+	}
+
+	softDeleteResource(input: {
+		workspace_id: string;
+		canonical_key: string;
+	}): { deleted: boolean; resource_id: number | null } {
+		const row = this.db
+			.prepare("SELECT id, metadata FROM workspace_resources WHERE workspace_id = ? AND canonical_key = ?")
+			.get(input.workspace_id, input.canonical_key) as { id: number; metadata: string | null } | undefined;
+		if (!row) return { deleted: false, resource_id: null };
+		const meta = parseJson<Record<string, unknown>>(row.metadata, {}) ?? {};
+		if (meta.deleted_at) return { deleted: false, resource_id: row.id };
+		const now = currentUnixSeconds();
+		meta.deleted_at = now;
+		this.db
+			.prepare("UPDATE workspace_resources SET metadata = ?, updated_at = ? WHERE id = ?")
+			.run(stringifyJson(meta), now, row.id);
+		return { deleted: true, resource_id: row.id };
+	}
+
+	/**
+	 * Drop the `deleted_at` marker from a resource's metadata, if present.
+	 * No-op when the resource is missing or not marked, so the hot
+	 * `indexResource` paths can call it unconditionally. `updated_at` is
+	 * left to the caller's own UPDATE.
+	 */
+	private clearSoftDeleteMarker(resourceId: number): void {
+		const row = this.db.prepare("SELECT metadata FROM workspace_resources WHERE id = ?").get(resourceId) as
+			| { metadata: string | null }
+			| undefined;
+		if (!row) return;
+		const meta = parseJson<Record<string, unknown>>(row.metadata, {}) ?? {};
+		if (!meta.deleted_at) return;
+		const { deleted_at: _removed, ...rest } = meta;
+		this.db
+			.prepare("UPDATE workspace_resources SET metadata = ? WHERE id = ?")
+			.run(stringifyJson(rest), resourceId);
 	}
 
 	// -------------------------------------------------------------------------

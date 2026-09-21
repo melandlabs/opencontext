@@ -191,6 +191,8 @@ export interface UpdateWorkspaceContextInput {
 	source: "okf_folder";
 	path: string;
 	metadata?: Record<string, unknown>;
+	/** Extra directory names the folder walk skips (see `OkfFolderWalkOptions`). */
+	ignoreDirNames?: ReadonlySet<string>;
 }
 
 export interface UpdateWorkspaceContextResult {
