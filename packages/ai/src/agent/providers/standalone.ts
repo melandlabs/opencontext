@@ -22,7 +22,6 @@
  * ```
  */
 
-import type { ModelMessage } from "ai";
 import { generateText } from "ai";
 
 import { isContextOverflowError } from "../compaction/overflow";
@@ -38,6 +37,7 @@ import {
 	defineAgentPlugin,
 } from "../index";
 
+import { buildConversationMessages } from "./_internal/standalone-images";
 import { createStandaloneModel } from "./_internal/standalone-model";
 
 /**
@@ -100,20 +100,16 @@ export class StandaloneAgent extends BaseAgent {
 		// Claude provider applies to these two fields.
 		const system = options?.systemPrompt ?? options?.aiSoulPrompt ?? undefined;
 
-		// TODO: map `ConversationMessage.imagePaths` to AI SDK image parts so
-		// multimodal single-turn calls (e.g. screenshot analysis) work
-		// through the standalone provider. Out of scope for this change —
-		// the alloomi-side mirror (`PlatformStandaloneAgent`) currently
-		// bypasses StandaloneAgent for multimodal calls via `userContent`.
-		const messages: ModelMessage[] = [
-			...(options?.conversation ?? []).map((m) => ({
-				role: m.role,
-				content: m.content,
-			})),
-			{ role: "user", content: prompt },
-		];
-
 		try {
+			// `buildConversationMessages` reads `ConversationMessage.imagePaths`
+			// from disk and emits multimodal `UserContent` arrays for user-role
+			// entries that carry attachments. Non-user roles and user messages
+			// without `imagePaths` keep the legacy `{ role, content: string }`
+			// shape so the rest of the agent stays string-typed. Reading
+			// failures (missing file, unsupported extension, etc.) flow through
+			// the existing error path below as `upstream_error` AgentMessages.
+			const messages = await buildConversationMessages(options?.conversation, prompt);
+
 			// `createStandaloneModel` throws when `apiKey` / `baseUrl` are
 			// missing — sitting it inside the try block lets the existing
 			// error path below surface the message to the caller as an

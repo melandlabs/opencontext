@@ -11,8 +11,8 @@
  *
  * When the host supplies both credentials, those win over `process.env`
  * and the global user-context bag — this is the env-priority fix that lets
- * downstream hosts (e.g. alloomi's `PlatformStandaloneAgent`) pin per-
- * request credentials without having to fork the agent.
+ * downstream hosts pin per-request credentials without having to fork the
+ * agent.
  *
  * Two wire protocols are supported:
  *

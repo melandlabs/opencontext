@@ -1,12 +1,13 @@
 /**
  * Unit tests for `StandaloneAgent.runCore` and its underlying
- * `createStandaloneModel` helper.
+ * `createStandaloneModel` / `readImageParts` helpers.
  *
  * The plan: pin `createStandaloneModel`'s env-priority semantics (explicit
  * credentials win over process env) and the new option-forwarding surface
- * (`systemPrompt` / `aiSoulPrompt`, `conversation`, `extraHeaders`) on the
- * upstream `StandaloneAgent` so the alloomi-side mirror can be deleted in a
- * follow-up.
+ * (`systemPrompt` / `aiSoulPrompt`, `conversation`, `extraHeaders`,
+ * `imagePaths`) on the upstream `StandaloneAgent` so downstream consumers can
+ * pin credentials, headers, and multimodal attachments without forking the
+ * agent locally.
  *
  * Mocking pattern mirrors `providers/claude/index.test.ts`: hoisted
  * `vi.hoisted` factories let `vi.mock("ai", ...)` and
@@ -23,6 +24,7 @@ const createOpenAICompatibleMock = vi.hoisted(() => vi.fn());
 const languageModelMock = vi.hoisted(() => vi.fn());
 const chatModelMock = vi.hoisted(() => vi.fn());
 const createDynamicModelMock = vi.hoisted(() => vi.fn());
+const readFileMock = vi.hoisted(() => vi.fn());
 
 vi.mock("ai", () => ({
 	generateText: generateTextMock,
@@ -43,6 +45,10 @@ vi.mock("../model/providers", async () => {
 		createDynamicModel: createDynamicModelMock,
 	};
 });
+
+vi.mock("node:fs/promises", () => ({
+	readFile: readFileMock,
+}));
 
 import { createStandaloneModel } from "./_internal/standalone-model";
 import { createStandaloneAgent } from "./standalone";
@@ -83,6 +89,7 @@ beforeEach(() => {
 	languageModelMock.mockReset();
 	chatModelMock.mockReset();
 	createDynamicModelMock.mockReset();
+	readFileMock.mockReset();
 
 	// `createAnthropic(...).languageModel(...)` is what the production code
 	// chains when explicit credentials + anthropic_compatible are present.
@@ -536,12 +543,12 @@ describe("StandaloneAgent.run", () => {
 
 	it("forwards options.extraHeaders as headers on generateText", async () => {
 		const agent = createStandaloneAgent(makeConfig());
-		await collectMessages(agent.run("hi", { extraHeaders: { "x-alloomi-run-id": "abc-123" } }));
+		await collectMessages(agent.run("hi", { extraHeaders: { "x-trace-id": "abc-123" } }));
 
 		const call = generateTextMock.mock.calls[0]?.[0] as {
 			headers?: Record<string, string>;
 		};
-		expect(call.headers).toEqual({ "x-alloomi-run-id": "abc-123" });
+		expect(call.headers).toEqual({ "x-trace-id": "abc-123" });
 	});
 
 	it("omits the headers key when extraHeaders is not supplied", async () => {
@@ -602,5 +609,215 @@ describe("StandaloneAgent.run", () => {
 				}),
 			]),
 		);
+	});
+
+	describe("imagePaths", () => {
+		function stubRead(files: Record<string, Uint8Array | string>): void {
+			readFileMock.mockImplementation(async (filePath: string) => {
+				const value = files[filePath];
+				if (value === undefined) {
+					throw new Error(`ENOENT: no such file '${filePath}'`);
+				}
+				return typeof value === "string" ? new TextEncoder().encode(value) : value;
+			});
+		}
+
+		it("reads a single png attachment and emits a multimodal user message", async () => {
+			const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+			stubRead({ "/tmp/cat.png": pngBytes });
+
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("describe", {
+					conversation: [
+						{
+							role: "user",
+							content: "what is in this image?",
+							imagePaths: ["/tmp/cat.png"],
+						},
+					],
+				}),
+			);
+
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{
+					role: string;
+					content: string | Array<{ type: string; text?: string; image?: string; mediaType?: string }>;
+				}>;
+			};
+			expect(call.messages).toEqual([
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "what is in this image?" },
+						{
+							type: "image",
+							image: Buffer.from(pngBytes).toString("base64"),
+							mediaType: "image/png",
+						},
+					],
+				},
+				{ role: "user", content: "describe" },
+			]);
+		});
+
+		it("supports multiple image attachments per message in path order", async () => {
+			const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+			const jpegBytes = new Uint8Array([0xff, 0xd8, 0xff]);
+			stubRead({
+				"/tmp/a.png": pngBytes,
+				"/tmp/b.jpg": jpegBytes,
+			});
+
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("describe both", {
+					conversation: [{ role: "user", content: "look", imagePaths: ["/tmp/a.png", "/tmp/b.jpg"] }],
+				}),
+			);
+
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{
+					content: Array<{ type: string; mediaType?: string }>;
+				}>;
+			};
+			expect(call.messages[0]?.content.map((m) => m.type)).toEqual(["text", "image", "image"]);
+			expect(call.messages[0]?.content[1]?.mediaType).toBe("image/png");
+			expect(call.messages[0]?.content[2]?.mediaType).toBe("image/jpeg");
+		});
+
+		it("keeps plain string content for messages without imagePaths", async () => {
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("ok", {
+					conversation: [
+						{ role: "user", content: "earlier" },
+						{ role: "assistant", content: "earlier reply" },
+						{ role: "user", content: "later" },
+					],
+				}),
+			);
+
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{ role: string; content: unknown }>;
+			};
+			expect(call.messages).toEqual([
+				{ role: "user", content: "earlier" },
+				{ role: "assistant", content: "earlier reply" },
+				{ role: "user", content: "later" },
+				{ role: "user", content: "ok" },
+			]);
+		});
+
+		it("silently drops whitespace-only imagePaths entries and falls back to plain string content", async () => {
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("hi", {
+					conversation: [{ role: "user", content: "see", imagePaths: ["   "] }],
+				}),
+			);
+
+			expect(readFileMock).not.toHaveBeenCalled();
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{ role: string; content: unknown }>;
+			};
+			expect(call.messages).toEqual([
+				{ role: "user", content: "see" },
+				{ role: "user", content: "hi" },
+			]);
+		});
+
+		it("rejects unsupported extensions with an upstream_error", async () => {
+			const agent = createStandaloneAgent(makeConfig());
+			const messages = await collectMessages(
+				agent.run("hi", {
+					conversation: [{ role: "user", content: "see", imagePaths: ["/tmp/photo.bmp"] }],
+				}),
+			);
+
+			expect(generateTextMock).not.toHaveBeenCalled();
+			expect(messages).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "error",
+						kind: {
+							kind: "upstream_error",
+							message: expect.stringMatching(/unsupported image extension/),
+						},
+					}),
+				]),
+			);
+		});
+
+		it("rejects missing files with an upstream_error", async () => {
+			readFileMock.mockRejectedValue(new Error("ENOENT: no such file"));
+
+			const agent = createStandaloneAgent(makeConfig());
+			const messages = await collectMessages(
+				agent.run("hi", {
+					conversation: [{ role: "user", content: "see", imagePaths: ["/tmp/does-not-exist.png"] }],
+				}),
+			);
+
+			expect(generateTextMock).not.toHaveBeenCalled();
+			expect(messages).toEqual(
+				expect.arrayContaining([
+					expect.objectContaining({
+						type: "error",
+						kind: {
+							kind: "upstream_error",
+							message: expect.stringMatching(/failed to read image/),
+						},
+					}),
+				]),
+			);
+		});
+
+		it("skips whitespace-only imagePaths entries when other paths are valid", async () => {
+			const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+			stubRead({ "/tmp/cat.png": pngBytes });
+
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("describe", {
+					conversation: [{ role: "user", content: "see", imagePaths: ["   ", "/tmp/cat.png"] }],
+				}),
+			);
+
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{ content: Array<{ type: string }> }>;
+			};
+			// One text + one image — the blank path is filtered out before
+			// hitting `readImageParts`.
+			expect(call.messages[0]?.content).toHaveLength(2);
+			expect(call.messages[0]?.content.map((m) => m.type)).toEqual(["text", "image"]);
+		});
+
+		it("keeps assistant and system messages as plain string content", async () => {
+			const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+			stubRead({ "/tmp/cat.png": pngBytes });
+
+			const agent = createStandaloneAgent(makeConfig());
+			await collectMessages(
+				agent.run("describe", {
+					conversation: [
+						{ role: "system", content: "you are a helpful assistant" },
+						{ role: "user", content: "see", imagePaths: ["/tmp/cat.png"] },
+						{ role: "assistant", content: "i see" },
+					],
+				}),
+			);
+
+			const call = generateTextMock.mock.calls[0]?.[0] as {
+				messages: Array<{ role: string; content: unknown }>;
+			};
+			expect(call.messages[0]).toEqual({
+				role: "system",
+				content: "you are a helpful assistant",
+			});
+			expect(call.messages[1]?.role).toBe("user");
+			expect(Array.isArray(call.messages[1]?.content)).toBe(true);
+			expect(call.messages[2]).toEqual({ role: "assistant", content: "i see" });
+		});
 	});
 });
