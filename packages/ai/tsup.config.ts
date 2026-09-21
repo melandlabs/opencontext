@@ -39,6 +39,8 @@ export default defineConfig({
 		// provider implementations live under providers/ in source
 		"agent/providers/standalone": "src/agent/providers/standalone.ts",
 		"agent/providers/standalone-plugin": "src/agent/providers/standalone.ts",
+		"agent/providers/standalone-model": "src/agent/providers/_internal/standalone-model.ts",
+		"agent/providers/standalone-images": "src/agent/providers/_internal/standalone-images.ts",
 		"agent/providers/cli-process": "src/agent/providers/_internal/cli-process.ts",
 		"agent/providers/prompt-context": "src/agent/providers/_internal/prompt-context.ts",
 		"agent/providers/claude/cli-locations": "src/agent/providers/claude/cli-locations.ts",

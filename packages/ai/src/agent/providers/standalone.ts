@@ -24,6 +24,7 @@
 
 import { generateText } from "ai";
 
+import { isContextOverflowError } from "../compaction/overflow";
 import {
 	type AgentConfig,
 	type AgentMessage,
@@ -35,9 +36,9 @@ import {
 	STANDALONE_METADATA,
 	defineAgentPlugin,
 } from "../index";
-import { createDynamicModel } from "../model/providers";
 
-import { isContextOverflowError } from "../compaction/overflow";
+import { buildConversationMessages } from "./_internal/standalone-images";
+import { createStandaloneModel } from "./_internal/standalone-model";
 
 /**
  * Heuristic for "this looks like the model refused because the prompt is
@@ -53,16 +54,21 @@ export { isContextOverflowError };
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;
 
 /**
- * Resolve `isNativeMode` from the agent config.
+ * Resolve the explicit wire-protocol type from `providerConfig.providerType`.
  *
- * `BaseAgent` does not carry an explicit native flag, so we read it from
- * `providerConfig.isNativeMode` (boolean) and default to `false`. The
- * flag is the same one the rest of the model layer uses to pick the
- * correct fetch / auth path.
+ * Mirrors the `providerType` shape returned by `getValidatedEnv` in
+ * `packages/ai/src/agent/model/providers.ts` so callers can switch the
+ * standalone agent between Anthropic-compatible and OpenAI-compatible
+ * endpoints without forking it. Defaults to `"anthropic_compatible"` to
+ * preserve backward compatibility with the original hard-coded
+ * `createAnthropic` behaviour.
  */
-function resolveIsNativeMode(config: AgentConfig): boolean {
-	const raw = config.providerConfig?.isNativeMode;
-	return typeof raw === "boolean" ? raw : false;
+function resolveStandaloneProviderType(
+	config: AgentConfig,
+): "anthropic_compatible" | "openai_compatible" | undefined {
+	const raw = config.providerConfig?.providerType;
+	if (raw === "openai_compatible" || raw === "anthropic_compatible") return raw;
+	return undefined;
 }
 
 export class StandaloneAgent extends BaseAgent {
@@ -85,20 +91,42 @@ export class StandaloneAgent extends BaseAgent {
 		}
 
 		const start = Date.now();
-		const model = createDynamicModel(resolveIsNativeMode(this.config), this.config.model);
-
 		// Honor an explicit abort controller on the options if the host
 		// passes one; otherwise fall back to the session's controller.
 		const abortSignal = options?.abortController?.signal ?? session.abortController.signal;
 
+		// `systemPrompt` (explicit run override) wins over `aiSoulPrompt`
+		// (user-defined custom instruction), matching the precedence the
+		// Claude provider applies to these two fields.
+		const system = options?.systemPrompt ?? options?.aiSoulPrompt ?? undefined;
+
 		try {
+			// `buildConversationMessages` reads `ConversationMessage.imagePaths`
+			// from disk and emits multimodal `UserContent` arrays for user-role
+			// entries that carry attachments. Non-user roles and user messages
+			// without `imagePaths` keep the legacy `{ role, content: string }`
+			// shape so the rest of the agent stays string-typed. Reading
+			// failures (missing file, unsupported extension, etc.) flow through
+			// the existing error path below as `upstream_error` AgentMessages.
+			const messages = await buildConversationMessages(options?.conversation, prompt);
+
+			// `createStandaloneModel` throws when `apiKey` / `baseUrl` are
+			// missing — sitting it inside the try block lets the existing
+			// error path below surface the message to the caller as an
+			// `upstream_error` `AgentMessage`.
+			const model = createStandaloneModel({
+				modelName: this.config.model,
+				apiKey: this.config.apiKey,
+				baseUrl: this.config.baseUrl,
+				providerType: resolveStandaloneProviderType(this.config),
+			});
+
 			const result = await generateText({
 				model,
-				prompt,
-				// aiSoulPrompt is the user-defined custom instruction — feed it
-				// through as the system prompt so the demo flow stays useful.
-				system: options?.aiSoulPrompt ?? undefined,
+				messages,
+				system,
 				abortSignal,
+				...(options?.extraHeaders ? { headers: options.extraHeaders } : {}),
 			});
 
 			if (session.isAborted) {
@@ -177,3 +205,14 @@ export const standaloneAgentPlugin = defineAgentPlugin({
 	metadata: STANDALONE_METADATA,
 	factory: (config: AgentConfig) => new StandaloneAgent(config),
 });
+
+/**
+ * Convenience constructor that mirrors `createClaudeAgent` /
+ * `createCodexAgent`. Lets callers wire up a `StandaloneAgent` instance
+ * directly without going through the plugin registry — useful for tests
+ * and for one-off callers that want to pin explicit credentials on a
+ * single agent instead of registering a provider.
+ */
+export function createStandaloneAgent(config: AgentConfig): StandaloneAgent {
+	return new StandaloneAgent(config);
+}
