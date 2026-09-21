@@ -51,6 +51,8 @@ function makeConfig(overrides: Partial<AgentConfig> = {}): AgentConfig {
 	return {
 		provider: "standalone",
 		model: "claude-test-model",
+		apiKey: "test-key",
+		baseUrl: "https://example.com",
 		...overrides,
 	};
 }
@@ -161,33 +163,39 @@ describe("createStandaloneModel", () => {
 		});
 	});
 
-	it("returns null and does not call any client when apiKey is missing", () => {
-		const model = createStandaloneModel({
-			baseUrl: "https://example.com",
-		});
-
-		expect(model).toBeNull();
+	it("throws and does not call any client when apiKey is missing", () => {
+		expect(() =>
+			createStandaloneModel({
+				baseUrl: "https://example.com",
+			}),
+		).toThrow(/`apiKey`/);
 		expect(createAnthropicMock).not.toHaveBeenCalled();
 		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 	});
 
-	it("returns null and does not call any client when baseUrl is missing", () => {
-		const model = createStandaloneModel({
-			apiKey: "explicit-key",
-		});
-
-		expect(model).toBeNull();
+	it("throws and does not call any client when baseUrl is missing", () => {
+		expect(() =>
+			createStandaloneModel({
+				apiKey: "explicit-key",
+			}),
+		).toThrow(/`baseUrl`/);
 		expect(createAnthropicMock).not.toHaveBeenCalled();
 		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 	});
 
-	it("returns null when both credentials are whitespace-only (treated as missing)", () => {
-		const model = createStandaloneModel({
-			apiKey: "   ",
-			baseUrl: "   ",
-		});
+	it("throws and lists both missing credentials when both are absent", () => {
+		expect(() => createStandaloneModel({})).toThrow(/`apiKey` and `baseUrl`/);
+		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
+	});
 
-		expect(model).toBeNull();
+	it("throws when both credentials are whitespace-only (treated as missing)", () => {
+		expect(() =>
+			createStandaloneModel({
+				apiKey: "   ",
+				baseUrl: "   ",
+			}),
+		).toThrow(/apiKey.*baseUrl|baseUrl.*apiKey/);
 		expect(createAnthropicMock).not.toHaveBeenCalled();
 		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 	});
@@ -270,13 +278,13 @@ describe("createStandaloneModel", () => {
 			expect(chatModelMock).toHaveBeenCalledWith("");
 		});
 
-		it("returns null when providerType is openai_compatible but credentials are missing", () => {
-			const model = createStandaloneModel({
-				apiKey: "openai-key",
-				providerType: "openai_compatible",
-			});
-
-			expect(model).toBeNull();
+		it("throws when providerType is openai_compatible but credentials are missing", () => {
+			expect(() =>
+				createStandaloneModel({
+					apiKey: "openai-key",
+					providerType: "openai_compatible",
+				}),
+			).toThrow(/`baseUrl`/);
 			expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 		});
 
@@ -369,31 +377,63 @@ describe("StandaloneAgent.run", () => {
 		);
 	});
 
-	it("falls through to createDynamicModel when providerType is openai_compatible but credentials are missing", async () => {
-		const agent = createStandaloneAgent(
-			makeConfig({ providerConfig: { providerType: "openai_compatible" } }),
-		);
-		await collectMessages(agent.run("hello"));
+	it("yields an upstream_error AgentMessage when no credentials are configured", async () => {
+		const agent = createStandaloneAgent(makeConfig({ apiKey: undefined, baseUrl: undefined }));
+		const messages = await collectMessages(agent.run("hello"));
 
-		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 		expect(createAnthropicMock).not.toHaveBeenCalled();
-		expect(createDynamicModelMock).toHaveBeenCalledTimes(1);
+		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
+		expect(createDynamicModelMock).not.toHaveBeenCalled();
+		expect(generateTextMock).not.toHaveBeenCalled();
+		expect(messages).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "error",
+					kind: {
+						kind: "upstream_error",
+						message: expect.stringMatching(/createStandaloneModel.*apiKey.*baseUrl/),
+					},
+				}),
+			]),
+		);
 	});
 
-	it("forwards providerConfig.isNativeMode to createDynamicModel on the fallback path", async () => {
-		const agent = createStandaloneAgent(makeConfig({ providerConfig: { isNativeMode: true } }));
-		await collectMessages(agent.run("hello"));
+	it("yields an upstream_error AgentMessage when only apiKey is configured", async () => {
+		const agent = createStandaloneAgent(makeConfig({ apiKey: "explicit-key", baseUrl: undefined }));
+		const messages = await collectMessages(agent.run("hello"));
 
-		// No explicit credentials → helper returns null → StandaloneAgent
-		// falls through to `createDynamicModel(resolveIsNativeMode(config), model)`.
-		expect(createDynamicModelMock).toHaveBeenCalledWith(true, "claude-test-model");
+		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(generateTextMock).not.toHaveBeenCalled();
+		expect(messages).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "error",
+					kind: {
+						kind: "upstream_error",
+						message: expect.stringMatching(/`baseUrl`/),
+					},
+				}),
+			]),
+		);
 	});
 
-	it("forwards modelName from AgentConfig to createDynamicModel on the fallback path", async () => {
-		const agent = createStandaloneAgent(makeConfig({ model: "fallback-model" }));
-		await collectMessages(agent.run("hello"));
+	it("yields an upstream_error AgentMessage when only baseUrl is configured", async () => {
+		const agent = createStandaloneAgent(makeConfig({ apiKey: undefined, baseUrl: "https://example.com" }));
+		const messages = await collectMessages(agent.run("hello"));
 
-		expect(createDynamicModelMock).toHaveBeenCalledWith(false, "fallback-model");
+		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(generateTextMock).not.toHaveBeenCalled();
+		expect(messages).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "error",
+					kind: {
+						kind: "upstream_error",
+						message: expect.stringMatching(/`apiKey`/),
+					},
+				}),
+			]),
+		);
 	});
 
 	it("ignores an unknown providerType value and defaults to anthropic_compatible", async () => {
@@ -410,12 +450,21 @@ describe("StandaloneAgent.run", () => {
 		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 	});
 
-	it("falls through to the env path (createDynamicModel) when no credentials are configured", async () => {
-		const agent = createStandaloneAgent(makeConfig());
-		await collectMessages(agent.run("hello"));
+	it("does not call createDynamicModel anymore — env fallback is gone", async () => {
+		const agent = createStandaloneAgent(makeConfig({ apiKey: undefined, baseUrl: undefined }));
+		const messages = await collectMessages(agent.run("hello"));
 
-		expect(createDynamicModelMock).toHaveBeenCalledTimes(1);
+		expect(createDynamicModelMock).not.toHaveBeenCalled();
 		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(generateTextMock).not.toHaveBeenCalled();
+		expect(messages).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "error",
+					kind: { kind: "upstream_error", message: expect.any(String) },
+				}),
+			]),
+		);
 	});
 
 	it("forwards options.systemPrompt to generateText when supplied", async () => {

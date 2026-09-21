@@ -1,21 +1,42 @@
 ---
-"@melandlabs/ai": minor
+"@melandlabs/ai": major
 ---
 
-`StandaloneAgent` now honors explicit configuration and an OpenAI-compatible wire protocol.
+**Breaking**: `StandaloneAgent` now requires explicit credentials (`apiKey` + `baseUrl`) on `AgentConfig`. The previous env + `setAIUserContext()` fallback path through `createDynamicModel` has been removed.
 
-Previously `StandaloneAgent.runCore` only routed model construction through `createDynamicModel`, which is hard-wired to `process.env.ANTHROPIC_*` and the global `setAIUserContext()` bag — every caller that wanted to pin credentials, forward a multi-turn conversation, or inject extra headers had to fork the agent locally. The agent now supports an explicit-credential path that wins over env (`apiKey` + `baseUrl` on `AgentConfig`), threads `options.systemPrompt` (takes precedence over `aiSoulPrompt`) / `options.conversation` (leading `ModelMessage` entries + the prompt appended as the trailing user message) / `options.extraHeaders` (forwarded as `headers` only when present) through `generateText`, and supports both Anthropic- and OpenAI-compatible wire protocols via a `providerType` discriminator on `providerConfig` (`"anthropic_compatible"` is the default).
+Previously `StandaloneAgent.runCore` routed model construction through `createDynamicModel`, which is hard-wired to `process.env.ANTHROPIC_*` and the global `setAIUserContext()` bag — every caller that wanted to pin credentials, forward a multi-turn conversation, or inject extra headers had to fork the agent locally. The agent now supports an explicit-credential path that **replaces** the env fallback entirely:
 
-Surface area:
-
+- `apiKey` + `baseUrl` on `AgentConfig` are mandatory. The internal `createStandaloneModel` helper throws an explicit error when either is missing, and `StandaloneAgent.runCore` surfaces the message to the caller as an `upstream_error` `AgentMessage`.
+- `providerConfig.isNativeMode` is no longer read — explicit `baseUrl` already encodes the destination (local proxy vs external API).
+- `options.systemPrompt` (takes precedence over `aiSoulPrompt`) / `options.conversation` (leading `ModelMessage` entries + the prompt appended as the trailing user message) / `options.extraHeaders` (forwarded as `headers` only when present) are now threaded through `generateText`.
 - `AgentConfig.providerConfig.providerType?: "anthropic_compatible" | "openai_compatible"` — opt the explicit path into an OpenAI-compatible endpoint.
-- `StandaloneAgent` still honours `providerConfig.isNativeMode` on the env fallback path (unchanged from the original implementation).
 - New `createStandaloneAgent(config)` factory mirroring `createClaudeAgent` / `createCodexAgent` for callers that want a `StandaloneAgent` without registering a plugin.
 - New subpath export `@melandlabs/ai/agent/standalone-model` exporting `createStandaloneModel` and `StandaloneProviderType` (re-exported from `_internal/standalone-model.ts`).
 
-Implementation:
+## Migration
 
-- New `packages/ai/src/agent/providers/_internal/standalone-model.ts` (`createStandaloneModel`) — a focused helper that only knows how to build an explicit-credential model: when both `apiKey` and `baseUrl` are non-empty, builds an Anthropic- or OpenAI-compatible client directly (`createAnthropic(...).languageModel(...)` or `createOpenAICompatible({ baseURL, apiKey, name: "standalone-model" }).chatModel(...)`), skipping env and `AIUserContext`. The baseUrl is normalized so it always ends with `/v1` to match the existing `getValidatedEnv` behaviour. Returns `null` when either credential is missing — `StandaloneAgent` uses `?? createDynamicModel(...)` to fall back so existing env + `AIUserContext` callers keep working unchanged. The helper intentionally does not take `isNativeMode`: explicit `baseUrl` already encodes the destination, and the env-fallback caller (the only place `isNativeMode` matters) is in `standalone.ts` where `providerConfig.isNativeMode` is resolved.
+Callers that previously relied on env vars or `setAIUserContext()` to drive `StandaloneAgent` must now pass credentials explicitly:
+
+```ts
+// Before — relied on ANTHROPIC_API_KEY / ANTHROPIC_BASE_URL or
+// setAIUserContext() to supply credentials.
+const agent = new StandaloneAgent({ provider: "standalone", model: "..." });
+for await (const msg of agent.run("hello")) { /* ... */ }
+
+// After — credentials are explicit. baseUrl gets `/v1` appended
+// automatically.
+const agent = new StandaloneAgent({
+  provider: "standalone",
+  model: "claude-sonnet-4-20250514",
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+  baseUrl: process.env.ANTHROPIC_BASE_URL ?? "https://api.anthropic.com",
+});
+```
+
+## Implementation
+
+- `packages/ai/src/agent/providers/_internal/standalone-model.ts` (`createStandaloneModel`) — throws when either `apiKey` or `baseUrl` is missing (or whitespace-only). When both are present, builds an Anthropic- or OpenAI-compatible client directly (`createAnthropic(...).languageModel(...)` or `createOpenAICompatible({ baseURL, apiKey, name: "standalone-model" }).chatModel(...)`). The baseUrl is normalized so it always ends with `/v1` to match the existing `getValidatedEnv` behaviour. The helper intentionally does not take `isNativeMode`, fall back to `createDynamicModel`, or honour `setAIUserContext()` / `process.env` — those concerns are now entirely the caller's responsibility.
+- `StandaloneAgent.runCore` no longer imports `createDynamicModel`; `resolveIsNativeMode` is removed. The model construction happens inside the existing `try` block so the throw is surfaced as an `upstream_error` `AgentMessage`.
 
 Out of scope (left for follow-ups):
 

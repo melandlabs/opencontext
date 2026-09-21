@@ -37,7 +37,6 @@ import {
 	STANDALONE_METADATA,
 	defineAgentPlugin,
 } from "../index";
-import { createDynamicModel } from "../model/providers";
 
 import { createStandaloneModel } from "./_internal/standalone-model";
 
@@ -53,19 +52,6 @@ export { isContextOverflowError };
 
 /** Provider type discriminator. Matches `STANDALONE_METADATA.type`. */
 const STANDALONE_PROVIDER = "standalone" as const satisfies AgentProvider;
-
-/**
- * Resolve `isNativeMode` from the agent config.
- *
- * `BaseAgent` does not carry an explicit native flag, so we read it from
- * `providerConfig.isNativeMode` (boolean) and default to `false`. The
- * flag is the same one the rest of the model layer uses to pick the
- * correct fetch / auth path.
- */
-function resolveIsNativeMode(config: AgentConfig): boolean {
-	const raw = config.providerConfig?.isNativeMode;
-	return typeof raw === "boolean" ? raw : false;
-}
 
 /**
  * Resolve the explicit wire-protocol type from `providerConfig.providerType`.
@@ -105,19 +91,6 @@ export class StandaloneAgent extends BaseAgent {
 		}
 
 		const start = Date.now();
-		// `createStandaloneModel` returns `null` when explicit credentials
-		// are absent — fall through to `createDynamicModel` so callers
-		// that still rely on env + `setAIUserContext()` (and the native-
-		// mode baseUrl / apiKey fallbacks inside `getValidatedEnv`) keep
-		// working unchanged.
-		const model =
-			createStandaloneModel({
-				modelName: this.config.model,
-				apiKey: this.config.apiKey,
-				baseUrl: this.config.baseUrl,
-				providerType: resolveStandaloneProviderType(this.config),
-			}) ?? createDynamicModel(resolveIsNativeMode(this.config), this.config.model);
-
 		// Honor an explicit abort controller on the options if the host
 		// passes one; otherwise fall back to the session's controller.
 		const abortSignal = options?.abortController?.signal ?? session.abortController.signal;
@@ -141,6 +114,17 @@ export class StandaloneAgent extends BaseAgent {
 		];
 
 		try {
+			// `createStandaloneModel` throws when `apiKey` / `baseUrl` are
+			// missing — sitting it inside the try block lets the existing
+			// error path below surface the message to the caller as an
+			// `upstream_error` `AgentMessage`.
+			const model = createStandaloneModel({
+				modelName: this.config.model,
+				apiKey: this.config.apiKey,
+				baseUrl: this.config.baseUrl,
+				providerType: resolveStandaloneProviderType(this.config),
+			});
+
 			const result = await generateText({
 				model,
 				messages,

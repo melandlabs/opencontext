@@ -4,10 +4,10 @@
  *
  * Pulled out of `standalone.ts` so the explicit-credential semantics can be
  * unit tested in isolation. The helper is laser-focused: it only knows how
- * to build a model from a `apiKey` + `baseUrl` pair, and returns `null`
- * when either is missing so the caller can decide how to fall back (the
- * `StandaloneAgent` falls back to `createDynamicModel` so existing env +
- * `setAIUserContext()` callers keep working).
+ * to build a model from a `apiKey` + `baseUrl` pair, and throws when
+ * either is missing — `StandaloneAgent` no longer falls back to
+ * `createDynamicModel`, so env + `setAIUserContext()` callers must migrate
+ * to passing credentials explicitly.
  *
  * When the host supplies both credentials, those win over `process.env`
  * and the global user-context bag — this is the env-priority fix that lets
@@ -31,11 +31,6 @@ export type StandaloneProviderType = "anthropic_compatible" | "openai_compatible
 
 export interface CreateStandaloneModelOptions {
 	modelName?: string;
-	/**
-	 * Explicit credentials. Trimmed before comparison so a stray whitespace-
-	 * only value still counts as missing and the helper returns `null` for
-	 * the caller to fall back.
-	 */
 	apiKey?: string;
 	baseUrl?: string;
 	/**
@@ -51,24 +46,25 @@ export interface CreateStandaloneModelOptions {
 
 /**
  * Build the AI SDK `LanguageModel` for `StandaloneAgent` from explicit
- * credentials, or return `null` if either credential is missing.
+ * credentials. Throws when either `apiKey` or `baseUrl` is missing — the
+ * caller (typically `StandaloneAgent.runCore`) is expected to surface the
+ * error to its caller as an `upstream_error` `AgentMessage`.
  *
- * When both `apiKey` and `baseUrl` are non-empty, build the wire-protocol
- * client directly (`createAnthropic` or `createOpenAICompatible` based on
- * `providerType`). The baseUrl is normalised so it always ends with `/v1`
- * (matching the existing `getValidatedEnv` behaviour for both Anthropic-
- * and OpenAI-compatible endpoints).
- *
- * Returns `null` when either credential is missing — the caller is
- * responsible for picking a fallback (typically `createDynamicModel`, which
- * honours env + `setAIUserContext()` + `providerConfig.isNativeMode`).
+ * The baseUrl is normalised so it always ends with `/v1` (matching the
+ * existing `getValidatedEnv` behaviour for both Anthropic- and OpenAI-
+ * compatible endpoints).
  */
-export function createStandaloneModel(opts: CreateStandaloneModelOptions): LanguageModel | null {
+export function createStandaloneModel(opts: CreateStandaloneModelOptions): LanguageModel {
 	const apiKey = opts.apiKey?.trim();
 	const baseUrl = opts.baseUrl?.trim();
 
 	if (!apiKey || !baseUrl) {
-		return null;
+		const missing: string[] = [];
+		if (!apiKey) missing.push("`apiKey`");
+		if (!baseUrl) missing.push("`baseUrl`");
+		throw new Error(
+			`createStandaloneModel: ${missing.join(" and ")} ${missing.length === 1 ? "is" : "are"} required. StandaloneAgent no longer falls back to process.env / setAIUserContext(); pass credentials explicitly on AgentConfig.`,
+		);
 	}
 
 	const providerType: StandaloneProviderType = opts.providerType ?? "anthropic_compatible";
