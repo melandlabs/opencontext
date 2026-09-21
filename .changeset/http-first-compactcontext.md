@@ -18,5 +18,3 @@ A new `packages/ai/src/agent/compaction/http-compactor.ts` module ships the wire
 `runWithAutoCompactCore` threads `compactionEndpoint` / `compactionUserToken` into the auto-compact recovery loop (reactive overflow recovery + proactive threshold-triggered compaction); `runWithAutoCompact` and the standalone `IAgent` wrapper contract are otherwise unchanged.
 
 Header merge order (matches the JSDoc on `extraHeaders`): protocol defaults (Content-Type, anthropic-version) → `compactionEndpoint.headers` (agent-level) → `Authorization: Bearer <userToken>` (when set) → `input.extraHeaders` (per-call, LAST — can override anything above).
-
-Hosts that want Alloomi's `/api/ai/v1/messages` to be the default just populate `providerConfig.compactionEndpoint.baseUrl` + `providerConfig.compactionUserToken` at agent construction — no dedicated `/compact` route required.
