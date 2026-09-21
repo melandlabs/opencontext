@@ -22,8 +22,10 @@
  * ```
  */
 
+import type { ModelMessage } from "ai";
 import { generateText } from "ai";
 
+import { isContextOverflowError } from "../compaction/overflow";
 import {
 	type AgentConfig,
 	type AgentMessage,
@@ -35,9 +37,8 @@ import {
 	STANDALONE_METADATA,
 	defineAgentPlugin,
 } from "../index";
-import { createDynamicModel } from "../model/providers";
 
-import { isContextOverflowError } from "../compaction/overflow";
+import { createStandaloneModel } from "./_internal/standalone-model";
 
 /**
  * Heuristic for "this looks like the model refused because the prompt is
@@ -65,6 +66,24 @@ function resolveIsNativeMode(config: AgentConfig): boolean {
 	return typeof raw === "boolean" ? raw : false;
 }
 
+/**
+ * Resolve the explicit wire-protocol type from `providerConfig.providerType`.
+ *
+ * Mirrors the `providerType` shape returned by `getValidatedEnv` in
+ * `packages/ai/src/agent/model/providers.ts` so callers can switch the
+ * standalone agent between Anthropic-compatible and OpenAI-compatible
+ * endpoints without forking it. Defaults to `"anthropic_compatible"` to
+ * preserve backward compatibility with the original hard-coded
+ * `createAnthropic` behaviour.
+ */
+function resolveStandaloneProviderType(
+	config: AgentConfig,
+): "anthropic_compatible" | "openai_compatible" | undefined {
+	const raw = config.providerConfig?.providerType;
+	if (raw === "openai_compatible" || raw === "anthropic_compatible") return raw;
+	return undefined;
+}
+
 export class StandaloneAgent extends BaseAgent {
 	readonly provider: AgentProvider = STANDALONE_PROVIDER;
 
@@ -85,20 +104,43 @@ export class StandaloneAgent extends BaseAgent {
 		}
 
 		const start = Date.now();
-		const model = createDynamicModel(resolveIsNativeMode(this.config), this.config.model);
+		const model = createStandaloneModel({
+			isNativeMode: resolveIsNativeMode(this.config),
+			modelName: this.config.model,
+			apiKey: this.config.apiKey,
+			baseUrl: this.config.baseUrl,
+			providerType: resolveStandaloneProviderType(this.config),
+		});
 
 		// Honor an explicit abort controller on the options if the host
 		// passes one; otherwise fall back to the session's controller.
 		const abortSignal = options?.abortController?.signal ?? session.abortController.signal;
 
+		// `systemPrompt` (explicit run override) wins over `aiSoulPrompt`
+		// (user-defined custom instruction), matching the precedence the
+		// Claude provider applies to these two fields.
+		const system = options?.systemPrompt ?? options?.aiSoulPrompt ?? undefined;
+
+		// TODO: map `ConversationMessage.imagePaths` to AI SDK image parts so
+		// multimodal single-turn calls (e.g. screenshot analysis) work
+		// through the standalone provider. Out of scope for this change —
+		// the alloomi-side mirror (`PlatformStandaloneAgent`) currently
+		// bypasses StandaloneAgent for multimodal calls via `userContent`.
+		const messages: ModelMessage[] = [
+			...(options?.conversation ?? []).map((m) => ({
+				role: m.role,
+				content: m.content,
+			})),
+			{ role: "user", content: prompt },
+		];
+
 		try {
 			const result = await generateText({
 				model,
-				prompt,
-				// aiSoulPrompt is the user-defined custom instruction — feed it
-				// through as the system prompt so the demo flow stays useful.
-				system: options?.aiSoulPrompt ?? undefined,
+				messages,
+				system,
 				abortSignal,
+				...(options?.extraHeaders ? { headers: options.extraHeaders } : {}),
 			});
 
 			if (session.isAborted) {
@@ -177,3 +219,14 @@ export const standaloneAgentPlugin = defineAgentPlugin({
 	metadata: STANDALONE_METADATA,
 	factory: (config: AgentConfig) => new StandaloneAgent(config),
 });
+
+/**
+ * Convenience constructor that mirrors `createClaudeAgent` /
+ * `createCodexAgent`. Lets callers wire up a `StandaloneAgent` instance
+ * directly without going through the plugin registry — useful for tests
+ * and for one-off callers that want to pin explicit credentials on a
+ * single agent instead of registering a provider.
+ */
+export function createStandaloneAgent(config: AgentConfig): StandaloneAgent {
+	return new StandaloneAgent(config);
+}

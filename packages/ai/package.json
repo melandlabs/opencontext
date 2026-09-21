@@ -77,6 +77,7 @@
 		"./agent/standalone": "./dist/agent/providers/standalone.js",
 		"./agent/standalone/index": "./dist/agent/providers/standalone.js",
 		"./agent/standalone-plugin": "./dist/agent/providers/standalone.js",
+		"./agent/standalone-model": "./dist/agent/providers/standalone-model.js",
 		"./agent/acp/agent": "./dist/agent/providers/acp/agent.js",
 		"./agent/acp/mapper": "./dist/agent/providers/acp/mapper.js",
 		"./agent/acp/stdio-client": "./dist/agent/providers/acp/stdio-client.js",
