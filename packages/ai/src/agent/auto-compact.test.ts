@@ -375,4 +375,58 @@ describe("runWithAutoCompact", () => {
 		// Budget exhausted immediately, so we get the first session + final error.
 		expect(collected.map((m) => m.type)).toEqual(["session", "error"]);
 	});
+
+	it("threads compactionEndpoint / compactionUserToken into compactContext", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(overflowStream());
+		stub.runStreams.push(textStream("ok"));
+
+		for await (const _msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "m1" },
+				{ role: "assistant", content: "m2" },
+			],
+			compactionEndpoint: "https://compaction.example/percall/v1/messages",
+			compactionUserToken: "percall-tok",
+		})) {
+			void _msg;
+		}
+
+		expect(stub.compactSpy).toHaveBeenCalledTimes(1);
+		const call = stub.compactSpy.mock.calls[0][0] as Record<string, unknown>;
+		expect(call.compactionEndpoint).toBe("https://compaction.example/percall/v1/messages");
+		expect(call.userToken).toBe("percall-tok");
+		// No CompactContextInput field is called `usageTask` — the
+		// auto-compact loop never forwards it; callers must attach any
+		// usage-attribution header themselves via `extraHeaders` or
+		// `providerConfig.compactionEndpoint.headers`.
+		expect("usageTask" in call).toBe(false);
+		// Plain fields still pass through unchanged.
+		expect(call.messages).toHaveLength(2);
+		expect(call.level).toBe("hard");
+	});
+
+	it("threads compactionEndpoint / compactionUserToken into proactive compaction", async () => {
+		const stub = new StubAgent();
+		stub.runStreams.push(textStream("ok"));
+
+		for await (const _msg of runWithAutoCompact(stub as unknown as IAgent, {
+			prompt: "p",
+			history: [
+				{ role: "user", content: "a fairly long earlier message that will surely exceed ten tokens" },
+			],
+			compactThresholdTokens: 10,
+			compactionEndpoint: "https://compaction.example/proactive/v1/messages",
+			compactionUserToken: "proactive-tok",
+		})) {
+			void _msg;
+		}
+
+		expect(stub.compactSpy).toHaveBeenCalledTimes(1);
+		const call = stub.compactSpy.mock.calls[0][0] as Record<string, unknown>;
+		expect(call.compactionEndpoint).toBe("https://compaction.example/proactive/v1/messages");
+		expect(call.userToken).toBe("proactive-tok");
+		expect("usageTask" in call).toBe(false);
+	});
 });

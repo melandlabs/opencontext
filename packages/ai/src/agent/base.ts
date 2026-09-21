@@ -10,6 +10,10 @@ import { UserLocale } from "@melandlabs/shared";
 
 import { defaultLanguageDirectiveBuilder } from "./adapters/default-language-directive-builder";
 import { runWithAutoCompactCore } from "./auto-compact";
+import {
+	compactContextHttp,
+	type HttpCompactorProtocol,
+} from "./compaction/http-compactor";
 import type { CompactContextInput, CompactContextResult, Compactor } from "./compaction/compactor";
 import type {
 	AgentConfig,
@@ -224,21 +228,69 @@ export abstract class BaseAgent implements IAgent {
 	/**
 	 * Compact the conversation history by summarizing older messages.
 	 *
-	 * The compactor is read from `config.providerConfig.compactor` (a
-	 * {@link Compactor} built once via `createCompactor(...)` from
-	 * `@melandlabs/opencontext`). Subclasses inherit this default — providers
-	 * do not need their own override.
+	 * Resolution order:
+	 *   1. `config.providerConfig.compactor` — when set, delegate to the
+	 *      in-process {@link Compactor} (built once via `createCompactor(...)`
+	 *      from `@melandlabs/opencontext`). Preserved as the explicit opt-out
+	 *      path for callers that already have a compactor.
+	 *   2. HTTP-first path: resolve the endpoint as
+	 *      `input.compactionEndpoint` → `providerConfig.compactionEndpoint.baseUrl`
+	 *      → `process.env.COMPACTION_HTTP_ENDPOINT`. POST the conversation
+	 *      to that URL with `Authorization: Bearer <userToken>` (when set).
+	 *      No host-specific header (e.g. usage-task attribution) is set
+	 *      here — callers attach whatever headers they need via
+	 *      `input.extraHeaders` (per-call) or
+	 *      `providerConfig.compactionEndpoint.headers` (agent-level).
+	 *      See {@link compactContextHttp} for the wire shape.
 	 *
-	 * Throws if no compactor is configured.
+	 * The user token follows the same per-call → agent → env precedence as
+	 * the endpoint.
+	 *
+	 * Throws if neither a compactor nor an endpoint is configured.
 	 */
 	async compactContext(input: CompactContextInput): Promise<CompactContextResult> {
 		const compactor = this.config.providerConfig?.compactor as Compactor | undefined;
-		if (!compactor) {
+		if (compactor) {
+			return compactor.compact(input);
+		}
+
+		const providerConfig = this.config.providerConfig ?? {};
+		const endpointConfig = providerConfig.compactionEndpoint as
+			| {
+					baseUrl?: string;
+					model?: string;
+					headers?: Record<string, string>;
+					protocol?: HttpCompactorProtocol;
+				}
+			| undefined;
+		const endpoint =
+			input.compactionEndpoint ??
+			endpointConfig?.baseUrl ??
+			process.env.COMPACTION_HTTP_ENDPOINT;
+		if (!endpoint) {
 			throw new Error(
-				`compactContext is not configured for provider "${this.provider}". Pass a Compactor via AgentConfig.providerConfig.compactor — build one with createCompactor(...) from "@melandlabs/opencontext".`,
+				`compactContext is not configured for provider "${this.provider}". ` +
+					`Either pass a Compactor via AgentConfig.providerConfig.compactor ` +
+					`(build one with createCompactor(...) from "@melandlabs/opencontext"), ` +
+					`or set providerConfig.compactionEndpoint.baseUrl (or COMPACTION_HTTP_ENDPOINT).`,
 			);
 		}
-		return compactor.compact(input);
+
+		const userToken =
+			input.userToken ??
+			(providerConfig.compactionUserToken as string | undefined) ??
+			process.env.COMPACTION_HTTP_USER_TOKEN;
+		const model = endpointConfig?.model ?? this.config.model ?? "claude-haiku-4-5";
+		const baseHeaders = endpointConfig?.headers ?? {};
+		const protocol: HttpCompactorProtocol = endpointConfig?.protocol ?? "anthropic";
+
+		return compactContextHttp(input, {
+			endpoint,
+			userToken,
+			model,
+			baseHeaders,
+			protocol,
+		});
 	}
 
 	/**
@@ -355,6 +407,8 @@ export abstract class BaseAgent implements IAgent {
 			compactThresholdTokens: providerConfig.compactThresholdTokens as number | undefined,
 			keepRecentTokens: providerConfig.compactKeepRecentTokens as number | undefined,
 			maxSummaryTokens: providerConfig.compactMaxSummaryTokens as number | undefined,
+			compactionEndpoint: (providerConfig.compactionEndpoint as { baseUrl?: string } | undefined)?.baseUrl,
+			compactionUserToken: providerConfig.compactionUserToken as string | undefined,
 			onCompactionBaseline: options?.onCompactionBaseline,
 		});
 	}

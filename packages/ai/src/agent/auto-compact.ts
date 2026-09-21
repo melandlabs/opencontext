@@ -121,6 +121,21 @@ export interface RunWithAutoCompactOptions {
 	 * oversized history and compaction runs again from scratch.
 	 */
 	onCompactionBaseline?: (baseline: ConversationMessage[], result: CompactContextResult) => void;
+	/**
+	 * HTTP compaction endpoint override forwarded to
+	 * `agent.compactContext` for this call. Per-call override; agent-level
+	 * fallback lives in `providerConfig.compactionEndpoint.baseUrl`. Ignored
+	 * when the agent has a `providerConfig.compactor` configured.
+	 */
+	compactionEndpoint?: string;
+	/**
+	 * Bearer token forwarded to `agent.compactContext` for this call as
+	 * `Authorization: Bearer <token>`. Per-call override; agent-level
+	 * fallback lives in `providerConfig.compactionUserToken`. May be
+	 * undefined — when undefined, the `Authorization` header is omitted
+	 * and the summarizer is unauthenticated.
+	 */
+	compactionUserToken?: string;
 }
 
 /**
@@ -161,6 +176,11 @@ export async function* runWithAutoCompactCore(
 				messages: history,
 				level,
 				maxSummaryTokens: options.maxSummaryTokens,
+				// HTTP-first path: forward the resolved endpoint + user token.
+				// The agent's `compactContext` decides whether to use these
+				// (only when no `providerConfig.compactor` is set).
+				compactionEndpoint: options.compactionEndpoint,
+				userToken: options.compactionUserToken,
 			});
 			return { ok: true, result };
 		} catch (error) {
