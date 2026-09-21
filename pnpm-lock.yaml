@@ -116,7 +116,7 @@ importers:
   examples:
     dependencies:
       '@melandlabs/ai':
-        specifier: ^0.11.0
+        specifier: ^0.12.0
         version: link:../packages/ai
       '@melandlabs/ai-rag':
         specifier: ^0.2.12
@@ -170,7 +170,7 @@ importers:
         specifier: ^0.3.0
         version: link:../packages/integrations/composio
       '@melandlabs/integrations-dingtalk':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/dingtalk
       '@melandlabs/integrations-facebook-messenger':
         specifier: ^0.3.2
@@ -179,7 +179,7 @@ importers:
         specifier: ^0.3.3
         version: link:../packages/integrations/feishu
       '@melandlabs/integrations-gmail':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/gmail
       '@melandlabs/integrations-google-docs':
         specifier: ^0.3.0
@@ -191,7 +191,7 @@ importers:
         specifier: ^0.3.2
         version: link:../packages/integrations/hubspot
       '@melandlabs/integrations-imessage':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/imessage
       '@melandlabs/integrations-instagram':
         specifier: ^0.3.2
@@ -203,19 +203,19 @@ importers:
         specifier: ^0.3.2
         version: link:../packages/integrations/linkedin
       '@melandlabs/integrations-qqbot':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/qqbot
       '@melandlabs/integrations-runtime':
         specifier: ^0.3.4
         version: link:../packages/integrations-runtime
       '@melandlabs/integrations-telegram':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/telegram
       '@melandlabs/integrations-weixin':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/weixin
       '@melandlabs/integrations-whatsapp':
-        specifier: ^0.3.13
+        specifier: ^0.3.14
         version: link:../packages/integrations/whatsapp
       '@melandlabs/integrations-x':
         specifier: ^0.3.2
@@ -230,7 +230,7 @@ importers:
         specifier: ^0.5.3
         version: link:../packages/ai/memory-consolidation
       '@melandlabs/memory-store':
-        specifier: ^1.3.3
+        specifier: ^1.3.4
         version: link:../packages/memory-store
       '@melandlabs/opencontext':
         specifier: ^0.13.0
@@ -11161,7 +11161,7 @@ snapshots:
       jsonwebtoken: 9.0.3
       load-esm: 1.0.3
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.18.0)
+      retry-axios: 2.6.0(axios@1.18.0(debug@4.3.4))
       tough-cookie: 4.1.3
     transitivePeerDependencies:
       - supports-color
@@ -12233,7 +12233,7 @@ snapshots:
 
   resolve-from@5.0.0: {}
 
-  retry-axios@2.6.0(axios@1.18.0):
+  retry-axios@2.6.0(axios@1.18.0(debug@4.3.4)):
     dependencies:
       axios: 1.18.0(debug@4.3.4)
 

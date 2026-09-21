@@ -1,5 +1,12 @@
 # @melandlabs/integrations-dingtalk
 
+## 0.3.14
+
+### Patch Changes
+
+- Updated dependencies [93773ba]
+  - @melandlabs/ai@0.12.0
+
 ## 0.3.13
 
 ### Patch Changes
