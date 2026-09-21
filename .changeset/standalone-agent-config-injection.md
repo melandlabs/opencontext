@@ -9,12 +9,13 @@ Previously `StandaloneAgent.runCore` only routed model construction through `cre
 Surface area:
 
 - `AgentConfig.providerConfig.providerType?: "anthropic_compatible" | "openai_compatible"` — opt the explicit path into an OpenAI-compatible endpoint.
+- `StandaloneAgent` still honours `providerConfig.isNativeMode` on the env fallback path (unchanged from the original implementation).
 - New `createStandaloneAgent(config)` factory mirroring `createClaudeAgent` / `createCodexAgent` for callers that want a `StandaloneAgent` without registering a plugin.
 - New subpath export `@melandlabs/ai/agent/standalone-model` exporting `createStandaloneModel` and `StandaloneProviderType` (re-exported from `_internal/standalone-model.ts`).
 
 Implementation:
 
-- New `packages/ai/src/agent/providers/_internal/standalone-model.ts` (`createStandaloneModel`) — when both `apiKey` and `baseUrl` are non-empty, builds an `Anthropic`- or OpenAI-compatible client directly (`createAnthropic(...).languageModel(...)` or `createOpenAICompatible({ baseURL, apiKey, name: "standalone-model" }).chatModel(...)`), skipping env and `AIUserContext`. Falls through to `createDynamicModel` otherwise, so existing callers keep working unchanged. BaseUrl is normalized so it always ends with `/v1` to match the existing `getValidatedEnv` behaviour.
+- New `packages/ai/src/agent/providers/_internal/standalone-model.ts` (`createStandaloneModel`) — a focused helper that only knows how to build an explicit-credential model: when both `apiKey` and `baseUrl` are non-empty, builds an Anthropic- or OpenAI-compatible client directly (`createAnthropic(...).languageModel(...)` or `createOpenAICompatible({ baseURL, apiKey, name: "standalone-model" }).chatModel(...)`), skipping env and `AIUserContext`. The baseUrl is normalized so it always ends with `/v1` to match the existing `getValidatedEnv` behaviour. Returns `null` when either credential is missing — `StandaloneAgent` uses `?? createDynamicModel(...)` to fall back so existing env + `AIUserContext` callers keep working unchanged. The helper intentionally does not take `isNativeMode`: explicit `baseUrl` already encodes the destination, and the env-fallback caller (the only place `isNativeMode` matters) is in `standalone.ts` where `providerConfig.isNativeMode` is resolved.
 
 Out of scope (left for follow-ups):
 

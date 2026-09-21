@@ -37,6 +37,7 @@ import {
 	STANDALONE_METADATA,
 	defineAgentPlugin,
 } from "../index";
+import { createDynamicModel } from "../model/providers";
 
 import { createStandaloneModel } from "./_internal/standalone-model";
 
@@ -104,13 +105,18 @@ export class StandaloneAgent extends BaseAgent {
 		}
 
 		const start = Date.now();
-		const model = createStandaloneModel({
-			isNativeMode: resolveIsNativeMode(this.config),
-			modelName: this.config.model,
-			apiKey: this.config.apiKey,
-			baseUrl: this.config.baseUrl,
-			providerType: resolveStandaloneProviderType(this.config),
-		});
+		// `createStandaloneModel` returns `null` when explicit credentials
+		// are absent — fall through to `createDynamicModel` so callers
+		// that still rely on env + `setAIUserContext()` (and the native-
+		// mode baseUrl / apiKey fallbacks inside `getValidatedEnv`) keep
+		// working unchanged.
+		const model =
+			createStandaloneModel({
+				modelName: this.config.model,
+				apiKey: this.config.apiKey,
+				baseUrl: this.config.baseUrl,
+				providerType: resolveStandaloneProviderType(this.config),
+			}) ?? createDynamicModel(resolveIsNativeMode(this.config), this.config.model);
 
 		// Honor an explicit abort controller on the options if the host
 		// passes one; otherwise fall back to the session's controller.

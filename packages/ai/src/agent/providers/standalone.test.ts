@@ -111,7 +111,6 @@ afterEach(() => {
 describe("createStandaloneModel", () => {
 	it("builds an Anthropic client from explicit apiKey + baseUrl (env-priority fix)", () => {
 		const model = createStandaloneModel({
-			isNativeMode: false,
 			modelName: "claude-test-model",
 			apiKey: "explicit-key",
 			baseUrl: "https://example.com",
@@ -123,13 +122,11 @@ describe("createStandaloneModel", () => {
 			apiKey: "explicit-key",
 		});
 		expect(languageModelMock).toHaveBeenCalledWith("claude-test-model");
-		expect(createDynamicModelMock).not.toHaveBeenCalled();
 		expect(model).toEqual({ __anthropicModel: "claude-test-model" });
 	});
 
 	it("appends /v1 only when the baseUrl does not already end in /v1", () => {
 		createStandaloneModel({
-			isNativeMode: false,
 			apiKey: "explicit-key",
 			baseUrl: "https://example.com/v1",
 		});
@@ -142,7 +139,6 @@ describe("createStandaloneModel", () => {
 
 	it("trims trailing slashes on the baseUrl before appending /v1", () => {
 		createStandaloneModel({
-			isNativeMode: false,
 			apiKey: "explicit-key",
 			baseUrl: "https://example.com/",
 		});
@@ -155,7 +151,6 @@ describe("createStandaloneModel", () => {
 
 	it("trims whitespace around apiKey and baseUrl", () => {
 		createStandaloneModel({
-			isNativeMode: false,
 			apiKey: "  explicit-key  ",
 			baseUrl: "  https://example.com  ",
 		});
@@ -166,51 +161,39 @@ describe("createStandaloneModel", () => {
 		});
 	});
 
-	it("treats whitespace-only credentials as missing and falls through to createDynamicModel", () => {
+	it("returns null and does not call any client when apiKey is missing", () => {
 		const model = createStandaloneModel({
-			isNativeMode: false,
+			baseUrl: "https://example.com",
+		});
+
+		expect(model).toBeNull();
+		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
+	});
+
+	it("returns null and does not call any client when baseUrl is missing", () => {
+		const model = createStandaloneModel({
+			apiKey: "explicit-key",
+		});
+
+		expect(model).toBeNull();
+		expect(createAnthropicMock).not.toHaveBeenCalled();
+		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
+	});
+
+	it("returns null when both credentials are whitespace-only (treated as missing)", () => {
+		const model = createStandaloneModel({
 			apiKey: "   ",
 			baseUrl: "   ",
 		});
 
+		expect(model).toBeNull();
 		expect(createAnthropicMock).not.toHaveBeenCalled();
-		expect(createDynamicModelMock).toHaveBeenCalledWith(false, undefined);
-		expect(model).toEqual({ __dynamicModel: "<no-model>" });
-	});
-
-	it("falls through to createDynamicModel when only apiKey is supplied", () => {
-		const model = createStandaloneModel({
-			isNativeMode: false,
-			apiKey: "explicit-key",
-		});
-
-		expect(createAnthropicMock).not.toHaveBeenCalled();
-		expect(createDynamicModelMock).toHaveBeenCalledWith(false, undefined);
-		expect(model).toEqual({ __dynamicModel: "<no-model>" });
-	});
-
-	it("falls through to createDynamicModel when only baseUrl is supplied", () => {
-		createStandaloneModel({
-			isNativeMode: false,
-			baseUrl: "https://example.com",
-		});
-
-		expect(createAnthropicMock).not.toHaveBeenCalled();
-		expect(createDynamicModelMock).toHaveBeenCalledWith(false, undefined);
-	});
-
-	it("forwards isNativeMode and modelName to createDynamicModel on the env path", () => {
-		createStandaloneModel({
-			isNativeMode: true,
-			modelName: "dynamic-model",
-		});
-
-		expect(createDynamicModelMock).toHaveBeenCalledWith(true, "dynamic-model");
+		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 	});
 
 	it("defaults the model id passed to languageModel to the empty string when no modelName is set", () => {
 		createStandaloneModel({
-			isNativeMode: false,
 			apiKey: "explicit-key",
 			baseUrl: "https://example.com",
 		});
@@ -223,7 +206,6 @@ describe("createStandaloneModel", () => {
 		vi.stubEnv("ANTHROPIC_BASE_URL", "https://env.example.com");
 
 		createStandaloneModel({
-			isNativeMode: false,
 			apiKey: "explicit-key",
 			baseUrl: "https://example.com",
 		});
@@ -232,13 +214,11 @@ describe("createStandaloneModel", () => {
 			baseURL: "https://example.com/v1",
 			apiKey: "explicit-key",
 		});
-		expect(createDynamicModelMock).not.toHaveBeenCalled();
 	});
 
 	describe("openai_compatible providerType", () => {
 		it("builds an OpenAI-compatible client from explicit apiKey + baseUrl", () => {
 			const model = createStandaloneModel({
-				isNativeMode: false,
 				modelName: "gpt-test-model",
 				apiKey: "openai-key",
 				baseUrl: "https://api.example.com",
@@ -253,13 +233,11 @@ describe("createStandaloneModel", () => {
 			});
 			expect(chatModelMock).toHaveBeenCalledWith("gpt-test-model");
 			expect(createAnthropicMock).not.toHaveBeenCalled();
-			expect(createDynamicModelMock).not.toHaveBeenCalled();
 			expect(model).toEqual({ __openaiModel: "gpt-test-model" });
 		});
 
 		it("does not create an Anthropic client when providerType is openai_compatible", () => {
 			createStandaloneModel({
-				isNativeMode: false,
 				apiKey: "openai-key",
 				baseUrl: "https://api.example.com",
 				providerType: "openai_compatible",
@@ -270,7 +248,6 @@ describe("createStandaloneModel", () => {
 
 		it("appends /v1 to OpenAI-compatible baseUrls just like the Anthropic branch", () => {
 			createStandaloneModel({
-				isNativeMode: false,
 				apiKey: "openai-key",
 				baseUrl: "https://api.example.com/",
 				providerType: "openai_compatible",
@@ -285,7 +262,6 @@ describe("createStandaloneModel", () => {
 
 		it("defaults the chat model id to the empty string when no modelName is set", () => {
 			createStandaloneModel({
-				isNativeMode: false,
 				apiKey: "openai-key",
 				baseUrl: "https://api.example.com",
 				providerType: "openai_compatible",
@@ -294,15 +270,14 @@ describe("createStandaloneModel", () => {
 			expect(chatModelMock).toHaveBeenCalledWith("");
 		});
 
-		it("ignores missing credentials on the OpenAI path and falls through to createDynamicModel", () => {
-			createStandaloneModel({
-				isNativeMode: false,
+		it("returns null when providerType is openai_compatible but credentials are missing", () => {
+			const model = createStandaloneModel({
 				apiKey: "openai-key",
 				providerType: "openai_compatible",
 			});
 
+			expect(model).toBeNull();
 			expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
-			expect(createDynamicModelMock).toHaveBeenCalledWith(false, undefined);
 		});
 
 		it("ignores env credentials (both ANTHROPIC_* and OPENAI_*) on the OpenAI path", () => {
@@ -312,7 +287,6 @@ describe("createStandaloneModel", () => {
 			vi.stubEnv("OPENAI_BASE_URL", "https://openai-env.example.com");
 
 			createStandaloneModel({
-				isNativeMode: false,
 				apiKey: "explicit-key",
 				baseUrl: "https://api.example.com",
 				providerType: "openai_compatible",
@@ -324,14 +298,12 @@ describe("createStandaloneModel", () => {
 				name: "standalone-model",
 			});
 			expect(createAnthropicMock).not.toHaveBeenCalled();
-			expect(createDynamicModelMock).not.toHaveBeenCalled();
 		});
 	});
 
 	describe("providerType default", () => {
 		it("defaults to anthropic_compatible when providerType is omitted (backward compat)", () => {
 			createStandaloneModel({
-				isNativeMode: false,
 				apiKey: "explicit-key",
 				baseUrl: "https://example.com",
 			});
@@ -406,6 +378,22 @@ describe("StandaloneAgent.run", () => {
 		expect(createOpenAICompatibleMock).not.toHaveBeenCalled();
 		expect(createAnthropicMock).not.toHaveBeenCalled();
 		expect(createDynamicModelMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("forwards providerConfig.isNativeMode to createDynamicModel on the fallback path", async () => {
+		const agent = createStandaloneAgent(makeConfig({ providerConfig: { isNativeMode: true } }));
+		await collectMessages(agent.run("hello"));
+
+		// No explicit credentials → helper returns null → StandaloneAgent
+		// falls through to `createDynamicModel(resolveIsNativeMode(config), model)`.
+		expect(createDynamicModelMock).toHaveBeenCalledWith(true, "claude-test-model");
+	});
+
+	it("forwards modelName from AgentConfig to createDynamicModel on the fallback path", async () => {
+		const agent = createStandaloneAgent(makeConfig({ model: "fallback-model" }));
+		await collectMessages(agent.run("hello"));
+
+		expect(createDynamicModelMock).toHaveBeenCalledWith(false, "fallback-model");
 	});
 
 	it("ignores an unknown providerType value and defaults to anthropic_compatible", async () => {
