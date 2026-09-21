@@ -13,7 +13,7 @@
  * pass-through to `runCore`: no compact call, no notice, no second
  * attempt on overflow.
  */
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BaseAgent } from "./base";
 import type {
@@ -294,10 +294,26 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 		});
 	}
 
+	// Snapshot the env vars we mutate so a stray `beforeEach` in any other
+	// suite can't leak COMPACTION_HTTP_* into this one (and vice versa).
+	const SAVED_COMPACTION_ENDPOINT = process.env.COMPACTION_HTTP_ENDPOINT;
+	const SAVED_COMPACTION_USER_TOKEN = process.env.COMPACTION_HTTP_USER_TOKEN;
+	beforeEach(() => {
+		process.env.COMPACTION_HTTP_ENDPOINT = "";
+		process.env.COMPACTION_HTTP_USER_TOKEN = "";
+	});
 	afterEach(() => {
 		vi.unstubAllGlobals();
-		delete process.env.COMPACTION_HTTP_ENDPOINT;
-		delete process.env.COMPACTION_HTTP_USER_TOKEN;
+		if (SAVED_COMPACTION_ENDPOINT === undefined) {
+			process.env.COMPACTION_HTTP_ENDPOINT = "";
+		} else {
+			process.env.COMPACTION_HTTP_ENDPOINT = SAVED_COMPACTION_ENDPOINT;
+		}
+		if (SAVED_COMPACTION_USER_TOKEN === undefined) {
+			process.env.COMPACTION_HTTP_USER_TOKEN = "";
+		} else {
+			process.env.COMPACTION_HTTP_USER_TOKEN = SAVED_COMPACTION_USER_TOKEN;
+		}
 	});
 
 	it("POSTs the conversation to providerConfig.compactionEndpoint.baseUrl with bearer + caller-supplied headers", async () => {
@@ -327,7 +343,10 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 		});
 
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
-		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [string, { method?: string; headers?: Record<string, string>; body?: string }];
+		const [calledUrl, calledInit] = fetchSpy.mock.calls[0] as [
+			string,
+			{ method?: string; headers?: Record<string, string>; body?: string },
+		];
 		expect(calledUrl).toBe("https://compaction.example/api/ai/v1/messages");
 		expect(calledInit.method).toBe("POST");
 		expect(calledInit.headers?.Authorization).toBe("Bearer user-tok-123");
@@ -376,9 +395,7 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 		process.env.COMPACTION_HTTP_ENDPOINT = "https://compaction.example/env/v1/messages";
 		process.env.COMPACTION_HTTP_USER_TOKEN = "env-tok";
 
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ content: [{ type: "text", text: "ok" }] }),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent({
@@ -404,9 +421,7 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 	});
 
 	it("omits the Authorization header when no userToken is available at any level", async () => {
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ content: [{ type: "text", text: "ok" }] }),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent({
@@ -422,9 +437,7 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 	});
 
 	it("merges input.extraHeaders LAST so callers can override defaults", async () => {
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ content: [{ type: "text", text: "ok" }] }),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent({
@@ -444,9 +457,7 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 	});
 
 	it("uses maxSummaryTokens from input as max_tokens in the request body", async () => {
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ content: [{ type: "text", text: "ok" }] }),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "ok" }] }));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent({
@@ -464,15 +475,13 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 	});
 
 	it("throws an actionable error when no compactor and no endpoint are configured", async () => {
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ content: [{ type: "text", text: "never" }] }),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ content: [{ type: "text", text: "never" }] }));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent(undefined);
-		await expect(
-			agent.compactContext({ messages: [{ role: "user", content: "x" }] }),
-		).rejects.toThrow(/compactionEndpoint|Compactor/);
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactionEndpoint|Compactor/,
+		);
 		expect(fetchSpy).not.toHaveBeenCalled();
 	});
 
@@ -483,9 +492,9 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 		const agent = makeAgent({
 			compactionEndpoint: { baseUrl: "https://compaction.example/v1/messages" },
 		});
-		await expect(
-			agent.compactContext({ messages: [{ role: "user", content: "x" }] }),
-		).rejects.toThrow(/compactContext HTTP 400/);
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactContext HTTP 400/,
+		);
 	});
 
 	it("preserves the providerConfig.compactor fallback — does NOT issue an HTTP call", async () => {
@@ -571,9 +580,7 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 	});
 
 	it("OpenAI path surfaces non-2xx HTTP status with the same error shape", async () => {
-		const fetchSpy = vi.fn<FetchFn>(async () =>
-			jsonResponse({ error: "rate limited" }, 429),
-		);
+		const fetchSpy = vi.fn<FetchFn>(async () => jsonResponse({ error: "rate limited" }, 429));
 		vi.stubGlobal("fetch", fetchSpy);
 
 		const agent = makeAgent({
@@ -582,8 +589,8 @@ describe("BaseAgent.compactContext HTTP-first path", () => {
 				protocol: "openai",
 			},
 		});
-		await expect(
-			agent.compactContext({ messages: [{ role: "user", content: "x" }] }),
-		).rejects.toThrow(/compactContext HTTP 429/);
+		await expect(agent.compactContext({ messages: [{ role: "user", content: "x" }] })).rejects.toThrow(
+			/compactContext HTTP 429/,
+		);
 	});
 });

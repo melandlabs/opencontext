@@ -1,3 +1,4 @@
+import { type CompactionLevel, buildCompactionPrompt } from "./compaction";
 /**
  * HTTP-first compaction client for `BaseAgent.compactContext`.
  *
@@ -58,8 +59,7 @@
  * or `extraHeaders` (per-call). Resolution and defaults are owned by
  * {@link BaseAgent.compactContext}.
  */
-import { type CompactContextInput, type CompactContextResult } from "./compactor";
-import { type CompactionLevel, buildCompactionPrompt } from "./compaction";
+import type { CompactContextInput, CompactContextResult } from "./compactor";
 
 /**
  * Wire protocol the resolved endpoint speaks.

@@ -10,11 +10,8 @@ import { UserLocale } from "@melandlabs/shared";
 
 import { defaultLanguageDirectiveBuilder } from "./adapters/default-language-directive-builder";
 import { runWithAutoCompactCore } from "./auto-compact";
-import {
-	compactContextHttp,
-	type HttpCompactorProtocol,
-} from "./compaction/http-compactor";
 import type { CompactContextInput, CompactContextResult, Compactor } from "./compaction/compactor";
+import { type HttpCompactorProtocol, compactContextHttp } from "./compaction/http-compactor";
 import type {
 	AgentConfig,
 	AgentMessage,
@@ -261,18 +258,13 @@ export abstract class BaseAgent implements IAgent {
 					model?: string;
 					headers?: Record<string, string>;
 					protocol?: HttpCompactorProtocol;
-				}
+			  }
 			| undefined;
 		const endpoint =
-			input.compactionEndpoint ??
-			endpointConfig?.baseUrl ??
-			process.env.COMPACTION_HTTP_ENDPOINT;
+			input.compactionEndpoint ?? endpointConfig?.baseUrl ?? process.env.COMPACTION_HTTP_ENDPOINT;
 		if (!endpoint) {
 			throw new Error(
-				`compactContext is not configured for provider "${this.provider}". ` +
-					`Either pass a Compactor via AgentConfig.providerConfig.compactor ` +
-					`(build one with createCompactor(...) from "@melandlabs/opencontext"), ` +
-					`or set providerConfig.compactionEndpoint.baseUrl (or COMPACTION_HTTP_ENDPOINT).`,
+				`compactContext is not configured for provider "${this.provider}". Either pass a Compactor via AgentConfig.providerConfig.compactor (build one with createCompactor(...) from "@melandlabs/opencontext"), or set providerConfig.compactionEndpoint.baseUrl (or COMPACTION_HTTP_ENDPOINT).`,
 			);
 		}
 
