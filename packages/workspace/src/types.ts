@@ -245,4 +245,12 @@ export interface OkfFolderResource {
 	body: string;
 	front_matter?: OkfFrontMatter;
 	size_bytes: number;
+	/**
+	 * Source file mtime in milliseconds (`fs.stat().mtimeMs`), captured at
+	 * walk time. `indexResource` persists it under the resource row's
+	 * `metadata.source_mtime` so the next reconcile can skip re-extraction
+	 * for files whose mtime + size are unchanged. Only meaningful for
+	 * `okf_local_dir` resources.
+	 */
+	source_mtime?: number;
 }

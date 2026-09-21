@@ -31,6 +31,7 @@ export type {
 export {
 	SUPPORTED_EXTENSIONS,
 	DEFAULT_IGNORED_DIR_NAMES,
+	OKF_MAX_EXTRACT_BYTES,
 	resourceTypeForExtension,
 	indexOkfFolder,
 	listOkfFolderResources,
