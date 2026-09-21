@@ -56,14 +56,64 @@ jobs:
       # without a DTS race. `pnpm -r build` works in a single pass.
       - run: pnpm -r build
 
+      # Pre-publish staging guard. Changesets only checks the `latest`
+      # dist-tag before publishing, so a non-`latest` staged version
+      # (e.g. one left over from a manual `npm publish --tag next` or
+      # a partially-failed release) with the same version number as
+      # our new local version would slip past changesets' pre-flight
+      # and surface as a 409 at PUT time. Detect that case here from
+      # the changesets status report so the failure mode shows up in
+      # CI as an actionable warning before we burn a publish attempt.
+      # Non-blocking — changesets will surface its own error if it
+      # does 409, this just makes the cause obvious in the UI.
+      - name: Pre-publish staging guard
+        run: |
+          pnpm changeset status --output /tmp/changeset-status.json
+          node <<'NODE_SCRIPT'
+          const fs = require("fs");
+          const { execSync } = require("child_process");
+          const status = JSON.parse(fs.readFileSync("/tmp/changeset-status.json", "utf8"));
+          for (const r of status.releases || []) {
+            let versions;
+            try {
+              versions = JSON.parse(execSync(
+                `npm view ${r.name} versions --registry=https://registry.npmjs.org`,
+                { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }
+              ));
+            } catch { continue; }
+            if (Array.isArray(versions) && versions.includes(r.newVersion)) {
+              console.log(
+                `::warning::${r.name}@${r.newVersion} is already on npm ` +
+                `(likely staged under a non-latest dist-tag). changesets ` +
+                `publish will 409. Either bump the version or run ` +
+                `\`npm dist-tag add ${r.name}@${r.newVersion} latest\` ` +
+                `before retrying.`
+              );
+            }
+          }
+          NODE_SCRIPT
+
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
       # avoids changesets trying to push a tag (we let the version PR do
       # that); `--tag latest` is the default but stated explicitly.
+      # If the publish itself 409s because of a staged version that
+      # slipped past the guard above (e.g. a manual publish landed
+      # between the guard and this step), annotate it as a warning so
+      # the failure cause is obvious. We still propagate the non-zero
+      # exit so the `smoke` job correctly skips when artifacts are
+      # incomplete.
       - name: Publish
         env:
           NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
-        run: pnpm changeset publish --no-git-tag --tag latest
+        run: |
+          output=$(pnpm changeset publish --no-git-tag --tag latest 2>&1)
+          rc=$?
+          echo "$output"
+          if [ "$rc" -ne 0 ] && echo "$output" | grep -qE 'E409|409 Conflict|Cannot publish over previously staged'; then
+            echo "::warning::changesets publish hit staged-version conflicts. The local versions above already exist on npm under a non-latest dist-tag. Bump the version or run \`npm dist-tag add <pkg>@<ver> latest\` before retrying."
+          fi
+          exit "$rc"
         shell: bash
 
   smoke:
