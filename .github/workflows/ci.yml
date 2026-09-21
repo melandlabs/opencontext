@@ -113,12 +113,8 @@ jobs:
           fi
 
   lint:
-    name: Lint (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Lint
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -154,12 +150,8 @@ jobs:
       - run: pnpm format:check
 
   typecheck:
-    name: Typecheck (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Typecheck
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -172,29 +164,13 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
-      # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
-      # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
-      # tsup child-worker heap OOMs on DTS generation. Linux passes
-      # comfortably without it.
       - name: Build
-        # Bump Node heap on macOS — @melandlabs/ai has ~70 tsup entries
-        # (heavy deps: @ai-sdk/anthropic, ai@5, @vercel/sandbox,
-        # @anthropic-ai/claude-agent-sdk) and the macOS runner's default
-        # tsup child-worker heap OOMs on DTS generation. Linux passes
-        # comfortably without it.
         run: pnpm -r --filter './packages/**' build
-        env:
-          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r typecheck
 
   test:
-    name: Test (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
+    name: Test
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -209,18 +185,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # examples/ smoke-tests import @melandlabs/* packages and need dist/
       # artifacts to be present before `pnpm -r test` runs.
-      # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
-      # the default worker heap; see the matching note in the typecheck
-      # job above.
       - name: Build
         # examples/ smoke-tests import @melandlabs/* packages and need dist/
         # artifacts to be present before `pnpm -r test` runs.
-        # Bump Node heap on macOS — @melandlabs/ai's tsup DTS step OOMs
-        # the default worker heap; see the matching note in the typecheck
-        # job above.
         run: pnpm -r --filter './packages/**' build
-        env:
-          NODE_OPTIONS: ${{ matrix.os == 'macos-latest' && '--max-old-space-size=8192' || '' }}
       - run: pnpm -r test
 
   native-sqlite:
