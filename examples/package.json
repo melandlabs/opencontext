@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/opencontext-examples",
-	"version": "0.3.14",
+	"version": "0.3.15",
 	"private": true,
 	"type": "module",
 	"description": "Runnable demos for every @melandlabs/* package published from the monorepo that has a Node-callable headline API. Each file exercises the package's real public surface and asserts on the value returned. Run with `pnpm test`.",
