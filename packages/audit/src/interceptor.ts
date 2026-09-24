@@ -7,9 +7,28 @@
  * Call installAuditInterceptors() in instrumentation.ts's register()
  * to activate on server startup.
  *
- * Note: All Node.js modules are loaded via dynamic require()
- * to avoid Edge Runtime static analysis errors.
+ * Note: Node.js modules are imported statically. This module is only ever
+ * loaded from `instrumentation.ts` (which gates on `NEXT_RUNTIME === "nodejs"`),
+ * so Edge Runtime bundling is not a concern.
  */
+
+import * as cp from "node:child_process";
+import * as fs from "node:fs";
+import { resolve } from "node:path";
+
+import { getOpenContextDir } from "@melandlabs/env-config/app-paths";
+
+import { logCommandExec, logFileRead } from "./logger";
+
+// Alias the namespace imports into fresh `any`-typed locals so esbuild and the
+// TypeScript compiler both accept property assignment. Direct `fs.readFileSync
+// = ...` is rejected because ES module namespace bindings are immutable;
+// the aliases below keep the actual fs/cp objects reachable for monkey-patching
+// without sprinkling casts at every call site.
+// biome-ignore lint/suspicious/noExplicitAny: target of monkey-patch needs `any`
+const fsMutable = fs as any;
+// biome-ignore lint/suspicious/noExplicitAny: target of monkey-patch needs `any`
+const cpMutable = cp as any;
 
 let installed = false;
 let projectRoot = "";
@@ -21,10 +40,6 @@ let projectRoot = "";
  */
 function isNonProjectPath(filePath: string): boolean {
 	try {
-		const { resolve } = require("node:path") as typeof import("node:path");
-		const { getOpenContextDir } = require("@melandlabs/env-config/app-paths") as {
-			getOpenContextDir: () => string;
-		};
 		const resolved = resolve(String(filePath));
 		if (resolved.includes("node_modules") || resolved.includes(".next")) {
 			return false;
@@ -55,19 +70,11 @@ export function installAuditInterceptors() {
 	installed = true;
 
 	try {
-		const { resolve } = require("node:path") as typeof import("node:path");
-		const { logFileRead, logCommandExec } = require("./logger") as typeof import("./logger");
-
 		projectRoot = resolve(globalThis.process.cwd());
 		// If started from apps/web, project root is two levels up
 		if (projectRoot.endsWith("/apps/web") || projectRoot.endsWith("\\apps\\web")) {
 			projectRoot = resolve(projectRoot, "..", "..");
 		}
-
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const fs = require("node:fs");
-		// eslint-disable-next-line @typescript-eslint/no-require-imports
-		const cp = require("node:child_process");
 
 		// ────────── Save original function ──────────
 		const origReadFileSync = fs.readFileSync;
@@ -78,7 +85,7 @@ export function installAuditInterceptors() {
 		const origSpawnSync = cp.spawnSync;
 
 		// ────────── Intercept fs.readFileSync ──────────
-		fs.readFileSync = function auditedReadFileSync(path: unknown, ...args: unknown[]) {
+		fsMutable.readFileSync = function auditedReadFileSync(path: unknown, ...args: unknown[]) {
 			try {
 				const p = String(path);
 				if (isNonProjectPath(p)) {
@@ -87,11 +94,12 @@ export function installAuditInterceptors() {
 			} catch {
 				// Does not affect original call
 			}
-			return origReadFileSync.apply(fs, [path, ...args]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origReadFileSync as Function).apply(fs, [path, ...args]);
 		};
 
 		// ────────── Intercept fs.readFile ──────────
-		fs.readFile = function auditedReadFile(path: unknown, ...args: unknown[]) {
+		fsMutable.readFile = function auditedReadFile(path: unknown, ...args: unknown[]) {
 			try {
 				const p = String(path);
 				if (isNonProjectPath(p)) {
@@ -100,13 +108,16 @@ export function installAuditInterceptors() {
 			} catch {
 				// Does not affect original call
 			}
-			return origReadFile.apply(fs, [path, ...args]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origReadFile as Function).apply(fs, [path, ...args]);
 		};
 
 		// Intercept fs.promises.readFile
 		if (fs.promises) {
 			const origPromisesReadFile = fs.promises.readFile;
-			fs.promises.readFile = function auditedPromisesReadFile(path: unknown, ...args: unknown[]) {
+			// biome-ignore lint/suspicious/noExplicitAny: monkey-patching fs.promises.readFile
+			const promisesMutable = fs.promises as any;
+			promisesMutable.readFile = function auditedPromisesReadFile(path: unknown, ...args: unknown[]) {
 				try {
 					const p = String(path);
 					if (isNonProjectPath(p)) {
@@ -115,50 +126,59 @@ export function installAuditInterceptors() {
 				} catch {
 					// Does not affect original call
 				}
-				return origPromisesReadFile.apply(fs.promises, [path, ...args]);
+				// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+				return (origPromisesReadFile as Function).apply(fs.promises, [path, ...args]);
 			};
 		}
 
 		// ────────── Intercept child_process.execSync ──────────
-		cp.execSync = function auditedExecSync(command: unknown, ...args: unknown[]) {
+		cpMutable.execSync = function auditedExecSync(command: unknown, ...args: unknown[]) {
 			try {
 				logCommandExec(String(command));
 			} catch {
 				// Does not affect original call
 			}
-			return origExecSync.apply(cp, [command, ...args]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origExecSync as Function).apply(cp, [command, ...args]);
 		};
 
 		// ────────── Intercept child_process.exec ──────────
-		cp.exec = function auditedExec(command: unknown, ...args: unknown[]) {
+		cpMutable.exec = function auditedExec(command: unknown, ...args: unknown[]) {
 			try {
 				logCommandExec(String(command));
 			} catch {
 				// Does not affect original call
 			}
-			return origExec.apply(cp, [command, ...args]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origExec as Function).apply(cp, [command, ...args]);
 		};
 
 		// ────────── Intercept child_process.spawn ──────────
-		cp.spawn = function auditedSpawn(command: unknown, spawnArgs?: unknown, ...rest: unknown[]) {
+		cpMutable.spawn = function auditedSpawn(command: unknown, spawnArgs?: unknown, ...rest: unknown[]) {
 			try {
 				const argsArr = Array.isArray(spawnArgs) ? spawnArgs.map(String) : undefined;
 				logCommandExec(String(command), argsArr);
 			} catch {
 				// Does not affect original call
 			}
-			return origSpawn.apply(cp, [command, spawnArgs, ...rest]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origSpawn as Function).apply(cp, [command, spawnArgs, ...rest]);
 		};
 
 		// ────────── Intercept child_process.spawnSync ──────────
-		cp.spawnSync = function auditedSpawnSync(command: unknown, spawnArgs?: unknown, ...rest: unknown[]) {
+		cpMutable.spawnSync = function auditedSpawnSync(
+			command: unknown,
+			spawnArgs?: unknown,
+			...rest: unknown[]
+		) {
 			try {
 				const argsArr = Array.isArray(spawnArgs) ? spawnArgs.map(String) : undefined;
 				logCommandExec(String(command), argsArr);
 			} catch {
 				// Does not affect original call
 			}
-			return origSpawnSync.apply(cp, [command, spawnArgs, ...rest]);
+			// biome-ignore lint/complexity/noBannedTypes: forwarding arbitrary args through Function.apply
+			return (origSpawnSync as Function).apply(cp, [command, spawnArgs, ...rest]);
 		};
 	} catch (e) {
 		// biome-ignore lint/suspicious/noConsole: error logging
