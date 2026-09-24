@@ -4,26 +4,25 @@
  * Records non-project file reads and non-project local command executions during program execution.
  * Logs are written in JSONL format to ~/.opencontext/logs/audit.jsonl
  *
- * Note: All Node.js modules are loaded via dynamic require()
- * to avoid Edge Runtime static analysis errors.
+ * Note: Node.js modules are imported statically. This module is only ever
+ * loaded from `instrumentation.ts` (which gates on `NEXT_RUNTIME === "nodejs"`),
+ * so Edge Runtime bundling is not a concern.
  */
 
+import * as fs from "node:fs";
+import { getOpenContextPath } from "@melandlabs/env-config/app-paths";
+
 function getLogPaths() {
-	const { getOpenContextPath } = require("@melandlabs/env-config/app-paths") as {
-		getOpenContextPath: (...segments: string[]) => string;
-	};
 	const dir = getOpenContextPath("logs");
 	const file = getOpenContextPath("logs", "audit.jsonl");
 	return { dir, file };
 }
 
-// Save original fs function references to avoid recursion after being overwritten by interceptors
-let _fs: typeof import("node:fs") | null = null;
+// Single handle on `node:fs` so the file read/write call sites stay symmetric
+// with the rest of the module. Kept as a function so callers don't need to
+// reach into the module's namespace directly.
 function getFs() {
-	if (!_fs) {
-		_fs = require("node:fs") as typeof import("node:fs");
-	}
-	return _fs;
+	return fs;
 }
 
 // Single log file max size 10 MB, truncate old logs when exceeded
