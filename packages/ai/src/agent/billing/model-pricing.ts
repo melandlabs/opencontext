@@ -27,6 +27,7 @@ export type ModelType =
 	| "x-ai/grok-4.20"
 	| "deepseek/deepseek-v4-flash"
 	| "deepseek/deepseek-v4-pro"
+	| "deepseek/deepseek-v4.1-flash"
 	| "z-ai/glm-5"
 	| "z-ai/glm-5.1"
 	| "z-ai/glm-5.2"
@@ -40,6 +41,7 @@ export type ModelType =
 	| "qwen/qwen3.6-plus"
 	| "qwen/qwen3.6-flash"
 	| "qwen/qwen3.7-max"
+	| "qwen/qwen3.8-flash"
 	| "xiaomi/mimo-v2.5"
 	| "xiaomi/mimo-v2.5-pro"
 	| "stepfun/step-3.7-flash"
@@ -103,6 +105,13 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		inputPricePerMillion: 1.7,
 		outputPricePerMillion: 3.4,
 		supportsVision: false,
+	},
+	"deepseek/deepseek-v4.1-flash": {
+		// OpenRouter list price (Sept 2026 rollout). Reasoning always on;
+		// natively multimodal (text + image in) per OpenRouter model card.
+		inputPricePerMillion: 0.15,
+		outputPricePerMillion: 0.6,
+		supportsVision: true,
 	},
 	"google/gemini-3-flash-preview": {
 		inputPricePerMillion: 0.5,
@@ -251,6 +260,13 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		inputPricePerMillion: 2.5,
 		outputPricePerMillion: 7.5,
 		supportsVision: true,
+	},
+	"qwen/qwen3.8-flash": {
+		// Previous alloomi default primary; kept registered for A/B testing.
+		// Reasoning capable; vision is unspecified by upstream so assume text only.
+		inputPricePerMillion: 0.15,
+		outputPricePerMillion: 0.47,
+		supportsVision: false,
 	},
 	"openrouter/auto": {
 		inputPricePerMillion: 2.5, // Weighted average for auto-selected models
