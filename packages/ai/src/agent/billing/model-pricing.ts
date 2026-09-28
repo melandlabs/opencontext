@@ -107,10 +107,10 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		supportsVision: false,
 	},
 	"deepseek/deepseek-v4.1-flash": {
-		// OpenRouter list price (Sept 2026 rollout). Reasoning always on;
+		// OpenRouter list price (verified 2026-09-28). Reasoning always on;
 		// natively multimodal (text + image in) per OpenRouter model card.
-		inputPricePerMillion: 0.15,
-		outputPricePerMillion: 0.6,
+		inputPricePerMillion: 0.035,
+		outputPricePerMillion: 0.29,
 		supportsVision: true,
 	},
 	"google/gemini-3-flash-preview": {
@@ -156,8 +156,9 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		supportsVision: false,
 	},
 	"z-ai/glm-5.3-flash": {
-		// OpenRouter list price as of 2026-08-27; 50% launch promo
-		// (input $0.075 / output $0.25) expires 2026-09-09.
+		// OpenRouter list price (verified 2026-09-28). Prompt caching
+		// available; cache_read $0.03/M per upstream model card. Reasoning
+		// mandatory (default effort max), natively multimodal.
 		inputPricePerMillion: 0.15,
 		outputPricePerMillion: 0.5,
 		supportsVision: true,
@@ -193,9 +194,11 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		supportsVision: false,
 	},
 	"minimax/minimax-m3": {
+		// OpenRouter list price (verified 2026-09-28). Natively multimodal
+		// (text + image + video in) per OpenRouter model card.
 		inputPricePerMillion: 0.3,
 		outputPricePerMillion: 1.2,
-		supportsVision: false,
+		supportsVision: true,
 	},
 	"openai/gpt-5.4-mini": {
 		inputPricePerMillion: 30,
@@ -262,11 +265,12 @@ export const MODEL_PRICING: Record<ModelType, ModelPricing> = {
 		supportsVision: true,
 	},
 	"qwen/qwen3.8-flash": {
-		// Previous alloomi default primary; kept registered for A/B testing.
-		// Reasoning capable; vision is unspecified by upstream so assume text only.
+		// OpenRouter list price (verified 2026-09-28). Previous alloomi
+		// default primary; kept registered for A/B testing. Reasoning
+		// capable; natively multimodal (text + image + video in).
 		inputPricePerMillion: 0.15,
 		outputPricePerMillion: 0.47,
-		supportsVision: false,
+		supportsVision: true,
 	},
 	"openrouter/auto": {
 		inputPricePerMillion: 2.5, // Weighted average for auto-selected models
