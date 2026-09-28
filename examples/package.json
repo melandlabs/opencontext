@@ -10,7 +10,7 @@
 		"test": "node --experimental-strip-types src/index.ts"
 	},
 	"dependencies": {
-		"@melandlabs/ai": "^0.12.0",
+		"@melandlabs/ai": "^1.0.1",
 		"@melandlabs/ai-rag": "^0.2.12",
 		"@melandlabs/api": "^0.3.0",
 		"@melandlabs/audit": "^0.3.1",

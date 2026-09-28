@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/ai",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -100,7 +104,9 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · ai module",
-	"keywords": ["opencontext"],
+	"keywords": [
+		"opencontext"
+	],
 	"dependencies": {
 		"@agentclientprotocol/sdk": "^0.22.1",
 		"@ai-sdk/anthropic": "4.0.0-beta.67",
