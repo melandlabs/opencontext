@@ -394,7 +394,7 @@ export function clampUnifiedMemorySearchLimit(limit: unknown): number {
 	if (!Number.isFinite(parsed)) {
 		return DEFAULT_LIMIT;
 	}
-	return Math.min(50, Math.max(1, Math.floor(parsed)));
+	return Math.min(100, Math.max(1, Math.floor(parsed)));
 }
 
 export function clampUnifiedMemorySearchThreshold(threshold: unknown): number {

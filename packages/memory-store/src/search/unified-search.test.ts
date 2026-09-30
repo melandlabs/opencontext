@@ -84,6 +84,57 @@ afterEach(() => {
 });
 
 describe("createUnifiedSearch", () => {
+	it("accepts the public AML top_k=100 without silently clamping to 50", async () => {
+		const candidates = Array.from({ length: 110 }, (_, i) => ({
+			id: `m${i}`,
+			content: `memory ${i}`,
+			similarity: 1 - i / 1000,
+			metadata: { userId: "u1", messageSequence: i + 1 },
+		}));
+		const search = createUnifiedSearch({
+			embedQuery: async () => [1, 0],
+			searchRawMessagesAnn: async () => candidates,
+		});
+		const output = await search.search({ userId: "u1", query: "memory", sources: ["memory"], limit: 100 });
+		expect(output.results).toHaveLength(100);
+	});
+	it("presents numbered evidence only after reranking and selecting the public Top-K", async () => {
+		const rerank = vi.fn(async (input: RerankerInput) => {
+			expect(input.candidates.map((hit) => hit.content)).toEqual(["one", "two", "three"]);
+			return [
+				{ id: "m3", score: 0.99 },
+				{ id: "m2", score: 0.8 },
+				{ id: "m1", score: 0.1 },
+			];
+		});
+		const search = createUnifiedSearch({
+			embedQuery: async () => [1, 0],
+			searchRawMessagesAnn: async () =>
+				["one", "two", "three"].map((content, i) => ({
+					id: `m${i + 1}`,
+					content,
+					similarity: 1 - i / 10,
+					metadata: { userId: "u1", messageSequence: i + 1, sourceChunkIndex: 0 },
+				})),
+			searchRawMessagesLexical: async () => [],
+			reranker: { rerank },
+		});
+		const output = await search.search({
+			userId: "u1",
+			query: "memory",
+			sources: ["memory"],
+			limit: 2,
+			includeRetrievalDiagnostics: true,
+		});
+		expect(output.results.map((hit) => hit.id)).toEqual(["m3", "m2"]);
+		expect(output.results[0].content).toContain("messageSequence: 3");
+		expect(output.results[0].content.match(/\[Message order guidance\]/g)).toHaveLength(1);
+		expect(output.retrievalDiagnostics?.final).toEqual(output.results);
+		expect(output.retrievalDiagnostics?.fusedBeforeRerank[0].content).toBe("one");
+		expect(output.retrievalDiagnostics?.reranker?.enabled).toBe(true);
+		expect(rerank).toHaveBeenCalledOnce();
+	});
+
 	it("uses RRF merge by default and dedupes by (type,id)", async () => {
 		const search = createUnifiedSearch(baseDeps);
 		const out = await search.search({ userId: "u1", query: "anything here" });

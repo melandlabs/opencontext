@@ -605,7 +605,12 @@ function messageToEvidence(message: RawMessage): MemoryGraphEvolutionEvidence {
 	return {
 		id: message.messageId,
 		ownerScope: ownerScopeFromMessage(message),
-		timestamp: message.timestamp < 1e11 ? message.timestamp * 1000 : message.timestamp,
+		timestamp:
+			message.timestamp === undefined
+				? 0
+				: message.timestamp < 1e11
+					? message.timestamp * 1000
+					: message.timestamp,
 		text: message.content,
 		relationGroup:
 			optionalString(message.metadata?.relationGroup) ??

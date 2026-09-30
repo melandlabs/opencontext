@@ -223,6 +223,14 @@ describe("runList", () => {
 		expect(out).toContain("messageId: uuid-aaa");
 	});
 
+	it("renders messages without a supplied timestamp without inventing one", async () => {
+		const { __mock } = await getMockStore();
+		__mock.queryMessages.mockResolvedValueOnce([makeRow({ timestamp: undefined })]);
+
+		await runList(parseListArgs([]));
+		expect(stdoutChunks.join("")).toContain("[unknown] #1 cli/default@default — hello world");
+	});
+
 	it("includes the channel in the human line when set", async () => {
 		const { __mock } = await getMockStore();
 		__mock.queryMessages.mockResolvedValueOnce([makeRow({ channel: "#eng" })]);

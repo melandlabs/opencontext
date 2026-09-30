@@ -22,7 +22,10 @@ export interface RawMessage {
 	userId: string;
 	channel?: string;
 	person?: string;
-	timestamp: number;
+	/** Original upstream timestamp; absent when the source provides none. */
+	timestamp?: number;
+	/** Storage-assigned, per-user insertion order. Immutable on retries. */
+	messageSequence?: number;
 	content: string;
 	attachments?: Array<{
 		name: string;

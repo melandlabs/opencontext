@@ -1,11 +1,11 @@
-"""Run an AML pipeline without modifying the vendored AML repo.
+"""Run an AML pipeline with local compatibility and BEAM provider recovery.
 
 The published AML pipelines (data/<bench>/pipeline*.py) pass plain `open()`
-file handles into `async with`, which CPython does not support. Instead of
-patching the vendored files, this shim patches `pathlib.Path.open` at runtime
-so write/append handles gain the async context-manager protocol, then executes
-the target pipeline with the remaining CLI arguments. Answering and scoring
-logic is untouched.
+file handles into `async with`, which CPython does not support. This shim
+patches `pathlib.Path.open` at runtime so write/append handles gain the async
+context-manager protocol, then executes the target pipeline with the remaining
+CLI arguments. BEAM answer/evaluate always use the resumable local executor,
+which reuses the official prompts, rubric parser and event metrics.
 
 Usage:
   python run_pipeline.py <path-to-pipeline.py> [pipeline args...]
@@ -49,8 +49,6 @@ class _AsyncFileWrapper:
 
 
 _original_open = Path.open
-
-
 def _patched_open(self, mode="r", *args, **kwargs):
     fileobj = _original_open(self, mode, *args, **kwargs)
     if any(flag in mode for flag in "wax+"):
@@ -59,10 +57,7 @@ def _patched_open(self, mode="r", *args, **kwargs):
 
 
 # The pipelines do `response.json()["choices"][0]["message"]["content"].strip()`.
-# OpenRouter/upstream providers occasionally return `"content": null` on a 200
-# (observed with qwen/qwen3-14b); the vendored pipeline then crashes and the
-# whole run dies. Retry the request a couple of times, and if content is still
-# null coerce it to "" so the run completes (empty answers simply score 0).
+# Keep provider-specific recovery here, outside the vendored AML code.
 _original_post = httpx.AsyncClient.post
 
 
@@ -145,6 +140,9 @@ def main() -> None:
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     pipeline = sys.argv[1]
+    if Path(pipeline).parent.name == "beam" and len(sys.argv) > 2 and sys.argv[2] in {"answer", "evaluate"}:
+        from beam_runtime import main as run_beam
+        raise SystemExit(run_beam(pipeline, sys.argv[2:]))
     Path.open = _patched_open
     httpx.AsyncClient.post = _patched_post
     sys.argv = [pipeline] + sys.argv[2:]

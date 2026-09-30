@@ -44,6 +44,8 @@ test("adapter preserves one complete RawMessage per upstream turn", () => {
 	assert.equal(built.messages.length, 2);
 	assert.equal(built.messages[0]?.content, "Berlin");
 	assert.equal(built.messages[1]?.content, "Noted");
+	assert.equal(built.messages[0]?.timestamp, undefined);
+	assert.equal(Object.hasOwn(JSON.parse(JSON.stringify(built.messages[0])), "timestamp"), false);
 	assert.equal(built.messages[0]?.metadata?.sourceTurnId, "41");
 	assert.equal(built.messages[1]?.metadata?.sourceTurnId, "42");
 	assert.deepEqual(built.chunks[0]?.source_turn_ids, ["41"]);

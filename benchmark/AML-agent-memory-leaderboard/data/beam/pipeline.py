@@ -401,13 +401,25 @@ async def evaluate(args: argparse.Namespace) -> None:
     async with httpx.AsyncClient(timeout=120) as client, _afile(output, "a") as handle:
         for ident, item in ((ident, item) for ident, item in items.items() if ident not in done):
             rubrics = rubric_items(item)
-            judge_response = await call_model(
-                client,
-                args,
-                [{"role": "user", "content": render_batch_judge_prompt(text(item["question"]), answers[ident], rubrics)}],
-                args.judge_max_tokens,
-                json_mode=True,
-            )
+            try:
+                judge_response = await call_model(
+                    client,
+                    args,
+                    [{"role": "user", "content": render_batch_judge_prompt(text(item["question"]), answers[ident], rubrics)}],
+                    args.judge_max_tokens,
+                    json_mode=True,
+                )
+            except RuntimeError as error:
+                if (
+                    os.environ.get("AML_SKIP_INVALID_BEAM_JUDGE") != "1"
+                    or not str(error).startswith("BEAM judge response remained invalid after")
+                ):
+                    raise
+                error_path = output.with_name(output.stem + "-errors.jsonl")
+                with error_path.open("a", encoding="utf-8") as error_handle:
+                    error_handle.write(json.dumps({"id": ident, "error": str(error)}, ensure_ascii=False) + "\n")
+                print(f"[aml-local] Skipped invalid BEAM judge response for {ident}; recorded in {error_path}", flush=True)
+                continue
             scores = parse_rubric_scores(judge_response, len(rubrics))
             result = {
                 "id": ident,

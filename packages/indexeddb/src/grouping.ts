@@ -57,7 +57,10 @@ export function groupRawMessagesByPeriod(
 
 	const grouped: Record<string, RawMessage[]> = {};
 	for (const message of messages) {
-		const key = localDateKey(message.timestamp, groupBy, today, yesterday);
+		const key =
+			message.timestamp === undefined
+				? "Unknown"
+				: localDateKey(message.timestamp, groupBy, today, yesterday);
 		if (!grouped[key]) grouped[key] = [];
 		grouped[key].push(message);
 	}

@@ -149,7 +149,13 @@ export class RawMessageChildVectorIndex {
 					userId: parent.userId,
 					botId: parent.botId,
 					platform: parent.platform,
-					timestamp: parent.timestamp,
+					timestamp:
+						parent.timestamp === undefined
+							? undefined
+							: parent.timestamp < 1e11
+								? parent.timestamp * 1000
+								: parent.timestamp,
+					messageSequence: parent.messageSequence,
 					sourceMessageId: parent.messageId,
 					sourceChunkId: chunk.chunkId,
 					sourceChunkIndex: chunk.chunkIndex,

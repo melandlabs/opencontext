@@ -188,7 +188,7 @@ function renderHuman(env: ListEnvelope): string {
 	const lines: string[] = [];
 	lines.push(`# ${env.count} message${env.count === 1 ? "" : "s"} for user=${env.query.userId}`);
 	for (const r of env.results) {
-		const ts = new Date(r.timestamp).toISOString();
+		const ts = r.timestamp === undefined ? "unknown" : new Date(r.timestamp).toISOString();
 		const preview = r.content.replace(/\s+/g, " ").slice(0, 160);
 		const ellipsis = preview.length === 160 ? "…" : "";
 		const rowId = r.id === undefined ? "?" : `#${r.id}`;

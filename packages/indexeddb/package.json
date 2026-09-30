@@ -34,6 +34,7 @@
 	},
 	"devDependencies": {
 		"@melandlabs/config": "workspace:*",
+		"fake-indexeddb": "^6.2.5",
 		"typescript": "^5.6.3",
 		"vitest": "^2.1.0"
 	},

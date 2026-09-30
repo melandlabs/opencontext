@@ -22,8 +22,9 @@
 			"description": "Maximum number of results. The adapter returns at most top_k items, relevance-ordered."
 		},
 		"options": {
-			"type": "object",
-			"description": "Reserved for platform-specific search options; currently ignored by the adapter."
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Optional multiple-choice option texts; the textual BEAM questions omit this field."
 		}
 	}
 }

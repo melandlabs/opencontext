@@ -88,6 +88,7 @@ export async function prepareRawMessageIngest(
 	incoming: RawMessage[],
 	embedOnInsert: boolean | undefined,
 	unified: UnifiedSearchDeps | undefined,
+	existingChunks: readonly RawMessageSearchChunk[] = [],
 ): Promise<PreparedRawMessageIngest> {
 	const deps = unified ?? {};
 	const embedderAvailable =
@@ -102,12 +103,38 @@ export async function prepareRawMessageIngest(
 		pieces: chunkTextByEstimatedTokens(message.content),
 	}));
 	const generatedEmbeddings = new Map<string, number[]>();
+	const storedByKey = new Map(
+		existingChunks.map((chunk) => [JSON.stringify([chunk.userId, chunk.messageId, chunk.chunkIndex]), chunk]),
+	);
+	const reusedChunks = new Map<string, RawMessageSearchChunk>();
 	const pendingByUser = new Map<string, Array<{ key: string; text: string }>>();
 
 	for (const [messageIndex, plan] of plans.entries()) {
 		for (const piece of plan.pieces) {
 			const canReuseParentEmbedding = plan.pieces.length === 1 && isUsableEmbedding(plan.message.embedding);
 			if (canReuseParentEmbedding || !shouldEmbed || piece.content.length === 0) continue;
+			const stored = storedByKey.get(
+				JSON.stringify([plan.message.userId, plan.message.messageId, piece.chunkIndex]),
+			);
+			// Reuse only an exact, validated child from this user's persisted catalog.
+			// A retry still writes current parent metadata and repairs external indexes.
+			if (
+				stored &&
+				embedderAvailable &&
+				deps.embeddingInfo?.model &&
+				stored.embeddingModel === deps.embeddingInfo.model &&
+				stored.content === piece.content &&
+				stored.contentHash === sha256(piece.content) &&
+				stored.startPosition === piece.startPosition &&
+				stored.endPosition === piece.endPosition &&
+				isUsableEmbedding(stored.embedding) &&
+				stored.embeddingDimensions === stored.embedding.length &&
+				(deps.embeddingInfo.dimensions === undefined ||
+					stored.embedding.length === deps.embeddingInfo.dimensions)
+			) {
+				reusedChunks.set(`${messageIndex}:${piece.chunkIndex}`, stored);
+				continue;
+			}
 			const pending = pendingByUser.get(plan.message.userId) ?? [];
 			pending.push({ key: `${messageIndex}:${piece.chunkIndex}`, text: piece.content });
 			pendingByUser.set(plan.message.userId, pending);
@@ -145,11 +172,12 @@ export async function prepareRawMessageIngest(
 		let message = incomingMessage;
 		for (const piece of pieces) {
 			const contentHash = sha256(piece.content);
+			const reused = reusedChunks.get(`${messageIndex}:${piece.chunkIndex}`);
 			const canReuseParentEmbedding = pieces.length === 1 && isUsableEmbedding(incomingMessage.embedding);
 			const embedding = canReuseParentEmbedding
 				? incomingMessage.embedding
-				: generatedEmbeddings.get(`${messageIndex}:${piece.chunkIndex}`);
-			generatedEmbedding = generatedEmbedding || Boolean(embedding && !canReuseParentEmbedding);
+				: (reused?.embedding ?? generatedEmbeddings.get(`${messageIndex}:${piece.chunkIndex}`));
+			generatedEmbedding = generatedEmbedding || Boolean(embedding && !canReuseParentEmbedding && !reused);
 			if (!embedding) missingSemanticEmbedding = true;
 			const embeddingModel = embedding
 				? canReuseParentEmbedding
@@ -169,7 +197,7 @@ export async function prepareRawMessageIngest(
 				embedding,
 				embeddingModel,
 				embeddingDimensions: embedding?.length,
-				embeddingUpdatedAt: embedding ? Date.now() : undefined,
+				embeddingUpdatedAt: embedding ? (reused?.embeddingUpdatedAt ?? Date.now()) : undefined,
 			});
 
 			if (pieces.length === 1 && embedding && !incomingMessage.embedding?.length) {
@@ -179,7 +207,7 @@ export async function prepareRawMessageIngest(
 					embeddingModel,
 					embeddingContentHash: contentHash,
 					embeddingDimensions: embedding.length,
-					embeddingUpdatedAt: Date.now(),
+					embeddingUpdatedAt: reused?.embeddingUpdatedAt ?? Date.now(),
 				};
 			}
 		}

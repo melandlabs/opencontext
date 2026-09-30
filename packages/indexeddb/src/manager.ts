@@ -23,8 +23,9 @@ import type {
 } from "./storage";
 
 const DB_NAME = "opencontext_messages_db";
-const DB_VERSION = 4; // v4: added factType index for retrieval-side filtering
+const DB_VERSION = 5; // v5: persistent per-user message sequence
 const STORE_NAME = "raw_messages";
+const SEQUENCE_STORE_NAME = "raw_message_sequences";
 const SUMMARY_STORE_NAME = "memory_summaries";
 
 export type {
@@ -192,6 +193,24 @@ class IndexedDBManager implements RawMessageStorageManager {
 		// - userId+timestamp for bounded time window queries
 		ensureIndex(rawStore, "userId_memoryStage", ["userId", "memoryStage"], false);
 		ensureIndex(rawStore, "userId_timestamp", ["userId", "timestamp"], false);
+		ensureIndex(rawStore, "userId_messageSequence", ["userId", "messageSequence"], true);
+		if (!db.objectStoreNames.contains(SEQUENCE_STORE_NAME)) {
+			const sequences = db.createObjectStore(SEQUENCE_STORE_NAME, { keyPath: "userId" });
+			const counters = new Map<string, number>();
+			const cursor = rawStore.openCursor();
+			cursor.onsuccess = () => {
+				const current = cursor.result;
+				if (!current) {
+					for (const [userId, lastSequence] of counters) sequences.put({ userId, lastSequence });
+					return;
+				}
+				const message = current.value as RawMessage;
+				const messageSequence = (counters.get(message.userId) ?? 0) + 1;
+				counters.set(message.userId, messageSequence);
+				current.update({ ...message, messageSequence });
+				current.continue();
+			};
+		}
 
 		let summaryStore: IDBObjectStore;
 		if (db.objectStoreNames.contains(SUMMARY_STORE_NAME)) {
@@ -224,8 +243,12 @@ class IndexedDBManager implements RawMessageStorageManager {
 					reject(new Error("Database not initialized"));
 					return;
 				}
-				const transaction = this.db.transaction([STORE_NAME], "readwrite");
+				const transaction = this.db.transaction([STORE_NAME, SEQUENCE_STORE_NAME], "readwrite");
 				const objectStore = transaction.objectStore(STORE_NAME);
+				const sequences = transaction.objectStore(SEQUENCE_STORE_NAME);
+				let storedId: number;
+				transaction.oncomplete = () => resolve(storedId);
+				transaction.onabort = () => reject(transaction.error ?? new Error("raw_message_write_aborted"));
 
 				// Check if message already exists
 				const index = objectStore.index("messageId");
@@ -238,30 +261,47 @@ class IndexedDBManager implements RawMessageStorageManager {
 						reject(new Error("raw_message_scope_conflict"));
 						return;
 					}
-					const messageToStore = existing ? mergeStoredChatMemoryEvidence(existing, message) : message;
-					const normalizedMessage: RawMessage = {
-						...messageToStore,
-						memoryStage: messageToStore.memoryStage ?? "short",
-						accessCount: messageToStore.accessCount ?? 0,
-						lastAccessAt: messageToStore.lastAccessAt,
-						importanceScore: messageToStore.importanceScore ?? 0,
-						archivedAt: messageToStore.archivedAt,
-						isPinned: messageToStore.isPinned ?? false,
-						summaryRefId: messageToStore.summaryRefId,
-					};
+					const write = (messageSequence: number) => {
+						const messageToStore = existing ? mergeStoredChatMemoryEvidence(existing, message) : message;
+						const normalizedMessage: RawMessage = {
+							...messageToStore,
+							messageSequence,
+							memoryStage: messageToStore.memoryStage ?? "short",
+							accessCount: messageToStore.accessCount ?? 0,
+							lastAccessAt: messageToStore.lastAccessAt,
+							importanceScore: messageToStore.importanceScore ?? 0,
+							archivedAt: messageToStore.archivedAt,
+							isPinned: messageToStore.isPinned ?? false,
+							summaryRefId: messageToStore.summaryRefId,
+						};
 
-					if (existing) {
-						const updateRequest = objectStore.put({
-							...existing,
-							...normalizedMessage,
-						});
-						updateRequest.onsuccess = () => resolve(updateRequest.result as number);
-						updateRequest.onerror = () => reject(updateRequest.error);
+						if (existing) {
+							const updateRequest = objectStore.put({
+								...existing,
+								...normalizedMessage,
+							});
+							updateRequest.onsuccess = () => {
+								storedId = updateRequest.result as number;
+							};
+							updateRequest.onerror = () => reject(updateRequest.error);
+						} else {
+							normalizedMessage.createdAt = Date.now();
+							const addRequest = objectStore.add(normalizedMessage);
+							addRequest.onsuccess = () => {
+								storedId = addRequest.result as number;
+							};
+							addRequest.onerror = () => reject(addRequest.error);
+						}
+					};
+					if (existing?.messageSequence !== undefined) {
+						write(existing.messageSequence);
 					} else {
-						normalizedMessage.createdAt = Date.now();
-						const addRequest = objectStore.add(normalizedMessage);
-						addRequest.onsuccess = () => resolve(addRequest.result as number);
-						addRequest.onerror = () => reject(addRequest.error);
+						const counter = sequences.get(message.userId);
+						counter.onsuccess = () => {
+							const messageSequence = (counter.result?.lastSequence ?? 0) + 1;
+							sequences.put({ userId: message.userId, lastSequence: messageSequence });
+							write(messageSequence);
+						};
 					}
 				};
 
@@ -333,7 +373,11 @@ class IndexedDBManager implements RawMessageStorageManager {
 						IDBKeyRange.only([query.userId, query.memoryStages[0]]),
 						reverse ? "prev" : "next",
 					);
-				} else if (query.userId && objectStore.indexNames.contains("userId_timestamp")) {
+				} else if (
+					query.userId &&
+					(query.startTime !== undefined || query.endTime !== undefined) &&
+					objectStore.indexNames.contains("userId_timestamp")
+				) {
 					// Default path for user-scoped queries with time windows.
 					const index = objectStore.index("userId_timestamp");
 					const lower = [query.userId, query.startTime ?? Number.MIN_SAFE_INTEGER];
@@ -1039,7 +1083,8 @@ class IndexedDBManager implements RawMessageStorageManager {
 
 		// Group messages by time period
 		for (const message of messages) {
-			const key = getLocalDateKey(message.timestamp, query.groupBy);
+			const key =
+				message.timestamp === undefined ? "Unknown" : getLocalDateKey(message.timestamp, query.groupBy);
 			if (!grouped[key]) {
 				grouped[key] = [];
 			}
@@ -1108,10 +1153,16 @@ class IndexedDBManager implements RawMessageStorageManager {
 						stats.messagesByBot[message.botId] = (stats.messagesByBot[message.botId] || 0) + 1;
 
 						// Track timestamps
-						if (!stats.oldestMessage || message.timestamp < stats.oldestMessage) {
+						if (
+							message.timestamp !== undefined &&
+							(stats.oldestMessage === undefined || message.timestamp < stats.oldestMessage)
+						) {
 							stats.oldestMessage = message.timestamp;
 						}
-						if (!stats.newestMessage || message.timestamp > stats.newestMessage) {
+						if (
+							message.timestamp !== undefined &&
+							(stats.newestMessage === undefined || message.timestamp > stats.newestMessage)
+						) {
 							stats.newestMessage = message.timestamp;
 						}
 

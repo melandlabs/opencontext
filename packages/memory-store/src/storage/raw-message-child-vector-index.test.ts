@@ -43,6 +43,7 @@ const parent: RawMessage = {
 	platform: "test",
 	content: "AAAABBBBCCCC",
 	timestamp: 1,
+	messageSequence: 7,
 	createdAt: 1,
 };
 
@@ -135,6 +136,8 @@ describe("RawMessageChildVectorIndex", () => {
 		expect(results).toHaveLength(1);
 		expect(results[0]).toMatchObject({ id: parent.messageId, content: parent.content, similarity: 0.9 });
 		expect(results[0]?.metadata).toMatchObject({
+			messageSequence: 7,
+			timestamp: 1000,
 			sourceMessageId: parent.messageId,
 			sourceChunkId: "parent-1:1",
 			backend: "lancedb",

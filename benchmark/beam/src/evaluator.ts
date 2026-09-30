@@ -92,7 +92,7 @@ export function buildConversationMessages(conv: BeamConversation): {
 			userId: "benchmark_user",
 			platform: "benchmark",
 			botId: "beam",
-			timestamp: parseTimestampMs(turn.timestamp) ?? now,
+			timestamp: parseTimestampMs(turn.timestamp),
 			content: turn.text,
 			createdAt: now,
 			metadata: {

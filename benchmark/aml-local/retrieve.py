@@ -15,9 +15,12 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import sys
 import time
+import urllib.error
 import urllib.request
+from contextlib import closing
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -36,6 +39,7 @@ OUTPUT_NAMES = {
     "scriptmem": "scriptmem",
 }
 SCRIPTMEM_FILES = ("angry.json", "enemy.json", "friends.json", "man_earth.json")
+SOCKET_RETRY_DELAYS = (5, 10, 20, 30, 60, 60, 60, 60)
 
 
 def read_json(path: Path) -> Any:
@@ -48,10 +52,33 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 
 def write_jsonl(path: Path, records: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8", newline="\n") as handle:
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8", newline="\n") as handle:
         for record in records:
             handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
     print(f"[aml-local] wrote {len(records)} records -> {path}")
+
+
+def write_json_atomic(path: Path, value: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(value, handle, ensure_ascii=False)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temporary, path)
+
+
+def load_beam_resume_ids(path: Path) -> set[str]:
+    """Read committed Add message IDs without modifying the running store."""
+    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)) as connection:
+        return {
+            row[0]
+            for row in connection.execute("SELECT message_id FROM raw_messages WHERE platform = 'aml'")
+        }
 
 
 def parse_timestamp(value: Any, fallback: int) -> int:
@@ -208,15 +235,32 @@ class OpenContextClient:
         self.top_k = top_k
         self.reasoning = reasoning
 
-    def _post(self, path: str, payload: dict[str, Any], timeout: int) -> dict[str, Any]:
+    def _post(self, path: str, payload: dict[str, Any], timeout: int, *, headers: dict[str, str] | None = None) -> dict[str, Any]:
         request = urllib.request.Request(
             self.base_url + path,
             data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": "application/json", **(headers or {})},
             method="POST",
         )
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            return json.loads(response.read().decode("utf-8"))
+        for attempt in range(len(SOCKET_RETRY_DELAYS) + 1):
+            try:
+                with urllib.request.urlopen(request, timeout=timeout) as response:
+                    return json.loads(response.read().decode("utf-8"))
+            except urllib.error.URLError as exc:
+                reason = exc.reason
+                no_buffer = isinstance(reason, OSError) and (
+                    getattr(reason, "winerror", None) == 10055 or reason.errno == 10055
+                )
+                if not no_buffer or attempt == len(SOCKET_RETRY_DELAYS):
+                    raise
+                delay = SOCKET_RETRY_DELAYS[attempt]
+                print(
+                    f"[aml-local] socket 10055 on {path}; retry {attempt + 1}/{len(SOCKET_RETRY_DELAYS)} in {delay}s",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                time.sleep(delay)
+        raise AssertionError("unreachable")
 
     def health(self) -> None:
         with urllib.request.urlopen(self.base_url + "/health", timeout=10) as response:
@@ -249,6 +293,177 @@ class OpenContextClient:
         if not isinstance(hits, list):
             raise TypeError("OpenContext /v1/search response must contain results[]")
         return hits
+
+
+class AmlClient(OpenContextClient):
+    """Exercise the same Add/Search boundary that AML calls in production."""
+
+    def health(self) -> None:
+        with urllib.request.urlopen(self.base_url + "/health", timeout=10) as response:
+            if response.status != 200:
+                raise RuntimeError(f"AML adapter unhealthy: HTTP {response.status}")
+            status = json.loads(response.read().decode("utf-8"))
+        if status.get("ok") is not True or (status.get("retrieval") or {}).get("rerankerReady") is not True:
+            raise RuntimeError("AML adapter is not ready with an active reranker")
+
+    def add(self, request_id: str, user_id: str, session_id: str, messages: list[dict[str, Any]]) -> None:
+        result = self._post(
+            "/add",
+            {"request_id": request_id, "user_id": user_id, "session_id": session_id, "messages": messages},
+            timeout=1800,
+        )
+        if result != {"success": True, "request_id": request_id, "user_id": user_id, "session_id": session_id}:
+            raise RuntimeError(f"AML Add returned an invalid acknowledgement for {request_id}")
+
+    def search(self, user_id: str, query: str) -> list[dict[str, Any]]:
+        return self.search_with_diagnostics(user_id, query, include_diagnostics=False)[0]
+
+    def search_with_diagnostics(
+        self, user_id: str, query: str, *, include_diagnostics: bool = True
+    ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+        result = self._post(
+            "/search", {"query": query, "user_id": user_id, "top_k": self.top_k}, timeout=1800,
+            headers={"X-OpenContext-Local-Diagnostics": "1"} if include_diagnostics else None,
+        )
+        hits = result.get("data")
+        if not isinstance(hits, list) or len(hits) > self.top_k:
+            raise RuntimeError("AML Search returned invalid or over-limit data")
+        for hit in hits:
+            if not isinstance(hit, dict) or not isinstance(hit.get("id"), str) or not hit["id"] or not isinstance(hit.get("content"), str) or not hit["content"]:
+                raise RuntimeError("AML Search returned invalid memory content")
+        diagnostics = result.get("_local_diagnostics") if include_diagnostics else None
+        if include_diagnostics:
+            retrieval = diagnostics.get("retrieval") if isinstance(diagnostics, dict) else None
+            reranker = retrieval.get("reranker") if isinstance(retrieval, dict) else None
+            if not isinstance(retrieval, dict) or not isinstance(retrieval.get("fusedBeforeRerank"), list) or not isinstance(reranker, dict) or reranker.get("enabled") is not True:
+                raise RuntimeError("AML local Search did not provide active reranker diagnostics; restart the updated adapter")
+        return hits, diagnostics
+
+
+def beam_messages(chat: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    messages = []
+    for i, turn in enumerate(chat):
+        role, content = turn.get("speaker"), turn.get("text")
+        if role not in ("user", "assistant") or not isinstance(content, str) or not content.strip():
+            raise ValueError(f"BEAM chat[{i}] must have user/assistant speaker and non-empty text")
+        message = {"role": role, "content": content}
+        timestamp = turn.get("timestamp")
+        if timestamp is not None:
+            if isinstance(timestamp, (int, float)) and not isinstance(timestamp, bool):
+                message["timestamp"] = int(timestamp)
+            elif isinstance(timestamp, str):
+                try:
+                    date = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                except ValueError:
+                    date = datetime.strptime(timestamp, "%B-%d-%Y")
+                if date.tzinfo is None:
+                    date = date.replace(tzinfo=timezone.utc)
+                message["timestamp"] = int(date.timestamp() * 1000)
+            else:
+                raise ValueError(f"BEAM chat[{i}] has an invalid timestamp")
+        messages.append(message)
+    return messages
+
+
+def beam_add_chunks(messages: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Approximate public 20-message/2,000-word Add boundaries.
+
+    AML's frozen Adapter word counter is not published; whitespace counting
+    is the reproducible local approximation, not a claim of byte parity.
+    """
+    chunks: list[list[dict[str, Any]]] = []
+    chunk: list[dict[str, Any]] = []
+    words = 0
+    for message in messages:
+        message_words = len(message["content"].split())
+        if chunk and (len(chunk) >= 20 or words + message_words > 2000):
+            chunks.append(chunk)
+            chunk, words = [], 0
+        chunk.append(message)
+        words += message_words
+    if chunk:
+        chunks.append(chunk)
+    return chunks
+
+
+def completed_beam_add_requests(
+    conversations: list[dict[str, Any]], dataset: Path, resume_message_ids: set[str]
+) -> set[str]:
+    """Accept only a complete prefix of Add batches from this exact dataset."""
+    completed: set[str] = set()
+    unmatched = set(resume_message_ids)
+    missing_seen = False
+    for entry in conversations:
+        user_id = scope_id("beam", dataset, str(entry["entry_id"]))
+        for chunk_index, chunk in enumerate(beam_add_chunks(beam_messages(entry.get("chat") or []))):
+            request_id = f"{user_id}:chunk:{chunk_index}"
+            ids = [f"aml:{request_id}:{index}" for index in range(len(chunk))]
+            present = sum(message_id in resume_message_ids for message_id in ids)
+            unmatched.difference_update(ids)
+            if present == len(ids):
+                if missing_seen:
+                    raise ValueError(f"BEAM resume database has a non-prefix Add batch: {request_id}")
+                completed.add(request_id)
+            elif present:
+                raise ValueError(f"BEAM resume database has a partial Add batch: {request_id}")
+            else:
+                missing_seen = True
+    if unmatched:
+        raise ValueError(f"BEAM resume database contains {len(unmatched)} messages outside this dataset selection")
+    return completed
+
+
+def beam_checkpoint_path(directory: Path, index: int, question_id: str) -> Path:
+    digest = hashlib.sha256(question_id.encode("utf-8")).hexdigest()[:12]
+    return directory / f"{index:04d}-{digest}.json"
+
+
+def beam_run_identity(
+    dataset: Path, client: AmlClient, *, limit: int | None, samples: set[str] | None,
+    max_questions: int | None,
+) -> dict[str, Any]:
+    file_hash = hashlib.sha256()
+    with dataset.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            file_hash.update(block)
+    return {
+        "dataset": str(dataset.resolve()),
+        "dataset_sha256": file_hash.hexdigest(),
+        "top_k": client.top_k,
+        "limit": limit,
+        "samples": sorted(samples) if samples else None,
+        "max_questions": max_questions,
+    }
+
+
+def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dict[str, str], required: set[str]) -> dict[str, Any]:
+    metadata = hit.get("metadata") if isinstance(hit.get("metadata"), dict) else {}
+    candidates = (hit.get("id"), metadata.get("parentMessageId"), metadata.get("messageId"), metadata.get("rawMessageId"))
+    source_ids = list(dict.fromkeys(source_ids_by_message[value] for value in candidates if isinstance(value, str) and value in source_ids_by_message))
+    content = str(hit.get("content", ""))
+    return {
+        "rank": rank,
+        "id": hit.get("id"),
+        "score": hit.get("score", hit.get("similarity")),
+        "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
+        "content_excerpt": " ".join(content.split())[:240],
+        "source_turn_ids": source_ids,
+        "matched_source_turn_ids": [value for value in source_ids if value in required],
+    }
+
+
+def beam_source_ids(entry: dict[str, Any], dataset: Path) -> dict[str, str]:
+    user_id = scope_id("beam", dataset, str(entry["entry_id"]))
+    source_ids: dict[str, str] = {}
+    offset = 0
+    for chunk_index, chunk in enumerate(beam_add_chunks(beam_messages(entry.get("chat") or []))):
+        request_id = f"{user_id}:chunk:{chunk_index}"
+        for index in range(len(chunk)):
+            source_id = (entry.get("chat") or [])[offset + index].get("source_id")
+            if source_id is not None:
+                source_ids[f"aml:{request_id}:{index}"] = str(source_id)
+        offset += len(chunk)
+    return source_ids
 
 
 def run_longmemeval(
@@ -438,12 +653,14 @@ def run_clbench(
 
 def run_beam(
     dataset: Path,
-    client: OpenContextClient,
+    client: AmlClient,
     *,
     limit: int | None,
     samples: set[str] | None,
     max_questions: int | None,
     skip_ingest: bool,
+    resume_message_ids: set[str] | None = None,
+    output_dir: Path | None = None,
 ) -> list[dict[str, Any]]:
     payload = read_json(dataset)
     conversations = payload.get("conversations", []) if isinstance(payload, dict) else payload
@@ -452,38 +669,149 @@ def run_beam(
     if limit:
         conversations = conversations[:limit]
 
-    records: list[dict[str, Any]] = []
+    if output_dir is None:
+        raise ValueError("BEAM retrieval requires an output directory for durable checkpoints")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    checkpoint_dir = output_dir / "retrieval-checkpoints"
+    state_path = output_dir / "retrieval-state.json"
+    identity = beam_run_identity(dataset, client, limit=limit, samples=samples, max_questions=max_questions)
+
+    questions: list[tuple[dict[str, Any], dict[str, Any], str]] = []
+    question_ids: set[str] = set()
+    for entry in conversations:
+        selected_questions = entry.get("probing_questions") or []
+        if max_questions:
+            selected_questions = selected_questions[:max_questions]
+        for index, question in enumerate(selected_questions):
+            question_id = str(question.get("question_id") or f"{entry['entry_id']}_q{index}")
+            if question_id in question_ids:
+                raise ValueError(f"duplicate BEAM question ID: {question_id}")
+            question_ids.add(question_id)
+            questions.append((entry, question, question_id))
+
+    completed_requests = (
+        completed_beam_add_requests(conversations, dataset, resume_message_ids)
+        if resume_message_ids is not None else set()
+    )
+    if state_path.exists():
+        if resume_message_ids is None:
+            raise ValueError("BEAM retrieval state already exists; use --resume-db or a new output tag")
+        if read_json(state_path) != identity:
+            raise ValueError("BEAM retrieval state does not match dataset, selection, or top_k")
+    else:
+        if (output_dir / "input.jsonl").exists() or (output_dir / "answers.jsonl").exists() or (output_dir / "judged.jsonl").exists() or checkpoint_dir.exists():
+            raise ValueError("BEAM output already exists without matching retrieval state; use a new tag")
+        write_json_atomic(state_path, identity)
+    checkpoint_dir.mkdir(exist_ok=True)
+    if resume_message_ids is not None:
+        print(f"[aml-local] resuming: {len(completed_requests)} committed Add batches preserved", flush=True)
+
+    total_batches = sum(len(beam_add_chunks(beam_messages(entry.get("chat") or []))) for entry in conversations)
+    existing_checkpoints = list(checkpoint_dir.glob("*.json"))
+    if existing_checkpoints and len(completed_requests) != total_batches:
+        raise ValueError("BEAM question checkpoints exist but the database is missing Add batches")
+    print(f"[aml-local] Add progress: {len(completed_requests)}/{total_batches} batches; Search progress: {len(existing_checkpoints)}/{len(questions)} questions", flush=True)
+
+    add_completed = len(completed_requests)
+    last_progress = time.monotonic()
     for entry in conversations:
         entry_id = str(entry["entry_id"])
         user_id = scope_id("beam", dataset, entry_id)
-        chat = entry.get("chat") or []
-        messages: list[dict[str, Any]] = []
-        for chunk_index, start in enumerate(range(0, len(chat), 20)):
-            chunk = chat[start : start + 20]
-            body = "\n".join(
-                f"{turn.get('speaker', '?')}: {turn.get('text', '')}" for turn in chunk
-            )
-            timestamp = parse_timestamp(chunk[0].get("timestamp") if chunk else None, chunk_index + 1)
-            messages.append(raw_message("beam", user_id, f"chunk_{chunk_index}", body, timestamp))
-        if not skip_ingest and messages:
-            client.ingest(user_id, messages)
+        messages = beam_messages(entry.get("chat") or [])
+        if not skip_ingest:
+            for chunk_index, chunk in enumerate(beam_add_chunks(messages)):
+                request_id = f"{user_id}:chunk:{chunk_index}"
+                if request_id not in completed_requests:
+                    client.add(request_id, user_id, entry_id, chunk)
+                    add_completed += 1
+                    now = time.monotonic()
+                    if add_completed == total_batches or add_completed % 100 == 0 or now - last_progress >= 15:
+                        print(f"[aml-local] Add {add_completed}/{total_batches} batches", flush=True)
+                        last_progress = now
 
-        questions = entry.get("probing_questions") or []
-        if max_questions:
-            questions = questions[:max_questions]
-        for index, question in enumerate(questions):
-            question_id = str(question.get("question_id") or f"{entry_id}_q{index}")
-            hits = client.search(user_id, str(question.get("question", "")))
-            records.append(
-                {
-                    "id": question_id,
-                    "question": question.get("question", ""),
-                    "category": question.get("category"),
-                    "retrieved_context": hit_texts(hits),
-                    "rubric_nuggets": question.get("atoms") or question.get("rubrics") or [],
-                    "scale": entry.get("scale") or (payload.get("scale") if isinstance(payload, dict) else None),
+    records: list[dict[str, Any]] = []
+    traces: list[dict[str, Any]] = []
+    source_maps: dict[str, dict[str, str]] = {}
+    for index, (entry, question, question_id) in enumerate(questions):
+        checkpoint = beam_checkpoint_path(checkpoint_dir, index, question_id)
+        resumed = checkpoint.exists()
+        if resumed:
+            saved = read_json(checkpoint)
+            if saved.get("record", {}).get("id") != question_id or saved.get("trace", {}).get("question_id") != question_id:
+                raise ValueError(f"invalid BEAM question checkpoint: {checkpoint}")
+            record, trace = saved["record"], saved["trace"]
+        else:
+            entry_id = str(entry["entry_id"])
+            user_id = scope_id("beam", dataset, entry_id)
+            query = str(question.get("question", ""))
+            started = time.monotonic()
+            hits, local_diagnostics = client.search_with_diagnostics(user_id, query)
+            elapsed_ms = round((time.monotonic() - started) * 1000)
+            retrieval = local_diagnostics["retrieval"]
+            if entry_id not in source_maps:
+                source_maps[entry_id] = beam_source_ids(entry, dataset)
+            source_ids_by_message = source_maps[entry_id]
+            source = question.get("source") or {}
+            required_ids = {str(value) for value in source.get("source_chat_ids", [])}
+            available_ids = set(source_ids_by_message.values())
+            channels = retrieval.get("channels") or {}
+            channel_hits = {
+                name: [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(channels.get(core_name) or [], 1)]
+                for name, core_name in (("keyword", "lexical"), ("semantic", "semantic"), ("hybrid", "hybrid"), ("entity", "entity"))
+            }
+            channel_ids = {name: {hit["id"] for hit in values} for name, values in channel_hits.items()}
+            before = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["fusedBeforeRerank"], 1)]
+            after = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(hits, 1)]
+            for hit in before + after:
+                hit["retrieval_channels"] = [name for name, ids in channel_ids.items() if hit["id"] in ids]
+            matched_ids = {source_id for hit in after for source_id in hit["matched_source_turn_ids"]}
+            mapped_final_hits = sum(bool(hit["source_turn_ids"]) for hit in after)
+            channel_summary = {}
+            for name, values in channel_hits.items():
+                source_matches = {source_id for hit in values for source_id in hit["matched_source_turn_ids"]}
+                channel_summary[name] = {
+                    "candidate_count": len(values),
+                    "final_hit_count": sum(name in hit["retrieval_channels"] for hit in after),
+                    "mapped_candidate_hits": sum(bool(hit["source_turn_ids"]) for hit in values),
+                    "matched_source_turn_ids": sorted(source_matches),
+                    "source_recall_at_candidate_k": len(source_matches) / len(required_ids) if required_ids and (not values or any(hit["source_turn_ids"] for hit in values)) else None,
                 }
-            )
+            record = {
+                "id": question_id,
+                "question": query,
+                "category": question.get("category"),
+                "retrieved_context": hit_texts(hits),
+                "rubric_nuggets": question.get("atoms") or question.get("rubrics") or [],
+                "scale": entry.get("scale") or (payload.get("scale") if isinstance(payload, dict) else None),
+            }
+            trace = {
+                "question_id": question_id,
+                "entry_id": entry_id,
+                "user_id": user_id,
+                "query": query,
+                "top_k": client.top_k,
+                "latency_ms": elapsed_ms,
+                "candidate_k": retrieval.get("candidateLimit"),
+                "candidate_counts": retrieval.get("candidateCounts"),
+                "channels": channel_hits,
+                "channel_summary": channel_summary,
+                "before_rerank": before,
+                "reranker": retrieval["reranker"],
+                "after_rerank": after,
+                "search_response": hits,
+                "warnings": local_diagnostics.get("warnings", []),
+                "required_source_turn_ids": sorted(required_ids),
+                "available_required_source_turn_ids": sorted(required_ids & available_ids),
+                "missing_required_source_turn_ids": sorted(required_ids - available_ids),
+                "retrieved_source_turn_ids": sorted(matched_ids),
+                "mapped_final_hits": mapped_final_hits,
+                "source_recall_at_k": len(matched_ids) / len(required_ids) if required_ids and (mapped_final_hits or not hits) else None,
+            }
+            write_json_atomic(checkpoint, {"record": record, "trace": trace})
+        records.append(record)
+        traces.append(trace)
+        print(f"[aml-local] Search {index + 1}/{len(questions)} questions ({'resumed' if resumed else 'done'})", flush=True)
+    write_jsonl(output_dir / "retrieval-traces.jsonl", traces)
     return records
 
 
@@ -714,15 +1042,18 @@ def run_benchmark(
     samples: set[str] | None = None,
     max_questions: int | None = None,
     skip_ingest: bool = False,
+    resume_message_ids: set[str] | None = None,
 ) -> Path:
-    records = RUNNERS[benchmark](
-        dataset,
-        client,
-        limit=limit,
-        samples=samples,
-        max_questions=max_questions,
-        skip_ingest=skip_ingest,
-    )
+    runner_options: dict[str, Any] = {
+        "limit": limit,
+        "samples": samples,
+        "max_questions": max_questions,
+        "skip_ingest": skip_ingest,
+    }
+    if benchmark == "beam":
+        runner_options["resume_message_ids"] = resume_message_ids
+        runner_options["output_dir"] = out_dir / OUTPUT_NAMES[benchmark]
+    records = RUNNERS[benchmark](dataset, client, **runner_options)
     output = out_dir / OUTPUT_NAMES[benchmark] / "input.jsonl"
     write_jsonl(output, records)
     return output
@@ -740,6 +1071,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="dataset override; BEAM relative paths resolve under benchmark/beam/dataset",
     )
     parser.add_argument("--skip-ingest", action="store_true", help="reuse an already-ingested sample scope")
+    parser.add_argument("--resume-db", type=Path, help="BEAM only: reuse committed Add batches in this SQLite database")
     parser.add_argument("--max-questions", type=int, help="cap questions per selected sample")
     parser.add_argument(
         "--preflight-only",
@@ -757,18 +1089,34 @@ def main() -> int:
         parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, or iterative")
         reasoning = "none"
     try:
-        top_k = int(os.environ.get("AML_TOP_K", "10"))
+        top_k = int(os.environ.get("AML_TOP_K", "12" if args.benchmark == "beam" else "10"))
     except ValueError:
         parameter_errors.append("AML_TOP_K must be an integer")
-        top_k = 10
+        top_k = 12 if args.benchmark == "beam" else 10
     if top_k < 1:
         parameter_errors.append("AML_TOP_K must be at least 1")
-        top_k = 10
+        top_k = 12 if args.benchmark == "beam" else 10
+    if args.benchmark == "beam" and top_k != 12:
+        parameter_errors.append("BEAM local run is configured for top_k=12")
 
     dataset = default_dataset(args.benchmark, args.dataset)
     out_dir = Path(os.environ.get("AML_OUT_DIR", DEFAULT_OUT_DIR)).resolve()
-    client = OpenContextClient(
-        os.environ.get("OPENCONTEXT_URL", "http://127.0.0.1:7421"),
+    resume_message_ids: set[str] | None = None
+    if args.resume_db is not None:
+        if args.benchmark != "beam" or args.skip_ingest:
+            parameter_errors.append("--resume-db requires BEAM with Add enabled")
+        elif not args.resume_db.is_file():
+            parameter_errors.append(f"BEAM resume database is missing: {args.resume_db}")
+        else:
+            try:
+                resume_message_ids = load_beam_resume_ids(args.resume_db)
+                if not resume_message_ids:
+                    parameter_errors.append("BEAM resume database contains no committed AML messages")
+            except sqlite3.Error as exc:
+                parameter_errors.append(f"BEAM resume database cannot be read: {exc}")
+    client_type = AmlClient if args.benchmark == "beam" else OpenContextClient
+    client = client_type(
+        os.environ.get("AML_ADAPTER_URL", "http://127.0.0.1:7422") if args.benchmark == "beam" else os.environ.get("OPENCONTEXT_URL", "http://127.0.0.1:7421"),
         top_k,
         reasoning,
     )
@@ -803,6 +1151,7 @@ def main() -> int:
         samples=samples,
         max_questions=args.max_questions,
         skip_ingest=args.skip_ingest,
+        resume_message_ids=resume_message_ids,
     )
     return 0
 

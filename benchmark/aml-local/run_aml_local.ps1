@@ -1,7 +1,7 @@
 # Local AML-style evaluation driver for OpenContext.
 #
 # Plays the AML orchestrator locally:
-#   1. retrieve.py  — ingest dataset into the OpenContext daemon (:7421), search per question,
+#   1. retrieve.py  — BEAM calls the AML Add/Search adapter (:7422); other datasets use the daemon,
 #                     emit AML-compatible input JSONL under aml-local/outputs/<bench>/
 #   2. AML pipeline answer    — benchmark/AML-agent-memory-leaderboard/data/<bench>/pipeline.py
 #   3. AML pipeline evaluate  — same file
@@ -21,10 +21,11 @@ param(
   [string]$Samples = "",
   [string]$Dataset = "sample_conversation.json",
   [switch]$SkipIngest,
+  [string]$ResumeDbPath = "",
   [int]$MaxQuestions = 0,
   [ValidateSet("mcq","generative")][string]$Mode = "mcq",
-  [string]$AnswerModel = "qwen/qwen3-14b",
-  [string]$JudgeModel = "qwen/qwen3.7-plus",
+  [string]$AnswerModel = "",
+  [string]$JudgeModel = "",
   # retrieval reasoning strategy forwarded to /v1/search (daemon must be started
   # with OPENCONTEXT_LLM_API_KEY — see README "Enhanced retrieval")
   [ValidateSet("none","rewrite","iterative")][string]$Reasoning = "none",
@@ -34,6 +35,10 @@ param(
 )
 
 $startedAt = [DateTimeOffset]::UtcNow
+$PSNativeCommandUseErrorActionPreference = $false
+if ($Bench -eq "beam" -and $Reasoning -ne "none") { throw "BEAM public-flow mode does not accept a retrieval reasoning override" }
+if ($Bench -eq "beam" -and $SkipIngest) { throw "BEAM public-flow mode requires Add before Search; -SkipIngest is diagnostic only" }
+if ($ResumeDbPath -and $Bench -ne "beam") { throw "-ResumeDbPath is supported only for BEAM" }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $amlRepo = Join-Path $here "..\AML-agent-memory-leaderboard"
 $python = Join-Path $amlRepo ".venv\Scripts\python.exe"
@@ -49,6 +54,14 @@ if (Test-Path $envFile) {
 }
 
 $dataDir = @{ longmemeval = "longmemeval-s"; locomo = "locomo-refined"; clbench = "clbench"; beam = "beam"; personamem = "personamem"; scriptmem = "scriptmem" }[$Bench]
+if (-not $AnswerModel) { $AnswerModel = $env:OPENROUTER_ANSWER_MODEL }
+if (-not $JudgeModel) { $JudgeModel = $env:OPENROUTER_JUDGE_MODEL }
+if ($Bench -ne 'beam') {
+  if (-not $AnswerModel) { $AnswerModel = 'qwen/qwen3-14b' }
+  if (-not $JudgeModel) { $JudgeModel = 'qwen/qwen3.7-plus' }
+}
+if (-not $AnswerModel -or -not $JudgeModel) { throw "Set OPENROUTER_ANSWER_MODEL and OPENROUTER_JUDGE_MODEL in .env, or pass -AnswerModel and -JudgeModel explicitly" }
+Write-Host "Models: answer=$AnswerModel judge=$JudgeModel"
 $outRoot = if ($Tag) { "outputs-$Tag" } else { "outputs" }
 $outDir  = Join-Path $here "$outRoot\$dataDir"
 $env:AML_REASONING_STRATEGY = $Reasoning
@@ -77,6 +90,7 @@ if ($Limit -gt 0)   { $retrieveArgs += @("--limit", $Limit) }
 if ($Samples)       { $retrieveArgs += @("--samples", $Samples) }
 if ($Bench -eq "beam") { $retrieveArgs += @("--dataset", $Dataset) }
 if ($SkipIngest)    { $retrieveArgs += "--skip-ingest" }
+if ($ResumeDbPath)  { $retrieveArgs += @("--resume-db", $ResumeDbPath) }
 if ($MaxQuestions -gt 0) { $retrieveArgs += @("--max-questions", $MaxQuestions) }
 
 function Test-WritableTarget([string]$TargetPath) {
@@ -110,17 +124,40 @@ foreach ($requiredFile in @($retrieve, $shim, $pipeline)) {
 if (-not (Test-WritableTarget $env:AML_OUT_DIR)) {
   $preflightErrors.Add("AML output path is not writable: $($env:AML_OUT_DIR)")
 }
+if ($Bench -eq "beam") {
+  $state = Join-Path $outDir "retrieval-state.json"
+  $configPath = Join-Path $outDir "run-config.json"
+  if ($ResumeDbPath) {
+    if ((Test-Path -LiteralPath $state) -and -not (Test-Path -LiteralPath $configPath)) {
+      $preflightErrors.Add("BEAM retrieval state has no run configuration: $configPath")
+    }
+    if (-not (Test-Path -LiteralPath $state)) {
+      foreach ($artifact in @($input, $answers, $judged, (Join-Path $outDir "judged-errors.jsonl"), (Join-Path $outDir "retrieval-checkpoints"))) {
+        if (Test-Path -LiteralPath $artifact) {
+          $preflightErrors.Add("BEAM output exists without retrieval state; choose a new -Tag: $artifact")
+        }
+      }
+    }
+  } else {
+    foreach ($artifact in @($input, $answers, $judged, (Join-Path $outDir "judged-errors.jsonl"), $state, $configPath, (Join-Path $outDir "retrieval-checkpoints"), (Join-Path $outDir "run-manifest.json"))) {
+      if (Test-Path -LiteralPath $artifact) {
+        $preflightErrors.Add("BEAM output already exists; choose a new -Tag for a fresh run: $artifact")
+      }
+    }
+  }
+}
 
-$topK = 10
-if ($env:AML_TOP_K) {
+$topK = if ($Bench -eq "beam") { 12 } else { 10 }
+if ($Bench -ne "beam" -and $env:AML_TOP_K) {
   $parsedTopK = 0
   if (-not [int]::TryParse($env:AML_TOP_K, [ref]$parsedTopK) -or $parsedTopK -lt 1) {
     $preflightErrors.Add("AML_TOP_K must be an integer of at least 1")
-    $env:AML_TOP_K = "10"
+    $env:AML_TOP_K = "$topK"
   } else {
     $topK = $parsedTopK
   }
 }
+$env:AML_TOP_K = "$topK"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
   $preflightErrors.Add("AML Python interpreter is missing: $python")
@@ -155,6 +192,27 @@ if ($preflightErrors.Count -gt 0) {
 }
 
 $ErrorActionPreference = "Stop"
+if ($Bench -eq "beam") {
+  $runConfig = [ordered]@{
+    dataset = [IO.Path]::GetFullPath($datasetPath)
+    top_k = $topK
+    answer_model = $AnswerModel
+    judge_model = $JudgeModel
+    limit = $Limit
+    samples = $Samples
+    max_questions = $MaxQuestions
+    reasoning = $Reasoning
+  }
+  $runConfigJson = $runConfig | ConvertTo-Json -Compress
+  if (Test-Path -LiteralPath $configPath) {
+    if ((Get-Content -LiteralPath $configPath -Raw).Trim() -ne $runConfigJson) {
+      throw "BEAM run configuration changed; resume with the original arguments or choose a new -Tag"
+    }
+  } else {
+    New-Item -ItemType Directory -Path $outDir -Force | Out-Null
+    Set-Content -LiteralPath $configPath -Value $runConfigJson -Encoding utf8
+  }
+}
 # AML api_config.py env surface; only set after every preflight check passed.
 $env:ANSWER_API_BASE = "https://openrouter.ai/api/v1"
 $env:ANSWER_API_KEY  = $env:OPENROUTER_API_KEY
@@ -162,19 +220,21 @@ $env:ANSWER_MODEL    = $AnswerModel
 $env:JUDGE_API_BASE  = "https://openrouter.ai/api/v1"
 $env:JUDGE_API_KEY   = $env:OPENROUTER_API_KEY
 $env:JUDGE_MODEL     = $JudgeModel
+$env:AML_PUBLIC_BEAM_FLOW = if ($Bench -eq "beam") { "1" } else { "0" }
+$env:AML_SKIP_INVALID_BEAM_JUDGE = if ($Bench -eq "beam") { "1" } else { "0" }
 
 Write-Host "=== [1/3] retrieve ($Bench) ==="
 & $python @retrieveArgs
 if ($LASTEXITCODE -ne 0) { throw "retrieve failed" }
 
 Write-Host "=== [2/3] answer ($AnswerModel) ==="
-if (Test-Path $answers) { Remove-Item $answers -Force }
+if ($Bench -ne "beam" -and (Test-Path $answers)) { Remove-Item $answers -Force }
 if ($Bench -eq "personamem") {
   & $python $shim $pipeline answer --input $input --output $answers --mode $Mode
 } else {
   & $python $shim $pipeline answer --input $input --output $answers
 }
-if ($LASTEXITCODE -ne 0) { throw "answer failed" }
+if ($LASTEXITCODE -ne 0 -and -not ($Bench -eq "beam" -and $LASTEXITCODE -eq 2)) { throw "answer failed; see runtime log" }
 
 Write-Host "=== [3/3] evaluate ($JudgeModel) ==="
 if ($Bench -eq "personamem") {
@@ -193,7 +253,7 @@ if ($Bench -eq "personamem") {
 } else {
   & $python $shim $pipeline evaluate --input $input --answers $answers --output $judged
 }
-if ($LASTEXITCODE -ne 0) { throw "evaluate failed" }
+if ($LASTEXITCODE -ne 0 -and -not ($Bench -eq "beam" -and $LASTEXITCODE -eq 2)) { throw "evaluate failed; see runtime log" }
 
 function Get-DatasetIdentity([string]$Path) {
   $item = Get-Item -LiteralPath $Path
@@ -232,8 +292,10 @@ $manifest = [ordered]@{
   dataset = Get-DatasetIdentity $datasetPath
   answerer_model = $AnswerModel
   judge_model = $JudgeModel
-  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK }
-  resume = $false
+  judge_rubric_routing = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_JUDGE_PROVIDER) { $env:AML_BEAM_JUDGE_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "NextBit" } else { "auto" }); response_format = "json_object"; invalid_format = "skip_after_bounded_retries" } } else { $null }
+  judge_event_alignment = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_EVENT_PROVIDER) { $env:AML_BEAM_EVENT_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "Alibaba" } else { "auto" }); reasoning = "none"; initial_max_tokens = 8 } } else { $null }
+  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam") }
+  resume = [bool]$ResumeDbPath
   started_at = $startedAt.ToString("o")
   finished_at = $finishedAt.ToString("o")
   wall_clock_ms = [long]($finishedAt - $startedAt).TotalMilliseconds
@@ -244,6 +306,7 @@ $manifest = [ordered]@{
     max_questions = if ($MaxQuestions -gt 0) { $MaxQuestions } else { $null }
     mode = if ($Bench -eq "personamem") { $Mode } else { $null }
     skip_ingest = [bool]$SkipIngest
+    resume_db = if ($ResumeDbPath) { [IO.Path]::GetFullPath($ResumeDbPath) } else { $null }
   }
 }
 $manifestPath = Join-Path $outDir "run-manifest.json"
@@ -280,5 +343,16 @@ if ($Bench -in @("longmemeval","locomo")) {
 } else {
   $mean = ($rows | Measure-Object -Property llm_judge_score -Average).Average
   Write-Host ("`n>>> beam: llm_judge_score mean = {0:N4} over {1} questions" -f $mean, $total)
+  $judgeErrors = Join-Path $outDir "judged-errors.jsonl"
+  if (Test-Path -LiteralPath $judgeErrors) {
+    $scoredIds = @($rows | ForEach-Object { $_.id })
+    $skippedIds = @(Get-Content -LiteralPath $judgeErrors | Where-Object { $_.Trim() } | ForEach-Object { ($_ | ConvertFrom-Json).id } | Where-Object { $_ -notin $scoredIds } | Select-Object -Unique)
+    Write-Host ("    unresolved judge errors: {0}; details: {1}" -f $skippedIds.Count, $judgeErrors)
+  }
 }
 Write-Host "judged: $judged"
+if ($Bench -eq "beam") {
+  $beamStatus = Get-Content (Join-Path $outDir "judged-status.json") -Raw | ConvertFrom-Json
+  Write-Host "BEAM final status: $($beamStatus.status); scored=$($beamStatus.succeeded)/$($beamStatus.total); pending=$($beamStatus.pending_ids.Count)"
+  if ($beamStatus.status -ne "complete") { exit 2 }
+}

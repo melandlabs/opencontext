@@ -41,7 +41,7 @@ export async function checkOpencontextHealth(baseUrl = getOpencontextBaseUrl()):
 	let res: Response;
 	try {
 		res = await fetch(`${baseUrl}/health`, {
-			signal: AbortSignal.timeout(5_000),
+			signal: AbortSignal.timeout(10_000),
 		});
 	} catch (error) {
 		throw new Error(`OpenContext daemon not reachable at ${baseUrl}: ${(error as Error).message}`);
@@ -56,7 +56,7 @@ export interface BenchRawMessage {
 	userId: string;
 	platform: string;
 	botId: string;
-	timestamp: number;
+	timestamp?: number;
 	content: string;
 	createdAt: number;
 	metadata?: Record<string, unknown>;
