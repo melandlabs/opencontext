@@ -1,6 +1,6 @@
 import type Database from "better-sqlite3";
 
-export const RAW_MESSAGES_SCHEMA_VERSION = 5;
+export const RAW_MESSAGES_SCHEMA_VERSION = 6;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -16,10 +16,61 @@ function addColumnIfMissing(db: Database.Database, table: string, column: string
 	db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
 }
 
+/** SQLite requires a table rebuild to remove NOT NULL. Keep row ids, child
+ * references, FTS contents, indexes and triggers intact in one transaction. */
+function makeRawTimestampNullable(db: Database.Database): void {
+	const columns = db.prepare("PRAGMA table_info(raw_messages)").all() as Array<{
+		name: string;
+		notnull: number;
+	}>;
+	if (!columns.some((column) => column.name === "timestamp" && column.notnull)) return;
+	db.pragma("foreign_keys = OFF");
+	try {
+		db.transaction(() => {
+			// Recheck under the write lock: another connection may have migrated.
+			const currentColumns = db.prepare("PRAGMA table_info(raw_messages)").all() as Array<{
+				name: string;
+				notnull: number;
+			}>;
+			if (!currentColumns.some((column) => column.name === "timestamp" && column.notnull)) return;
+			const { sql } = db
+				.prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'raw_messages'")
+				.get() as { sql: string };
+			const objects = db
+				.prepare(
+					"SELECT sql FROM sqlite_master WHERE tbl_name = 'raw_messages' AND type IN ('index', 'trigger') AND sql IS NOT NULL",
+				)
+				.all() as Array<{ sql: string }>;
+			const oldSequence = db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'raw_messages'").get() as
+				| { seq: number }
+				| undefined;
+			const definition = sql
+				.replace(/CREATE TABLE\s+(?:"raw_messages"|raw_messages)/i, 'CREATE TABLE "raw_messages_nullable"')
+				.replace(/timestamp\s+INTEGER\s+NOT NULL/i, "timestamp INTEGER");
+			if (definition === sql || /timestamp\s+INTEGER\s+NOT NULL/i.test(definition))
+				throw new Error("unsupported_raw_message_timestamp_schema");
+			db.exec(definition);
+			db.exec("INSERT INTO raw_messages_nullable SELECT * FROM raw_messages");
+			db.exec("DROP TABLE raw_messages");
+			db.exec("ALTER TABLE raw_messages_nullable RENAME TO raw_messages");
+			if (oldSequence)
+				db.prepare("UPDATE sqlite_sequence SET seq = MAX(seq, ?) WHERE name = 'raw_messages'").run(
+					oldSequence.seq,
+				);
+			for (const object of objects) db.exec(object.sql);
+			if (db.prepare("PRAGMA foreign_key_check").all().length)
+				throw new Error("raw_message_migration_foreign_key_check_failed");
+		}).immediate();
+	} finally {
+		db.pragma("foreign_keys = ON");
+	}
+}
+
 export function initializeRawMessageSchema(db: Database.Database): void {
 	db.pragma("journal_mode = WAL");
 	db.pragma("busy_timeout = 30000");
 	db.pragma("foreign_keys = ON");
+	makeRawTimestampNullable(db);
 
 	db.exec(`
     CREATE TABLE IF NOT EXISTS raw_messages (
@@ -30,7 +81,7 @@ export function initializeRawMessageSchema(db: Database.Database): void {
       user_id TEXT NOT NULL,
       channel TEXT,
       person TEXT,
-      timestamp INTEGER NOT NULL,
+      timestamp INTEGER,
       content TEXT NOT NULL,
       attachments TEXT,
       embedding BLOB,
@@ -143,6 +194,24 @@ export function initializeRawMessageSchema(db: Database.Database): void {
 	// verbatim so retrieval can filter by classification without
 	// re-classifying at query time.
 	addColumnIfMissing(db, "raw_messages", "fact_type", "TEXT");
+	addColumnIfMissing(db, "raw_messages", "message_sequence", "INTEGER");
+	// Existing row ids record insertion order, unlike source timestamps. Preserve
+	// that order once on upgrade; subsequent writes allocate under the write lock.
+	db.transaction(() => {
+		db.exec(`
+      WITH numbered AS (
+        SELECT id, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY id) AS sequence
+        FROM raw_messages
+      )
+      UPDATE raw_messages SET message_sequence = (SELECT sequence FROM numbered WHERE numbered.id = raw_messages.id)
+      WHERE message_sequence IS NULL;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_raw_messages_user_sequence ON raw_messages(user_id, message_sequence);
+      CREATE TABLE IF NOT EXISTS raw_message_sequences (user_id TEXT PRIMARY KEY, last_sequence INTEGER NOT NULL);
+      INSERT INTO raw_message_sequences(user_id, last_sequence)
+      SELECT user_id, MAX(message_sequence) FROM raw_messages GROUP BY user_id
+      ON CONFLICT(user_id) DO UPDATE SET last_sequence = MAX(last_sequence, excluded.last_sequence);
+    `);
+	}).immediate();
 	db.exec(`
     CREATE INDEX IF NOT EXISTS idx_raw_messages_fact_type
       ON raw_messages(user_id, fact_type)

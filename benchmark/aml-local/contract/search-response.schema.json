@@ -14,8 +14,8 @@
 				"required": ["id", "content"],
 				"additionalProperties": true,
 				"properties": {
-					"id": { "type": "string" },
-					"content": { "type": "string" },
+					"id": { "type": "string", "minLength": 1 },
+					"content": { "type": "string", "minLength": 1 },
 					"score": {
 						"type": "number",
 						"description": "Retrieval score (higher = more relevant). Optional."

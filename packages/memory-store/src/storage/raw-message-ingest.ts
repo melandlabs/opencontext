@@ -3,6 +3,10 @@ import type { UnifiedSearchDeps } from "../config";
 import { type EmbedOnInsertWarning, embedMissingMessages, prepareRawMessageIngest } from "../embed-on-insert";
 
 export interface RawMessageIngestManager {
+	getRawMessageSearchChunks?(input: {
+		messageIds?: string[];
+		userId?: string;
+	}): Promise<RawMessageSearchChunk[]>;
 	storeMessages?(messages: RawMessage[]): Promise<number[]>;
 	storeMessagesWithSearchChunks?(messages: RawMessage[], chunks: RawMessageSearchChunk[]): Promise<number[]>;
 	upsertRawMessages?(input: { userId: string; messages: RawMessage[] }): Promise<unknown>;
@@ -29,7 +33,33 @@ export interface PersistRawMessagesResult {
 
 /** Shared write path for HTTP, MCP and OKF. */
 export async function persistRawMessages(input: PersistRawMessagesInput): Promise<PersistRawMessagesResult> {
-	const prepared = await prepareRawMessageIngest(input.messages, input.embedOnInsert, input.unified);
+	const existingChunks: RawMessageSearchChunk[] = [];
+	if (input.manager.getRawMessageSearchChunks && input.unified?.embeddingInfo?.model) {
+		const messageIdsByUser = new Map<string, Set<string>>();
+		for (const message of input.messages) {
+			const ids = messageIdsByUser.get(message.userId) ?? new Set<string>();
+			ids.add(message.messageId);
+			messageIdsByUser.set(message.userId, ids);
+		}
+		for (const [userId, ids] of messageIdsByUser) {
+			const messageIds = [...ids];
+			// Bound SQL parameters and avoid an unscoped lookup for empty requests.
+			for (let offset = 0; offset < messageIds.length; offset += 250) {
+				existingChunks.push(
+					...(await input.manager.getRawMessageSearchChunks({
+						userId,
+						messageIds: messageIds.slice(offset, offset + 250),
+					})),
+				);
+			}
+		}
+	}
+	const prepared = await prepareRawMessageIngest(
+		input.messages,
+		input.embedOnInsert,
+		input.unified,
+		existingChunks,
+	);
 	let ids: number[] | undefined;
 
 	if (typeof input.manager.storeMessagesWithSearchChunks === "function") {

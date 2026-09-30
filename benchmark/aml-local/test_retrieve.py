@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import sqlite3
 import sys
 import tempfile
 import threading
 import unittest
+import urllib.error
+from contextlib import closing
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 
 HERE = Path(__file__).resolve().parent
@@ -28,6 +32,8 @@ class MockDaemon(ThreadingHTTPServer):
     def __init__(self) -> None:
         super().__init__(("127.0.0.1", 0), MockHandler)
         self.requests = []
+        self.reranker_ready = True
+        self.fail_query = None
 
 
 class MockHandler(BaseHTTPRequestHandler):
@@ -46,7 +52,7 @@ class MockHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/health":
-            self.send_json(200, {"ok": True})
+            self.send_json(200, {"ok": True, "retrieval": {"rerankerReady": self.server.reranker_ready}})
             return
         self.send_json(404, {"error": "not found"})
 
@@ -72,6 +78,30 @@ class MockHandler(BaseHTTPRequestHandler):
                 },
             )
             return
+        if self.path == "/add":
+            self.send_json(200, {"success": True, "request_id": payload["request_id"], "user_id": payload["user_id"], "session_id": payload["session_id"]})
+            return
+        if self.path == "/search":
+            if payload["query"] == self.server.fail_query:
+                self.send_json(503, {"error": "simulated search failure"})
+                return
+            result = {"data": [{"id": "memory-1", "content": f"retrieved: {payload['query']}"}]}
+            if self.headers.get("X-OpenContext-Local-Diagnostics") == "1":
+                result["_local_diagnostics"] = {
+                    "retrieval": {
+                        "candidateLimit": 48,
+                        "candidateCounts": {"fused": 1, "final": 1},
+                        "channels": {
+                            "semantic": [{"id": "memory-1", "content": "semantic candidate", "similarity": 0.7}],
+                            "lexical": [{"id": "memory-1", "content": "keyword candidate", "similarity": 0.6}],
+                        },
+                        "fusedBeforeRerank": [{"id": "memory-1", "content": "before rerank", "similarity": 0.4}],
+                        "reranker": {"enabled": True, "provider": "local", "model": "test-model", "inputCount": 1, "outputCount": 1, "latencyMs": 1, "orderChanged": False},
+                    },
+                    "warnings": [],
+                }
+            self.send_json(200, result)
+            return
         self.send_json(404, {"error": "not found"})
 
 
@@ -83,6 +113,7 @@ class RetrieveFixtureTests(unittest.TestCase):
         cls.thread.start()
         host, port = cls.server.server_address
         cls.client = retrieve.OpenContextClient(f"http://{host}:{port}", top_k=3)
+        cls.aml_client = retrieve.AmlClient(f"http://{host}:{port}", top_k=12)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -92,6 +123,13 @@ class RetrieveFixtureTests(unittest.TestCase):
 
     def setUp(self) -> None:
         self.server.requests.clear()
+        self.server.reranker_ready = True
+        self.server.fail_query = None
+
+    def test_beam_preflight_requires_ready_reranker(self) -> None:
+        self.server.reranker_ready = False
+        with self.assertRaisesRegex(RuntimeError, "reranker"):
+            self.aml_client.health()
 
     def test_preflight_aggregates_parameter_dataset_and_daemon_failures(self) -> None:
         class FailingClient:
@@ -181,35 +219,46 @@ class RetrieveFixtureTests(unittest.TestCase):
 
     def run_case(self, benchmark: str, dataset: Path, output_root: Path) -> tuple[list[dict], list[str]]:
         self.server.requests.clear()
-        self.client.health()
+        client = self.aml_client if benchmark == "beam" else self.client
+        client.health()
         output = retrieve.run_benchmark(
             benchmark,
             dataset,
-            self.client,
+            client,
             output_root,
             max_questions=1,
         )
         rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
 
-        add_requests = [payload for path, payload in self.server.requests if path == "/v1/raw-messages"]
-        search_requests = [payload for path, payload in self.server.requests if path == "/v1/search"]
+        add_path, search_path = ("/add", "/search") if benchmark == "beam" else ("/v1/raw-messages", "/v1/search")
+        add_requests = [payload for path, payload in self.server.requests if path == add_path]
+        search_requests = [payload for path, payload in self.server.requests if path == search_path]
         self.assertTrue(add_requests, f"{benchmark} did not ingest fixture messages")
         self.assertTrue(search_requests, f"{benchmark} did not search fixture questions")
 
-        added_user_ids = {payload["userId"] for payload in add_requests}
-        for payload in add_requests:
-            self.assertTrue(payload["embedOnInsert"])
-            for message in payload["messages"]:
-                self.assertEqual(payload["userId"], message["userId"])
-        for payload in search_requests:
-            self.assertIn(payload["userId"], added_user_ids)
-            self.assertEqual(payload["limit"], 3)
-            self.assertEqual(payload["sources"], ["memory"])
+        if benchmark == "beam":
+            added_user_ids = {payload["user_id"] for payload in add_requests}
+            for payload in add_requests:
+                self.assertTrue(all(message["role"] in ("user", "assistant") for message in payload["messages"]))
+                self.assertLessEqual(len(payload["messages"]), 20)
+            for payload in search_requests:
+                self.assertIn(payload["user_id"], added_user_ids)
+                self.assertEqual(payload["top_k"], 12)
+        else:
+            added_user_ids = {payload["userId"] for payload in add_requests}
+            for payload in add_requests:
+                self.assertTrue(payload["embedOnInsert"])
+                for message in payload["messages"]:
+                    self.assertEqual(payload["userId"], message["userId"])
+            for payload in search_requests:
+                self.assertIn(payload["userId"], added_user_ids)
+                self.assertEqual(payload["limit"], 3)
+                self.assertEqual(payload["sources"], ["memory"])
 
         message_ids = [
-            message["messageId"]
+            message.get("messageId", f"{payload['request_id']}:{index}" if benchmark == "beam" else "")
             for payload in add_requests
-            for message in payload["messages"]
+            for index, message in enumerate(payload["messages"])
         ]
         self.assertEqual(len(message_ids), len(set(message_ids)))
         return rows, message_ids
@@ -219,8 +268,8 @@ class RetrieveFixtureTests(unittest.TestCase):
             output_root = Path(temp_dir)
             for benchmark, (dataset, required_keys) in self.fixture_cases().items():
                 with self.subTest(benchmark=benchmark):
-                    first_rows, first_ids = self.run_case(benchmark, dataset, output_root)
-                    second_rows, second_ids = self.run_case(benchmark, dataset, output_root)
+                    first_rows, first_ids = self.run_case(benchmark, dataset, output_root / "first")
+                    second_rows, second_ids = self.run_case(benchmark, dataset, output_root / "second")
                     self.assertTrue(first_rows)
                     self.assertTrue(required_keys.issubset(first_rows[0]))
                     self.assertEqual(first_rows, second_rows)
@@ -231,6 +280,131 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.assertEqual(first, retrieve.scope_id("beam", Path("beam_1m.json"), "sample-1"))
         self.assertNotEqual(first, retrieve.scope_id("beam", Path("beam_10m.json"), "sample-1"))
         self.assertNotEqual(first, retrieve.scope_id("beam", Path("beam_1m.json"), "sample-2"))
+
+    def test_beam_preserves_real_dates_and_omits_missing_timestamp(self) -> None:
+        messages = retrieve.beam_messages([
+            {"speaker": "user", "text": "first", "timestamp": "July-01-2024"},
+            {"speaker": "assistant", "text": "second", "timestamp": None},
+        ])
+        self.assertEqual(messages[0]["timestamp"], 1719792000000)
+        self.assertNotIn("timestamp", messages[1])
+        chunks = retrieve.beam_add_chunks([{"role": "user", "content": "word"}] * 21)
+        self.assertEqual([len(chunk) for chunk in chunks], [20, 1])
+
+    def test_beam_resume_skips_only_committed_add_batches(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "beam_10m.json"
+            entry = {
+                "entry_id": "sample-1",
+                "chat": [
+                    {"speaker": "user" if index % 2 == 0 else "assistant", "text": f"message {index}"}
+                    for index in range(21)
+                ],
+                "probing_questions": [{"question_id": "q1", "question": "What happened?"}],
+            }
+            dataset.write_text(json.dumps({"conversations": [entry]}), encoding="utf-8")
+            user_id = retrieve.scope_id("beam", dataset, "sample-1")
+            request_id = f"{user_id}:chunk:0"
+            saved_ids = {f"aml:{request_id}:{index}" for index in range(20)}
+            db = Path(temp_dir) / "saved.db"
+            with closing(sqlite3.connect(db)) as connection:
+                with connection:
+                    connection.execute("CREATE TABLE raw_messages (message_id TEXT, platform TEXT)")
+                    connection.executemany(
+                        "INSERT INTO raw_messages VALUES (?, 'aml')", [(message_id,) for message_id in saved_ids]
+                    )
+            loaded_ids = retrieve.load_beam_resume_ids(db)
+            output = retrieve.run_benchmark(
+                "beam", dataset, self.aml_client, Path(temp_dir) / "outputs", resume_message_ids=loaded_ids
+            )
+            self.assertEqual(len(retrieve.read_jsonl(output)), 1)
+            adds = [body for path, body in self.server.requests if path == "/add"]
+            self.assertEqual(len(adds), 1)
+            self.assertEqual(adds[0]["request_id"], f"{user_id}:chunk:1")
+            self.assertEqual(len(adds[0]["messages"]), 1)
+            traces = retrieve.read_jsonl(Path(temp_dir) / "outputs" / "beam" / "retrieval-traces.jsonl")
+            self.assertEqual(len(traces), 1)
+            self.assertEqual(traces[0]["before_rerank"][0]["content_excerpt"], "before rerank")
+            self.assertEqual(traces[0]["after_rerank"][0]["id"], "memory-1")
+            self.assertEqual(traces[0]["after_rerank"][0]["retrieval_channels"], ["keyword", "semantic"])
+            self.assertEqual(traces[0]["channel_summary"]["keyword"]["candidate_count"], 1)
+            self.assertEqual(traces[0]["channel_summary"]["semantic"]["candidate_count"], 1)
+            self.assertTrue(traces[0]["reranker"]["enabled"])
+
+            self.server.requests.clear()
+            complete_ids = saved_ids | {f"aml:{user_id}:chunk:1:0"}
+            output_again = retrieve.run_benchmark(
+                "beam", dataset, self.aml_client, Path(temp_dir) / "outputs", resume_message_ids=complete_ids
+            )
+            self.assertEqual(retrieve.read_jsonl(output), retrieve.read_jsonl(output_again))
+            self.assertFalse([path for path, _ in self.server.requests if path in ("/add", "/search")])
+
+            with self.assertRaisesRegex(ValueError, "partial Add batch"):
+                retrieve.completed_beam_add_requests([entry], dataset, {f"aml:{request_id}:0"})
+            with self.assertRaisesRegex(ValueError, "non-prefix Add batch"):
+                retrieve.completed_beam_add_requests(
+                    [entry], dataset, {f"aml:{user_id}:chunk:1:0"}
+                )
+
+    def test_beam_finishes_all_adds_before_searching(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "beam.json"
+            conversations = [
+                {"entry_id": f"entry-{index}", "chat": [{"speaker": "user", "text": f"fact {index}", "source_id": str(index)}],
+                 "probing_questions": [{"question_id": f"q-{index}", "question": f"question {index}", "source": {"source_chat_ids": [str(index)]}}]}
+                for index in range(2)
+            ]
+            dataset.write_text(json.dumps({"conversations": conversations}), encoding="utf-8")
+            retrieve.run_benchmark("beam", dataset, self.aml_client, Path(temp_dir) / "outputs")
+            self.assertEqual([path for path, _ in self.server.requests], ["/add", "/add", "/search", "/search"])
+            self.assertEqual(len(retrieve.read_jsonl(Path(temp_dir) / "outputs" / "beam" / "retrieval-traces.jsonl")), 2)
+
+    def test_beam_resumes_after_a_search_failure_without_repeating_completed_question(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "beam.json"
+            entry = {"entry_id": "entry-1", "chat": [{"speaker": "user", "text": "fact"}],
+                     "probing_questions": [{"question_id": "q-1", "question": "first"}, {"question_id": "q-2", "question": "second"}]}
+            dataset.write_text(json.dumps({"conversations": [entry]}), encoding="utf-8")
+            output_root = Path(temp_dir) / "outputs"
+            self.server.fail_query = "second"
+            with self.assertRaises(urllib.error.HTTPError):
+                retrieve.run_benchmark("beam", dataset, self.aml_client, output_root)
+            result_dir = output_root / "beam"
+            self.assertEqual(len(list((result_dir / "retrieval-checkpoints").glob("*.json"))), 1)
+            self.assertFalse((result_dir / "input.jsonl").exists())
+
+            self.server.fail_query = None
+            self.server.requests.clear()
+            user_id = retrieve.scope_id("beam", dataset, "entry-1")
+            saved_ids = {f"aml:{user_id}:chunk:0:0"}
+            output = retrieve.run_benchmark("beam", dataset, self.aml_client, output_root, resume_message_ids=saved_ids)
+            self.assertEqual(len(retrieve.read_jsonl(output)), 2)
+            self.assertEqual([body["query"] for path, body in self.server.requests if path == "/search"], ["second"])
+            self.assertFalse([path for path, _ in self.server.requests if path == "/add"])
+
+    def test_beam_hit_evidence_maps_exact_source_id(self) -> None:
+        hit = {"id": "aml:request:0", "content": "answer", "similarity": 0.5}
+        evidence = retrieve.beam_hit_evidence(hit, 1, {"aml:request:0": "turn-7"}, {"turn-7"})
+        self.assertEqual(evidence["source_turn_ids"], ["turn-7"])
+        self.assertEqual(evidence["matched_source_turn_ids"], ["turn-7"])
+
+    def test_socket_10055_is_retried_before_aborting_add(self) -> None:
+        actual_urlopen = retrieve.urllib.request.urlopen
+        attempts = 0
+
+        def flaky_urlopen(request: Any, timeout: int) -> Any:
+            nonlocal attempts
+            attempts += 1
+            if attempts < 3:
+                raise urllib.error.URLError(OSError(10055, "no socket buffer"))
+            return actual_urlopen(request, timeout=timeout)
+
+        with mock.patch.object(retrieve.urllib.request, "urlopen", side_effect=flaky_urlopen):
+            with mock.patch.object(retrieve.time, "sleep") as sleep:
+                self.aml_client.add("request-1", "user-1", "session-1", [{"role": "user", "content": "hello"}])
+        self.assertEqual(attempts, 3)
+        self.assertEqual(sleep.call_count, 2)
+        self.assertEqual(len([path for path, _ in self.server.requests if path == "/add"]), 1)
 
     def test_clbench_single_message_splits_inline_context_and_task(self) -> None:
         row = {

@@ -21,7 +21,8 @@ platform retries of the same Add request do not create duplicates.
 
 Auth (two distinct keys — see the AML participation guide):
   * Memory System Key — you generate it and share it with the platform.
-    Set AML_SYSTEM_KEY; accepted as `Authorization: Bearer <key>` or
+    Set AML_SYSTEM_KEY; accepted as `Authorization: Token <key>`,
+    `Authorization: Bearer <key>` or
     `X-Api-Key: <key>` on /add and /search.
   * Eval Key — the platform issues it to you when your evaluation is
     approved. Set AML_EVAL_KEY; accepted as `X-Eval-Key: <key>` on
@@ -46,6 +47,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import math
 import os
 import time
 import urllib.error
@@ -76,76 +78,107 @@ def oc_post(path: str, payload: dict, timeout: int = 600) -> dict:
 
 
 def iso_from_ms(ms: int | None) -> str | None:
-    if not ms:
+    if ms is None:
         return None
     try:
-        return datetime.fromtimestamp(int(ms) / 1000, tz=timezone.utc).isoformat()
+        value = int(ms)
+        return datetime.fromtimestamp(value if abs(value) < 100_000_000_000 else value / 1000, tz=timezone.utc).isoformat()
     except Exception:
         return None
 
 
 def handle_add(body: dict) -> dict:
-    request_id = str(body.get("request_id") or "").strip()
-    user_id = str(body.get("user_id") or "").strip()
-    session_id = str(body.get("session_id") or "").strip()
-    messages = body.get("messages") or []
-    if not request_id or not user_id or not session_id or not isinstance(messages, list) or not messages:
+    if not isinstance(body, dict):
+        raise ValueError("Add body must be an object")
+    request_id = body.get("request_id")
+    user_id = body.get("user_id")
+    session_id = body.get("session_id")
+    messages = body.get("messages")
+    if any(not isinstance(value, str) or not value.strip() for value in (request_id, user_id, session_id)) or not isinstance(messages, list) or not messages:
         raise ValueError("request_id, user_id, session_id and non-empty messages[] are required")
 
-    now_ms = int(time.time() * 1000)
+    now_seconds = int(time.time())
     oc_messages = []
     for i, m in enumerate(messages):
+        if not isinstance(m, dict):
+            raise ValueError(f"messages[{i}] must be an object")
         content = m.get("content")
-        if content is None:
-            raise ValueError(f"messages[{i}].content is required")
+        role = m.get("role")
+        if role not in ("user", "assistant") or not isinstance(content, str) or not content.strip():
+            raise ValueError(f"messages[{i}] requires user/assistant role and non-empty string content")
         ts = m.get("timestamp")
-        oc_messages.append(
-            {
+        if ts is not None and (isinstance(ts, bool) or not isinstance(ts, int)):
+            raise ValueError(f"messages[{i}].timestamp must be Unix milliseconds")
+        oc_message = {
                 # deterministic id -> platform retries stay idempotent
                 "messageId": f"aml:{request_id}:{i}",
                 "userId": user_id,
                 "platform": "aml",
                 "botId": "aml-adapter",
-                "sessionId": session_id,
-                "role": m.get("role", "user"),
-                "timestamp": int(ts) if ts else now_ms,
-                "content": str(content),
-                "createdAt": now_ms,
+                "metadata": {"sessionId": session_id, "role": role},
+                "content": content,
+                "createdAt": now_seconds,
             }
-        )
+        if ts is not None:
+            oc_message["timestamp"] = ts
+        oc_messages.append(oc_message)
     # embedOnInsert blocks until embeddings are stored, so Search right after
     # Add sees the memories (contract: return 200 only once searchable).
-    oc_post("/v1/raw-messages", {"userId": user_id, "messages": oc_messages, "embedOnInsert": True})
+    result = oc_post("/v1/raw-messages", {"userId": user_id, "messages": oc_messages, "embedOnInsert": True}, timeout=1800)
+    if result.get("ok") is not True or result.get("count") != len(oc_messages) or result.get("warnings"):
+        raise RuntimeError("OpenContext did not confirm fully embedded Add messages")
     return {"success": True, "request_id": request_id, "user_id": user_id, "session_id": session_id}
 
 
-def handle_search(body: dict) -> dict:
-    query = str(body.get("query") or "").strip()
-    user_id = str(body.get("user_id") or "").strip()
+def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
+    if not isinstance(body, dict):
+        raise ValueError("Search body must be an object")
+    query = body.get("query")
+    user_id = body.get("user_id")
     top_k = body.get("top_k")
-    if not query or not user_id or not isinstance(top_k, int):
-        raise ValueError("query, user_id and integer top_k are required")
+    if not isinstance(query, str) or not query.strip() or not isinstance(user_id, str) or not user_id.strip() or isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
+        raise ValueError("query, user_id and positive integer top_k are required")
+    options = body.get("options")
+    if options is not None and (not isinstance(options, list) or any(not isinstance(option, str) for option in options)):
+        raise ValueError("options must be an array of strings when supplied")
 
     res = oc_post(
         "/v1/search",
-        {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"]},
-        timeout=120,
+        {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"],
+         **({"includeRetrievalDiagnostics": True} if local_diagnostics else {})},
+        timeout=1800,
     )
     data = []
-    for i, hit in enumerate(res.get("results", [])):
+    hits = res.get("results")
+    if not isinstance(hits, list) or len(hits) > top_k:
+        raise RuntimeError("OpenContext returned invalid or over-limit search results")
+    for hit in hits:
+        if not isinstance(hit, dict) or not isinstance(hit.get("id"), str) or not hit["id"] or not isinstance(hit.get("content"), str) or not hit["content"]:
+            raise RuntimeError("OpenContext returned a search result without a valid id or content")
         meta = hit.get("metadata") or {}
         item = {
-            "id": str(hit.get("id") or hit.get("messageId") or f"mem_{i}"),
-            "content": str(hit.get("content", "")),
+            "id": hit["id"],
+            "content": hit["content"],
         }
-        sim = hit.get("similarity", hit.get("score"))
-        if sim is not None:
+        sim = meta.get("rerankerScore", hit.get("similarity", hit.get("score")))
+        if isinstance(sim, (int, float)) and not isinstance(sim, bool) and math.isfinite(sim):
             item["score"] = float(sim)
         created = iso_from_ms(meta.get("timestamp")) or iso_from_ms(meta.get("createdAt"))
         if created:
             item["created_at"] = created
         data.append(item)
-    return {"data": data}
+    response = {"data": data}
+    if local_diagnostics:
+        diagnostics = res.get("retrievalDiagnostics")
+        if not isinstance(diagnostics, dict) or not isinstance(diagnostics.get("fusedBeforeRerank"), list) or not isinstance(diagnostics.get("reranker"), dict) or not isinstance(diagnostics.get("final"), list):
+            raise RuntimeError("OpenContext did not return complete retrieval diagnostics")
+        if [hit.get("id") for hit in diagnostics["final"]] != [hit.get("id") for hit in hits]:
+            raise RuntimeError("OpenContext diagnostics do not match final Search order")
+        response["_local_diagnostics"] = {
+            "retrieval": diagnostics,
+            "warnings": res.get("warnings", []),
+        }
+    return response
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -159,7 +192,7 @@ class Handler(BaseHTTPRequestHandler):
             return True
         bearer = self.headers.get("Authorization", "")
         api_key = self.headers.get("X-Api-Key", "")
-        if AML_SYSTEM_KEY and (bearer == f"Bearer {AML_SYSTEM_KEY}" or api_key == AML_SYSTEM_KEY):
+        if AML_SYSTEM_KEY and (bearer in (f"Bearer {AML_SYSTEM_KEY}", f"Token {AML_SYSTEM_KEY}") or api_key == AML_SYSTEM_KEY):
             return True
         if AML_EVAL_KEY and any(self.headers.get(h, "") == AML_EVAL_KEY for h in EVAL_KEY_HEADERS):
             return True
@@ -181,7 +214,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path.rstrip("/") == "/health":
-            self._send(200, {"ok": True, "opencontext": OPENCONTEXT_URL})
+            try:
+                with urllib.request.urlopen(OPENCONTEXT_URL + "/health", timeout=5) as response:
+                    if not 200 <= response.status < 300:
+                        raise RuntimeError(f"daemon health returned {response.status}")
+                    daemon_health = json.loads(response.read().decode("utf-8"))
+                if daemon_health.get("ok") is not True:
+                    raise RuntimeError("daemon health is not ok")
+                if (daemon_health.get("retrieval") or {}).get("rerankerReady") is not True:
+                    raise RuntimeError("required reranker is not ready")
+                self._send(200, {"ok": True, "opencontext": OPENCONTEXT_URL, "retrieval": daemon_health.get("retrieval")})
+            except Exception as error:
+                self._send_retriable(503, f"opencontext daemon unavailable: {error}")
         else:
             self._send(404, {"error": "not found"})
 
@@ -193,6 +237,9 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             self._send(401, {"error": "unauthorized"})
             return
+        if self.headers.get("X-OpenContext-Local-Diagnostics") == "1" and self.client_address[0] not in ("127.0.0.1", "::1"):
+            self._send(403, {"error": "local diagnostics require a loopback client"})
+            return
         try:
             length = int(self.headers.get("Content-Length", "0"))
             body = json.loads(self.rfile.read(length).decode("utf-8"))
@@ -200,7 +247,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send(400, {"error": "invalid JSON body"})
             return
         try:
-            result = handle_add(body) if path == "/add" else handle_search(body)
+            result = handle_add(body) if path == "/add" else handle_search(
+                body, local_diagnostics=self.headers.get("X-OpenContext-Local-Diagnostics") == "1"
+            )
             self._send(200, result)
         except ValueError as e:
             # 4xx: client error, NOT retriable per the AML contract

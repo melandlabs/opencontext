@@ -26,6 +26,7 @@ import type {
 	IterativeRecallSearchRequest,
 	IterativeRecallSearchResult,
 } from "./iterative-recall";
+import { presentMessageContext } from "./message-context";
 import { applyReranker } from "./reranker";
 import {
 	type SearchEvidence,
@@ -1042,7 +1043,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		const mergeStrategy = normalizeUnifiedMemoryMergeStrategy(
 			input.mergeStrategy ?? deps.reasoning?.defaultMergeStrategy ?? "rrf",
 		);
-		const candidateLimit = Math.min(50, Math.max(limit, limit * 4));
+		const candidateLimit = Math.min(400, Math.max(limit, limit * 4));
 		const threshold = clampUnifiedMemorySearchThreshold(input.threshold);
 		const memoryThreshold =
 			input.threshold === undefined && mergeStrategy === "rrf" ? Number.NEGATIVE_INFINITY : threshold;
@@ -1284,7 +1285,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 	}
 
 	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
-		return searchUnifiedMemoryWithRuntime(input);
+		const output = await searchUnifiedMemoryWithRuntime(input);
+		output.results = presentMessageContext(output.results);
+		if (output.retrievalDiagnostics) output.retrievalDiagnostics.final = output.results;
+		return output;
 	}
 
 	/**
@@ -1425,6 +1429,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			hits = mergeUnifiedMemorySearchResultsRrf(tierLists, limit);
 		}
 
+		hits = presentMessageContext(hits);
+		if (retrievalDiagnostics) retrievalDiagnostics = { ...retrievalDiagnostics, final: hits };
 		const evidence: SearchEvidence[] = hits.map((hit) => ({
 			id: hit.id,
 			source: mapHitToEvidenceSource(hit),

@@ -26,20 +26,21 @@
 			"minItems": 1,
 			"items": {
 				"type": "object",
-				"required": ["content"],
+				"required": ["role", "content"],
 				"additionalProperties": true,
 				"properties": {
 					"role": {
-						"type": "string",
-						"description": "Speaker role, e.g. \"user\" or \"assistant\". Defaults to \"user\" when omitted."
+						"enum": ["user", "assistant"],
+						"description": "Speaker role from the ordered source conversation."
 					},
 					"content": {
-						"type": ["string", "number", "boolean", "object", "array"],
-						"description": "Message payload; non-string values are stringified before storage."
+						"type": "string",
+						"minLength": 1,
+						"description": "Non-empty textual message content."
 					},
 					"timestamp": {
 						"type": "integer",
-						"description": "Unix epoch milliseconds. Defaults to the adapter receive time when omitted."
+						"description": "Optional Unix epoch milliseconds. Omit when the source has no timestamp."
 					}
 				}
 			}

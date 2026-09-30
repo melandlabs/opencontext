@@ -34,7 +34,8 @@ interface RawMessageRow {
 	user_id: string;
 	channel: string | null;
 	person: string | null;
-	timestamp: number;
+	timestamp: number | null;
+	message_sequence: number;
 	content: string;
 	attachments: string | null;
 	embedding: Buffer | null;
@@ -139,7 +140,8 @@ export interface SQLiteRawMessageSemanticSearchResult {
 		botId: string;
 		channel?: string;
 		person?: string;
-		timestamp: number;
+		timestamp?: number;
+		messageSequence?: number;
 		memoryStage?: string;
 		embeddingModel?: string;
 		factType?: "world" | "experience" | "mental_model";
@@ -185,7 +187,8 @@ export interface SQLiteRawMessageLexicalSearchResult {
 		botId: string;
 		channel?: string;
 		person?: string;
-		timestamp: number;
+		timestamp?: number;
+		messageSequence?: number;
 		memoryStage?: string;
 		factType?: "world" | "experience" | "mental_model";
 		scoring: "bm25";
@@ -295,7 +298,8 @@ function toRawMessage(row: RawMessageRow): RawMessage {
 		userId: row.user_id,
 		channel: row.channel ?? undefined,
 		person: row.person ?? undefined,
-		timestamp: row.timestamp,
+		timestamp: row.timestamp ?? undefined,
+		messageSequence: row.message_sequence,
 		content: row.content,
 		attachments: parseJson(row.attachments, undefined),
 		embedding: bufferToFloatArray(row.embedding),
@@ -738,6 +742,11 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		yesterday.setDate(yesterday.getDate() - 1);
 
 		for (const message of messages) {
+			if (message.timestamp === undefined) {
+				grouped.Unknown ??= [];
+				grouped.Unknown.push(message);
+				continue;
+			}
 			const date = new Date(message.timestamp * 1000);
 			let key = date.toISOString().split("T")[0];
 
@@ -1223,6 +1232,17 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		const messageToStore = persisted ? mergeStoredChatMemoryEvidence(persisted, message) : message;
 		const normalized = {
 			...messageToStore,
+			messageSequence:
+				persisted?.messageSequence ??
+				(
+					this.db
+						.prepare(`
+        INSERT INTO raw_message_sequences(user_id, last_sequence) VALUES (?, 1)
+        ON CONFLICT(user_id) DO UPDATE SET last_sequence = last_sequence + 1
+        RETURNING last_sequence
+      `)
+						.get(message.userId) as { last_sequence: number }
+				).last_sequence,
 			memoryStage: messageToStore.memoryStage ?? "short",
 			accessCount: messageToStore.accessCount ?? 0,
 			importanceScore: messageToStore.importanceScore ?? 0,
@@ -1239,7 +1259,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             embedding_content_hash, embedding_dimensions, embedding_updated_at,
             metadata, created_at, memory_stage, access_count, last_access_at,
             importance_score, archived_at, is_pinned, summary_ref_id,
-            source_episode_id, fact_type
+            source_episode_id, fact_type, message_sequence
           )
           VALUES (
             @messageId, @platform, @botId, @userId, @channel, @person,
@@ -1247,7 +1267,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
             @embeddingContentHash, @embeddingDimensions, @embeddingUpdatedAt,
             @metadata, @createdAt, @memoryStage, @accessCount, @lastAccessAt,
             @importanceScore, @archivedAt, @isPinned, @summaryRefId,
-            @sourceEpisodeId, @factType
+            @sourceEpisodeId, @factType, @messageSequence
           )
           ON CONFLICT(message_id) DO UPDATE SET
             platform = excluded.platform,
@@ -1284,7 +1304,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				userId: normalized.userId,
 				channel: normalized.channel ?? null,
 				person: normalized.person ?? null,
-				timestamp: normalized.timestamp,
+				timestamp: normalized.timestamp ?? null,
+				messageSequence: normalized.messageSequence,
 				content: normalized.content,
 				attachments: stringifyJson(normalized.attachments),
 				embedding: floatArrayToBuffer(normalized.embedding),
@@ -1362,13 +1383,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 	}
 
 	private deleteSearchChunksForMessage(messageId: string): void {
-		for (const tableName of this.listChildVectorTables()) {
-			this.db
-				.prepare(
-					`DELETE FROM ${tableName} WHERE chunk_id IN (SELECT chunk_id FROM raw_message_chunks WHERE message_id = ?)`,
-				)
-				.run(messageId);
-		}
+		// The per-dimension AFTER DELETE triggers remove each vector by its
+		// primary key. An additional vec0 IN-subquery delete scans the entire
+		// vector index for every parent (including newly inserted parents).
 		this.db.prepare("DELETE FROM raw_message_chunks WHERE message_id = ?").run(messageId);
 	}
 
@@ -1651,7 +1668,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 						botId: message.botId,
 						channel: message.channel,
 						person: message.person,
-						timestamp: normalizeTimestampToMs(message.timestamp),
+						timestamp:
+							message.timestamp === undefined ? undefined : normalizeTimestampToMs(message.timestamp),
+						messageSequence: message.messageSequence,
 						memoryStage: message.memoryStage,
 						factType: message.factType,
 						scoring: "bm25" as const,
@@ -1684,7 +1703,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				botId: message.botId,
 				channel: message.channel,
 				person: message.person,
-				timestamp: normalizeTimestampToMs(message.timestamp),
+				timestamp: message.timestamp === undefined ? undefined : normalizeTimestampToMs(message.timestamp),
+				messageSequence: message.messageSequence,
 				memoryStage: message.memoryStage,
 				embeddingModel: chunk.embedding_model ?? undefined,
 				factType: message.factType,
@@ -1787,7 +1807,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 					botId: message.botId,
 					channel: message.channel,
 					person: message.person,
-					timestamp: normalizeTimestampToMs(message.timestamp),
+					timestamp: message.timestamp === undefined ? undefined : normalizeTimestampToMs(message.timestamp),
+					messageSequence: message.messageSequence,
 					memoryStage: message.memoryStage,
 					factType: message.factType,
 					scoring: "bm25",
@@ -2225,10 +2246,16 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		if (input.person && !message.person?.toLowerCase().includes(input.person.toLowerCase())) {
 			return false;
 		}
-		if (input.startTime !== undefined && message.timestamp < input.startTime) {
+		if (
+			input.startTime !== undefined &&
+			(message.timestamp === undefined || message.timestamp < input.startTime)
+		) {
 			return false;
 		}
-		if (input.endTime !== undefined && message.timestamp >= input.endTime) {
+		if (
+			input.endTime !== undefined &&
+			(message.timestamp === undefined || message.timestamp >= input.endTime)
+		) {
 			return false;
 		}
 		if (
@@ -2275,7 +2302,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				botId: message.botId,
 				channel: message.channel,
 				person: message.person,
-				timestamp: normalizeTimestampToMs(message.timestamp),
+				timestamp: message.timestamp === undefined ? undefined : normalizeTimestampToMs(message.timestamp),
+				messageSequence: message.messageSequence,
 				memoryStage: message.memoryStage,
 				embeddingModel: message.embeddingModel,
 				factType: message.factType,

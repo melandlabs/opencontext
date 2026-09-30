@@ -38,8 +38,8 @@ function makeMessage(overrides: Partial<RawMessage> & { messageId: string; conte
 }
 
 describe("RAW_MESSAGES_SCHEMA_VERSION", () => {
-	it("is bumped to 5 for the RawMessage child search index", () => {
-		expect(RAW_MESSAGES_SCHEMA_VERSION).toBe(5);
+	it("is bumped to 6 for optional timestamps and per-user message order", () => {
+		expect(RAW_MESSAGES_SCHEMA_VERSION).toBe(6);
 	});
 });
 

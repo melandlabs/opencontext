@@ -179,6 +179,7 @@ benchmark/.opencontext-data/
 # AML local eval outputs (the AML pipeline sources are vendored in-repo)
 benchmark/aml-local/outputs/
 benchmark/aml-local/outputs-*/
+benchmark/aml-local/run-data/
 # benchmark local secrets (API keys used by eval harnesses)
 benchmark/**/.qwen_key_.txt
 # benchmark run artifacts (checkpoints, per-run score files, egg-info)

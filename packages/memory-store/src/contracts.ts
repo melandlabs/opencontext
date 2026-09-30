@@ -30,7 +30,9 @@ export interface RawMessage {
 	userId: string;
 	channel?: string;
 	person?: string;
-	timestamp: number;
+	timestamp?: number;
+	/** Storage-assigned, per-user insertion order; not an event timestamp. */
+	messageSequence?: number;
 	content: string;
 	attachments?: Array<{
 		name: string;
