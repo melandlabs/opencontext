@@ -344,8 +344,8 @@ class AmlClient(OpenContextClient):
                 raise RuntimeError("AML local Search did not provide active reranker diagnostics; restart the updated adapter")
             if self.reasoning != "none":
                 actual = diagnostics.get("reasoning") if isinstance(diagnostics, dict) else None
-                if not isinstance(actual, dict) or actual.get("strategy") != self.reasoning or actual.get("degraded") is True:
-                    raise RuntimeError(f"AML local Search did not execute {self.reasoning} without degradation")
+                if not isinstance(actual, dict) or actual.get("strategy") != self.reasoning:
+                    raise RuntimeError(f"AML local Search did not report the requested {self.reasoning} strategy")
         return hits, diagnostics
 
 

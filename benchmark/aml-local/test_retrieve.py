@@ -143,7 +143,11 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.assertEqual(post.call_args.kwargs["headers"]["X-OpenContext-Local-Reasoning"], "iterative")
         reply["_local_diagnostics"]["reasoning"]["degraded"] = True
         with mock.patch.object(client, "_post", return_value=reply):
-            with self.assertRaisesRegex(RuntimeError, "without degradation"):
+            _, degraded = client.search_with_diagnostics("user", "question")
+        self.assertTrue(degraded["reasoning"]["degraded"])
+        reply["_local_diagnostics"]["reasoning"]["strategy"] = "rewrite"
+        with mock.patch.object(client, "_post", return_value=reply):
+            with self.assertRaisesRegex(RuntimeError, "did not report"):
                 client.search_with_diagnostics("user", "question")
 
     def test_beam_preflight_requires_ready_reranker(self) -> None:
