@@ -16,6 +16,13 @@ import httpx
 retry_sleep = asyncio.sleep
 
 
+def provider_reasoning_disabled():
+    return any(
+        os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+        for name in ("AML_DISABLE_PROVIDER_REASONING", "AML_BEAM_DISABLE_REASONING")
+    )
+
+
 class RequestFailure(RuntimeError):
     pass
 
@@ -117,7 +124,7 @@ class BeamRuntime:
             provider = self.event_provider if event else self.rubric_provider if json_mode else ""
             if provider:
                 payload["provider"] = {"order": [provider], "allow_fallbacks": False}
-            if event or os.environ.get("AML_BEAM_DISABLE_REASONING", "").lower() in {"1", "true", "yes"}:
+            if event or provider_reasoning_disabled():
                 payload["reasoning"] = {"effort": "none"}
         # Resume successful subrequests within an unfinished event-ordering
         # judgement. Reuse only the exact question, endpoint and request payload.
@@ -218,7 +225,7 @@ class BeamRuntime:
                     "rubric_provider": self.rubric_provider, "event_provider": self.event_provider,
                     "request_attempts": self.attempts, "request_timeout": self.timeout,
                     "max_tokens_ceiling": self.ceiling,
-                    "disable_reasoning": os.environ.get("AML_BEAM_DISABLE_REASONING", "0")}
+                    "disable_reasoning": provider_reasoning_disabled()}
         config = self.output.with_name(self.output.stem + "-config.json")
         if config.exists() and json.loads(config.read_text(encoding="utf-8"))["identity"] != identity:
             raise ValueError("Execution configuration changed; choose a new output directory")

@@ -184,6 +184,21 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(all(p["model"] == os.environ["ANSWER_MODEL"] for p in payloads))
         self.assertEqual(self.read(runtime.requests_path)[0]["finish_reason"], "length")
 
+    def test_common_reasoning_flag_applies_to_answer_and_judge(self):
+        os.environ["AML_DISABLE_PROVIDER_REASONING"] = "1"
+        payloads = []
+        def handler(request):
+            payload = json.loads(request.content)
+            payloads.append(payload)
+            if payload.get("response_format"):
+                return response('{"scores":[{"index":0,"score":1,"reason":"ok"}]}')
+            return response("answer")
+        answer_code, _ = self.execute(handler)
+        judge_code, _ = self.execute(handler, "evaluate")
+        self.assertEqual((answer_code, judge_code), (0, 0))
+        self.assertEqual(len(payloads), 4)
+        self.assertTrue(all(payload["reasoning"] == {"effort": "none"} for payload in payloads))
+
     def test_judge_format_failure_continues_and_missing_answer_is_not_fabricated(self):
         self.save(self.answers, [{"id": x["id"], "generated_answer": "answer"} for x in self.items])
         calls = []
