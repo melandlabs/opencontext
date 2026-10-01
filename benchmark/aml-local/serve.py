@@ -177,8 +177,10 @@ def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasonin
         diagnostics = res.get("retrievalDiagnostics")
         if not isinstance(diagnostics, dict) or not isinstance(diagnostics.get("fusedBeforeRerank"), list) or not isinstance(diagnostics.get("reranker"), dict) or not isinstance(diagnostics.get("final"), list):
             raise RuntimeError("OpenContext did not return complete retrieval diagnostics")
-        if [hit.get("id") for hit in diagnostics["final"]] != [hit.get("id") for hit in hits]:
-            raise RuntimeError("OpenContext diagnostics do not match final Search order")
+        if [(hit.get("id"), hit.get("content")) for hit in diagnostics["final"]] != [
+            (hit.get("id"), hit.get("content")) for hit in hits
+        ]:
+            raise RuntimeError("OpenContext diagnostics do not match final Search evidence")
         response["_local_diagnostics"] = {
             "retrieval": diagnostics,
             "reasoning": res.get("reasoning"),
