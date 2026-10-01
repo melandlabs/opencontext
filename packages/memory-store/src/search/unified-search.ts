@@ -26,6 +26,7 @@ import type {
 	IterativeRecallSearchRequest,
 	IterativeRecallSearchResult,
 } from "./iterative-recall";
+import { mergeMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 import { presentMessageContext } from "./message-context";
 import { applyReranker } from "./reranker";
 import {
@@ -432,29 +433,52 @@ async function runSemanticSearchForEmbedding(
  * Generic over the hit shape; both `UnifiedMemorySearchResult` and
  * `IterativeRecallCandidate` qualify without a wrapper.
  */
-function mergeByMaxScore<T extends { id: string; similarity: number }>(lists: T[][]): T[] {
+function mergeByMaxScore<
+	T extends { id: string; content: string; similarity: number; metadata: Record<string, unknown> },
+>(lists: T[][]): T[] {
 	const best = new Map<string, T>();
 	for (const list of lists) {
 		for (const hit of list) {
 			const existing = best.get(hit.id);
-			if (!existing || hit.similarity > existing.similarity) {
+			if (!existing) {
 				best.set(hit.id, hit);
+			} else {
+				const preferred = hit.similarity > existing.similarity ? hit : existing;
+				const other = preferred === hit ? existing : hit;
+				best.set(hit.id, mergeMatchedEvidence(preferred, other));
 			}
 		}
 	}
 	return Array.from(best.values()).sort((a, b) => b.similarity - a.similarity);
 }
 
-function dedupeChannelByParent(hits: UnifiedMemorySearchResult[]): UnifiedMemorySearchResult[] {
+function dedupeChannelByParent(
+	hits: UnifiedMemorySearchResult[],
+	channel: string,
+): UnifiedMemorySearchResult[] {
 	const strongest = new Map<string, UnifiedMemorySearchResult>();
-	for (const hit of hits) {
+	for (const [index, hit] of hits.entries()) {
 		const sourceMessageId = hit.metadata?.sourceMessageId;
 		const parentId =
 			typeof sourceMessageId === "string" && sourceMessageId.length > 0 ? sourceMessageId : hit.id;
-		const normalized = hit.type === "memory" && hit.id !== parentId ? { ...hit, id: parentId } : hit;
+		const normalized =
+			hit.type === "memory"
+				? withMatchedEvidence(hit.id !== parentId ? { ...hit, id: parentId } : hit, channel, index + 1)
+				: hit;
 		const key = `${normalized.type}:${parentId}`;
 		const current = strongest.get(key);
-		if (!current || normalized.similarity > current.similarity) strongest.set(key, normalized);
+		if (!current) {
+			strongest.set(key, normalized);
+		} else {
+			const preferred = normalized.similarity > current.similarity ? normalized : current;
+			const other = preferred === normalized ? current : normalized;
+			strongest.set(
+				key,
+				preferred.type === "memory" && other.type === "memory"
+					? mergeMatchedEvidence(preferred, other)
+					: preferred,
+			);
+		}
 	}
 	return [...strongest.values()].sort((a, b) => b.similarity - a.similarity);
 }
@@ -1107,10 +1131,14 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						runtimeContext,
 					);
 					memorySubs = {
-						semantic: dedupeChannelByParent(memorySubs.semantic),
-						lexical: dedupeChannelByParent(memorySubs.lexical),
-						...(memorySubs.hybrid ? { hybrid: dedupeChannelByParent(memorySubs.hybrid) } : {}),
-						...(memorySubs.entity ? { entity: dedupeChannelByParent(memorySubs.entity) } : {}),
+						semantic: dedupeChannelByParent(memorySubs.semantic, "memory-semantic"),
+						lexical: dedupeChannelByParent(memorySubs.lexical, "memory-bm25"),
+						...(memorySubs.hybrid
+							? { hybrid: dedupeChannelByParent(memorySubs.hybrid, "memory-hybrid") }
+							: {}),
+						...(memorySubs.entity
+							? { entity: dedupeChannelByParent(memorySubs.entity, "memory-entity") }
+							: {}),
 					};
 					if (deps.getRawMessageRetrievalStatus) {
 						retrievalStatus = await deps.getRawMessageRetrievalStatus();

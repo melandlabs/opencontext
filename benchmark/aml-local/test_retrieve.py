@@ -96,6 +96,7 @@ class MockHandler(BaseHTTPRequestHandler):
                             "lexical": [{"id": "memory-1", "content": "keyword candidate", "similarity": 0.6}],
                         },
                         "fusedBeforeRerank": [{"id": "memory-1", "content": "before rerank", "similarity": 0.4}],
+                        "final": [{"id": "memory-1", "content": f"retrieved: {payload['query']}", "similarity": 0.9}],
                         "reranker": {"enabled": True, "provider": "local", "model": "test-model", "inputCount": 1, "outputCount": 1, "latencyMs": 1, "orderChanged": False},
                     },
                     "warnings": [],
@@ -125,6 +126,25 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.server.requests.clear()
         self.server.reranker_ready = True
         self.server.fail_query = None
+
+    def test_beam_reasoning_requires_a_matching_non_degraded_trace(self) -> None:
+        client = retrieve.AmlClient(self.aml_client.base_url, top_k=12, reasoning="iterative")
+        reply = {
+            "data": [{"id": "memory-1", "content": "answer"}],
+            "_local_diagnostics": {
+                "retrieval": {"fusedBeforeRerank": [], "reranker": {"enabled": True}},
+                "reasoning": {"strategy": "iterative", "iterations": 2, "degraded": False},
+            },
+        }
+        with mock.patch.object(client, "_post", return_value=reply) as post:
+            hits, diagnostics = client.search_with_diagnostics("user", "question")
+        self.assertEqual(hits[0]["id"], "memory-1")
+        self.assertEqual(diagnostics["reasoning"]["iterations"], 2)
+        self.assertEqual(post.call_args.kwargs["headers"]["X-OpenContext-Local-Reasoning"], "iterative")
+        reply["_local_diagnostics"]["reasoning"]["degraded"] = True
+        with mock.patch.object(client, "_post", return_value=reply):
+            with self.assertRaisesRegex(RuntimeError, "without degradation"):
+                client.search_with_diagnostics("user", "question")
 
     def test_beam_preflight_requires_ready_reranker(self) -> None:
         self.server.reranker_ready = False

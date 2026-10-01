@@ -36,7 +36,6 @@ param(
 
 $startedAt = [DateTimeOffset]::UtcNow
 $PSNativeCommandUseErrorActionPreference = $false
-if ($Bench -eq "beam" -and $Reasoning -ne "none") { throw "BEAM public-flow mode does not accept a retrieval reasoning override" }
 if ($Bench -eq "beam" -and $SkipIngest) { throw "BEAM public-flow mode requires Add before Search; -SkipIngest is diagnostic only" }
 if ($ResumeDbPath -and $Bench -ne "beam") { throw "-ResumeDbPath is supported only for BEAM" }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

@@ -321,9 +321,14 @@ class AmlClient(OpenContextClient):
     def search_with_diagnostics(
         self, user_id: str, query: str, *, include_diagnostics: bool = True
     ) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
+        if self.reasoning != "none" and not include_diagnostics:
+            raise ValueError("BEAM local reasoning experiments require retrieval diagnostics")
+        headers = {"X-OpenContext-Local-Diagnostics": "1"} if include_diagnostics else {}
+        if self.reasoning != "none":
+            headers["X-OpenContext-Local-Reasoning"] = self.reasoning
         result = self._post(
             "/search", {"query": query, "user_id": user_id, "top_k": self.top_k}, timeout=1800,
-            headers={"X-OpenContext-Local-Diagnostics": "1"} if include_diagnostics else None,
+            headers=headers or None,
         )
         hits = result.get("data")
         if not isinstance(hits, list) or len(hits) > self.top_k:
@@ -337,6 +342,10 @@ class AmlClient(OpenContextClient):
             reranker = retrieval.get("reranker") if isinstance(retrieval, dict) else None
             if not isinstance(retrieval, dict) or not isinstance(retrieval.get("fusedBeforeRerank"), list) or not isinstance(reranker, dict) or reranker.get("enabled") is not True:
                 raise RuntimeError("AML local Search did not provide active reranker diagnostics; restart the updated adapter")
+            if self.reasoning != "none":
+                actual = diagnostics.get("reasoning") if isinstance(diagnostics, dict) else None
+                if not isinstance(actual, dict) or actual.get("strategy") != self.reasoning or actual.get("degraded") is True:
+                    raise RuntimeError(f"AML local Search did not execute {self.reasoning} without degradation")
         return hits, diagnostics
 
 
@@ -441,6 +450,19 @@ def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dic
     candidates = (hit.get("id"), metadata.get("parentMessageId"), metadata.get("messageId"), metadata.get("rawMessageId"))
     source_ids = list(dict.fromkeys(source_ids_by_message[value] for value in candidates if isinstance(value, str) and value in source_ids_by_message))
     content = str(hit.get("content", ""))
+    matched_spans = []
+    for span in metadata.get("matchedSpans") or []:
+        if not isinstance(span, dict) or not isinstance(span.get("content"), str):
+            continue
+        span_content = span["content"]
+        matched_spans.append({
+            "source_chunk_ids": span.get("sourceChunkIds") or ([span["sourceChunkId"]] if isinstance(span.get("sourceChunkId"), str) else []),
+            "start_position": span.get("startPosition"),
+            "end_position": span.get("endPosition"),
+            "channels": span.get("channels", []),
+            "content_sha256": hashlib.sha256(span_content.encode("utf-8")).hexdigest(),
+            "content_excerpt": " ".join(span_content.split())[:240],
+        })
     return {
         "rank": rank,
         "id": hit.get("id"),
@@ -449,6 +471,10 @@ def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dic
         "content_excerpt": " ".join(content.split())[:240],
         "source_turn_ids": source_ids,
         "matched_source_turn_ids": [value for value in source_ids if value in required],
+        "matched_spans": matched_spans,
+        "matched_spans_truncated": metadata.get("matchedSpansTruncated", 0),
+        "vector_scan_underfilled": metadata.get("vectorScanUnderfilled", False),
+        "vector_search_fallback": metadata.get("vectorSearchFallback"),
     }
 
 
@@ -761,7 +787,7 @@ def run_beam(
             }
             channel_ids = {name: {hit["id"] for hit in values} for name, values in channel_hits.items()}
             before = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["fusedBeforeRerank"], 1)]
-            after = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(hits, 1)]
+            after = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["final"], 1)]
             for hit in before + after:
                 hit["retrieval_channels"] = [name for name, ids in channel_ids.items() if hit["id"] in ids]
             matched_ids = {source_id for hit in after for source_id in hit["matched_source_turn_ids"]}
@@ -797,6 +823,7 @@ def run_beam(
                 "channel_summary": channel_summary,
                 "before_rerank": before,
                 "reranker": retrieval["reranker"],
+                "reasoning": local_diagnostics.get("reasoning"),
                 "after_rerank": after,
                 "search_response": hits,
                 "warnings": local_diagnostics.get("warnings", []),

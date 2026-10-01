@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 /**
  * Tests for the additions to `search/unified-search`:
  *   - the optional lexical (BM25) sub-query alongside the semantic one
@@ -9,6 +12,7 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SQLiteRawMessageManager } from "../../../sqlite/src/raw-message-manager";
 import type { UnifiedSearchDeps } from "../config";
 import { createIterativeRecallPlanner } from "./iterative-recall";
 import { type QueryRewriter, createUserVoiceRewriter } from "./query-rewriter";
@@ -84,6 +88,128 @@ afterEach(() => {
 });
 
 describe("createUnifiedSearch", () => {
+	it("keeps real FTS5 relevance order through parent dedupe and RRF", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "unified-fts-order-"));
+		const manager = new SQLiteRawMessageManager({ dbPath: join(dir, "store.db") });
+		try {
+			const base = { platform: "test", botId: "bot", userId: "u1", timestamp: 1, createdAt: 1 };
+			await manager.storeMessages([
+				{ ...base, messageId: "strong", content: "mars mars mars mars mars rover" },
+				{ ...base, messageId: "weak", content: "mars rover and other unrelated words" },
+			]);
+			const raw = await manager.lexicalSearchMessages({ userId: "u1", keywords: ["mars"], limit: 2 });
+			expect(raw.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+			expect(raw[0]?.bm25Rank).toBeLessThan(raw[1]?.bm25Rank ?? 0);
+			expect(raw[0]?.similarity).toBeGreaterThan(raw[1]?.similarity ?? 0);
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1, 0],
+				searchRawMessagesAnn: async () => [],
+				searchRawMessagesLexical: (input) => manager.lexicalSearchMessages(input),
+			});
+			const output = await search.search({
+				userId: "u1",
+				query: "mars",
+				sources: ["memory"],
+				limit: 2,
+				mergeStrategy: "rrf",
+				includeRetrievalDiagnostics: true,
+			});
+			expect(output.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+			expect(output.results.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+		} finally {
+			await manager.close();
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("exposes two distant FTS5 matches from a single parent to the answer context", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "unified-fts-spans-"));
+		const manager = new SQLiteRawMessageManager({ dbPath: join(dir, "store.db") });
+		try {
+			const paragraphs = Array.from(
+				{ length: 22 },
+				(_, index) =>
+					`Section ${index}. ${"context detail ".repeat(38)} ${index === 2 || index === 18 ? "rareevidence" : "ordinary"}.`,
+			);
+			await manager.storeMessage({
+				messageId: "long-parent",
+				platform: "test",
+				botId: "bot",
+				userId: "u1",
+				timestamp: 1,
+				createdAt: 1,
+				content: paragraphs.join("\n\n"),
+			});
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1, 0],
+				searchRawMessagesAnn: async () => [],
+				searchRawMessagesLexical: (input) => manager.lexicalSearchMessages(input),
+			});
+			const output = await search.search({
+				userId: "u1",
+				query: "rareevidence",
+				sources: ["memory"],
+				limit: 1,
+				mergeStrategy: "rrf",
+			});
+			expect(output.results).toHaveLength(1);
+			expect(output.results[0]?.content).toContain("Section 2.");
+			expect(output.results[0]?.content).toContain("Section 18.");
+			expect((output.results[0]?.metadata.matchedSpans as unknown[]).length).toBeGreaterThanOrEqual(2);
+		} finally {
+			await manager.close();
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("returns distinct semantic and lexical excerpts from one parent", async () => {
+		const search = createUnifiedSearch({
+			embedQuery: async () => [1, 0],
+			searchRawMessagesAnn: async () => [
+				{
+					id: "parent",
+					content: "Background about the trip.",
+					similarity: 0.9,
+					metadata: {
+						userId: "u1",
+						messageSequence: 1,
+						sourceChunkId: "a",
+						sourceStartPosition: 0,
+						sourceEndPosition: 26,
+					},
+				},
+			],
+			searchRawMessagesLexical: async () => [
+				{
+					id: "parent",
+					content: "The answer is the blue train.",
+					similarity: 0.8,
+					metadata: {
+						userId: "u1",
+						messageSequence: 1,
+						sourceChunkId: "b",
+						sourceStartPosition: 100,
+						sourceEndPosition: 129,
+					},
+				},
+			],
+		});
+		const output = await search.search({
+			userId: "u1",
+			query: "blue train",
+			sources: ["memory"],
+			limit: 1,
+			mergeStrategy: "rrf",
+		});
+		expect(output.results).toHaveLength(1);
+		expect(output.results[0]?.content).toContain("Background about the trip.");
+		expect(output.results[0]?.content).toContain("The answer is the blue train.");
+		expect(
+			(output.results[0]?.metadata.matchedSpans as Array<{ sourceChunkId: string }>).map(
+				(span) => span.sourceChunkId,
+			),
+		).toEqual(["a", "b"]);
+	});
 	it("accepts the public AML top_k=100 without silently clamping to 50", async () => {
 		const candidates = Array.from({ length: 110 }, (_, i) => ({
 			id: `m${i}`,

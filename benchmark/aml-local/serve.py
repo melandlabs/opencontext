@@ -130,7 +130,7 @@ def handle_add(body: dict) -> dict:
     return {"success": True, "request_id": request_id, "user_id": user_id, "session_id": session_id}
 
 
-def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
+def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasoning: str = "none") -> dict:
     if not isinstance(body, dict):
         raise ValueError("Search body must be an object")
     query = body.get("query")
@@ -141,10 +141,15 @@ def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
     options = body.get("options")
     if options is not None and (not isinstance(options, list) or any(not isinstance(option, str) for option in options)):
         raise ValueError("options must be an array of strings when supplied")
+    if local_reasoning not in ("none", "rewrite", "iterative"):
+        raise ValueError("unsupported local reasoning strategy")
+    if local_reasoning != "none" and not local_diagnostics:
+        raise ValueError("local reasoning requires local diagnostics")
 
     res = oc_post(
         "/v1/search",
         {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"],
+         **({"reasoningStrategy": local_reasoning} if local_reasoning != "none" else {}),
          **({"includeRetrievalDiagnostics": True} if local_diagnostics else {})},
         timeout=1800,
     )
@@ -176,6 +181,7 @@ def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
             raise RuntimeError("OpenContext diagnostics do not match final Search order")
         response["_local_diagnostics"] = {
             "retrieval": diagnostics,
+            "reasoning": res.get("reasoning"),
             "warnings": res.get("warnings", []),
         }
     return response
@@ -237,8 +243,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             self._send(401, {"error": "unauthorized"})
             return
-        if self.headers.get("X-OpenContext-Local-Diagnostics") == "1" and self.client_address[0] not in ("127.0.0.1", "::1"):
-            self._send(403, {"error": "local diagnostics require a loopback client"})
+        local_diagnostics = self.headers.get("X-OpenContext-Local-Diagnostics") == "1"
+        local_reasoning = self.headers.get("X-OpenContext-Local-Reasoning", "none")
+        if (local_diagnostics or local_reasoning != "none") and self.client_address[0] not in ("127.0.0.1", "::1"):
+            self._send(403, {"error": "local retrieval controls require a loopback client"})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -248,7 +256,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             result = handle_add(body) if path == "/add" else handle_search(
-                body, local_diagnostics=self.headers.get("X-OpenContext-Local-Diagnostics") == "1"
+                body, local_diagnostics=local_diagnostics, local_reasoning=local_reasoning
             )
             self._send(200, result)
         except ValueError as e:

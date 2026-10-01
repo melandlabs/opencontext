@@ -8,6 +8,7 @@
 
 import type { FactType } from "@melandlabs/contracts";
 import type { Peer } from "@melandlabs/contracts/peer";
+import { mergeMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
 
@@ -469,10 +470,14 @@ export function mergeUnifiedMemorySearchResultsRrf(
 			const key = `${hit.type}::${hit.id}`;
 			const contribution = 1 / (safeK + index + 1);
 			const existing = scores.get(key);
+			const rankedHit = hit.type === "memory" ? withMatchedEvidence(hit, list.name, index + 1) : hit;
 			if (existing) {
 				existing.rrf += contribution;
+				if (hit.type === "memory" && existing.hit.type === "memory") {
+					existing.hit = mergeMatchedEvidence(existing.hit, rankedHit);
+				}
 			} else {
-				scores.set(key, { hit, rrf: contribution });
+				scores.set(key, { hit: rankedHit, rrf: contribution });
 				order.push(key);
 			}
 		}

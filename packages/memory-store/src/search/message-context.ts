@@ -1,3 +1,4 @@
+import { renderMatchedEvidence } from "./matched-evidence";
 import type { UnifiedMemorySearchResult } from "./utilities";
 
 /** Applied only after candidate scoring and Top-K selection. Never persisted
@@ -18,7 +19,9 @@ export function presentMessageContext(hits: UnifiedMemorySearchResult[]): Unifie
 	// Search results must retain retrieval/reranker rank. The sequence is
 	// evidence about conversation order, not a second ranking criterion.
 	return hits.map((hit) => {
-		if (sequence(hit) === undefined || !hit.content) return hit;
+		if (!hit.content) return hit;
+		const excerpt = hit.type === "memory" ? renderMatchedEvidence(hit) : hit.content;
+		if (sequence(hit) === undefined) return excerpt === hit.content ? hit : { ...hit, content: excerpt };
 		const fields = [`messageSequence: ${sequence(hit)}`];
 		const metadata = hit.metadata ?? {};
 		if (metadata.role === "user" || metadata.role === "assistant") fields.push(`role: ${metadata.role}`);
@@ -31,7 +34,7 @@ export function presentMessageContext(hits: UnifiedMemorySearchResult[]): Unifie
 		}
 		return {
 			...hit,
-			content: `[Message order guidance]\n${MESSAGE_SEQUENCE_GUIDANCE}\n\n[Message metadata]\n${fields.join("\n")}\n\n[Original excerpt]\n${hit.content}`,
+			content: `[Message order guidance]\n${MESSAGE_SEQUENCE_GUIDANCE}\n\n[Message metadata]\n${fields.join("\n")}\n\n[Original excerpt]\n${excerpt}`,
 		};
 	});
 }
