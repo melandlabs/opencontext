@@ -1,7 +1,44 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { buildUnified, parseUnifiedArgs } from "./cli-shared";
 
 describe("memory-store backend CLI", () => {
+	it("forwards an explicit no-thinking setting to the retrieval model", async () => {
+		const oldKey = process.env.OPENCONTEXT_LLM_API_KEY;
+		const oldEffort = process.env.OPENCONTEXT_LLM_REASONING_EFFORT;
+		process.env.OPENCONTEXT_LLM_API_KEY = "test-key";
+		process.env.OPENCONTEXT_LLM_REASONING_EFFORT = "none";
+		const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({
+			ok: true,
+			json: async () => ({ choices: [{ message: { content: "- Did I mention my favorite color?" } }] }),
+		}));
+		vi.stubGlobal("fetch", fetchMock);
+		try {
+			const unified = await buildUnified(
+				parseUnifiedArgs([
+					"--embedding-provider",
+					"none",
+					"--memory-backend",
+					"none",
+					"--reranker-provider",
+					"none",
+					"--reasoning",
+				]),
+			);
+			const variants = await unified.reasoning?.queryRewriter?.rewrite({
+				query: "What is the user's favorite color?",
+				userId: "u1",
+			});
+			expect(variants).toHaveLength(2);
+			const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+			expect(request.reasoning).toEqual({ effort: "none" });
+		} finally {
+			vi.unstubAllGlobals();
+			if (oldKey === undefined) Reflect.deleteProperty(process.env, "OPENCONTEXT_LLM_API_KEY");
+			else process.env.OPENCONTEXT_LLM_API_KEY = oldKey;
+			if (oldEffort === undefined) Reflect.deleteProperty(process.env, "OPENCONTEXT_LLM_REASONING_EFFORT");
+			else process.env.OPENCONTEXT_LLM_REASONING_EFFORT = oldEffort;
+		}
+	});
 	it("parses the local reranker configuration", () => {
 		const args = parseUnifiedArgs([
 			"--reranker-provider",

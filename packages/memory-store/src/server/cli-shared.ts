@@ -622,6 +622,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			args.reasoningBaseUrl ?? process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
 		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
 		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
+		const reasoningEffort = process.env.OPENCONTEXT_LLM_REASONING_EFFORT?.trim();
+		if (reasoningEffort && !["none", "minimal", "low", "medium", "high"].includes(reasoningEffort)) {
+			throw new Error("OPENCONTEXT_LLM_REASONING_EFFORT must be none, minimal, low, medium, or high");
+		}
 
 		const complete = async (prompt: string): Promise<string> => {
 			const controller = new AbortController();
@@ -640,6 +644,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 						model,
 						messages: [{ role: "user", content: prompt }],
 						temperature: 0,
+						...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
 					}),
 					signal: controller.signal,
 				});
@@ -733,5 +738,7 @@ Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
   Required env when --reasoning is set:
     OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
     OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
-    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model`);
+    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
+    OPENCONTEXT_LLM_REASONING_EFFORT
+                                   (optional) none | minimal | low | medium | high`);
 }
