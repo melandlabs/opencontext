@@ -100,7 +100,9 @@ def summary(directory: Path) -> dict[str, Any]:
     traces = {row["question_id"]: row for row in rows(directory / "retrieval-traces.jsonl")}
     answers = {row["id"]: row for row in rows(directory / "answers.jsonl")}
     judged = {row["id"]: row for row in rows(directory / "judged.jsonl")}
-    categories: dict[str, dict[str, list[float]]] = defaultdict(lambda: {"score": [], "recall": []})
+    categories: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: {"score": [], "recall": [], "required_source_count": [], "over_top_k": []}
+    )
     recall_by_id: dict[str, float] = {}
     score_by_id: dict[str, float] = {}
     for question_id, record in inputs.items():
@@ -111,6 +113,9 @@ def summary(directory: Path) -> dict[str, Any]:
             if recall is not None:
                 recall_by_id[question_id] = recall
                 categories[category]["recall"].append(recall)
+                required_count = len(trace.get("required_source_turn_ids") or [])
+                categories[category]["required_source_count"].append(required_count)
+                categories[category]["over_top_k"].append(required_count > int(trace.get("top_k") or 12))
         judgement = judged.get(question_id)
         if judgement and isinstance(judgement.get("llm_judge_score"), (int, float)):
             score = float(judgement["llm_judge_score"])
@@ -159,6 +164,9 @@ def summary(directory: Path) -> dict[str, Any]:
                 "mean_score": mean(values["score"]) if values["score"] else None,
                 "annotated": len(values["recall"]),
                 "mean_source_recall_at_12": mean(values["recall"]) if values["recall"] else None,
+                "mean_required_source_turns": mean(values["required_source_count"])
+                if values["required_source_count"] else None,
+                "questions_requiring_more_than_top_k_sources": sum(values["over_top_k"]),
             }
             for category, values in sorted(categories.items())
         },

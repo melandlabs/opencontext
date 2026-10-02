@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from analyze_beam_run import evidence_chain, provider_audit, ranking_ablation
+from analyze_beam_run import evidence_chain, provider_audit, ranking_ablation, summary
 
 
 class EvidenceChainTests(unittest.TestCase):
@@ -72,6 +72,20 @@ class EvidenceChainTests(unittest.TestCase):
         self.assertEqual(result["semantic"]["mean_source_recall_at_k"], 1)
         self.assertEqual(result["fused_before_rerank"]["mean_source_recall_at_k"], 0)
         self.assertEqual(result["final_after_rerank"]["mean_source_recall_at_k"], 1)
+
+    def test_required_sources_over_top_k_are_counted_by_category(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "input.jsonl").write_text(
+                json.dumps({"id": "q1", "category": "event_ordering"}) + "\n", encoding="utf-8"
+            )
+            (root / "retrieval-traces.jsonl").write_text(json.dumps({
+                "question_id": "q1", "top_k": 2, "required_source_turn_ids": ["a", "b", "c"],
+                "retrieved_source_turn_ids": [],
+            }) + "\n", encoding="utf-8")
+            category = summary(root)["categories"]["event_ordering"]
+        self.assertEqual(category["mean_required_source_turns"], 3)
+        self.assertEqual(category["questions_requiring_more_than_top_k_sources"], 1)
 
 
 if __name__ == "__main__":
