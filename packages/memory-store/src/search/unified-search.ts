@@ -595,6 +595,7 @@ async function runLexicalSearchForKeywords(
 interface MemorySubQueries {
 	semantic: UnifiedMemorySearchResult[];
 	lexical: UnifiedMemorySearchResult[];
+	planner?: UnifiedMemorySearchResult[];
 	hybrid?: UnifiedMemorySearchResult[];
 	entity?: UnifiedMemorySearchResult[];
 }
@@ -1005,48 +1006,16 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			});
 		}
 
-		if (unionEvidence) {
-			// Union strategy: planner evidence first, baseline hybrid hits fill the
-			// remaining budget. Dedup by hit id (both channels surface the same
-			// underlying messages), cap at `limit` so the context budget matches
-			// the plain top-k run. Planner hits get a tiny synthetic score boost
-			// above the best baseline hit so any downstream similarity sort keeps
-			// them in front instead of dropping low-scored evidence.
-			const plannerHits = unionEvidence;
-			const base = mergeByMaxScore([
-				filterByDateRange(semantic, input.dateFrom, input.dateTo),
-				filterByDateRange(lexical, input.dateFrom, input.dateTo),
-			]);
-			const maxBase = base.length > 0 ? Math.max(...base.map((h) => h.similarity)) : 0;
-			const seen = new Set<string>();
-			const merged: UnifiedMemorySearchResult[] = [];
-			plannerHits.forEach((hit, i) => {
-				if (seen.has(hit.id)) {
-					return;
-				}
-				seen.add(hit.id);
-				merged.push({
-					...hit,
-					similarity: maxBase + (plannerHits.length - i) * 1e-6,
-				});
-			});
-			for (const hit of base) {
-				if (merged.length >= limit) {
-					break;
-				}
-				if (seen.has(hit.id)) {
-					continue;
-				}
-				seen.add(hit.id);
-				merged.push(hit);
-			}
-			return { semantic: merged.slice(0, limit), lexical: [] };
-		}
-
 		const out: MemorySubQueries = {
 			semantic: filterByDateRange(semantic, input.dateFrom, input.dateTo),
 			lexical: filterByDateRange(lexical, input.dateFrom, input.dateTo),
 		};
+		if (unionEvidence) {
+			// Preserve all three independently ranked channels. RRF can then
+			// reward agreement without discarding the baseline BM25 ranking or
+			// inventing a similarity score for planner-selected evidence.
+			out.planner = filterByDateRange(unionEvidence, input.dateFrom, input.dateTo);
+		}
 		if (entity && entity.length > 0) {
 			out.entity = entity;
 		}
@@ -1133,6 +1102,9 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					memorySubs = {
 						semantic: dedupeChannelByParent(memorySubs.semantic, "memory-semantic"),
 						lexical: dedupeChannelByParent(memorySubs.lexical, "memory-bm25"),
+						...(memorySubs.planner
+							? { planner: dedupeChannelByParent(memorySubs.planner, "memory-planner") }
+							: {}),
 						...(memorySubs.hybrid
 							? { hybrid: dedupeChannelByParent(memorySubs.hybrid, "memory-hybrid") }
 							: {}),
@@ -1282,6 +1254,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				candidateCounts: {
 					semantic: memorySubs?.semantic.length ?? 0,
 					lexical: memorySubs?.lexical.length ?? 0,
+					planner: memorySubs?.planner?.length ?? 0,
 					hybrid: memorySubs?.hybrid?.length ?? 0,
 					entity: memorySubs?.entity?.length ?? 0,
 					fused: merged.length,
@@ -1290,6 +1263,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				channels: {
 					semantic: memorySubs?.semantic ?? [],
 					lexical: memorySubs?.lexical ?? [],
+					...(memorySubs?.planner ? { planner: memorySubs.planner } : {}),
 					...(memorySubs?.hybrid ? { hybrid: memorySubs.hybrid } : {}),
 					...(memorySubs?.entity ? { entity: memorySubs.entity } : {}),
 				},
@@ -1553,14 +1527,24 @@ function mergeAcrossSources(input: {
 		for (const hit of [
 			...memorySubs.semantic,
 			...memorySubs.lexical,
+			...(memorySubs.planner ?? []),
 			...(memorySubs.hybrid ?? []),
 			...input.insightHits,
 			...input.knowledgeHits,
 		]) {
 			const key = `${hit.type}::${hit.id}`;
 			const existing = seen.get(key);
-			if (!existing || hit.similarity > existing.similarity) {
+			if (!existing) {
 				seen.set(key, hit);
+			} else {
+				const preferred = hit.similarity > existing.similarity ? hit : existing;
+				const other = preferred === hit ? existing : hit;
+				seen.set(
+					key,
+					preferred.type === "memory" && other.type === "memory"
+						? mergeMatchedEvidence(preferred, other)
+						: preferred,
+				);
 			}
 		}
 		const merged = mergeUnifiedMemorySearchResults(Array.from(seen.values()), input.limit);
@@ -1570,6 +1554,7 @@ function mergeAcrossSources(input: {
 	const all: UnifiedMemorySearchResult[] = [
 		...memorySubs.semantic,
 		...memorySubs.lexical,
+		...(memorySubs.planner ?? []),
 		...(memorySubs.hybrid ?? []),
 		...(memorySubs.entity ?? []),
 		...input.insightHits,
@@ -1591,6 +1576,9 @@ function buildChannelLists(
 	const lists: UnifiedMemoryRankedList[] = [];
 	if (memorySubs.semantic.length > 0) lists.push({ name: "memory-semantic", hits: memorySubs.semantic });
 	if (memorySubs.lexical.length > 0) lists.push({ name: "memory-bm25", hits: memorySubs.lexical });
+	if (memorySubs.planner && memorySubs.planner.length > 0) {
+		lists.push({ name: "memory-planner", hits: memorySubs.planner });
+	}
 	if (memorySubs.hybrid && memorySubs.hybrid.length > 0) {
 		lists.push({ name: "memory-hybrid", hits: memorySubs.hybrid });
 	}

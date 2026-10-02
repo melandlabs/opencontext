@@ -63,6 +63,7 @@ class EvidenceChainTests(unittest.TestCase):
             "channels": {
                 "keyword": [{"matched_source_turn_ids": []}, {"matched_source_turn_ids": ["source"]}],
                 "semantic": [{"matched_source_turn_ids": ["source"]}],
+                "planner": [{"matched_source_turn_ids": ["source"]}],
             },
             "before_rerank": [{"matched_source_turn_ids": []}, {"matched_source_turn_ids": ["source"]}],
             "after_rerank": [{"matched_source_turn_ids": ["source"]}],
@@ -70,6 +71,7 @@ class EvidenceChainTests(unittest.TestCase):
         result = ranking_ablation({"q1": trace})
         self.assertEqual(result["keyword"]["mean_source_recall_at_k"], 0)
         self.assertEqual(result["semantic"]["mean_source_recall_at_k"], 1)
+        self.assertEqual(result["planner"]["mean_source_recall_at_k"], 1)
         self.assertEqual(result["fused_before_rerank"]["mean_source_recall_at_k"], 0)
         self.assertEqual(result["final_after_rerank"]["mean_source_recall_at_k"], 1)
 

@@ -94,6 +94,7 @@ class MockHandler(BaseHTTPRequestHandler):
                         "channels": {
                             "semantic": [{"id": "memory-1", "content": "semantic candidate", "similarity": 0.7}],
                             "lexical": [{"id": "memory-1", "content": "keyword candidate", "similarity": 0.6}],
+                            "planner": [{"id": "memory-1", "content": "planner candidate", "similarity": 0.5}],
                         },
                         "fusedBeforeRerank": [{"id": "memory-1", "content": "before rerank", "similarity": 0.4}],
                         "final": [{"id": "memory-1", "content": f"retrieved: {payload['query']}", "similarity": 0.9}],
@@ -350,9 +351,10 @@ class RetrieveFixtureTests(unittest.TestCase):
             self.assertEqual(len(traces), 1)
             self.assertEqual(traces[0]["before_rerank"][0]["content_excerpt"], "before rerank")
             self.assertEqual(traces[0]["after_rerank"][0]["id"], "memory-1")
-            self.assertEqual(traces[0]["after_rerank"][0]["retrieval_channels"], ["keyword", "semantic"])
+            self.assertEqual(traces[0]["after_rerank"][0]["retrieval_channels"], ["keyword", "semantic", "planner"])
             self.assertEqual(traces[0]["channel_summary"]["keyword"]["candidate_count"], 1)
             self.assertEqual(traces[0]["channel_summary"]["semantic"]["candidate_count"], 1)
+            self.assertEqual(traces[0]["channel_summary"]["planner"]["candidate_count"], 1)
             self.assertTrue(traces[0]["reranker"]["enabled"])
 
             self.server.requests.clear()

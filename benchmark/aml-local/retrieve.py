@@ -790,7 +790,7 @@ def run_beam(
             channels = retrieval.get("channels") or {}
             channel_hits = {
                 name: [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(channels.get(core_name) or [], 1)]
-                for name, core_name in (("keyword", "lexical"), ("semantic", "semantic"), ("hybrid", "hybrid"), ("entity", "entity"))
+                for name, core_name in (("keyword", "lexical"), ("semantic", "semantic"), ("planner", "planner"), ("hybrid", "hybrid"), ("entity", "entity"))
             }
             channel_ids = {name: {hit["id"] for hit in values} for name, values in channel_hits.items()}
             before = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["fusedBeforeRerank"], 1)]

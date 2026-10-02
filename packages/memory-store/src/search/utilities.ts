@@ -20,10 +20,11 @@ export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
  *   - `lexical`  — BM25 / FTS5 keyword match
  *     (`searchRawMessagesLexical` or the SQLite manager's lexical
  *     fallback).
+ *   - `planner`  — evidence selected by iterative recall.
  *   - `entity`   — entity-link match supplied by the host's
  *     `entitySearch` dep.
  */
-export type HitChannel = "semantic" | "lexical" | "hybrid" | "entity";
+export type HitChannel = "semantic" | "lexical" | "planner" | "hybrid" | "entity";
 
 /**
  * Per-hit score breakdown. Always emitted by `search()` (default merge
@@ -43,6 +44,8 @@ export interface HitSignals {
 	semantic?: number;
 	/** Lexical sub-query BM25 score (undefined when absent). */
 	lexical?: number;
+	/** Iterative planner evidence score (undefined when absent). */
+	planner?: number;
 	/** Native backend dense+BM25 fused score (undefined when absent). */
 	hybrid?: number;
 	/** Entity sub-query match score (undefined when absent). */
@@ -58,7 +61,13 @@ export interface HitSignals {
  * list. Order is intentional — it matches the declaration order
  * used by `materializeSignals` when populating `signals.channels`.
  */
-export const HIT_CHANNELS: readonly HitChannel[] = ["semantic", "lexical", "hybrid", "entity"] as const;
+export const HIT_CHANNELS: readonly HitChannel[] = [
+	"semantic",
+	"lexical",
+	"planner",
+	"hybrid",
+	"entity",
+] as const;
 
 /**
  * Derive simple lexical keywords from a query string. Splits on any
@@ -234,6 +243,7 @@ export interface UnifiedMemoryRetrievalDiagnostics {
 	candidateCounts?: {
 		semantic: number;
 		lexical: number;
+		planner?: number;
 		hybrid: number;
 		entity: number;
 		fused: number;
@@ -242,6 +252,7 @@ export interface UnifiedMemoryRetrievalDiagnostics {
 	channels: {
 		semantic: UnifiedMemorySearchResult[];
 		lexical: UnifiedMemorySearchResult[];
+		planner?: UnifiedMemorySearchResult[];
 		hybrid?: UnifiedMemorySearchResult[];
 		entity?: UnifiedMemorySearchResult[];
 	};
@@ -558,6 +569,7 @@ export function materializeSignals(
 	const channels: HitChannel[] = [];
 	let semantic: number | undefined;
 	let lexical: number | undefined;
+	let planner: number | undefined;
 	let entity: number | undefined;
 
 	for (const list of lists) {
@@ -579,6 +591,8 @@ export function materializeSignals(
 			semantic = found.similarity;
 		} else if (channel === "lexical" && lexical === undefined) {
 			lexical = found.similarity;
+		} else if (channel === "planner" && planner === undefined) {
+			planner = found.similarity;
 		} else if (channel === "entity" && entity === undefined) {
 			entity = found.similarity;
 		}
@@ -591,6 +605,7 @@ export function materializeSignals(
 	const out: HitSignals = { channels };
 	if (semantic !== undefined) out.semantic = semantic;
 	if (lexical !== undefined) out.lexical = lexical;
+	if (planner !== undefined) out.planner = planner;
 	if (entity !== undefined) out.entity = entity;
 	if (typeof hit.metadata.rrfScore === "number") {
 		out.rrf = hit.metadata.rrfScore;
@@ -608,6 +623,7 @@ export function materializeSignals(
 export function listNameToChannel(name: string): HitChannel | undefined {
 	if (name === "memory-semantic") return "semantic";
 	if (name === "memory-bm25" || name === "memory-lexical") return "lexical";
+	if (name === "memory-planner") return "planner";
 	if (name === "memory-hybrid") return "hybrid";
 	if (name === "memory-entity") return "entity";
 	return undefined;

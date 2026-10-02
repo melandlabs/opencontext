@@ -194,21 +194,23 @@ describe("createUnifiedSearch", () => {
 				},
 			],
 		});
-		const output = await search.search({
-			userId: "u1",
-			query: "blue train",
-			sources: ["memory"],
-			limit: 1,
-			mergeStrategy: "rrf",
-		});
-		expect(output.results).toHaveLength(1);
-		expect(output.results[0]?.content).toContain("Background about the trip.");
-		expect(output.results[0]?.content).toContain("The answer is the blue train.");
-		expect(
-			(output.results[0]?.metadata.matchedSpans as Array<{ sourceChunkId: string }>).map(
-				(span) => span.sourceChunkId,
-			),
-		).toEqual(["a", "b"]);
+		for (const mergeStrategy of ["rrf", "similarity"] as const) {
+			const output = await search.search({
+				userId: "u1",
+				query: "blue train",
+				sources: ["memory"],
+				limit: 1,
+				mergeStrategy,
+			});
+			expect(output.results).toHaveLength(1);
+			expect(output.results[0]?.content).toContain("Background about the trip.");
+			expect(output.results[0]?.content).toContain("The answer is the blue train.");
+			expect(
+				(output.results[0]?.metadata.matchedSpans as Array<{ sourceChunkId: string }>).map(
+					(span) => span.sourceChunkId,
+				),
+			).toEqual(["a", "b"]);
+		}
 	});
 	it("accepts the public AML top_k=100 without silently clamping to 50", async () => {
 		const candidates = Array.from({ length: 110 }, (_, i) => ({
@@ -630,10 +632,9 @@ describe("createUnifiedSearch", () => {
 		expect(out.results.some((r) => r.type === "memory" && r.id === "m2")).toBe(true);
 	});
 
-	it("merges planner evidence with baseline top-k when reasoningStrategy='union'", async () => {
-		// Planner notes m1 (rank 3 in its own search, absent from the baseline
-		// lexical path); baseline semantic returns m2/m3. Union must keep m1 in
-		// front, fill the rest from baseline, cap at limit.
+	it("fuses planner evidence with separate baseline semantic and BM25 channels", async () => {
+		// The planner notes m1, while m2 occurs in both baseline channels.
+		// RRF must reward m2's two independent hits and still retain m1.
 		const m1 = {
 			id: "m1",
 			content: "I adopted a cat named Luna.",
@@ -654,10 +655,12 @@ describe("createUnifiedSearch", () => {
 		const searchDeps: UnifiedSearchDeps = {
 			...baseDeps,
 			embedQuery,
-			// Planner searches with a single keyword ("cat") and sees m1; the
-			// baseline lexical path (multi-keyword query) finds nothing.
+			// Planner searches with a single keyword ("cat") and sees m1;
+			// baseline lexical search also contributes m2.
 			searchRawMessagesLexical: async (req: { keywords: string[] }) =>
-				req.keywords.length === 1 ? [m1] : [],
+				req.keywords.length === 1
+					? [m1]
+					: [{ id: "m2", content: "My cat Luna loves tuna.", similarity: 0.7, metadata: {} }],
 			searchRawMessagesAnn: async () => [
 				{
 					id: "m2",
@@ -681,12 +684,18 @@ describe("createUnifiedSearch", () => {
 			reasoningStrategy: "union",
 			sources: ["memory"],
 			limit: 2,
+			includeRetrievalDiagnostics: true,
 		});
 
 		expect(out.reasoning?.strategy).toBe("union");
 		const memoryIds = out.results.filter((r) => r.type === "memory").map((r) => r.id);
-		// planner evidence first, baseline fills up to limit=2
-		expect(memoryIds).toEqual(["m1", "m2"]);
+		expect(memoryIds).toEqual(["m2", "m1"]);
+		expect(out.retrievalDiagnostics?.channels.semantic.map((hit) => hit.id)).toEqual(["m2", "m3"]);
+		expect(out.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["m2"]);
+		expect(out.retrievalDiagnostics?.channels.planner?.map((hit) => hit.id)).toEqual(["m1"]);
+		expect(out.retrievalDiagnostics?.candidateCounts?.planner).toBe(1);
+		expect(out.results[0]?.signals?.channels).toEqual(["semantic", "lexical"]);
+		expect(out.results[1]?.signals?.channels).toEqual(["planner"]);
 	});
 
 	it("filters memory results by dateFrom/dateTo", async () => {

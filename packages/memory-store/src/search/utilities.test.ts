@@ -168,6 +168,10 @@ describe("listNameToChannel", () => {
 		expect(listNameToChannel("memory-entity")).toBe("entity");
 	});
 
+	it("maps memory-planner to its own evidence channel", () => {
+		expect(listNameToChannel("memory-planner")).toBe("planner");
+	});
+
 	it("returns undefined for non-channel list names (insights, knowledge, summary)", () => {
 		expect(listNameToChannel("insights")).toBeUndefined();
 		expect(listNameToChannel("knowledge")).toBeUndefined();

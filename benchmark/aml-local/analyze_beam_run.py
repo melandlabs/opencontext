@@ -30,7 +30,7 @@ def matched_source_ids(hits: list[dict[str, Any]]) -> set[str]:
 def evidence_chain(traces: dict[str, dict[str, Any]], judged: dict[str, dict[str, Any]]) -> dict[str, Any]:
     counts: Counter[str] = Counter()
     recalls: dict[str, list[float]] = defaultdict(list)
-    channel_names = ("keyword", "semantic", "hybrid", "entity")
+    channel_names = ("keyword", "semantic", "planner", "hybrid", "entity")
     for question_id, trace in traces.items():
         required = set(trace.get("required_source_turn_ids") or [])
         if not required:
@@ -79,7 +79,7 @@ def provider_audit(directory: Path, stage: str) -> dict[str, Any]:
 def ranking_ablation(traces: dict[str, dict[str, Any]]) -> dict[str, Any]:
     """Compare existing candidate rankings at the same Top-K; no model calls."""
     recalls: dict[str, list[float]] = defaultdict(list)
-    names = ("keyword", "semantic", "hybrid", "entity")
+    names = ("keyword", "semantic", "planner", "hybrid", "entity")
     for trace in traces.values():
         required = set(trace.get("required_source_turn_ids") or [])
         if not required:
