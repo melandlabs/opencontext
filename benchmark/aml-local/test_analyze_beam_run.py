@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from analyze_beam_run import evidence_chain, provider_audit, ranking_ablation, summary
+from analyze_beam_run import evidence_chain, provider_audit, ranking_ablation, rrf_channel_ablation, summary
 
 
 class EvidenceChainTests(unittest.TestCase):
@@ -72,6 +72,34 @@ class EvidenceChainTests(unittest.TestCase):
         self.assertEqual(result["semantic"]["mean_source_recall_at_k"], 1)
         self.assertEqual(result["fused_before_rerank"]["mean_source_recall_at_k"], 0)
         self.assertEqual(result["final_after_rerank"]["mean_source_recall_at_k"], 1)
+
+    def test_planner_ablation_requires_exact_rrf_reconstruction(self):
+        trace = {
+            "required_source_turn_ids": ["gold"],
+            "top_k": 1,
+            "channels": {
+                "keyword": [
+                    {"id": "b", "matched_source_turn_ids": ["gold"]},
+                    {"id": "a", "matched_source_turn_ids": []},
+                ],
+                "semantic": [
+                    {"id": "a", "matched_source_turn_ids": []},
+                    {"id": "b", "matched_source_turn_ids": ["gold"]},
+                ],
+                "planner": [{"id": "b", "matched_source_turn_ids": ["gold"]}],
+            },
+            "before_rerank": [{"id": "b"}, {"id": "a"}],
+        }
+        result = rrf_channel_ablation({"q1": trace})
+        self.assertEqual(result["paired_questions"], 1)
+        self.assertEqual(result["reconstruction_mismatches"], 0)
+        self.assertEqual(result["mean_pre_rerank_recall_at_k"]["with_planner"], 1)
+        self.assertEqual(result["mean_pre_rerank_recall_at_k"]["without_planner"], 0)
+
+        trace["before_rerank"] = [{"id": "a"}, {"id": "b"}]
+        result = rrf_channel_ablation({"q1": trace})
+        self.assertEqual(result["paired_questions"], 0)
+        self.assertEqual(result["reconstruction_mismatches"], 1)
 
     def test_required_sources_over_top_k_are_counted_by_category(self):
         with tempfile.TemporaryDirectory() as folder:

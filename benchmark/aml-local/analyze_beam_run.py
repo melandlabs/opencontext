@@ -95,6 +95,58 @@ def ranking_ablation(traces: dict[str, dict[str, Any]]) -> dict[str, Any]:
             for name, values in sorted(recalls.items())}
 
 
+def rrf_channel_ablation(traces: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Replay recorded RRF channel ranks with and without planner evidence.
+
+    This is a pre-reranker counterfactual, not a prediction of final answers.
+    Only traces whose full-channel replay matches the recorded fused order are
+    included; a mismatch means the recorded lists cannot reconstruct the run.
+    """
+    channel_order = ("semantic", "keyword", "planner", "hybrid", "entity")
+    recalls: dict[str, list[float]] = defaultdict(list)
+    mismatches = 0
+    eligible = 0
+
+    def fuse(channels: dict[str, Any], names: tuple[str, ...]) -> list[tuple[str, set[str]]]:
+        scores: dict[str, float] = defaultdict(float)
+        source_ids: dict[str, set[str]] = defaultdict(set)
+        for name in names:
+            for rank, hit in enumerate(channels.get(name) or [], 1):
+                hit_id = str(hit.get("id") or "")
+                if not hit_id:
+                    continue
+                scores[hit_id] += 1 / (60 + rank)
+                source_ids[hit_id].update(str(value) for value in hit.get("matched_source_turn_ids") or [])
+        ordered = sorted(scores, key=lambda hit_id: (-scores[hit_id], hit_id))
+        return [(hit_id, source_ids[hit_id]) for hit_id in ordered]
+
+    for trace in traces.values():
+        required = set(trace.get("required_source_turn_ids") or [])
+        channels = trace.get("channels") or {}
+        if not required or not channels.get("planner"):
+            continue
+        eligible += 1
+        before = trace.get("before_rerank") or []
+        with_planner = fuse(channels, channel_order)
+        if [hit_id for hit_id, _ in with_planner[:len(before)]] != [str(hit.get("id")) for hit in before]:
+            mismatches += 1
+            continue
+        top_k = int(trace.get("top_k") or 12)
+        without_planner = fuse(channels, tuple(name for name in channel_order if name != "planner"))
+        for name, ranked in (("with_planner", with_planner), ("without_planner", without_planner)):
+            found = set().union(*(source_ids for _, source_ids in ranked[:top_k]))
+            recalls[name].append(len(required & found) / len(required))
+
+    return {
+        "eligible_annotated_questions": eligible,
+        "reconstruction_mismatches": mismatches,
+        "paired_questions": len(recalls["with_planner"]),
+        "mean_pre_rerank_recall_at_k": {
+            name: mean(values) if values else None for name, values in sorted(recalls.items())
+        },
+    }
+
+
 def summary(directory: Path) -> dict[str, Any]:
     inputs = {row["id"]: row for row in rows(directory / "input.jsonl")}
     traces = {row["question_id"]: row for row in rows(directory / "retrieval-traces.jsonl")}
@@ -172,6 +224,7 @@ def summary(directory: Path) -> dict[str, Any]:
         },
         "evidence_chain": evidence_chain(traces, judged),
         "ranking_ablation": ranking_ablation(traces),
+        "rrf_channel_ablation": rrf_channel_ablation(traces),
         "provider_audit": {stage: provider_audit(directory, stage) for stage in ("answers", "judged")},
         "_recall_by_id": recall_by_id,
         "_score_by_id": score_by_id,
