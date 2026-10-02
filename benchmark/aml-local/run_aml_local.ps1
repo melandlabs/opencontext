@@ -294,7 +294,7 @@ $manifest = [ordered]@{
   judge_model = $JudgeModel
   judge_rubric_routing = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_JUDGE_PROVIDER) { $env:AML_BEAM_JUDGE_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "NextBit" } else { "auto" }); response_format = "json_object"; invalid_format = "skip_after_bounded_retries" } } else { $null }
   judge_event_alignment = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_EVENT_PROVIDER) { $env:AML_BEAM_EVENT_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "Alibaba" } else { "auto" }); reasoning = "none"; initial_max_tokens = 8 } } else { $null }
-  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam") }
+  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam"); reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" } }
   resume = [bool]$ResumeDbPath
   started_at = $startedAt.ToString("o")
   finished_at = $finishedAt.ToString("o")

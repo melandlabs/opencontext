@@ -73,6 +73,11 @@ Both bins accept the same `--embedding-provider` / `--*-backend` flag surface
 with `--reasoning`, which reads `OPENCONTEXT_LLM_API_KEY` /
 `OPENCONTEXT_LLM_BASE_URL` / `OPENCONTEXT_LLM_MODEL` from the environment:
 
+For reproducible OpenRouter runs, set `OPENCONTEXT_LLM_PROVIDER` to one
+provider name. The CLI disables provider fallback and rejects a response
+reported from a different provider; leaving it unset preserves automatic
+routing.
+
 ```bash
 # HTTP daemon with local embeddings + sqlite-vec memory + LLM reasoning
 opencontext-memory-http \

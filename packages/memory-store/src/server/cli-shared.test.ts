@@ -39,6 +39,57 @@ describe("memory-store backend CLI", () => {
 			else process.env.OPENCONTEXT_LLM_REASONING_EFFORT = oldEffort;
 		}
 	});
+	it("pins and verifies the OpenRouter provider for retrieval reasoning", async () => {
+		const oldKey = process.env.OPENCONTEXT_LLM_API_KEY;
+		const oldBase = process.env.OPENCONTEXT_LLM_BASE_URL;
+		const oldProvider = process.env.OPENCONTEXT_LLM_PROVIDER;
+		process.env.OPENCONTEXT_LLM_API_KEY = "test-key";
+		process.env.OPENCONTEXT_LLM_BASE_URL = "https://openrouter.ai/api/v1";
+		process.env.OPENCONTEXT_LLM_PROVIDER = "OpenInference";
+		const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => ({
+			ok: true,
+			json: async () => ({
+				provider: "OpenInference",
+				choices: [{ message: { content: "- What color did the user mention?" } }],
+			}),
+		}));
+		vi.stubGlobal("fetch", fetchMock);
+		try {
+			const unified = await buildUnified(
+				parseUnifiedArgs([
+					"--embedding-provider",
+					"none",
+					"--memory-backend",
+					"none",
+					"--reranker-provider",
+					"none",
+					"--reasoning",
+				]),
+			);
+			await unified.reasoning?.queryRewriter?.rewrite({
+				query: "What is the user's favorite color?",
+				userId: "u1",
+			});
+			const request = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+			expect(request.provider).toEqual({ order: ["OpenInference"], allow_fallbacks: false });
+			fetchMock.mockImplementation(async () => ({
+				ok: true,
+				json: async () => ({ provider: "other", choices: [{ message: { content: "rewritten" } }] }),
+			}));
+			await expect(
+				unified.reasoning?.queryRewriter?.rewrite({ query: "What is the user's age?", userId: "u1" }),
+			).resolves.toEqual(["What is the user's age?"]);
+			expect(unified.reasoning?.queryRewriter?.lastDegraded?.()).toBe(true);
+		} finally {
+			vi.unstubAllGlobals();
+			if (oldKey === undefined) Reflect.deleteProperty(process.env, "OPENCONTEXT_LLM_API_KEY");
+			else process.env.OPENCONTEXT_LLM_API_KEY = oldKey;
+			if (oldBase === undefined) Reflect.deleteProperty(process.env, "OPENCONTEXT_LLM_BASE_URL");
+			else process.env.OPENCONTEXT_LLM_BASE_URL = oldBase;
+			if (oldProvider === undefined) Reflect.deleteProperty(process.env, "OPENCONTEXT_LLM_PROVIDER");
+			else process.env.OPENCONTEXT_LLM_PROVIDER = oldProvider;
+		}
+	});
 	it("parses the local reranker configuration", () => {
 		const args = parseUnifiedArgs([
 			"--reranker-provider",

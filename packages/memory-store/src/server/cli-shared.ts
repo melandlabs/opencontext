@@ -623,8 +623,13 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
 		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
 		const reasoningEffort = process.env.OPENCONTEXT_LLM_REASONING_EFFORT?.trim();
+		const reasoningProvider = process.env.OPENCONTEXT_LLM_PROVIDER?.trim();
 		if (reasoningEffort && !["none", "minimal", "low", "medium", "high"].includes(reasoningEffort)) {
 			throw new Error("OPENCONTEXT_LLM_REASONING_EFFORT must be none, minimal, low, medium, or high");
+		}
+		const reasoningHost = new URL(baseUrl).hostname;
+		if (reasoningProvider && reasoningHost !== "openrouter.ai" && !reasoningHost.endsWith(".openrouter.ai")) {
+			throw new Error("OPENCONTEXT_LLM_PROVIDER requires an OpenRouter base URL");
 		}
 
 		const complete = async (prompt: string): Promise<string> => {
@@ -644,14 +649,23 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 						model,
 						messages: [{ role: "user", content: prompt }],
 						temperature: 0,
+						...(reasoningProvider
+							? { provider: { order: [reasoningProvider], allow_fallbacks: false } }
+							: {}),
 						...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
 					}),
 					signal: controller.signal,
 				});
 				if (!res.ok) throw new Error(`reasoning LLM ${res.status}: ${await res.text()}`);
 				const body = (await res.json()) as {
+					provider?: string;
 					choices?: Array<{ message?: { content?: string } }>;
 				};
+				if (reasoningProvider && body.provider?.toLowerCase() !== reasoningProvider.toLowerCase()) {
+					throw new Error(
+						`reasoning LLM provider mismatch: expected ${reasoningProvider}, got ${body.provider ?? "none"}`,
+					);
+				}
 				const text = body.choices?.[0]?.message?.content?.trim();
 				if (!text) throw new Error("reasoning LLM response missing choices[0].message.content");
 				return text;
@@ -666,7 +680,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 		if (!unified.reasoning) unified.reasoning = {};
 		unified.reasoning.queryRewriter = queryRewriter;
 		unified.reasoning.iterativePlanner = iterativePlanner;
-		log(`reasoning wired (model=${model}, baseUrl=${baseUrl})`);
+		log(`reasoning wired (model=${model}, baseUrl=${baseUrl}, provider=${reasoningProvider ?? "auto"})`);
 	}
 
 	return unified;
