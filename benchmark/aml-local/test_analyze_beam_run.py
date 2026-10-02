@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from analyze_beam_run import evidence_chain, provider_audit
+from analyze_beam_run import evidence_chain, provider_audit, ranking_ablation
 
 
 class EvidenceChainTests(unittest.TestCase):
@@ -55,6 +55,23 @@ class EvidenceChainTests(unittest.TestCase):
         self.assertEqual(result["successful_requests"], 2)
         self.assertEqual(result["error_attempts"], 1)
         self.assertEqual(result["successful_provider_mismatches"], 1)
+
+    def test_rankings_are_compared_at_the_same_top_k(self):
+        trace = {
+            "required_source_turn_ids": ["source"],
+            "top_k": 1,
+            "channels": {
+                "keyword": [{"matched_source_turn_ids": []}, {"matched_source_turn_ids": ["source"]}],
+                "semantic": [{"matched_source_turn_ids": ["source"]}],
+            },
+            "before_rerank": [{"matched_source_turn_ids": []}, {"matched_source_turn_ids": ["source"]}],
+            "after_rerank": [{"matched_source_turn_ids": ["source"]}],
+        }
+        result = ranking_ablation({"q1": trace})
+        self.assertEqual(result["keyword"]["mean_source_recall_at_k"], 0)
+        self.assertEqual(result["semantic"]["mean_source_recall_at_k"], 1)
+        self.assertEqual(result["fused_before_rerank"]["mean_source_recall_at_k"], 0)
+        self.assertEqual(result["final_after_rerank"]["mean_source_recall_at_k"], 1)
 
 
 if __name__ == "__main__":

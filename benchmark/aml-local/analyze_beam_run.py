@@ -76,6 +76,25 @@ def provider_audit(directory: Path, stage: str) -> dict[str, Any]:
             "successful_provider_mismatches": len(mismatches)}
 
 
+def ranking_ablation(traces: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Compare existing candidate rankings at the same Top-K; no model calls."""
+    recalls: dict[str, list[float]] = defaultdict(list)
+    names = ("keyword", "semantic", "hybrid", "entity")
+    for trace in traces.values():
+        required = set(trace.get("required_source_turn_ids") or [])
+        if not required:
+            continue
+        k = int(trace.get("top_k") or 12)
+        channels = trace.get("channels") or {}
+        rankings = {name: channels.get(name) or [] for name in names}
+        rankings.update({"fused_before_rerank": trace.get("before_rerank") or [],
+                         "final_after_rerank": trace.get("after_rerank") or []})
+        for name, hits in rankings.items():
+            recalls[name].append(len(required & matched_source_ids(hits[:k])) / len(required))
+    return {name: {"annotated": len(values), "mean_source_recall_at_k": mean(values) if values else None}
+            for name, values in sorted(recalls.items())}
+
+
 def summary(directory: Path) -> dict[str, Any]:
     inputs = {row["id"]: row for row in rows(directory / "input.jsonl")}
     traces = {row["question_id"]: row for row in rows(directory / "retrieval-traces.jsonl")}
@@ -144,6 +163,7 @@ def summary(directory: Path) -> dict[str, Any]:
             for category, values in sorted(categories.items())
         },
         "evidence_chain": evidence_chain(traces, judged),
+        "ranking_ablation": ranking_ablation(traces),
         "provider_audit": {stage: provider_audit(directory, stage) for stage in ("answers", "judged")},
         "_recall_by_id": recall_by_id,
         "_score_by_id": score_by_id,
