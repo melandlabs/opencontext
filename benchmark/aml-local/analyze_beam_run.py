@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 from statistics import mean
 from typing import Any
@@ -21,6 +21,59 @@ def source_recall(trace: dict[str, Any]) -> float | None:
         return None
     retrieved = set(trace.get("retrieved_source_turn_ids") or [])
     return len(required & retrieved) / len(required)
+
+
+def matched_source_ids(hits: list[dict[str, Any]]) -> set[str]:
+    return {str(source_id) for hit in hits for source_id in hit.get("matched_source_turn_ids") or []}
+
+
+def evidence_chain(traces: dict[str, dict[str, Any]], judged: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    counts: Counter[str] = Counter()
+    recalls: dict[str, list[float]] = defaultdict(list)
+    channel_names = ("keyword", "semantic", "hybrid", "entity")
+    for question_id, trace in traces.items():
+        required = set(trace.get("required_source_turn_ids") or [])
+        if not required:
+            continue
+        counts["annotated"] += 1
+        available = set(trace.get("available_required_source_turn_ids") or []) & required
+        channel_hits = trace.get("channels") or {}
+        channels = {name: matched_source_ids(channel_hits.get(name) or []) & required for name in channel_names}
+        candidate = set().union(*channels.values())
+        before = matched_source_ids(trace.get("before_rerank") or []) & required
+        final = matched_source_ids(trace.get("after_rerank") or []) & required
+        stages = {"available": available, "candidate": candidate, "before_rerank": before, "final": final,
+                  **{f"{name}_candidate": ids for name, ids in channels.items()}}
+        for name, ids in stages.items():
+            recalls[name].append(len(ids) / len(required))
+            if ids:
+                counts[f"{name}_any"] += 1
+            if ids == required:
+                counts[f"{name}_full"] += 1
+        if candidate and not before:
+            counts["lost_all_at_fusion"] += 1
+        if before and not final:
+            counts["lost_all_at_rerank"] += 1
+        score = judged.get(question_id, {}).get("llm_judge_score")
+        if isinstance(score, (int, float)):
+            if final and score == 0:
+                counts["final_source_present_but_zero_score"] += 1
+            if not final and score > 0:
+                counts["final_source_absent_but_positive_score"] += 1
+    return {"question_counts": dict(sorted(counts.items())),
+            "mean_source_recall_by_stage": {name: mean(values) for name, values in sorted(recalls.items())}}
+
+
+def provider_audit(directory: Path, stage: str) -> dict[str, Any]:
+    requests = rows(directory / f"{stage}-requests.jsonl")
+    successes = [row for row in requests if row.get("status") == "success"]
+    mismatches = [row for row in successes if row.get("requested_provider") not in (None, "auto")
+                  and str(row.get("provider", "")).casefold() != str(row["requested_provider"]).casefold()]
+    return {"requests": len(requests), "successful_requests": len(successes),
+            "error_attempts": len(requests) - len(successes),
+            "success_by_provider": dict(sorted(Counter(str(row.get("provider") or "unknown") for row in successes).items())),
+            "success_by_requested_provider": dict(sorted(Counter(str(row.get("requested_provider") or "auto") for row in successes).items())),
+            "successful_provider_mismatches": len(mismatches)}
 
 
 def summary(directory: Path) -> dict[str, Any]:
@@ -90,6 +143,8 @@ def summary(directory: Path) -> dict[str, Any]:
             }
             for category, values in sorted(categories.items())
         },
+        "evidence_chain": evidence_chain(traces, judged),
+        "provider_audit": {stage: provider_audit(directory, stage) for stage in ("answers", "judged")},
         "_recall_by_id": recall_by_id,
         "_score_by_id": score_by_id,
     }
