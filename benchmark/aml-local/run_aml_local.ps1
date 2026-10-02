@@ -28,7 +28,7 @@ param(
   [string]$JudgeModel = "",
   # retrieval reasoning strategy forwarded to /v1/search (daemon must be started
   # with OPENCONTEXT_LLM_API_KEY — see README "Enhanced retrieval")
-  [ValidateSet("none","rewrite","iterative")][string]$Reasoning = "none",
+  [ValidateSet("none","rewrite","iterative","union")][string]$Reasoning = "none",
   # redirect artifacts to outputs-<Tag>/ instead of outputs/ (keeps enhanced
   # runs separate from the baseline results)
   [string]$Tag = ""

@@ -104,6 +104,19 @@ class AdapterContractTests(unittest.TestCase):
                 serve.handle_search(body, local_reasoning="rewrite")
             post.assert_not_called()
 
+    def test_local_union_uses_existing_core_strategy_without_changing_public_body(self) -> None:
+        hit = {"id": "memory-1", "content": "answer", "similarity": 0.8}
+        diagnostics = {"fusedBeforeRerank": [hit], "reranker": {"enabled": True}, "final": [hit]}
+        core = {"results": [hit], "retrievalDiagnostics": diagnostics,
+                "reasoning": {"strategy": "union", "iterations": 2, "evidenceCount": 1}}
+        body = {"query": "what?", "user_id": "user", "top_k": 12}
+        with patch.object(serve, "oc_post", return_value=core) as post:
+            result = serve.handle_search(body, local_diagnostics=True, local_reasoning="union")
+        self.assertEqual(result["data"], [{"id": "memory-1", "content": "answer", "score": 0.8}])
+        self.assertEqual(result["_local_diagnostics"]["reasoning"]["strategy"], "union")
+        self.assertEqual(post.call_args.args[1]["reasoningStrategy"], "union")
+        self.assertEqual(body, {"query": "what?", "user_id": "user", "top_k": 12})
+
 
 if __name__ == "__main__":
     unittest.main()

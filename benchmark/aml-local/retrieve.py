@@ -1119,8 +1119,8 @@ def main() -> int:
     args = build_parser().parse_args()
     parameter_errors: list[str] = []
     reasoning = os.environ.get("AML_REASONING_STRATEGY", "none").strip().lower()
-    if reasoning not in {"none", "rewrite", "iterative"}:
-        parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, or iterative")
+    if reasoning not in {"none", "rewrite", "iterative", "union"}:
+        parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, iterative, or union")
         reasoning = "none"
     try:
         top_k = int(os.environ.get("AML_TOP_K", "12" if args.benchmark == "beam" else "10"))

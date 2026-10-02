@@ -141,7 +141,7 @@ def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasonin
     options = body.get("options")
     if options is not None and (not isinstance(options, list) or any(not isinstance(option, str) for option in options)):
         raise ValueError("options must be an array of strings when supplied")
-    if local_reasoning not in ("none", "rewrite", "iterative"):
+    if local_reasoning not in ("none", "rewrite", "iterative", "union"):
         raise ValueError("unsupported local reasoning strategy")
     if local_reasoning != "none" and not local_diagnostics:
         raise ValueError("local reasoning requires local diagnostics")

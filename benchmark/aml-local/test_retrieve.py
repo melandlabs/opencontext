@@ -151,6 +151,20 @@ class RetrieveFixtureTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "did not report"):
                 client.search_with_diagnostics("user", "question")
 
+    def test_beam_union_uses_local_header_and_requires_matching_trace(self) -> None:
+        client = retrieve.AmlClient(self.aml_client.base_url, top_k=12, reasoning="union")
+        reply = {
+            "data": [{"id": "memory-1", "content": "answer"}],
+            "_local_diagnostics": {
+                "retrieval": {"fusedBeforeRerank": [], "reranker": {"enabled": True}},
+                "reasoning": {"strategy": "union", "iterations": 2, "evidenceCount": 1},
+            },
+        }
+        with mock.patch.object(client, "_post", return_value=reply) as post:
+            _, diagnostics = client.search_with_diagnostics("user", "question")
+        self.assertEqual(diagnostics["reasoning"]["strategy"], "union")
+        self.assertEqual(post.call_args.kwargs["headers"]["X-OpenContext-Local-Reasoning"], "union")
+
     def test_beam_preflight_requires_ready_reranker(self) -> None:
         self.server.reranker_ready = False
         with self.assertRaisesRegex(RuntimeError, "reranker"):
