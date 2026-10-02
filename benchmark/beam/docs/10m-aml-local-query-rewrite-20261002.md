@@ -17,6 +17,8 @@ This experiment used the public BEAM question set (200 questions across 10 conve
 
 The final artifacts contain 200 distinct retrieval traces, answers and judgements with no missing IDs. All 200 traces have nonempty semantic and lexical candidates, 48 reranker inputs and outputs, and 12 final hits. The final judge status is `complete`, with 200/200 successes and no failures in the completing run. Two retrieval traces report degraded query rewriting; the ordinary retrieval path remained available. The output records 739 final hits with multiple matched spans.
 
+OpenRouter auto-routed 183 of the 200 successful DeepSeek answer requests to OpenInference and the other 17 across eight providers. All 1,090 successful Qwen Judge subrequests report Alibaba as provider, with zero reported reasoning tokens; nine earlier Judge requests received HTTP 429 before recovery. The answer provider was not pinned, which matters when comparing this run with another retrieval strategy.
+
 Top-12 is a deliberate local choice; it is not the public AML Top-100 setting. The run reused a database and was recovered across process/provider interruptions. These details limit formal comparability, even though the final artifacts are complete.
 
 ## Retrieval result
