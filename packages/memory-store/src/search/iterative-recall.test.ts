@@ -54,6 +54,22 @@ describe("createIterativeRecallPlanner", () => {
 		expect(result.stats.iterations).toBe(3);
 		expect(result.stats.searches).toBe(1);
 		expect(result.stats.notes).toBe(1);
+		const firstRequest = complete.mock.calls[0]?.[1];
+		const secondRequest = complete.mock.calls[1]?.[1];
+		expect(firstRequest.messages.map((message: { role: string }) => message.role)).toEqual([
+			"system",
+			"user",
+		]);
+		expect(secondRequest.messages.map((message: { role: string }) => message.role)).toEqual([
+			"system",
+			"user",
+			"assistant",
+			"user",
+		]);
+		expect(firstRequest.messages[1].content).not.toContain("You are a research assistant");
+		expect(secondRequest.messages[3].content).toContain("I adopted a cat named Luna.");
+		// Later actions must not mutate the earlier request's message snapshot.
+		expect(firstRequest.messages).toHaveLength(2);
 	});
 
 	it("performs multiple searches when the planner asks for them", async () => {

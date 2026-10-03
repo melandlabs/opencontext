@@ -88,9 +88,15 @@ export interface IterativeRecallPlannerOptions {
 	fallbackToBaseline?: boolean;
 }
 
+export interface IterativeRecallCompletionOptions {
+	/** Preserve real chat roles instead of asking the model to continue a transcript. */
+	messages: ReadonlyArray<{ role: "system" | "user" | "assistant"; content: string }>;
+}
+
 export interface IterativeRecallPlannerDeps {
-	/** LLM completion callback. */
-	complete: (prompt: string) => Promise<string>;
+	/** LLM completion callback. Chat transports should send options.messages
+	 * verbatim; the string prompt is also supplied for plain completion hosts. */
+	complete: (prompt: string, options?: IterativeRecallCompletionOptions) => Promise<string>;
 	/** Default options. */
 	options?: IterativeRecallPlannerOptions;
 }
@@ -139,7 +145,7 @@ function formatDateHint(dateFrom?: string, dateTo?: string): string | undefined 
 
 function buildInitialPrompt(query: string, dateHint?: string): string {
 	const hintText = dateHint ? `\n${dateHint}` : "";
-	return `${SYSTEM_PROMPT}\n\nQuestion to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
+	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
 }
 
 function buildObservationPrompt(hits: IterativeRecallCandidate[]): string {
@@ -309,7 +315,9 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 				iterations = i + 1;
 				let reply: string;
 				try {
-					reply = await complete(messages.map((m) => `${m.role}: ${m.content}`).join("\n\n"));
+					reply = await complete(messages.map((m) => `${m.role}: ${m.content}`).join("\n\n"), {
+						messages: messages.map((message) => ({ ...message })),
+					});
 				} catch {
 					// Catch the LLM error locally so the planner degrades
 					// gracefully (empty evidence + lastDegraded=true) instead

@@ -71,6 +71,9 @@ describe("memory-reasoning facade", () => {
 		});
 		expect(result.evidence).toEqual([]);
 		expect(generateTextMock).toHaveBeenCalledTimes(1);
+		const request = generateTextMock.mock.calls[0]?.[0];
+		expect(request).not.toHaveProperty("prompt");
+		expect(request.messages.map((message: { role: string }) => message.role)).toEqual(["system", "user"]);
 	});
 
 	it("createMemoryReasoningProviders bundles both factories", () => {

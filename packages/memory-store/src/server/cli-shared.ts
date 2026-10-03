@@ -17,7 +17,10 @@
 import { ChromaVectorStore } from "@melandlabs/rag/chroma-vector-store";
 import type { IVectorStore } from "@melandlabs/rag/vector-service";
 import type { UnifiedSearchDeps } from "../config";
-import { createIterativeRecallPlanner } from "../search/iterative-recall";
+import {
+	type IterativeRecallCompletionOptions,
+	createIterativeRecallPlanner,
+} from "../search/iterative-recall";
 import { createUserVoiceRewriter } from "../search/query-rewriter";
 import { RawMessageChildVectorIndex } from "../storage/raw-message-child-vector-index";
 import { createRawMessageStore } from "../storage/raw-message-store";
@@ -632,7 +635,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			throw new Error("OPENCONTEXT_LLM_PROVIDER requires an OpenRouter base URL");
 		}
 
-		const complete = async (prompt: string): Promise<string> => {
+		const complete = async (
+			prompt: string,
+			requestOptions?: IterativeRecallCompletionOptions,
+		): Promise<string> => {
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), timeoutMs);
 			timer.unref?.();
@@ -647,7 +653,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 					},
 					body: JSON.stringify({
 						model,
-						messages: [{ role: "user", content: prompt }],
+						messages: requestOptions?.messages ?? [{ role: "user", content: prompt }],
 						temperature: 0,
 						...(reasoningProvider
 							? { provider: { order: [reasoningProvider], allow_fallbacks: false } }

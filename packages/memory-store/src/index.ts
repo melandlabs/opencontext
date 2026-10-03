@@ -251,6 +251,7 @@ export {
 	createIterativeRecallPlanner,
 	createIdentityIterativePlanner,
 	type IterativeRecallCandidate,
+	type IterativeRecallCompletionOptions,
 	type IterativeRecallExecutor,
 	type IterativeRecallPlanner,
 	type IterativeRecallPlannerOptions,

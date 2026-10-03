@@ -74,6 +74,24 @@ describe("memory-store backend CLI", () => {
 			expect(request.provider).toEqual({ order: ["OpenInference"], allow_fallbacks: false });
 			fetchMock.mockImplementation(async () => ({
 				ok: true,
+				json: async () => ({
+					provider: "OpenInference",
+					choices: [{ message: { content: "Action: finish\nAction Input: {}" } }],
+				}),
+			}));
+			await unified.reasoning?.iterativePlanner?.plan({
+				query: "What is the user's favorite color?",
+				executor: { search: async () => ({ candidates: [] }) },
+				options: { fallbackToBaseline: false },
+			});
+			const plannerRequest = JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body));
+			expect(plannerRequest.messages.map((message: { role: string }) => message.role)).toEqual([
+				"system",
+				"user",
+			]);
+			expect(plannerRequest.provider).toEqual({ order: ["OpenInference"], allow_fallbacks: false });
+			fetchMock.mockImplementation(async () => ({
+				ok: true,
 				json: async () => ({ provider: "other", choices: [{ message: { content: "rewritten" } }] }),
 			}));
 			await expect(
