@@ -70,6 +70,10 @@ These cases establish an answerer/question-following problem in addition to retr
 
 ## Optimization priorities
 
+A read-only lexical ablation covered all 200 questions on the unchanged database. It removed common English function words and deduplicated keywords **before** the existing 16-keyword cap; 115 questions exceeded that cap under the original tokenizer. Original FTS5 candidate order was reconstructed, including a replay to correct the analysis tokenizer's treatment of `x_n`. Exact source mappings came from the existing BEAM adapter helper, not guessed message sequence values.
+
+Across 176 annotated questions, mean BM25 **candidate recall@48** moved from **0.3165 to 0.3357** (+0.0192): 21 improved, 10 worsened, and 145 were unchanged. This is not a reranked Top-12 or QA-score gain. The small lift and regressions do not justify enabling this normalization globally without a final-ranking and answer-score ablation. No production keyword behavior was changed. Detailed results are in the ignored local artifact `benchmark/aml-local/outputs-beam10m-keyword-ablation-20261003/beam/analysis.json`.
+
 1. Improve **answer-bearing source coverage** before adding more query rewrites. The candidate stage has relevant turns that are lost during fusion and Top-12 selection; use stage-level traces and matched spans to improve candidate ranking without hardcoding benchmark answers.
 2. Treat event ordering and broad summarization as **coverage-limited tasks**. Event-ordering questions require a mean of 38 annotated turns; 19/20 require more than Top-12 can hold if each turn needs its own hit. A separate Top-K/context-budget ablation is needed before claiming these categories can be solved under the current cap.
 3. Investigate answerer interpretation on full-source failures, especially contradiction resolution and temporal reasoning, while keeping official answer/judge prompts unchanged. Distinguish missing exact spans, conflicting historical facts, and rubric ambiguity from model failure.
