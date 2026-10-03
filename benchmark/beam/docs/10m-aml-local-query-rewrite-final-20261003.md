@@ -15,6 +15,16 @@ This is a **complete local** BEAM run, not an AML platform submission. The publi
 
 Coverage is 200/200 retrieval traces, 200/200 answers, and 200/200 judgements, with no skipped questions. All 200 successful answer requests reported OpenInference. All 1,346 successful judge subrequests reported Alibaba; 58 failed attempts were recovered without changing provider. The reranker was enabled in all 200 retrieval traces. Query rewriting reported degradation on four traces.
 
+The retrieval state records dataset SHA256 `f80b3ca1236c6933300cd89cc65f1062535b18ca86c733eb34a73309e8439978`. Provider fallback was disabled for the planner, answerer, rubric judge, and event-alignment judge. The public answer/judge prompts were not edited to obtain these scores.
+
+## Core repairs and validation
+
+The shared core was repaired before this comparison: FTS5's ascending negative rank is converted to a monotonically correct relevance score; exhausted vector widening retains partial matches and falls back to an exact search within the requested user's scope; parent deduplication and RRF fusion retain distinct matched child excerpts instead of only combining scores. Regression tests cover real FTS5 through parent deduplication and RRF, overlapping/distant source windows, and exhausted vector scans. A later test strengthens the vector case by putting the owned result behind every foreign-user vector within the widening budget.
+
+The known 512-token **reranker input** truncation issue remains deferred, as requested. It was not silently treated as fixed.
+
+The 200 successful answer API responses reported a mean of **8,382.34 input tokens**, median 8,481, nearest-rank P95 12,527, and maximum 13,408. These are provider-reported model-native counts for the complete answer prompt, not estimates from the 400-token chunk setting. Mean answer output was 67.865 tokens, maximum 417; all 200 finished with `stop`, at the official initial 512-token output budget, with zero reported reasoning tokens. These records do not show answer-output budget exhaustion; they do not establish the absence of every possible server-side input transformation.
+
 ## Outcome
 
 The mean BEAM judge score was **0.2462** over all 200 questions. Query rewrite did not provide a meaningful retrieval lift against the fixed-code, same-database Top-12 baseline: annotated source-turn recall moved from **0.3374 to 0.3423** (+0.0049), with five questions improved, one worsened, and 170 unchanged. The baseline comparison is retrieval-only, not a paired answer-score comparison.
@@ -78,5 +88,18 @@ Across 176 annotated questions, mean BM25 **candidate recall@48** moved from **0
 2. Treat event ordering and broad summarization as **coverage-limited tasks**. Event-ordering questions require a mean of 38 annotated turns; 19/20 require more than Top-12 can hold if each turn needs its own hit. A separate Top-K/context-budget ablation is needed before claiming these categories can be solved under the current cap.
 3. Investigate answerer interpretation on full-source failures, especially contradiction resolution and temporal reasoning, while keeping official answer/judge prompts unchanged. Distinguish missing exact spans, conflicting historical facts, and rubric ambiguity from model failure.
 4. Compare with the independently pinned iterative-union run before selecting a default reasoning strategy. Query rewrite's measured gain here is small and does not justify an unconditional extra LLM call.
+
+## Optional modules and bounded follow-up experiments
+
+Query rewrite and iterative recall are existing optional core modules, now supplied with the pinned Flash completion callback by the CLI. Iterative union retains the original-query semantic and BM25 channels and adds planner evidence; internal planner searches also fuse the two channels by RRF rather than comparing raw BM25 and cosine scores.
+
+The CLI still does not implement `entitySearch`. That is an optional host dependency, not an environment toggle that can activate an already-populated entity index. Insights and knowledge search have selectable CLI backends, but this run's AML Add path ingests raw messages only, and Search requests the memory source. Merely enabling those backends would not create extracted facts or an evidence-linked knowledge corpus. They are not claimed as tested improvements here. Lifecycle/dreaming work remains outside this experiment.
+
+Two follow-up diagnostics use the same preselected 20 question IDs (two per category, selected by the lowest SHA256 of question IDs), the unchanged database, the same models/providers, and unmodified official prompts:
+
+- Lossless quoting of historical excerpts kept retrieval fixed. All 20 answers completed. Only 7/20 judgements completed in the latest pass because of Alibaba upstream shared-pool rate limits; failed questions are pending, not scored zero. The completed pairs include a regression on `10m_4_q_8` (1.0 to 0.0). No complete aggregate benefit has been established, and this presentation prototype is not enabled in production.
+- A structured-chat iterative-union diagnostic preserves real system/user/assistant roles instead of flattening the planner's history into one user message. All 20 retrievals and answers completed; all 20 answer responses reported DeepSeek Flash/OpenInference with zero provider mismatches. The subset has 18 source-annotated questions, mean source recall 0.3750, and 12 degraded planner traces. Only 6/20 judgements completed in the latest pass because of the same upstream rate limit. The isolated real-CLI protocol check completed search -> note -> finish using OpenInference with zero reasoning tokens; this establishes correct transport, not a full-run score gain. A matched comparison against the full flat-history iterative run is still required.
+
+Top-12 also imposes a mean annotated-source recall ceiling of 0.4314 on the 20 event-ordering questions, even with an ideal ranking: 19 questions require more than twelve distinct source turns. This is a ceiling for the source-ID metric, not proof that a smaller number of retrieved messages can never contain a useful timeline summary. Neither partial diagnostic score is substituted for a complete 200-question result. A score above 0.5 has not been demonstrated under this run's constraints.
 
 No code or benchmark artifacts from this run were pushed.
