@@ -122,46 +122,49 @@ describe("SQLite RawMessage child index", () => {
 		}
 	});
 
-	it("keeps underfilled vector results when the widening attempt budget expires", async () => {
-		const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "underfilled.db") });
-		const base = { platform: "test", botId: "bot", timestamp: 1, createdAt: 1 };
-		const messages: RawMessage[] = [
-			{ ...base, messageId: "owned", userId: "user", content: "The answer is here." },
-			...Array.from({ length: 64 }, (_, index) => ({
-				...base,
-				messageId: `other-${index}`,
-				userId: "other-user",
-				content: `Distractor ${index}.`,
-			})),
-		];
-		await manager.storeMessages(messages);
-		const chunks = await manager.getRawMessageSearchChunks({
-			messageIds: messages.map((message) => message.messageId),
-		});
-		await manager.storeMessagesWithSearchChunks(
-			messages,
-			chunks.map((chunk) => ({
-				...chunk,
-				embedding: chunk.messageId === "owned" ? [1, 0, 0] : [0.9, 0.1, 0],
-				embeddingModel: "fixture",
-				embeddingDimensions: 3,
-				embeddingUpdatedAt: 1,
-			})),
-		);
-		expect((await manager.getRawMessageSearchIndexStats()).semanticReady).toBe(true);
-		const hits = await manager.searchMessagesSemantically({
-			userId: "user",
-			queryEmbedding: [1, 0, 0],
-			threshold: 0.5,
-			limit: 2,
-			scanLimit: 8,
-		});
-		await manager.close();
-		expect(hits.map((hit) => hit.id)).toEqual(["owned"]);
-		expect(hits[0]?.metadata.vectorScanUnderfilled).toBe(true);
-		expect(hits[0]?.metadata.vectorScanLimit).toBe(64);
-		expect(hits[0]?.metadata.vectorSearchFallback).toBe("user-scoped-exact");
-	});
+	it.each(["visible", "crowded-out"])(
+		"keeps underfilled user-scoped vector results when widening expires (%s)",
+		async (position) => {
+			const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "underfilled.db") });
+			const base = { platform: "test", botId: "bot", timestamp: 1, createdAt: 1 };
+			const messages: RawMessage[] = [
+				{ ...base, messageId: "owned", userId: "user", content: "The answer is here." },
+				...Array.from({ length: 64 }, (_, index) => ({
+					...base,
+					messageId: `other-${index}`,
+					userId: "other-user",
+					content: `Distractor ${index}.`,
+				})),
+			];
+			await manager.storeMessages(messages);
+			const chunks = await manager.getRawMessageSearchChunks({
+				messageIds: messages.map((message) => message.messageId),
+			});
+			await manager.storeMessagesWithSearchChunks(
+				messages,
+				chunks.map((chunk) => ({
+					...chunk,
+					embedding: (chunk.messageId === "owned") === (position === "visible") ? [1, 0, 0] : [0.9, 0.1, 0],
+					embeddingModel: "fixture",
+					embeddingDimensions: 3,
+					embeddingUpdatedAt: 1,
+				})),
+			);
+			expect((await manager.getRawMessageSearchIndexStats()).semanticReady).toBe(true);
+			const hits = await manager.searchMessagesSemantically({
+				userId: "user",
+				queryEmbedding: [1, 0, 0],
+				threshold: 0.5,
+				limit: 2,
+				scanLimit: 8,
+			});
+			await manager.close();
+			expect(hits.map((hit) => hit.id)).toEqual(["owned"]);
+			expect(hits[0]?.metadata.vectorScanUnderfilled).toBe(true);
+			expect(hits[0]?.metadata.vectorScanLimit).toBe(64);
+			expect(hits[0]?.metadata.vectorSearchFallback).toBe("user-scoped-exact");
+		},
+	);
 
 	it("removes child catalog and vectors when the parent is cleared", async () => {
 		const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "store.db") });
