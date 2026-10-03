@@ -406,6 +406,21 @@ class RetrieveFixtureTests(unittest.TestCase):
             self.assertEqual([body["query"] for path, body in self.server.requests if path == "/search"], ["second"])
             self.assertFalse([path for path, _ in self.server.requests if path == "/add"])
 
+    def test_beam_evidence_previews_original_text_but_hashes_full_context(self) -> None:
+        content = (
+            "[Message order guidance]\n" + "Guidance. " * 60
+            + "\n\n[Message metadata]\nmessageSequence: 9"
+            + "\n\n[Original excerpt]\nA 50-page album costs $75."
+        )
+        evidence = retrieve.beam_hit_evidence(
+            {"id": "m1", "content": content}, 1, {"m1": "turn-7"}, {"turn-7"}
+        )
+        self.assertEqual(evidence["content_excerpt"], "A 50-page album costs $75.")
+        self.assertEqual(
+            evidence["content_sha256"], retrieve.hashlib.sha256(content.encode()).hexdigest()
+        )
+        self.assertEqual(evidence["matched_source_turn_ids"], ["turn-7"])
+
     def test_beam_hit_evidence_maps_exact_source_id(self) -> None:
         hit = {"id": "aml:request:0", "content": "answer", "similarity": 0.5}
         evidence = retrieve.beam_hit_evidence(hit, 1, {"aml:request:0": "turn-7"}, {"turn-7"})

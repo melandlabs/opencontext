@@ -61,6 +61,13 @@ The following are **apparent question/rubric ambiguities**, not evidence that th
 
 These are examples, not a quantified dataset error rate. The official judge output is reported unchanged.
 
+Two failures also have **directly visible answer-bearing text**, without relying only on source IDs:
+
+- `10m_9_q_6`: the first returned user excerpt explicitly says a **50-page album for $75**, but the answer discusses selecting photos for an album with eight pages to fill. It addresses a historical question rather than the evaluation question.
+- `10m_9_q_13`: returned user excerpts at ranks 1 and 5 explicitly allocate **1.5 hours** to the first island and **2 hours** to the second. The answer says the combined duration is unspecified, despite these visible inputs supporting 3.5 hours.
+
+These cases establish an answerer/question-following problem in addition to retrieval loss. They do not prove that every full-source zero-score case has adequate answer-bearing context.
+
 ## Optimization priorities
 
 1. Improve **answer-bearing source coverage** before adding more query rewrites. The candidate stage has relevant turns that are lost during fusion and Top-12 selection; use stage-level traces and matched spans to improve candidate ranking without hardcoding benchmark answers.

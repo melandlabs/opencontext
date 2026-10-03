@@ -450,6 +450,13 @@ def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dic
     candidates = (hit.get("id"), metadata.get("parentMessageId"), metadata.get("messageId"), metadata.get("rawMessageId"))
     source_ids = list(dict.fromkeys(source_ids_by_message[value] for value in candidates if isinstance(value, str) and value in source_ids_by_message))
     content = str(hit.get("content", ""))
+    # Preview the actual historical text, not the repeated core order guidance.
+    # The hash below still identifies the complete content seen by the model.
+    preview = content
+    if content.startswith("[Message order guidance]\n"):
+        _, marker, excerpt = content.partition("[Original excerpt]\n")
+        if marker:
+            preview = excerpt
     matched_spans = []
     for span in metadata.get("matchedSpans") or []:
         if not isinstance(span, dict) or not isinstance(span.get("content"), str):
@@ -468,7 +475,7 @@ def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dic
         "id": hit.get("id"),
         "score": hit.get("score", hit.get("similarity")),
         "content_sha256": hashlib.sha256(content.encode("utf-8")).hexdigest(),
-        "content_excerpt": " ".join(content.split())[:240],
+        "content_excerpt": " ".join(preview.split())[:240],
         "source_turn_ids": source_ids,
         "matched_source_turn_ids": [value for value in source_ids if value in required],
         "matched_spans": matched_spans,
