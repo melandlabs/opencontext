@@ -23,6 +23,7 @@ param(
   [switch]$SkipIngest,
   [string]$ResumeDbPath = "",
   [int]$MaxQuestions = 0,
+  [string]$QuestionIds = "",
   [ValidateSet("mcq","generative")][string]$Mode = "mcq",
   [string]$AnswerModel = "",
   [string]$JudgeModel = "",
@@ -38,6 +39,7 @@ $startedAt = [DateTimeOffset]::UtcNow
 $PSNativeCommandUseErrorActionPreference = $false
 if ($Bench -eq "beam" -and $SkipIngest) { throw "BEAM public-flow mode requires Add before Search; -SkipIngest is diagnostic only" }
 if ($ResumeDbPath -and $Bench -ne "beam") { throw "-ResumeDbPath is supported only for BEAM" }
+if ($QuestionIds -and ($Bench -ne "beam" -or $MaxQuestions -gt 0)) { throw "-QuestionIds requires BEAM and cannot be combined with -MaxQuestions" }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $amlRepo = Join-Path $here "..\AML-agent-memory-leaderboard"
 $python = Join-Path $amlRepo ".venv\Scripts\python.exe"
@@ -91,6 +93,7 @@ if ($Bench -eq "beam") { $retrieveArgs += @("--dataset", $Dataset) }
 if ($SkipIngest)    { $retrieveArgs += "--skip-ingest" }
 if ($ResumeDbPath)  { $retrieveArgs += @("--resume-db", $ResumeDbPath) }
 if ($MaxQuestions -gt 0) { $retrieveArgs += @("--max-questions", $MaxQuestions) }
+if ($QuestionIds) { $retrieveArgs += @("--question-ids", $QuestionIds) }
 
 function Test-WritableTarget([string]$TargetPath) {
   $candidate = [IO.Path]::GetFullPath($TargetPath)
@@ -205,6 +208,7 @@ if ($Bench -eq "beam") {
     reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" }
     reasoning_effort = if ($env:OPENCONTEXT_LLM_REASONING_EFFORT) { $env:OPENCONTEXT_LLM_REASONING_EFFORT } else { "auto" }
   }
+  if ($QuestionIds) { $runConfig["question_ids"] = $QuestionIds }
   $runConfigJson = $runConfig | ConvertTo-Json -Compress
   if (Test-Path -LiteralPath $configPath) {
     if ((Get-Content -LiteralPath $configPath -Raw).Trim() -ne $runConfigJson) {
@@ -307,6 +311,7 @@ $manifest = [ordered]@{
     limit = if ($Limit -gt 0) { $Limit } else { $null }
     samples = if ($Samples) { $Samples } else { $null }
     max_questions = if ($MaxQuestions -gt 0) { $MaxQuestions } else { $null }
+    question_ids = if ($QuestionIds) { @($QuestionIds.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { $null }
     mode = if ($Bench -eq "personamem") { $Mode } else { $null }
     skip_ingest = [bool]$SkipIngest
     resume_db = if ($ResumeDbPath) { [IO.Path]::GetFullPath($ResumeDbPath) } else { $null }

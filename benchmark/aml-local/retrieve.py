@@ -429,13 +429,13 @@ def beam_checkpoint_path(directory: Path, index: int, question_id: str) -> Path:
 
 def beam_run_identity(
     dataset: Path, client: AmlClient, *, limit: int | None, samples: set[str] | None,
-    max_questions: int | None,
+    max_questions: int | None, question_ids: set[str] | None = None,
 ) -> dict[str, Any]:
     file_hash = hashlib.sha256()
     with dataset.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
             file_hash.update(block)
-    return {
+    identity = {
         "dataset": str(dataset.resolve()),
         "dataset_sha256": file_hash.hexdigest(),
         "top_k": client.top_k,
@@ -443,6 +443,9 @@ def beam_run_identity(
         "samples": sorted(samples) if samples else None,
         "max_questions": max_questions,
     }
+    if question_ids is not None:
+        identity["question_ids"] = sorted(question_ids)
+    return identity
 
 
 def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dict[str, str], required: set[str]) -> dict[str, Any]:
@@ -694,7 +697,10 @@ def run_beam(
     skip_ingest: bool,
     resume_message_ids: set[str] | None = None,
     output_dir: Path | None = None,
+    question_ids: set[str] | None = None,
 ) -> list[dict[str, Any]]:
+    if question_ids is not None and (not question_ids or max_questions):
+        raise ValueError("BEAM question IDs must be non-empty and cannot be combined with max_questions")
     payload = read_json(dataset)
     conversations = payload.get("conversations", []) if isinstance(payload, dict) else payload
     if samples:
@@ -707,20 +713,27 @@ def run_beam(
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir = output_dir / "retrieval-checkpoints"
     state_path = output_dir / "retrieval-state.json"
-    identity = beam_run_identity(dataset, client, limit=limit, samples=samples, max_questions=max_questions)
+    identity = beam_run_identity(
+        dataset, client, limit=limit, samples=samples,
+        max_questions=max_questions, question_ids=question_ids,
+    )
 
     questions: list[tuple[dict[str, Any], dict[str, Any], str]] = []
-    question_ids: set[str] = set()
+    seen_question_ids: set[str] = set()
     for entry in conversations:
         selected_questions = entry.get("probing_questions") or []
         if max_questions:
             selected_questions = selected_questions[:max_questions]
         for index, question in enumerate(selected_questions):
             question_id = str(question.get("question_id") or f"{entry['entry_id']}_q{index}")
-            if question_id in question_ids:
+            if question_id in seen_question_ids:
                 raise ValueError(f"duplicate BEAM question ID: {question_id}")
-            question_ids.add(question_id)
+            seen_question_ids.add(question_id)
+            if question_ids is not None and question_id not in question_ids:
+                continue
             questions.append((entry, question, question_id))
+    if question_ids is not None and question_ids - seen_question_ids:
+        raise ValueError(f"unknown BEAM question IDs: {sorted(question_ids - seen_question_ids)}")
 
     completed_requests = (
         completed_beam_add_requests(conversations, dataset, resume_message_ids)
@@ -1077,7 +1090,10 @@ def run_benchmark(
     max_questions: int | None = None,
     skip_ingest: bool = False,
     resume_message_ids: set[str] | None = None,
+    question_ids: set[str] | None = None,
 ) -> Path:
+    if question_ids is not None and benchmark != "beam":
+        raise ValueError("Question ID selection is supported only for BEAM")
     runner_options: dict[str, Any] = {
         "limit": limit,
         "samples": samples,
@@ -1086,6 +1102,7 @@ def run_benchmark(
     }
     if benchmark == "beam":
         runner_options["resume_message_ids"] = resume_message_ids
+        runner_options["question_ids"] = question_ids
         runner_options["output_dir"] = out_dir / OUTPUT_NAMES[benchmark]
     records = RUNNERS[benchmark](dataset, client, **runner_options)
     output = out_dir / OUTPUT_NAMES[benchmark] / "input.jsonl"
@@ -1107,6 +1124,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-ingest", action="store_true", help="reuse an already-ingested sample scope")
     parser.add_argument("--resume-db", type=Path, help="BEAM only: reuse committed Add batches in this SQLite database")
     parser.add_argument("--max-questions", type=int, help="cap questions per selected sample")
+    parser.add_argument("--question-ids", help="BEAM only: comma-separated question IDs for a frozen ablation subset")
     parser.add_argument(
         "--preflight-only",
         action="store_true",
@@ -1118,6 +1136,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = build_parser().parse_args()
     parameter_errors: list[str] = []
+    question_ids = selected_ids(args.question_ids)
+    if args.question_ids is not None and (
+        args.benchmark != "beam" or not question_ids or args.max_questions
+    ):
+        parameter_errors.append("--question-ids requires non-empty BEAM IDs and cannot be combined with --max-questions")
     reasoning = os.environ.get("AML_REASONING_STRATEGY", "none").strip().lower()
     if reasoning not in {"none", "rewrite", "iterative", "union"}:
         parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, iterative, or union")
@@ -1186,6 +1209,7 @@ def main() -> int:
         max_questions=args.max_questions,
         skip_ingest=args.skip_ingest,
         resume_message_ids=resume_message_ids,
+        question_ids=question_ids,
     )
     return 0
 

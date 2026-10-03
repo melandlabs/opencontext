@@ -386,6 +386,43 @@ class RetrieveFixtureTests(unittest.TestCase):
                     [entry], dataset, {f"aml:{user_id}:chunk:1:0"}
                 )
 
+    def test_beam_question_subset_preserves_full_ingestion_and_freezes_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "beam.json"
+            entries = [
+                {"entry_id": f"entry-{index}", "chat": [{"speaker": "user", "text": f"fact {index}"}],
+                 "probing_questions": [{"question_id": f"q-{index}", "question": f"question {index}"}]}
+                for index in range(2)
+            ]
+            dataset.write_text(json.dumps({"conversations": entries}), encoding="utf-8")
+            output_root = Path(temp_dir) / "outputs"
+            output = retrieve.run_benchmark(
+                "beam", dataset, self.aml_client, output_root, question_ids={"q-1"}
+            )
+            records = retrieve.read_jsonl(output)
+            self.assertEqual([record["id"] for record in records], ["q-1"])
+            self.assertEqual(records[0]["question"], "question 1")
+            self.assertEqual([path for path, _ in self.server.requests], ["/add", "/add", "/search"])
+            state = retrieve.read_json(output_root / "beam" / "retrieval-state.json")
+            self.assertEqual(state["question_ids"], ["q-1"])
+            saved_ids = {
+                f"aml:{retrieve.scope_id('beam', dataset, entry['entry_id'])}:chunk:0:0"
+                for entry in entries
+            }
+            self.server.requests.clear()
+            with self.assertRaisesRegex(ValueError, "selection"):
+                retrieve.run_benchmark(
+                    "beam", dataset, self.aml_client, output_root,
+                    question_ids={"q-0"}, resume_message_ids=saved_ids,
+                )
+            self.assertEqual(self.server.requests, [])
+            with self.assertRaisesRegex(ValueError, "unknown BEAM question"):
+                retrieve.run_benchmark(
+                    "beam", dataset, self.aml_client, Path(temp_dir) / "unknown",
+                    question_ids={"missing"},
+                )
+            self.assertEqual(self.server.requests, [])
+
     def test_beam_finishes_all_adds_before_searching(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             dataset = Path(temp_dir) / "beam.json"
