@@ -739,11 +739,24 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 							}
 						}
 
+						// Planner observations need the same rank-based channel fusion as
+						// ordinary retrieval. BM25 and cosine values are not comparable:
+						// a strong FTS5 match can have a score of 1 and otherwise crowd
+						// out every semantic hit before the planner sees any evidence.
+						const plannerLexical = dedupeChannelByParent(lexicalHits, "memory-bm25");
+						const plannerSemantic = dedupeChannelByParent(semanticHits, "memory-semantic");
+						const ranked = mergeUnifiedMemorySearchResultsRrf(
+							[
+								{ name: "memory-bm25", hits: plannerLexical },
+								{ name: "memory-semantic", hits: plannerSemantic },
+							],
+							limit,
+						);
 						const candidates = filterByDateRange(
-							mergeByMaxScore([
-								lexicalHits.map(toIterativeRecallCandidate),
-								semanticHits.map(toIterativeRecallCandidate),
-							]),
+							ranked.map((hit) => ({
+								...toIterativeRecallCandidate(hit),
+								similarity: Number(hit.metadata.rrfScore ?? hit.similarity),
+							})),
 							request.dateFrom,
 							request.dateTo,
 						);

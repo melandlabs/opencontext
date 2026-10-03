@@ -632,6 +632,42 @@ describe("createUnifiedSearch", () => {
 		expect(out.results.some((r) => r.type === "memory" && r.id === "m2")).toBe(true);
 	});
 
+	it("keeps semantic evidence visible to the planner when BM25 scores saturate", async () => {
+		const replies = [
+			'Thought: search for the answer\nAction: search\nAction Input: {"keywords":["answer"]}',
+			'Thought: save the observed evidence\nAction: note\nAction Input: {"indices":[1,2,3,4,5]}',
+			"Thought: finish\nAction: finish\nAction Input: {}",
+		];
+		const planner = createIterativeRecallPlanner({
+			complete: vi.fn().mockImplementation(() => Promise.resolve(replies.shift())),
+			options: { maxIterations: 3 },
+		});
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesLexical: async () =>
+				Array.from({ length: 5 }, (_, index) => ({
+					id: `lexical-${index}`,
+					content: `Broad keyword match ${index}`,
+					similarity: 1,
+					metadata: {},
+				})),
+			searchRawMessagesAnn: async () => [
+				{ id: "a-semantic", content: "The answer-bearing message.", similarity: 0.8, metadata: {} },
+			],
+			reasoning: { iterativePlanner: planner },
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "What is the answer?",
+			sources: ["memory"],
+			limit: 5,
+			reasoningStrategy: "iterative",
+		});
+
+		expect(out.reasoning?.degraded).toBeUndefined();
+		expect(out.results.map((hit) => hit.id)).toContain("a-semantic");
+	});
+
 	it("fuses planner evidence with separate baseline semantic and BM25 channels", async () => {
 		// The planner notes m1, while m2 occurs in both baseline channels.
 		// RRF must reward m2's two independent hits and still retain m1.
@@ -644,7 +680,7 @@ describe("createUnifiedSearch", () => {
 		const embedQuery = vi.fn().mockResolvedValue(new Array(4).fill(0.1));
 		const replies = [
 			'Thought: search for cat\nAction: search\nAction Input: {"keywords":["cat"]}',
-			'Thought: note it\nAction: note\nAction Input: {"indices":[3]}',
+			'Thought: note it\nAction: note\nAction Input: {"indices":[1]}',
 			"Thought: finish\nAction: finish\nAction Input: {}",
 		];
 		const complete = vi.fn().mockImplementation(() => {
