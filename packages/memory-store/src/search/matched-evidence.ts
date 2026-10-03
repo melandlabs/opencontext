@@ -58,7 +58,7 @@ function combineSpans(spans: MatchedEvidenceSpan[]): MatchedEvidenceSpan[] {
 		if (!existing) {
 			combined.push({
 				...span,
-				sourceChunkIds: span.sourceChunkIds ?? (span.sourceChunkId ? [span.sourceChunkId] : []),
+				sourceChunkIds: [...(span.sourceChunkIds ?? (span.sourceChunkId ? [span.sourceChunkId] : []))],
 				channels: [...span.channels],
 			});
 			continue;

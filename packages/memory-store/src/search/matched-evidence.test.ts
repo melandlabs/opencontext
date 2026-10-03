@@ -39,7 +39,9 @@ describe("matched evidence", () => {
 			"memory-bm25",
 			1,
 		);
+		const inputsBefore = structuredClone([first, second]);
 		const merged = mergeMatchedEvidence(first, second);
+		expect([first, second]).toEqual(inputsBefore);
 		expect((merged.metadata as Record<string, unknown>).matchedSpans).toMatchObject([
 			{ sourceChunkIds: ["a", "b"], channels: [{ name: "memory-semantic" }, { name: "memory-bm25" }] },
 		]);
