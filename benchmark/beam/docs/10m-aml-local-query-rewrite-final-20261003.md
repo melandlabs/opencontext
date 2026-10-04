@@ -107,3 +107,5 @@ The full iterative-union comparison and the completed wider-window, lexical-dedu
 Shared post-run correctness repairs and diagnostics were synchronized to both experiment branches. Relevant scoped tests, package builds and type checks passed; no full CI suite was run. These later checks are not a new complete benchmark of the final shared source. All test stages finished and test-owned services were stopped; the reused database and complete artifacts remain available locally.
 
 No code or benchmark artifacts from this run were pushed.
+
+The user subsequently required a complete score above 0.5 before stopping optimization. Work has resumed; the final-score evidence above remains unchanged. The new core-only, fixed-retrieval extractive-evidence experiment and its completion gate are tracked in the iterative report, without creating a third report or changing official benchmark prompts.

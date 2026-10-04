@@ -37,6 +37,7 @@ import type { Peer } from "@melandlabs/contracts/peer";
 import type { RawMessage as IndexedRawMessage, RawMessageSearchChunk } from "@melandlabs/indexeddb";
 import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import type { RawMessage } from "./contracts";
+import type { EvidenceSelector } from "./search/evidence-selector";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
 
@@ -131,6 +132,8 @@ export interface UnifiedSearchInsightsResult {
 }
 
 export interface UnifiedSearchReasoningDeps {
+	/** Optional extractive context selection after ranking. Disabled unless supplied. */
+	evidenceSelector?: EvidenceSelector;
 	/**
 	 * LLM single-turn synthesis callback. Wired into
 	 * `search({ synthesize: true })` so a host that wants synthesis

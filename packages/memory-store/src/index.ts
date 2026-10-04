@@ -13,6 +13,11 @@ import type { SearchRuntimeContext } from "./search/applicability";
 import type { ApplyConsolidateInput, ApplyConsolidateOutput } from "./search/apply-reflect";
 import { type UnifiedSearch, createUnifiedSearch } from "./search/unified-search";
 import type { SearchInput, SearchOutput } from "./search/utilities";
+export {
+	createExtractiveEvidenceSelector,
+	type EvidenceSelector,
+	type EvidenceSelectorOptions,
+} from "./search/evidence-selector";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
 import {
 	type RawMessageStore,

@@ -1303,9 +1303,34 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		return output;
 	}
 
+	async function presentRankedEvidence(
+		query: string,
+		hits: UnifiedMemorySearchResult[],
+		warnings: UnifiedMemorySearchWarning[],
+	): Promise<UnifiedMemorySearchResult[]> {
+		let selectedHits = hits;
+		if (deps.reasoning?.evidenceSelector) {
+			try {
+				const selection = await deps.reasoning.evidenceSelector.select({
+					query,
+					hits,
+				});
+				selectedHits = selection.hits;
+				warnings.push(...selection.warnings);
+			} catch {
+				warnings.push({
+					source: "memory",
+					code: "evidence_selection_failed",
+					message: "Evidence selection failed; original ranked excerpts retained.",
+				});
+			}
+		}
+		return presentMessageContext(selectedHits);
+	}
+
 	async function searchUnifiedMemory(input: UnifiedMemorySearchInput): Promise<UnifiedMemorySearchOutput> {
 		const output = await searchUnifiedMemoryWithRuntime(input);
-		output.results = presentMessageContext(output.results);
+		output.results = await presentRankedEvidence(input.query, output.results, output.warnings);
 		if (output.retrievalDiagnostics) output.retrievalDiagnostics.final = output.results;
 		return output;
 	}
@@ -1448,7 +1473,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			hits = mergeUnifiedMemorySearchResultsRrf(tierLists, limit);
 		}
 
-		hits = presentMessageContext(hits);
+		hits = await presentRankedEvidence(query, hits, warnings);
 		if (retrievalDiagnostics) retrievalDiagnostics = { ...retrievalDiagnostics, final: hits };
 		const evidence: SearchEvidence[] = hits.map((hit) => ({
 			id: hit.id,

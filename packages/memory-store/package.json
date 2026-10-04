@@ -29,6 +29,7 @@
 			"import": "./dist/server/cli-shared.js"
 		},
 		"./unified-search": "./dist/search/unified-search.js",
+		"./evidence-selector": "./dist/search/evidence-selector.js",
 		"./memory-graph-write-policy": "./dist/policies/memory-graph-write-policy.js",
 		"./memory-graph-correction-policy": "./dist/policies/memory-graph-correction-policy.js"
 	},

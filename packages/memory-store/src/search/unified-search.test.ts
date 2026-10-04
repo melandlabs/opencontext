@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SQLiteRawMessageManager } from "../../../sqlite/src/raw-message-manager";
 import type { UnifiedSearchDeps } from "../config";
+import { createExtractiveEvidenceSelector } from "./evidence-selector";
 import { createIterativeRecallPlanner } from "./iterative-recall";
 import { type QueryRewriter, createUserVoiceRewriter } from "./query-rewriter";
 import type { RerankerInput } from "./reranker";
@@ -88,6 +89,73 @@ afterEach(() => {
 });
 
 describe("createUnifiedSearch", () => {
+	it("retains ranked evidence when a host's selector fails", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			reasoning: {
+				evidenceSelector: {
+					select: async () => {
+						throw new Error("private error details");
+					},
+				},
+			},
+		});
+		const input = { userId: "u1", query: "topic", sources: ["memory"] as const, limit: 2 };
+		const failed = await search.search({ ...input, sources: ["memory"] });
+		const baseline = await createUnifiedSearch(baseDeps).search({ ...input, sources: ["memory"] });
+		expect(failed.results).toEqual(baseline.results);
+		expect(failed.warnings).toContainEqual({
+			source: "memory",
+			code: "evidence_selection_failed",
+			message: "Evidence selection failed; original ranked excerpts retained.",
+		});
+		expect(JSON.stringify(failed)).not.toContain("private error details");
+	});
+	it.each(["search", "searchUnifiedMemory"] as const)(
+		"selects exact evidence only after Top-K and reranking via %s",
+		async (method) => {
+			const original = "Unrelated background. I spent $75. Historical question?";
+			const rerank = vi.fn(async (_input: RerankerInput) => [
+				{ id: "m1", score: 0.99 },
+				{ id: "m2", score: 0.1 },
+			]);
+			const complete = vi.fn(
+				async (_prompt: string) =>
+					'{"selections":[{"id":"m1","quotes":[{"excerpt":0,"text":"I spent $75."}]}]}',
+			);
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1],
+				searchRawMessagesAnn: async () => [
+					{ id: "m1", content: original, similarity: 0.9, metadata: { messageSequence: 1, userId: "u1" } },
+					{
+						id: "m2",
+						content: "Another source",
+						similarity: 0.8,
+						metadata: { messageSequence: 2, userId: "u1" },
+					},
+				],
+				searchRawMessagesLexical: async () => [],
+				reranker: { rerank },
+				reasoning: { evidenceSelector: createExtractiveEvidenceSelector({ complete }) },
+			});
+			const output = await search[method]({
+				userId: "u1",
+				query: "cost?",
+				sources: ["memory"],
+				limit: 1,
+				includeRetrievalDiagnostics: true,
+			});
+			expect(output.results.map((item) => item.id)).toEqual(["m1"]);
+			expect(output.results[0].content).toContain("I spent $75.");
+			expect(output.results[0].content).not.toContain("Unrelated background");
+			expect(complete).toHaveBeenCalledTimes(1);
+			expect(complete.mock.calls[0]?.[0]).not.toContain("Another source");
+			expect(output.retrievalDiagnostics?.fusedBeforeRerank[0].content).toBe(original);
+			expect(output.retrievalDiagnostics?.final[0].metadata.contextSelection).toMatchObject({
+				status: "selected",
+			});
+		},
+	);
 	it("keeps real FTS5 relevance order through parent dedupe and RRF", async () => {
 		const dir = mkdtempSync(join(tmpdir(), "unified-fts-order-"));
 		const manager = new SQLiteRawMessageManager({ dbPath: join(dir, "store.db") });

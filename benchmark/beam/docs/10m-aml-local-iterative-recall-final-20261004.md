@@ -111,3 +111,13 @@ Scoped verification covered 109 TypeScript tests across retrieval, provenance, C
 All test stages finished. The test-owned core and adapter services were stopped; corpus databases, checkpoints, provider logs and frozen experiment bundles remain in ignored local artifacts. Both local experiment branches contain the same final shared source repairs and these two English reports. A score above 0.5 was not demonstrated, and no default ranking/prompt change is presented as an established score gain. Further work should target the coverage and answer-interpretation gaps above rather than continue tuning this small subset.
 
 Only the rewrite and iterative final reports are retained for these experiments. No experiment code, report or artifact has been pushed.
+
+## Subsequent optimization continuation
+
+The user subsequently made a complete score **above 0.5** an explicit completion requirement. The optimization goal is active again; the completed comparisons above are evidence, not satisfaction of that new gate.
+
+A new opt-in core experiment performs query-conditioned **verbatim evidence selection after Top-12 ranking**. It does not change candidate retrieval, cross-encoder inputs, ranking, source IDs, official question/judge prompts or the persisted corpus. Each passage must match a unique substring of an original retrieved span; its UTF-16 offsets and original evidence remain available for audit. Unknown sources, invented/paraphrased passages, malformed output and oversized requests retain the original evidence instead. This is an unproven prototype, not an enabled default or a demonstrated score gain.
+
+The first matched experiment replays the fresh twenty-question diagnostic control, verifies every original full answer context exactly, then changes only the core-produced excerpts. Selection calls are pinned to DeepSeek Flash/OpenInference with reasoning disabled; normal answer and judge stages use the existing pinned providers. The experiment is running under `outputs-beam10m-extractive-evidence-ablation-20261004`. Small-subset results, including any score above 0.5, will not satisfy the complete-200-question gate.
+
+A separate numerical audit found 299 keyword candidate scores rounded to 1 across the original two-hundred-question rewrite traces. This is a precision risk, but the single lexical channel uses stable sorting and preserves database order on ties; it is **not established as a cause of the current failures**. No new BM25 score change was enabled on the strength of this count alone.

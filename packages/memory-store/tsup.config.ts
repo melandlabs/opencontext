@@ -14,6 +14,7 @@ export default defineConfig({
 		"search/unified-search": "src/search/unified-search.ts",
 		"search/distill": "src/search/distill.ts",
 		"search/derive": "src/search/derive.ts",
+		"search/evidence-selector": "src/search/evidence-selector.ts",
 		"policies/memory-graph-write-policy": "src/policies/memory-graph-write-policy.ts",
 		"policies/memory-graph-correction-policy": "src/policies/memory-graph-correction-policy.ts",
 		"server/cli-http": "src/server/cli-http.ts",

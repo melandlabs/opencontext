@@ -17,6 +17,7 @@
 import { ChromaVectorStore } from "@melandlabs/rag/chroma-vector-store";
 import type { IVectorStore } from "@melandlabs/rag/vector-service";
 import type { UnifiedSearchDeps } from "../config";
+import { createExtractiveEvidenceSelector } from "../search/evidence-selector";
 import {
 	type IterativeRecallCompletionOptions,
 	createIterativeRecallPlanner,
@@ -686,6 +687,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 		if (!unified.reasoning) unified.reasoning = {};
 		unified.reasoning.queryRewriter = queryRewriter;
 		unified.reasoning.iterativePlanner = iterativePlanner;
+		if (process.env.OPENCONTEXT_LLM_EVIDENCE_SELECTION === "1") {
+			unified.reasoning.evidenceSelector = createExtractiveEvidenceSelector({ complete });
+			log("extractive evidence selection wired after ranking");
+		}
 		log(`reasoning wired (model=${model}, baseUrl=${baseUrl}, provider=${reasoningProvider ?? "auto"})`);
 	}
 

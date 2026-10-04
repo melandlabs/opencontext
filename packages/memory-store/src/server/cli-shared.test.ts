@@ -2,6 +2,31 @@ import { describe, expect, it, vi } from "vitest";
 import { buildUnified, parseUnifiedArgs } from "./cli-shared";
 
 describe("memory-store backend CLI", () => {
+	it("only wires evidence selection when explicitly enabled", async () => {
+		const keys = ["OPENCONTEXT_LLM_API_KEY", "OPENCONTEXT_LLM_EVIDENCE_SELECTION"] as const;
+		const saved = keys.map((key) => process.env[key]);
+		process.env.OPENCONTEXT_LLM_API_KEY = "test-key";
+		const args = parseUnifiedArgs([
+			"--embedding-provider",
+			"none",
+			"--memory-backend",
+			"none",
+			"--reranker-provider",
+			"none",
+			"--reasoning",
+		]);
+		try {
+			process.env.OPENCONTEXT_LLM_EVIDENCE_SELECTION = "0";
+			expect((await buildUnified(args)).reasoning?.evidenceSelector).toBeUndefined();
+			process.env.OPENCONTEXT_LLM_EVIDENCE_SELECTION = "1";
+			expect((await buildUnified(args)).reasoning?.evidenceSelector).toBeDefined();
+		} finally {
+			keys.forEach((key, index) => {
+				if (saved[index] === undefined) Reflect.deleteProperty(process.env, key);
+				else process.env[key] = saved[index];
+			});
+		}
+	});
 	it("forwards an explicit no-thinking setting to the retrieval model", async () => {
 		const oldKey = process.env.OPENCONTEXT_LLM_API_KEY;
 		const oldEffort = process.env.OPENCONTEXT_LLM_REASONING_EFFORT;

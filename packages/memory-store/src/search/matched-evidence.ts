@@ -19,7 +19,7 @@ function isSpan(value: unknown): value is MatchedEvidenceSpan {
 	);
 }
 
-function spansFor(hit: EvidenceHit): MatchedEvidenceSpan[] {
+export function spansFor(hit: EvidenceHit): MatchedEvidenceSpan[] {
 	const stored = hit.metadata.matchedSpans;
 	if (Array.isArray(stored) && stored.length > 0 && stored.every(isSpan)) return stored;
 	return [
