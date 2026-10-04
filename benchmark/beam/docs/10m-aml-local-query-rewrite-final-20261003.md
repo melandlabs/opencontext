@@ -221,3 +221,32 @@ All twenty successful answer calls used OpenInference and all fifty successful j
 A zero-paid-call audit inspected the six `recent-hits` fallbacks in the completed structured-observation arm. In each case, four searches exposed twenty distinct results to the planner but fallback retained only the final five. Ninety earlier observed excerpts were matched exactly to scoped native candidate text hashes and message sequences. This verifies the candidate-discard mechanism, but those extra candidates introduced **no additional annotated sources beyond the existing final Top-12** in these six cases (one is unannotated abstention). This limited audit neither proves the policy harmless on all questions nor demonstrates QA benefit. It does not justify implementing an all-observed fallback as a claimed recall optimization on this evidence alone.
 
 The separate BGE complete-200 run is still evaluating. All 200 answers completed without pending questions; no full QA score is claimed before the remaining judgements finish. The score-above-0.5 goal remains unmet and active, official prompts and fixed Flash providers are unchanged, and nothing has been pushed.
+
+### Completed BGE full-200 confirmation
+
+The full frozen-pool comparison completed all **200 rankings, answers and judgements**. BGE QA was **0.2598712 versus 0.2844167** for the original MiniLM union control: twenty-one improvements, twenty-one regressions and 158 unchanged scores. There were 44 perfect, 25 partial and 131 zero-score questions. All 200 contexts changed; every original full context and scoring-text/scope check passed, and all non-context question/rubric fields stayed identical. Mean CPU ranking time was **10,860.1 ms per question**. The small positive twenty-question diagnostic did not generalize.
+
+| Category (20 questions each) | Original MiniLM | BGE |
+| --- | ---: | ---: |
+| Abstention | 0.80000 | 0.70000 |
+| Contradiction resolution | 0.05625 | 0.07500 |
+| Event ordering | 0.01042 | 0.04955 |
+| Information extraction | 0.65000 | 0.65000 |
+| Instruction following | 0.28750 | 0.16250 |
+| Knowledge update | 0.55000 | 0.55000 |
+| Multi-session reasoning | 0.05000 | 0.07500 |
+| Preference following | 0.37500 | 0.27917 |
+| Summarization | 0.04000 | 0.04500 |
+| Temporal reasoning | 0.02500 | 0.01250 |
+
+The limited gains in event/contradiction/multi-session categories do not outweigh the larger instruction, preference and abstention regressions. Annotated-source Recall@12 fell from **0.34510 to 0.28340** across 176 questions, with seven improvements, twenty-six regressions and 143 unchanged values. These are parent/source-level measurements, not proof of exact answer-bearing span visibility. The default remains MiniLM; BGE is not promoted and its original numeric 512-token behavior remains unchanged.
+
+All 200 successful answer calls used DeepSeek Flash/OpenInference, and all **723** successful judge subrequests used Qwen Flash/Alibaba. There were zero provider mismatches, zero reported reasoning tokens and zero pending/skipped/fabricated-zero questions. Two judge connection failures and two initially truncated responses recovered within the existing bounded policy (727 attempts total). The larger subrequest count is partly the official event-alignment pairwise work, not unlimited retries. Official prompts and the corpus were unchanged. Only the same two English reports were updated, and no work was pushed.
+
+### Lexical full-run comparability preflight (excluded; zero QA calls)
+
+A follow-up full-200 lexical-rewrite attempt under `outputs-beam10m-lexical-rewrite-full200-20261005/beam` was stopped after original FTS-order checks failed. Fourteen per-question retrieval checkpoints were preserved, but **no answer or judge stage was launched** and no score is attributed to this incomplete comparison. Its status is explicitly `stopped-incomparable`; it is not a new valid benchmark baseline.
+
+The root cause is verified keyword-derivation drift: historical commit `753c13d` truncated sixteen tokens without deduplication, whereas the current core deduplicates first and then caps sixteen distinct tokens. For `10m_1_q_0`, a repeated "the" previously consumed a slot; the current request additionally includes "logic". Replaying the actual historical keyword array with the current production SQLite manager exactly reproduces the old native FTS ordering. The mismatch is therefore not treated as a corpus loss or a model failure, and the comparison guard is not bypassed. A subsequent full lexical ablation needs a newly generated **matched current-code control**, with the same frozen semantic candidates/expressions in both arms and real current native FTS retrieval. It cannot legitimately claim a delta against the old 0.24625 full score merely by reusing that file.
+
+The highest complete full-union reference remains 0.2844167. The requested complete-run score above 0.5 has **not** been achieved; optimization remains active rather than marking these completed negative experiments as goal completion.
