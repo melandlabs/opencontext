@@ -2,6 +2,35 @@ import { describe, expect, it, vi } from "vitest";
 import { buildUnified, parseUnifiedArgs } from "./cli-shared";
 
 describe("memory-store backend CLI", () => {
+	it("requires an explicit valid semantic-variant merge switch", async () => {
+		const keys = ["OPENCONTEXT_LLM_API_KEY", "OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE"] as const;
+		const saved = keys.map((key) => process.env[key]);
+		process.env.OPENCONTEXT_LLM_API_KEY = "test-key";
+		const args = parseUnifiedArgs([
+			"--embedding-provider",
+			"none",
+			"--memory-backend",
+			"none",
+			"--reranker-provider",
+			"none",
+			"--reasoning",
+		]);
+		try {
+			Reflect.deleteProperty(process.env, keys[1]);
+			expect((await buildUnified(args)).reasoning?.rewriteSemanticMerge).toBeUndefined();
+			process.env[keys[1]] = "max-score";
+			expect((await buildUnified(args)).reasoning?.rewriteSemanticMerge).toBeUndefined();
+			process.env[keys[1]] = "rrf";
+			expect((await buildUnified(args)).reasoning?.rewriteSemanticMerge).toBe("rrf");
+			process.env[keys[1]] = "invalid";
+			await expect(buildUnified(args)).rejects.toThrow("must be max-score or rrf");
+		} finally {
+			keys.forEach((key, index) => {
+				if (saved[index] === undefined) Reflect.deleteProperty(process.env, key);
+				else process.env[key] = saved[index];
+			});
+		}
+	});
 	it("enables lexical rewriting only with its explicit switch", async () => {
 		const keys = ["OPENCONTEXT_LLM_API_KEY", "OPENCONTEXT_LLM_QUERY_REWRITE_LEXICAL"] as const;
 		const saved = keys.map((key) => process.env[key]);

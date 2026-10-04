@@ -693,6 +693,14 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 
 		if (!unified.reasoning) unified.reasoning = {};
 		unified.reasoning.queryRewriter = queryRewriter;
+		const semanticMerge = process.env.OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE?.trim();
+		if (semanticMerge && semanticMerge !== "max-score" && semanticMerge !== "rrf") {
+			throw new Error("OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE must be max-score or rrf");
+		}
+		if (semanticMerge === "rrf") {
+			unified.reasoning.rewriteSemanticMerge = "rrf";
+			log("query rewrite wired to semantic variant rank fusion under RRF");
+		}
 		if (process.env.OPENCONTEXT_LLM_QUERY_REWRITE_LEXICAL === "1") {
 			unified.reasoning.rewriteLexical = true;
 			log("query rewrite wired to lexical retrieval under RRF");

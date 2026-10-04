@@ -110,6 +110,8 @@ export interface UnifiedMemoryReasoningInfo {
 	rewrittenQueries?: string[];
 	/** Bounded query variants actually used by the opt-in lexical rewrite path. */
 	lexicalRewrittenQueries?: string[];
+	/** Present only when RRF fusion of multiple semantic query variants ran. */
+	semanticVariantMerge?: "rrf";
 	/** Number of planner iterations executed (iterative mode only). */
 	iterations?: number;
 	/** Number of evidence items collected by the planner (iterative mode only). */

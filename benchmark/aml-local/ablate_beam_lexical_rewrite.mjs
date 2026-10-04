@@ -1,5 +1,5 @@
-/** Real core lexical-rewrite ablation: freeze query expressions and semantic
- * candidates, use production FTS5 and the unchanged local cross-encoder. */
+/** Real core query-fusion ablation. Frozen expressions, production FTS5,
+ * unchanged local cross-encoder; semantic-RRF additionally runs real ANN. */
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -15,6 +15,9 @@ for (const key of ["run", "root", "baseline-module", "db", "source-map", "output
 const run = path.resolve(options.run);
 const root = path.resolve(options.root);
 const output = path.resolve(options.output);
+const intervention = options.intervention ?? "lexical";
+assert(["lexical", "semantic-rrf"].includes(intervention), "Unknown intervention");
+const semanticRrf = intervention === "semantic-rrf";
 assert.notEqual(run, output, "Cannot overwrite the control");
 const rows = (file) => fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const currentModule = path.join(root, "packages/memory-store/dist/search/unified-search.js");
@@ -26,6 +29,19 @@ const db = new (require("better-sqlite3"))(path.resolve(options.db), { readonly:
 const { SQLiteRawMessageManager } = await import(pathToFileURL(sqliteModule).href);
 const manager = new SQLiteRawMessageManager({ db, enableVectorSearch: false });
 manager.init = async () => {}; // Existing read-only schema; real queries and hydration remain enabled.
+let embedding;
+const embeddingModule = path.join(root, "packages/ai/rag/dist/local-transformers-embedding-provider.js");
+if (semanticRrf) {
+	require("sqlite-vec").load(db);
+	assert(
+		db.prepare("SELECT name FROM sqlite_master WHERE name = 'raw_message_chunks_vec_d384'").get(),
+		"Native ANN index missing",
+	);
+	manager.vectorSearchAvailable = true;
+	const { LocalTransformersEmbeddingProvider } = await import(pathToFileURL(embeddingModule).href);
+	embedding = new LocalTransformersEmbeddingProvider({ dtype: "fp32", localFilesOnly: true });
+}
+const embeddings = new Map();
 const rerankerModule = path.join(root, "packages/ai/rag/dist/local-transformers-reranker.js");
 const { LocalTransformersReranker } = await import(pathToFileURL(rerankerModule).href);
 const reranker = new LocalTransformersReranker({
@@ -58,8 +74,16 @@ const identity = {
 	max_tokens: 512,
 	batch_size: 8,
 	top_k: 12,
-	intervention:
-		"actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
+	intervention: semanticRrf
+		? "actual core semantic variant RRF; frozen expressions; real native ANN/FTS5; exact old-core replay; original local reranker"
+		: "actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
+	...(semanticRrf
+		? {
+				embedding_model: embedding.getModelName(),
+				embedding_dtype: "fp32",
+				embedding_module_sha256: sha256(fs.readFileSync(embeddingModule)),
+			}
+		: {}),
 	new_planner_calls: 0,
 	official_prompts_changed: false,
 };
@@ -91,6 +115,19 @@ try {
 					(id) => chunk.get(id),
 				),
 			);
+			const nativeQueries = new Map();
+			let arm = "control";
+			const nativeAnn = async (request) => {
+				const key = JSON.stringify(request);
+				if (!nativeQueries.has(key))
+					nativeQueries.set(key, await manager.searchMessagesSemantically(request));
+				const hits = nativeQueries.get(key);
+				fs.appendFileSync(
+					path.join(output, "semantic-queries.jsonl"),
+					`${JSON.stringify({ id: record.id, arm, user_id: request.userId, limit: request.limit, embedding_sha256: sha256(JSON.stringify(request.queryEmbedding)), hits: hits.map((hit) => ({ id: hit.id, score: hit.similarity, content_sha256: sha256(hit.content), metadata: hit.metadata })) })}\n`,
+				);
+				return structuredClone(hits);
+			};
 			const originalLexical = await manager.lexicalSearchMessages({
 				userId: trace.user_id,
 				keywords: baseline.deriveLexicalKeywords(trace.query),
@@ -109,8 +146,20 @@ try {
 				),
 			);
 			const deps = {
-				embedQuery: async () => [1],
-				searchRawMessagesAnn: async () => structuredClone(semantic),
+				embedQuery: semanticRrf
+					? async ({ query: text }) => {
+							assert.equal(typeof text, "string", "Tokenizer requires request.query, not the request object");
+							if (!embeddings.has(text)) embeddings.set(text, await embedding.embedQuery(text));
+							const vector = embeddings.get(text);
+							assert.equal(vector.length, 384, "Embedding dimension drift");
+							fs.appendFileSync(
+								path.join(output, "embedding-queries.jsonl"),
+								`${JSON.stringify({ id: record.id, arm, query: text, embedding_sha256: sha256(JSON.stringify(vector)) })}\n`,
+							);
+							return [...vector];
+						}
+					: async () => [1],
+				searchRawMessagesAnn: semanticRrf ? nativeAnn : async () => structuredClone(semantic),
 				searchRawMessagesLexical: (request) => manager.lexicalSearchMessages(request),
 				reranker,
 				reasoning: {
@@ -131,10 +180,16 @@ try {
 			};
 			const control = await baseline.createUnifiedSearch(deps).search(input);
 			assertReplay(control, trace, record);
+			// Current default must also replay identically before the one-switch intervention.
+			if (semanticRrf) assertReplay(await current.createUnifiedSearch(deps).search(input), trace, record);
+			arm = "changed";
 			const changed = await current
 				.createUnifiedSearch({
 					...deps,
-					reasoning: { ...deps.reasoning, rewriteLexical: true },
+					reasoning: {
+						...deps.reasoning,
+						...(semanticRrf ? { rewriteSemanticMerge: "rrf" } : { rewriteLexical: true }),
+					},
 					searchRawMessagesLexical: async (request) => {
 						const hits = await manager.lexicalSearchMessages(request);
 						fs.appendFileSync(

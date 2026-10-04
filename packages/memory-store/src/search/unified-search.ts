@@ -873,8 +873,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			return { semantic: [], lexical: [], hybrid: filterByDateRange(hybrid, input.dateFrom, input.dateTo) };
 		}
 
-		// Rewrite strategy: embed multiple query variants and keep the best score
-		// per memory.
+		// Rewrite strategy: embed multiple variants, then combine their candidates.
 		if (reasoningStrategy === "rewrite" && deps.reasoning?.queryRewriter) {
 			try {
 				const variants = await deps.reasoning.queryRewriter.rewrite({
@@ -922,7 +921,24 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						),
 					),
 				);
-				semantic = mergeByMaxScore(lists);
+				if (
+					activeMergeStrategy === "rrf" &&
+					deps.reasoning.rewriteSemanticMerge === "rrf" &&
+					lists.length > 1 &&
+					lists.some((hits) => hits.length > 0)
+				) {
+					semantic = mergeUnifiedMemorySearchResultsRrf(
+						lists.map((hits, index) => ({
+							name: `memory-semantic-query:${index}`,
+							hits: dedupeChannelByParent(hits, `memory-semantic-query:${index}`),
+						})),
+						limit,
+					).map((hit) => ({ ...hit, similarity: Number(hit.metadata.rrfScore) }));
+					// Parent dedupe later sorts by similarity; preserve the fused order.
+					if (reasoningInfo) reasoningInfo.semanticVariantMerge = "rrf";
+				} else {
+					semantic = mergeByMaxScore(lists);
+				}
 			} catch (error) {
 				logger.warn?.("[memory-store] Query rewriting failed; falling back to original query:", error);
 				warnings.push({

@@ -147,3 +147,101 @@ describe("opt-in lexical query rewriting", () => {
 		expect(output.reasoning?.lexicalRewrittenQueries).toBeUndefined();
 	});
 });
+
+describe("opt-in semantic variant rank fusion", () => {
+	function semanticSetup(variants = [query, "new topic"]) {
+		const fixture = setup(variants, false);
+		const embed = vi.fn(async ({ query: text }: { query: string }) => [text === query ? 1 : 2]);
+		const ann = vi.fn<NonNullable<UnifiedSearchDeps["searchRawMessagesAnn"]>>(async ({ queryEmbedding }) =>
+			queryEmbedding[0] === 1
+				? [hit("dominant", 0.99), hit("shared", 0.9)]
+				: [hit("other", 0.4), hit("shared", 0.3)],
+		);
+		fixture.deps.embedQuery = embed;
+		fixture.deps.searchRawMessagesAnn = ann;
+		return { ...fixture, embed, ann };
+	}
+	it("keeps max-score merging by default and preserves rank fusion through parent dedupe", async () => {
+		const { deps, search, embed, ann, lexical } = semanticSetup();
+		const original = await search();
+		expect(original.retrievalDiagnostics?.channels.semantic[0].id).toBe("dominant");
+		expect(original.reasoning?.semanticVariantMerge).toBeUndefined();
+		if (deps.reasoning) deps.reasoning.rewriteSemanticMerge = "rrf";
+		embed.mockClear();
+		ann.mockClear();
+		lexical.mockClear();
+		const changed = await search();
+		expect(changed.retrievalDiagnostics?.channels.semantic[0].id).toBe("shared");
+		expect(changed.retrievalDiagnostics?.channels.semantic[0].similarity).toBeCloseTo(2 / 62);
+		expect(changed.reasoning?.semanticVariantMerge).toBe("rrf");
+		expect(embed.mock.calls.map(([request]) => request.query)).toEqual([query, "new topic"]);
+		expect(ann).toHaveBeenCalledTimes(2);
+		expect(lexical).toHaveBeenCalledTimes(1);
+	});
+	it("counts a parent once per variant while retaining its distinct evidence spans", async () => {
+		const { deps, search, ann } = semanticSetup();
+		if (deps.reasoning) deps.reasoning.rewriteSemanticMerge = "rrf";
+		ann.mockImplementation(async ({ queryEmbedding }) =>
+			queryEmbedding[0] === 1
+				? [
+						hit("c1", 0.9, "first evidence", { sourceMessageId: "parent", sourceChunkId: "c1" }),
+						hit("c2", 0.8, "second evidence", { sourceMessageId: "parent", sourceChunkId: "c2" }),
+					]
+				: [hit("parent", 0.5, "third evidence", { sourceChunkId: "c3" })],
+		);
+		const result = await search();
+		const channel = result.retrievalDiagnostics?.channels.semantic;
+		expect(channel).toHaveLength(1);
+		expect(channel?.[0].similarity).toBeCloseTo(2 / 61);
+		expect(channel?.[0].metadata.matchedSpans).toHaveLength(3);
+		for (const text of ["first evidence", "second evidence", "third evidence"])
+			expect(result.results[0].content).toContain(text);
+	});
+	it("preserves the native candidate budget, scope, lifecycle and date filters", async () => {
+		const { deps, search, ann } = semanticSetup();
+		if (deps.reasoning) deps.reasoning.rewriteSemanticMerge = "rrf";
+		ann.mockResolvedValue([
+			hit("old", 0.9, "old", { timestamp: Date.parse("2023-01-01") }),
+			hit("current", 0.8, "current", { timestamp: Date.parse("2024-02-01") }),
+		]);
+		const result = await search({
+			botIds: ["b1", "b2"],
+			asOf: 1234,
+			includeDeprecated: true,
+			dateFrom: "2024-01-01",
+			dateTo: "2024-12-31",
+		});
+		expect(ann).toHaveBeenCalledTimes(4);
+		for (const [request] of ann.mock.calls) {
+			expect(request).toMatchObject({ userId: "u1", limit: 48, asOf: 1234, includeDeprecated: true });
+			expect(["b1", "b2"]).toContain(request.botId);
+		}
+		expect(result.retrievalDiagnostics?.channels.semantic.map((row) => row.id)).toEqual(["current"]);
+	});
+	it("does not change single-query, similarity merging or failed rewriter behavior", async () => {
+		const { deps, search } = semanticSetup([query]);
+		if (deps.reasoning) deps.reasoning.rewriteSemanticMerge = "rrf";
+		const single = await search();
+		expect(single.reasoning?.semanticVariantMerge).toBeUndefined();
+		expect(single.retrievalDiagnostics?.channels.semantic[0].similarity).toBe(0.99);
+		if (deps.reasoning?.queryRewriter)
+			deps.reasoning.queryRewriter.rewrite = async () => [query, "new topic"];
+		expect((await search({ mergeStrategy: "similarity" })).reasoning?.semanticVariantMerge).toBeUndefined();
+		if (deps.reasoning?.queryRewriter)
+			deps.reasoning.queryRewriter.rewrite = async () => {
+				throw new Error("failed");
+			};
+		const failed = await search();
+		expect(failed.reasoning?.degraded).toBe(true);
+		expect(failed.reasoning?.semanticVariantMerge).toBeUndefined();
+		expect(failed.retrievalDiagnostics?.channels.semantic[0].similarity).toBe(0.99);
+	});
+	it("does not claim variant rank fusion when every variant is empty", async () => {
+		const { deps, search, ann } = semanticSetup();
+		if (deps.reasoning) deps.reasoning.rewriteSemanticMerge = "rrf";
+		ann.mockResolvedValue([]);
+		const empty = await search();
+		expect(empty.reasoning?.semanticVariantMerge).toBeUndefined();
+		expect(empty.results).toEqual([]);
+	});
+});
