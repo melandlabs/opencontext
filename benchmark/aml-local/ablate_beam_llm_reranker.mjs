@@ -36,13 +36,32 @@ const records = selection === "all" ? inputRecords : selectRecords(inputRecords,
 assert.equal(new Set(records.map((record) => record.id)).size, records.length, "Duplicate question IDs");
 const traces = new Map(rows(path.join(run, "retrieval-traces.jsonl")).map((row) => [row.question_id, row]));
 const frozenResponses = new Map();
-if (options["response-ledger"]) {
-	for (const row of rows(options["response-ledger"])) {
+const replayProof = [];
+const validatedReplayIds = new Set();
+if (options["replay-checkpoints"]) {
+	assert(options["response-ledger"], "Replay validation requires a response ledger");
+	for (const name of fs
+		.readdirSync(options["replay-checkpoints"])
+		.filter((name) => name.endsWith(".json"))
+		.sort()) {
+		const data = fs.readFileSync(path.join(options["replay-checkpoints"], name));
+		const checkpoint = JSON.parse(data);
+		assert.equal(name, `${sha256(checkpoint.record.id)}.json`, "Checkpoint ID mismatch");
+		validatedReplayIds.add(checkpoint.record.id);
+		replayProof.push({ name, sha256: sha256(data) });
+	}
+}
+for (const ledgerPath of [options["response-ledger"], options["additional-response-ledger"]].filter(
+	Boolean,
+)) {
+	const ledgerHash = sha256(fs.readFileSync(ledgerPath));
+	for (const row of rows(ledgerPath)) {
+		if (options["replay-checkpoints"] && !validatedReplayIds.has(row.id)) continue;
 		assert(
 			typeof row.prompt_sha256 === "string" && typeof row.content === "string",
 			"Invalid frozen response",
 		);
-		if (!frozenResponses.has(row.prompt_sha256)) frozenResponses.set(row.prompt_sha256, row);
+		frozenResponses.set(`${row.id}:${row.prompt_sha256}`, { ...row, ledger_sha256: ledgerHash });
 	}
 }
 const model = "deepseek/deepseek-v4-flash-0731";
@@ -66,12 +85,19 @@ const identity = {
 	allow_fallbacks: false,
 	batch_size: 6,
 	mode,
+	native_response_format: mode === "listwise" ? "json_schema-with-required-provider-support" : null,
 	message_format: mode === "listwise" ? "structured-system-user" : "single-user-prompt",
 	score_protocol: mode === "listwise" ? "ranked-unique-index-array" : "indexed-integer-array",
 	invalid_batch_recovery:
-		mode === "listwise" ? "pending-on-invalid-selection" : "bounded-bisection-to-single-document",
+		mode === "listwise"
+			? "bounded-single-choice-with-shrinking-schema-enum"
+			: "bounded-bisection-to-single-document",
 	response_ledger_sha256: options["response-ledger"]
 		? sha256(fs.readFileSync(options["response-ledger"]))
+		: null,
+	replay_validation_sha256: replayProof.length ? sha256(JSON.stringify(replayProof)) : null,
+	additional_response_ledger_sha256: options["additional-response-ledger"]
+		? sha256(fs.readFileSync(options["additional-response-ledger"]))
 		: null,
 	max_request_characters: maxRequestCharacters,
 	top_k: 12,
@@ -136,12 +162,12 @@ try {
 			);
 			let requestCount = 0;
 			const complete = async (prompt, completionOptions) => {
-				const frozen = frozenResponses.get(sha256(prompt));
+				const frozen = frozenResponses.get(`${record.id}:${sha256(prompt)}`);
 				if (frozen) {
 					assert.equal(frozen.id, record.id, "Frozen response question mismatch");
 					fs.appendFileSync(
 						path.join(output, "ranking-replays.jsonl"),
-						`${JSON.stringify({ id: record.id, prompt_sha256: frozen.prompt_sha256, ledger_sha256: identity.response_ledger_sha256 })}\n`,
+						`${JSON.stringify({ id: record.id, prompt_sha256: frozen.prompt_sha256, ledger_sha256: frozen.ledger_sha256 })}\n`,
 					);
 					return frozen.content;
 				}
@@ -160,7 +186,14 @@ try {
 							},
 							body: JSON.stringify({
 								model,
-								provider: { order: [provider], allow_fallbacks: false },
+								provider: {
+									order: [provider],
+									allow_fallbacks: false,
+									...(completionOptions?.responseFormat ? { require_parameters: true } : {}),
+								},
+								...(completionOptions?.responseFormat
+									? { response_format: completionOptions.responseFormat }
+									: {}),
 								reasoning: { effort: "none" },
 								temperature: 0,
 								messages: completionOptions?.messages ?? [{ role: "user", content: prompt }],
