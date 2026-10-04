@@ -63,7 +63,19 @@ const reranker = new LocalTransformersReranker({
 const referenceRecords = rows(path.join(run, "input.jsonl"));
 const maxQuestions = Number(options["max-questions"] ?? referenceRecords.length);
 assert(Number.isSafeInteger(maxQuestions) && maxQuestions > 0, "Invalid --max-questions");
-const records = referenceRecords.slice(0, maxQuestions);
+const requestedIds = options["question-ids"]?.split(",").map((id) => id.trim());
+if (requestedIds) {
+	assert(!options["max-questions"], "Use either --question-ids or --max-questions");
+	assert(requestedIds.length && requestedIds.every(Boolean), "Question IDs must be non-empty");
+	assert.equal(new Set(requestedIds).size, requestedIds.length, "Duplicate requested question IDs");
+	assert(
+		requestedIds.every((id) => referenceRecords.some((record) => record.id === id)),
+		"Unknown question ID",
+	);
+}
+const records = requestedIds
+	? referenceRecords.filter((record) => requestedIds.includes(record.id))
+	: referenceRecords.slice(0, maxQuestions);
 assert.equal(new Set(records.map((r) => r.id)).size, records.length, "Duplicate question IDs");
 const traces = new Map(rows(path.join(run, "retrieval-traces.jsonl")).map((r) => [r.question_id, r]));
 const sources = new Map(rows(options["source-map"]).map((r) => [r.user_id, r.source_ids]));
@@ -146,7 +158,10 @@ try {
 			assert(trace?.reasoning?.strategy === "rewrite", "A frozen rewrite control is required");
 			assert.equal(trace.top_k, 12);
 			const variants = trace.reasoning.rewrittenQueries;
-			assert(Array.isArray(variants) && variants[0] === trace.query, "Missing original-first query variants");
+			assert(
+				Array.isArray(variants) && variants[0] === trace.query.trim(),
+				"Missing original-first query variants",
+			);
 			const semantic = trace.channels.semantic.map((hit) =>
 				hydrateHit(
 					hit,
