@@ -42,8 +42,19 @@ def evidence_chain(traces: dict[str, dict[str, Any]], judged: dict[str, dict[str
         candidate = set().union(*channels.values())
         before = matched_source_ids(trace.get("before_rerank") or []) & required
         final = matched_source_ids(trace.get("after_rerank") or []) & required
+        model_top_k = final
         stages = {"available": available, "candidate": candidate, "before_rerank": before, "final": final,
                   **{f"{name}_candidate": ids for name, ids in channels.items()}}
+        if "after_model_rerank_before_selection" in trace:
+            # Full model output may contain 48 candidates; compare its Top-K
+            # with the selected Top-K, not all 48 with only twelve final hits.
+            k = int(trace.get("top_k") or 12)
+            model_top_k = matched_source_ids(trace["after_model_rerank_before_selection"][:k]) & required
+            stages["model_top_k_before_selection"] = model_top_k
+            if model_top_k and not final:
+                counts["lost_all_at_selection"] += 1
+            if not model_top_k and final:
+                counts["gained_first_source_at_selection"] += 1
         for name, ids in stages.items():
             recalls[name].append(len(ids) / len(required))
             if ids:
@@ -52,7 +63,7 @@ def evidence_chain(traces: dict[str, dict[str, Any]], judged: dict[str, dict[str
                 counts[f"{name}_full"] += 1
         if candidate and not before:
             counts["lost_all_at_fusion"] += 1
-        if before and not final:
+        if before and not model_top_k:
             counts["lost_all_at_rerank"] += 1
         score = judged.get(question_id, {}).get("llm_judge_score")
         if isinstance(score, (int, float)):
@@ -89,6 +100,8 @@ def ranking_ablation(traces: dict[str, dict[str, Any]]) -> dict[str, Any]:
         rankings = {name: channels.get(name) or [] for name in names}
         rankings.update({"fused_before_rerank": trace.get("before_rerank") or [],
                          "final_after_rerank": trace.get("after_rerank") or []})
+        if "after_model_rerank_before_selection" in trace:
+            rankings["model_before_selection"] = trace["after_model_rerank_before_selection"]
         for name, hits in rankings.items():
             recalls[name].append(len(required & matched_source_ids(hits[:k])) / len(required))
     return {name: {"annotated": len(values), "mean_source_recall_at_k": mean(values) if values else None}

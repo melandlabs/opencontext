@@ -56,6 +56,46 @@ class EvidenceChainTests(unittest.TestCase):
         self.assertEqual(result["error_attempts"], 1)
         self.assertEqual(result["successful_provider_mismatches"], 1)
 
+    def test_selection_loss_is_not_attributed_to_the_model(self):
+        trace = {
+            "required_source_turn_ids": ["gold"], "top_k": 1,
+            "before_rerank": [{"matched_source_turn_ids": ["gold"]}],
+            "after_model_rerank_before_selection": [{"matched_source_turn_ids": ["gold"]}],
+            "after_rerank": [{"matched_source_turn_ids": []}],
+        }
+        result = evidence_chain({"q": trace}, {})
+        self.assertEqual(result["question_counts"].get("lost_all_at_rerank", 0), 0)
+        self.assertEqual(result["question_counts"]["lost_all_at_selection"], 1)
+        self.assertEqual(result["mean_source_recall_by_stage"]["model_top_k_before_selection"], 1)
+        self.assertEqual(result["mean_source_recall_by_stage"]["final"], 0)
+
+    def test_selection_gain_compares_model_top_k_not_the_full_pool(self):
+        trace = {
+            "required_source_turn_ids": ["gold"], "top_k": 1,
+            "before_rerank": [{"matched_source_turn_ids": ["gold"]}],
+            "after_model_rerank_before_selection": [
+                {"matched_source_turn_ids": []}, {"matched_source_turn_ids": ["gold"]},
+            ],
+            "after_rerank": [{"matched_source_turn_ids": ["gold"]}],
+        }
+        result = evidence_chain({"q": trace}, {})
+        self.assertEqual(result["question_counts"]["lost_all_at_rerank"], 1)
+        self.assertEqual(result["question_counts"]["gained_first_source_at_selection"], 1)
+        self.assertEqual(result["mean_source_recall_by_stage"]["model_top_k_before_selection"], 0)
+        self.assertEqual(ranking_ablation({"q": trace})["model_before_selection"]["mean_source_recall_at_k"], 0)
+
+    def test_legacy_traces_do_not_invent_an_unrecorded_selection_stage(self):
+        trace = {
+            "required_source_turn_ids": ["gold"],
+            "before_rerank": [{"matched_source_turn_ids": ["gold"]}],
+            "after_rerank": [],
+        }
+        result = evidence_chain({"q": trace}, {})
+        self.assertEqual(result["question_counts"]["lost_all_at_rerank"], 1)
+        self.assertNotIn("lost_all_at_selection", result["question_counts"])
+        self.assertNotIn("model_top_k_before_selection", result["mean_source_recall_by_stage"])
+        self.assertNotIn("model_before_selection", ranking_ablation({"q": trace}))
+
     def test_rankings_are_compared_at_the_same_top_k(self):
         trace = {
             "required_source_turn_ids": ["source"],
