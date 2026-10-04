@@ -31,8 +31,21 @@ const chunk = db.prepare(
 const sourceMaps = new Map(rows(options["source-map"]).map((row) => [row.user_id, row.source_ids]));
 const records = selectRecords(rows(path.join(run, "input.jsonl")), 2);
 const traces = new Map(rows(path.join(run, "retrieval-traces.jsonl")).map((row) => [row.question_id, row]));
+const frozenResponses = new Map();
+if (options["response-ledger"]) {
+	for (const row of rows(options["response-ledger"])) {
+		assert(
+			typeof row.prompt_sha256 === "string" && typeof row.content === "string",
+			"Invalid frozen response",
+		);
+		if (!frozenResponses.has(row.prompt_sha256)) frozenResponses.set(row.prompt_sha256, row);
+	}
+}
 const model = "deepseek/deepseek-v4-flash-0731";
 const provider = "OpenInference";
+const mode = options.mode ?? "pointwise";
+assert(["pointwise", "listwise"].includes(mode), "Unknown reranker mode");
+const maxRequestCharacters = mode === "listwise" ? 256000 : 32000;
 const identity = {
 	control: run,
 	control_input_sha256: sha256(fs.readFileSync(path.join(run, "input.jsonl"))),
@@ -47,8 +60,15 @@ const identity = {
 	reasoning_effort: "none",
 	allow_fallbacks: false,
 	batch_size: 6,
-	score_protocol: "indexed-integer-array",
-	max_request_characters: 32000,
+	mode,
+	message_format: mode === "listwise" ? "structured-system-user" : "single-user-prompt",
+	score_protocol: mode === "listwise" ? "ranked-unique-index-array" : "indexed-integer-array",
+	invalid_batch_recovery:
+		mode === "listwise" ? "pending-on-invalid-selection" : "bounded-bisection-to-single-document",
+	response_ledger_sha256: options["response-ledger"]
+		? sha256(fs.readFileSync(options["response-ledger"]))
+		: null,
+	max_request_characters: maxRequestCharacters,
 	top_k: 12,
 	intervention:
 		"actual core evidence scorer only; fixed original fusion candidates and texts; original cross-encoder settings unchanged",
@@ -110,7 +130,16 @@ try {
 				"Complete control context differs",
 			);
 			let requestCount = 0;
-			const complete = async (prompt) => {
+			const complete = async (prompt, completionOptions) => {
+				const frozen = frozenResponses.get(sha256(prompt));
+				if (frozen) {
+					assert.equal(frozen.id, record.id, "Frozen response question mismatch");
+					fs.appendFileSync(
+						path.join(output, "ranking-replays.jsonl"),
+						`${JSON.stringify({ id: record.id, prompt_sha256: frozen.prompt_sha256, ledger_sha256: identity.response_ledger_sha256 })}\n`,
+					);
+					return frozen.content;
+				}
 				let lastError;
 				for (let attempt = 1; attempt <= 3; attempt++) {
 					const started = Date.now();
@@ -129,7 +158,7 @@ try {
 								provider: { order: [provider], allow_fallbacks: false },
 								reasoning: { effort: "none" },
 								temperature: 0,
-								messages: [{ role: "user", content: prompt }],
+								messages: completionOptions?.messages ?? [{ role: "user", content: prompt }],
 							}),
 						});
 						const payload = await response.json();
@@ -161,7 +190,13 @@ try {
 				}
 				throw lastError;
 			};
-			const scorer = createEvidenceReranker({ complete, batchSize: 6, maxRequestCharacters: 32000 });
+			const scorer = createEvidenceReranker({
+				complete,
+				mode,
+				selectionLimit: 12,
+				batchSize: 6,
+				maxRequestCharacters,
+			});
 			const changed = await createUnifiedSearch({
 				...deps,
 				reranker: {
