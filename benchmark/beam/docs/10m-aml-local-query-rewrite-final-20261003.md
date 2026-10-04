@@ -104,4 +104,6 @@ Top-12 also imposes a mean annotated-source recall ceiling of 0.4314 on the 20 e
 
 The full iterative-union comparison and the completed wider-window, lexical-deduplication and planner-budget core ablations are documented in [the iterative final report](10m-aml-local-iterative-recall-final-20261004.md). The wider rerank window and default planner-budget hints were withdrawn after regressions; the apparent lexical-deduplication score gain came entirely from unchanged contexts and is not attributed to the core change. No default score improvement above the complete frozen runs is claimed.
 
+Shared post-run correctness repairs and diagnostics were synchronized to both experiment branches. Relevant scoped tests, package builds and type checks passed; no full CI suite was run. These later checks are not a new complete benchmark of the final shared source. All test stages finished and test-owned services were stopped; the reused database and complete artifacts remain available locally.
+
 No code or benchmark artifacts from this run were pushed.

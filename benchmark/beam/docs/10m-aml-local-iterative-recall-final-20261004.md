@@ -102,4 +102,12 @@ The lexical replay initially used Node's bundled SQLite 3.51.2, which chose a sl
 3. Address answer interpretation where exact text is already visible. The failed context-quoting diagnostic in the rewrite report shows that a plausible formatting change cannot simply be assumed beneficial. Any replacement belongs in core evidence presentation and needs its own matched experiment.
 4. Keep the useful core correctness repairs, provider checks and complete evidence traces. Reject unproved ranking changes and distinguish replay/subset diagnostics from full-run results. The deferred cross-encoder truncation issue remains explicitly outside this round.
 
+## Final code and handoff state
+
+The shared post-run correctness fixes and diagnostics were synchronized to both experiment branches after preserving the frozen iterative CLI and search bundle. Default wider reranking and planner-budget hints are absent. Structured planner chat transport, immutable matched-evidence provenance, lexical-term deduplication and opt-in action diagnostics remain. The two original complete scores belong to their frozen run commits, **not to a new complete evaluation of these later changes**.
+
+Scoped verification covered 109 TypeScript tests across retrieval, provenance, CLI reasoning transport and SQLite child retrieval, 24 Python adapter/analysis/ablation tests, and three native replay tests. Both worktrees' memory-store and opencontext packages built successfully and passed their relevant type checks. The initial iterative-worktree opencontext type check saw a stale dependency declaration; rebuilding memory-store regenerated its exported types, after which the check passed. No full CI suite was run.
+
+All test stages finished. The test-owned core and adapter services were stopped; corpus databases, checkpoints, provider logs and frozen experiment bundles remain in ignored local artifacts. Both local experiment branches contain the same final shared source repairs and these two English reports. A score above 0.5 was not demonstrated, and no default ranking/prompt change is presented as an established score gain. Further work should target the coverage and answer-interpretation gaps above rather than continue tuning this small subset.
+
 Only the rewrite and iterative final reports are retained for these experiments. No experiment code, report or artifact has been pushed.
