@@ -16,13 +16,29 @@ const output = path.resolve(options.output);
 assert.notEqual(run, output, "Cannot overwrite the control");
 const rows = (file) => fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const root = path.resolve(options.root);
-const moduleFile = path.join(root, "packages/memory-store/dist/search/evidence-selector.js");
-const { createExtractiveEvidenceSelector } = await import(pathToFileURL(moduleFile).href);
+const intervention = options.intervention ?? "extractive";
+assert(["extractive", "dialogue"].includes(intervention), "Unknown context intervention");
+const moduleFile = path.join(
+	root,
+	intervention === "extractive"
+		? "packages/memory-store/dist/search/evidence-selector.js"
+		: "packages/sqlite/dist/raw-message-manager.js",
+);
+const coreIntervention = await import(pathToFileURL(moduleFile).href);
 const { createUnifiedSearch } = await import(
 	pathToFileURL(path.join(root, "packages/memory-store/dist/search/unified-search.js")).href
 );
 const require = createRequire(pathToFileURL(path.join(root, "packages/sqlite/dist/raw-message-manager.js")));
 const db = new (require("better-sqlite3"))(path.resolve(options.db), { readonly: true, fileMustExist: true });
+const catalog =
+	intervention === "dialogue"
+		? new coreIntervention.SQLiteRawMessageManager({ db, enableVectorSearch: false })
+		: undefined;
+const sourceMaps = options["source-map"]
+	? new Map(rows(options["source-map"]).map((row) => [row.user_id, row.source_ids]))
+	: new Map();
+if (intervention === "dialogue")
+	assert(sourceMaps.size > 0, "Dialogue analysis requires canonical source mappings");
 const parentQuery = db.prepare("SELECT * FROM raw_messages WHERE message_id = ?");
 const chunkQuery = db.prepare(
 	"SELECT chunk_id, message_id, chunk_index, chunk_count FROM raw_message_chunks WHERE chunk_id = ?",
@@ -35,13 +51,14 @@ const traces = new Map(
 );
 const provider = "OpenInference";
 const model = "deepseek/deepseek-v4-flash-0731";
-assert(process.env.OPENROUTER_API_KEY, "Missing OpenRouter credentials");
+if (intervention === "extractive") assert(process.env.OPENROUTER_API_KEY, "Missing OpenRouter credentials");
 const identity = {
 	control: run,
 	control_traces_sha256: sha256(fs.readFileSync(path.join(run, "retrieval-traces.jsonl"))),
 	harness_sha256: sha256(fs.readFileSync(new URL(import.meta.url))),
 	control_input_sha256: sha256(fs.readFileSync(path.join(run, "input.jsonl"))),
 	selector_module_sha256: sha256(fs.readFileSync(moduleFile)),
+	...(options["source-map"] ? { source_map_sha256: sha256(fs.readFileSync(options["source-map"])) } : {}),
 	search_module_sha256: sha256(
 		fs.readFileSync(path.join(root, "packages/memory-store/dist/search/unified-search.js")),
 	),
@@ -51,7 +68,8 @@ const identity = {
 	allow_fallbacks: false,
 	reasoning_effort: "none",
 	official_prompts_changed: false,
-	intervention: "actual core extractive context selection only; fixed Top12 IDs, ordering and scores",
+	intervention: `actual core ${intervention} context only; fixed Top12 IDs, ordering and scores`,
+	...(intervention === "dialogue" ? { max_added_original_utf16_characters: 16000 } : {}),
 };
 fs.mkdirSync(path.join(output, "selection-checkpoints"), { recursive: true });
 const manifest = path.join(output, "ablation-manifest.json");
@@ -136,7 +154,14 @@ try {
 		};
 		const changed = await createUnifiedSearch({
 			...deps,
-			reasoning: { evidenceSelector: createExtractiveEvidenceSelector({ complete }) },
+			...(intervention === "extractive"
+				? { reasoning: { evidenceSelector: coreIntervention.createExtractiveEvidenceSelector({ complete }) } }
+				: {
+						dialogueContext: {
+							loadPairs: (input) => catalog.getRawMessageDialoguePairs(input),
+							maxAddedCharacters: 16000,
+						},
+					}),
 		}).search(input);
 		assert.deepEqual(
 			changed.results.map((hit) => hit.id),
@@ -176,6 +201,58 @@ try {
 					selected_spans: hit.metadata.matchedSpans,
 				})),
 				evidence_selection_warnings: changed.warnings,
+				...(intervention === "dialogue"
+					? {
+							dialogue_context: (() => {
+								const sourceMap = sourceMaps.get(trace.user_id);
+								assert(sourceMap, `Missing user source map ${trace.user_id}`);
+								const neighbors = changed.results.flatMap((hit) =>
+									(hit.dialogueContextMessages ?? []).map((message) => {
+										const source = sourceMap[message.id];
+										assert(source, `Unmapped neighbor ${message.id}`);
+										const original = parentQuery.get(message.id);
+										assert.equal(original.user_id, trace.user_id);
+										assert.equal(
+											original.content,
+											message.content,
+											"Neighbor text differs from stored original",
+										);
+										return {
+											anchor_id: hit.id,
+											id: message.id,
+											source_turn_id: source,
+											role: message.role,
+											message_sequence: message.messageSequence,
+											start_position: message.startPosition,
+											end_position: message.endPosition,
+											content_sha256: sha256(message.content),
+											character_count: message.content.length,
+											...(message.timestamp === undefined ? {} : { timestamp: message.timestamp }),
+										};
+									}),
+								);
+								const direct = new Set(trace.after_rerank.flatMap((hit) => hit.source_turn_ids ?? []));
+								const expanded = new Set([...direct, ...neighbors.map((message) => message.source_turn_id)]);
+								const required = trace.required_source_turn_ids ?? [];
+								return {
+									neighbors,
+									direct_source_turn_ids: [...direct],
+									expanded_source_turn_ids: [...expanded],
+									direct_source_recall: required.length
+										? required.filter((id) => direct.has(id)).length / required.length
+										: null,
+									expanded_source_recall: required.length
+										? required.filter((id) => expanded.has(id)).length / required.length
+										: null,
+									added_original_characters: neighbors.reduce(
+										(sum, message) => sum + message.character_count,
+										0,
+									),
+									warnings: changed.warnings,
+								};
+							})(),
+						}
+					: {}),
 			},
 		};
 		fs.writeFileSync(`${checkpoint}.tmp`, JSON.stringify(row));

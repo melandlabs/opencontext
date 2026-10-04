@@ -32,6 +32,8 @@ export interface QueryRewriter {
 }
 
 export interface QueryRewriterOptions {
+	/** Optional evidence-oriented retrieval expressions; legacy user voice remains default. */
+	style?: "user-voice" | "evidence";
 	/**
 	 * LLM completion callback. Receives the full prompt and returns the raw
 	 * model output. The rewriter parses the output and falls back to the
@@ -68,8 +70,16 @@ Rules:
 - Keep each rephrasing under 20 words.
 - Output exactly the requested number of lines.`;
 
-function buildPrompt(query: string, numVariants: number): string {
+const EVIDENCE_PROMPT = `Generate retrieval expressions for searching a user's conversation history, not an answer.
+The history contains both user messages and assistant replies. Rewrite the information need as short expressions resembling the historical facts, requests or updates that would provide evidence.
+Use complementary expressions rather than repeating a generic question. For compound questions, cover its distinct information needs. Preserve names, quantities and time constraints actually stated in the question, but never invent their values or assume an answer. Do not invent dates from relative time language. Do not use outside knowledge to supply missing facts.
+When a question asks for advice or an action, include the user's relevant previously stated requirements or preferences as a retrieval target, not a proposed solution. Expressions must stay tied to the question's subject.
+Output only the requested number of bullet lines, each starting with "- ". Keep each expression concise, under 25 words. Do not explain or answer.`;
+
+function buildPrompt(query: string, numVariants: number, style: QueryRewriterOptions["style"]): string {
 	const label = numVariants === 1 ? "1 alternative rephrasing" : `${numVariants} alternative rephrasings`;
+	if (style === "evidence")
+		return `${EVIDENCE_PROMPT}\nGenerate ${numVariants} expressions for this question: ${JSON.stringify(query)}`;
 	return `${SYSTEM_PROMPT}
 
 Output exactly ${label}.
@@ -120,7 +130,7 @@ function parseVariants(raw: string, maxVariants: number, original: string): stri
 }
 
 export function createUserVoiceRewriter(options: QueryRewriterOptions): QueryRewriter {
-	const { complete, maxVariants = 1, disabled = false } = options;
+	const { complete, maxVariants = 1, disabled = false, style = "user-voice" } = options;
 	const wantedVariants = Math.max(0, Math.floor(maxVariants));
 	let lastDegraded = false;
 
@@ -138,7 +148,7 @@ export function createUserVoiceRewriter(options: QueryRewriterOptions): QueryRew
 			}
 
 			try {
-				const raw = await complete(buildPrompt(original, wantedVariants));
+				const raw = await complete(buildPrompt(original, wantedVariants, style));
 				const variants = parseVariants(raw, wantedVariants, original);
 				if (variants.length === 0) {
 					lastDegraded = true;

@@ -681,7 +681,14 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			}
 		};
 
-		const queryRewriter = createUserVoiceRewriter({ complete });
+		const rewriteStyle = process.env.OPENCONTEXT_LLM_QUERY_REWRITE_STYLE?.trim();
+		if (rewriteStyle && rewriteStyle !== "user-voice" && rewriteStyle !== "evidence") {
+			throw new Error("OPENCONTEXT_LLM_QUERY_REWRITE_STYLE must be user-voice or evidence");
+		}
+		const queryRewriter = createUserVoiceRewriter({
+			complete,
+			...(rewriteStyle === "evidence" ? { style: "evidence", maxVariants: 3 } : {}),
+		});
 		const iterativePlanner = createIterativeRecallPlanner({ complete });
 
 		if (!unified.reasoning) unified.reasoning = {};
