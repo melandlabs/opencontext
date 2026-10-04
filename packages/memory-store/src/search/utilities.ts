@@ -72,16 +72,20 @@ export const HIT_CHANNELS: readonly HitChannel[] = [
 /**
  * Derive simple lexical keywords from a query string. Splits on any
  * non-letter/non-digit Unicode boundary, lowercases, drops tokens
- * shorter than 2 chars, and caps the list at 16. Used by the unified
+ * shorter than 2 chars, deduplicates in first-occurrence order, and caps
+ * the unique list at 16. Used by the unified
  * search lexical sub-query and by the `derive` primitive's candidate
  * fetch fallback.
  */
 export function deriveLexicalKeywords(query: string): string[] {
-	return query
-		.toLowerCase()
-		.split(/[^\p{L}\p{N}]+/u)
-		.filter((token) => token.length >= 2)
-		.slice(0, 16);
+	return Array.from(
+		new Set(
+			query
+				.toLowerCase()
+				.split(/[^\p{L}\p{N}]+/u)
+				.filter((token) => token.length >= 2),
+		),
+	).slice(0, 16);
 }
 
 export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative" | "union";
@@ -108,6 +112,8 @@ export interface UnifiedMemoryReasoningInfo {
 	iterations?: number;
 	/** Number of evidence items collected by the planner (iterative mode only). */
 	evidenceCount?: number;
+	/** Opt-in planner action ledger, only when retrieval diagnostics were requested. */
+	plannerDiagnostics?: import("./iterative-recall").IterativeRecallDiagnostics;
 	/** Date range that was applied to the memory source, if any. */
 	dateRange?: { from?: string; to?: string };
 }

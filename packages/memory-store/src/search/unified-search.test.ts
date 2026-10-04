@@ -920,6 +920,30 @@ describe("createUnifiedSearch", () => {
 		expect(out.warnings.some((w) => w.code === "memory_query_rewrite_failed")).toBe(true);
 	});
 
+	it("exposes planner diagnostics only on request without changing search results", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () => "Action: finish\nAction Input: {}",
+		});
+		const search = createUnifiedSearch({ ...baseDeps, reasoning: { iterativePlanner: planner } });
+		const input = {
+			userId: "u1",
+			query: "alpha",
+			sources: ["memory"] as ["memory"],
+			reasoningStrategy: "union" as const,
+			mergeStrategy: "rrf" as const,
+		};
+		const plain = await search.search(input);
+		const diagnosed = await search.search({ ...input, includeRetrievalDiagnostics: true });
+		expect(plain.reasoning?.plannerDiagnostics).toBeUndefined();
+		expect(diagnosed.results).toEqual(plain.results);
+		expect(diagnosed.reasoning?.plannerDiagnostics).toMatchObject({
+			fallback: "baseline",
+			searches: 1,
+			notes: 0,
+		});
+		expect(diagnosed.reasoning?.plannerDiagnostics?.steps[0]?.action).toBe("finish");
+	});
+
 	it("emits reasoning.dateRange even when strategy is 'none'", async () => {
 		const search = createUnifiedSearch(baseDeps);
 		const out = await search.search({

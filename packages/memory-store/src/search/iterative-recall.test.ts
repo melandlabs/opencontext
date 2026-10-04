@@ -415,3 +415,99 @@ describe("createIdentityIterativePlanner", () => {
 		expect(planner.lastDegraded?.()).toBe(false);
 	});
 });
+
+describe("opt-in planner diagnostics", () => {
+	it.each([3, 6])("reports the actual remaining action budget (%i)", async (maxIterations) => {
+		const replies = [
+			'Action: search\nAction Input: {"keywords":["topic"]}',
+			'Action: note\nAction Input: {"indices":[1]}',
+			"Action: finish\nAction Input: {}",
+		];
+		const complete = vi.fn(async (_prompt: string) => replies.shift() ?? "Action: finish\nAction Input: {}");
+		const planner = createIterativeRecallPlanner({ complete, options: { maxIterations } });
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [makeCandidate("m1", "evidence")] }) },
+		});
+		for (const [index, call] of complete.mock.calls.entries()) {
+			const prompt = call[0] as string;
+			expect(prompt).toContain(`Planner actions remaining: ${maxIterations - index}.`);
+		}
+		expect(result.evidence.map((hit) => hit.id)).toEqual(["m1"]);
+		expect(result.stats.iterations).toBe(3);
+	});
+
+	it("does not forbid the initial search when only one action is configured", async () => {
+		const complete = vi.fn(async (_prompt: string) => 'Action: search\nAction Input: {"keywords":["topic"]}');
+		const planner = createIterativeRecallPlanner({ complete, options: { maxIterations: 1 } });
+		await planner.plan({ query: "topic", executor: { search: async () => ({ candidates: [] }) } });
+		expect(complete.mock.calls[0]?.[0]).toContain("Planner actions remaining: 1.");
+		expect(complete.mock.calls[0]?.[0]).not.toContain("Do not start another search");
+	});
+
+	it("explains invalid actions and fallback without changing evidence", async () => {
+		const executor = { search: vi.fn().mockResolvedValue({ candidates: [makeCandidate("m1", "evidence")] }) };
+		const planner = createIterativeRecallPlanner({ complete: async () => "invalid ".repeat(200) });
+		const baseline = await planner.plan({ query: "topic", executor });
+		const diagnosed = await planner.plan({ query: "topic", executor, options: { collectDiagnostics: true } });
+		expect(baseline.diagnostics).toBeUndefined();
+		expect(diagnosed.evidence).toEqual(baseline.evidence);
+		expect(diagnosed.stats).toEqual(baseline.stats);
+		expect(diagnosed.diagnostics).toMatchObject({ fallback: "baseline", searches: 1, notes: 0 });
+		expect(diagnosed.diagnostics?.steps).toHaveLength(4);
+		expect(diagnosed.diagnostics?.steps.every((step) => step.action === "invalid")).toBe(true);
+		expect(diagnosed.diagnostics?.steps[0]?.responseExcerpt).toHaveLength(1000);
+	});
+
+	it("records transport status without exposing the error body", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () => {
+				throw new Error("reasoning LLM 429: private provider body");
+			},
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [] }) },
+			options: { collectDiagnostics: true },
+		});
+		expect(result.diagnostics?.steps).toEqual([
+			{ iteration: 1, action: "completion_error", errorName: "Error", httpStatus: 429 },
+		]);
+		expect(JSON.stringify(result.diagnostics)).not.toContain("private provider body");
+	});
+
+	it("distinguishes a timeout from an invalid action", async () => {
+		const timeout = new Error("private timeout details");
+		timeout.name = "AbortError";
+		const planner = createIterativeRecallPlanner({
+			complete: async () => {
+				throw timeout;
+			},
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [] }) },
+			options: { collectDiagnostics: true },
+		});
+		expect(result.diagnostics?.steps[0]).toEqual({
+			iteration: 1,
+			action: "completion_error",
+			errorName: "AbortError",
+		});
+	});
+
+	it("detects multiple actions without executing invented follow-up observations", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () =>
+				'Action: search\nAction Input: {"keywords":["topic"]}\nAction: note\nAction Input: {"indices":[1]}',
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [makeCandidate("m1", "evidence")] }) },
+			options: { collectDiagnostics: true, maxIterations: 1 },
+		});
+		expect(result.diagnostics?.steps[0]).toMatchObject({ action: "search", multipleActions: true });
+		expect(result.diagnostics?.notes).toBe(0);
+		expect(result.diagnostics?.fallback).toBe("recent-hits");
+	});
+});

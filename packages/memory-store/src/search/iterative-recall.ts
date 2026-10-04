@@ -45,6 +45,22 @@ export interface IterativeRecallResult {
 	evidence: IterativeRecallCandidate[];
 	/** Diagnostic statistics. */
 	stats: IterativeRecallStats;
+	/** Opt-in action diagnostics. Never used to select or rank evidence. */
+	diagnostics?: IterativeRecallDiagnostics;
+}
+
+export interface IterativeRecallDiagnostics {
+	steps: Array<{
+		iteration: number;
+		action: PlannerAction["type"] | "invalid" | "completion_error";
+		responseExcerpt?: string;
+		multipleActions?: boolean;
+		errorName?: string;
+		httpStatus?: number;
+	}>;
+	fallback?: "recent-hits" | "baseline";
+	searches: number;
+	notes: number;
 }
 
 export interface IterativeRecallPlanner {
@@ -86,6 +102,8 @@ export interface IterativeRecallPlannerOptions {
 	 * @default true
 	 */
 	fallbackToBaseline?: boolean;
+	/** Include bounded response excerpts and degradation causes. @default false */
+	collectDiagnostics?: boolean;
 }
 
 export interface IterativeRecallCompletionOptions {
@@ -143,14 +161,22 @@ function formatDateHint(dateFrom?: string, dateTo?: string): string | undefined 
 	return `Restrict searches to the date range ${fromText} to ${toText}. You may still emit narrower date_from/date_to bounds when useful.`;
 }
 
-function buildInitialPrompt(query: string, dateHint?: string): string {
-	const hintText = dateHint ? `\n${dateHint}` : "";
-	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
+function budgetHint(remaining: number, hasSearchResults = false): string {
+	return `Planner actions remaining: ${remaining}. Search, note, and finish each use one action. ${
+		remaining === 1 && hasSearchResults
+			? "This is your last action. Save useful results from the last search with note, or finish if none are useful. Do not start another search."
+			: "Save useful results with note before another search. Unnoted results are not saved as evidence."
+	}`;
 }
 
-function buildObservationPrompt(hits: IterativeRecallCandidate[]): string {
+function buildInitialPrompt(query: string, dateHint: string | undefined, remaining: number): string {
+	const hintText = dateHint ? `\n${dateHint}` : "";
+	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.\n${budgetHint(remaining)}`;
+}
+
+function buildObservationPrompt(hits: IterativeRecallCandidate[], remaining: number): string {
 	if (hits.length === 0) {
-		return "Observation: No matching memory found.\nRespond with the next action only.";
+		return `Observation: No matching memory found.\nRespond with the next action only.\n${budgetHint(remaining)}`;
 	}
 
 	const blocks = hits.map((hit, index) => {
@@ -161,7 +187,7 @@ function buildObservationPrompt(hits: IterativeRecallCandidate[]): string {
 		return lines.join("\n");
 	});
 
-	return `Observation:\n${blocks.join("\n\n")}\n\nRespond with the next action only.`;
+	return `Observation:\n${blocks.join("\n\n")}\n\nRespond with the next action only.\n${budgetHint(remaining, true)}`;
 }
 
 function stripCodeFences(text: string): string {
@@ -270,6 +296,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 		searchTopK: 5,
 		disabled: false,
 		fallbackToBaseline: true,
+		collectDiagnostics: false,
 	};
 
 	let lastDegraded = false;
@@ -299,7 +326,11 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 				{ role: "system", content: SYSTEM_PROMPT },
 				{
 					role: "user",
-					content: buildInitialPrompt(input.query, formatDateHint(input.dateFrom, input.dateTo)),
+					content: buildInitialPrompt(
+						input.query,
+						formatDateHint(input.dateFrom, input.dateTo),
+						opts.maxIterations,
+					),
 				},
 			];
 
@@ -310,6 +341,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			let notes = 0;
 			let iterations = 0;
 			let completeThrew = false;
+			const diagnostics: IterativeRecallDiagnostics = { steps: [], searches: 0, notes: 0 };
 
 			for (let i = 0; i < opts.maxIterations; i += 1) {
 				iterations = i + 1;
@@ -318,23 +350,39 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 					reply = await complete(messages.map((m) => `${m.role}: ${m.content}`).join("\n\n"), {
 						messages: messages.map((message) => ({ ...message })),
 					});
-				} catch {
+				} catch (error) {
 					// Catch the LLM error locally so the planner degrades
 					// gracefully (empty evidence + lastDegraded=true) instead
 					// of bubbling up to the unified-search caller. This mirrors
 					// the QueryRewriter pattern: surface degraded state through
 					// lastDegraded() rather than via a thrown error.
 					completeThrew = true;
+					if (opts.collectDiagnostics) {
+						const status = error instanceof Error ? error.message.match(/reasoning LLM (\d{3}):/) : null;
+						diagnostics.steps.push({
+							iteration: iterations,
+							action: "completion_error",
+							errorName: error instanceof Error ? error.name : "UnknownError",
+							...(status ? { httpStatus: Number(status[1]) } : {}),
+						});
+					}
 					break;
 				}
 				messages.push({ role: "assistant", content: reply });
 
 				const action = parseAction(reply);
+				if (opts.collectDiagnostics) {
+					diagnostics.steps.push({
+						iteration: iterations,
+						action: action?.type ?? "invalid",
+						responseExcerpt: reply.slice(0, 1000),
+						multipleActions: (reply.match(/^\s*Action:\s*/gm)?.length ?? 0) > 1,
+					});
+				}
 				if (!action) {
 					messages.push({
 						role: "user",
-						content:
-							"Observation: Use exactly one valid action: search, note, or finish. Respond with the next action only.",
+						content: `Observation: Use exactly one valid action: search, note, or finish. Respond with the next action only.\n${budgetHint(opts.maxIterations - iterations, lastHits.length > 0)}`,
 					});
 					continue;
 				}
@@ -355,7 +403,10 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 						excludedIds.add(hit.id);
 					}
 					searches += 1;
-					messages.push({ role: "user", content: buildObservationPrompt(lastHits) });
+					messages.push({
+						role: "user",
+						content: buildObservationPrompt(lastHits, opts.maxIterations - iterations),
+					});
 					continue;
 				}
 
@@ -373,7 +424,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 					notes += saved;
 					messages.push({
 						role: "user",
-						content: `Observation: Saved ${saved} new result(s). Total notes: ${evidence.size}.\nRespond with the next action only.`,
+						content: `Observation: Saved ${saved} new result(s). Total notes: ${evidence.size}.\nRespond with the next action only.\n${budgetHint(opts.maxIterations - iterations, lastHits.length > 0)}`,
 					});
 				}
 			}
@@ -388,12 +439,14 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			if (evidence.size === 0 && opts.fallbackToBaseline) {
 				fallbackRan = true;
 				if (lastHits.length > 0) {
+					diagnostics.fallback = "recent-hits";
 					for (const hit of lastHits) {
 						if (!evidence.has(hit.id)) {
 							evidence.set(hit.id, hit);
 						}
 					}
 				} else {
+					diagnostics.fallback = "baseline";
 					// Last resort: search with keywords derived from the original query
 					// so the fallback is not a total loss, while still honouring the
 					// caller-supplied date range.
@@ -420,6 +473,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			return {
 				evidence: Array.from(evidence.values()),
 				stats: { iterations, searches, notes },
+				...(opts.collectDiagnostics ? { diagnostics: { ...diagnostics, searches, notes } } : {}),
 			};
 		},
 	};

@@ -698,6 +698,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			const planner = deps.reasoning.iterativePlanner;
 			const result = await planner.plan({
 				query: input.query,
+				...(input.includeRetrievalDiagnostics ? { options: { collectDiagnostics: true } } : {}),
 				dateFrom: input.dateFrom,
 				dateTo: input.dateTo,
 				executor: {
@@ -769,6 +770,9 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			if (reasoningInfo) {
 				reasoningInfo.iterations = result.stats.iterations;
 				reasoningInfo.evidenceCount = result.evidence.length;
+				if (input.includeRetrievalDiagnostics && result.diagnostics) {
+					reasoningInfo.plannerDiagnostics = result.diagnostics;
+				}
 				// The planner catches its own LLM errors and reports degraded
 				// state via lastDegraded(); mirror the rewriter pattern so
 				// callers see a single, consistent degraded marker regardless

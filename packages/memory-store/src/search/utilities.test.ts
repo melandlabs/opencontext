@@ -14,12 +14,37 @@ import { describe, expect, it } from "vitest";
 import {
 	type UnifiedMemorySearchInput,
 	type UnifiedMemorySearchResult,
+	deriveLexicalKeywords,
 	listNameToChannel,
 	materializeSignals,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
 } from "./utilities";
+
+describe("deriveLexicalKeywords", () => {
+	it("deduplicates before spending the keyword budget", () => {
+		const query = `${Array.from({ length: 16 }, () => "repeat").join(" ")} invoice renewal`;
+		expect(deriveLexicalKeywords(query)).toEqual(["repeat", "invoice", "renewal"]);
+	});
+
+	it("preserves first occurrence, Unicode, numbers and negative terms", () => {
+		expect(deriveLexicalKeywords("NEVER never 2025 北京 北京 WITHOUT Alpha alpha")).toEqual([
+			"never",
+			"2025",
+			"北京",
+			"without",
+			"alpha",
+		]);
+	});
+
+	it("caps unique terms and retains existing token boundaries", () => {
+		const words = Array.from({ length: 20 }, (_, index) => `term${index}`);
+		expect(deriveLexicalKeywords(words.join(" "))).toEqual(words.slice(0, 16));
+		expect(deriveLexicalKeywords("A b x_n v2")).toEqual(["v2"]);
+		expect(deriveLexicalKeywords("")).toEqual([]);
+	});
+});
 
 function makeResult(
 	overrides: Partial<UnifiedMemorySearchResult> & { type: UnifiedMemorySearchResult["type"]; id: string },
