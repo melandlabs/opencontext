@@ -161,22 +161,14 @@ function formatDateHint(dateFrom?: string, dateTo?: string): string | undefined 
 	return `Restrict searches to the date range ${fromText} to ${toText}. You may still emit narrower date_from/date_to bounds when useful.`;
 }
 
-function budgetHint(remaining: number, hasSearchResults = false): string {
-	return `Planner actions remaining: ${remaining}. Search, note, and finish each use one action. ${
-		remaining === 1 && hasSearchResults
-			? "This is your last action. Save useful results from the last search with note, or finish if none are useful. Do not start another search."
-			: "Save useful results with note before another search. Unnoted results are not saved as evidence."
-	}`;
-}
-
-function buildInitialPrompt(query: string, dateHint: string | undefined, remaining: number): string {
+function buildInitialPrompt(query: string, dateHint: string | undefined): string {
 	const hintText = dateHint ? `\n${dateHint}` : "";
-	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.\n${budgetHint(remaining)}`;
+	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
 }
 
-function buildObservationPrompt(hits: IterativeRecallCandidate[], remaining: number): string {
+function buildObservationPrompt(hits: IterativeRecallCandidate[]): string {
 	if (hits.length === 0) {
-		return `Observation: No matching memory found.\nRespond with the next action only.\n${budgetHint(remaining)}`;
+		return "Observation: No matching memory found.\nRespond with the next action only.";
 	}
 
 	const blocks = hits.map((hit, index) => {
@@ -187,7 +179,7 @@ function buildObservationPrompt(hits: IterativeRecallCandidate[], remaining: num
 		return lines.join("\n");
 	});
 
-	return `Observation:\n${blocks.join("\n\n")}\n\nRespond with the next action only.\n${budgetHint(remaining, true)}`;
+	return `Observation:\n${blocks.join("\n\n")}\n\nRespond with the next action only.`;
 }
 
 function stripCodeFences(text: string): string {
@@ -326,11 +318,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 				{ role: "system", content: SYSTEM_PROMPT },
 				{
 					role: "user",
-					content: buildInitialPrompt(
-						input.query,
-						formatDateHint(input.dateFrom, input.dateTo),
-						opts.maxIterations,
-					),
+					content: buildInitialPrompt(input.query, formatDateHint(input.dateFrom, input.dateTo)),
 				},
 			];
 
@@ -382,7 +370,8 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 				if (!action) {
 					messages.push({
 						role: "user",
-						content: `Observation: Use exactly one valid action: search, note, or finish. Respond with the next action only.\n${budgetHint(opts.maxIterations - iterations, lastHits.length > 0)}`,
+						content:
+							"Observation: Use exactly one valid action: search, note, or finish. Respond with the next action only.",
 					});
 					continue;
 				}
@@ -405,7 +394,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 					searches += 1;
 					messages.push({
 						role: "user",
-						content: buildObservationPrompt(lastHits, opts.maxIterations - iterations),
+						content: buildObservationPrompt(lastHits),
 					});
 					continue;
 				}
@@ -424,7 +413,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 					notes += saved;
 					messages.push({
 						role: "user",
-						content: `Observation: Saved ${saved} new result(s). Total notes: ${evidence.size}.\nRespond with the next action only.\n${budgetHint(opts.maxIterations - iterations, lastHits.length > 0)}`,
+						content: `Observation: Saved ${saved} new result(s). Total notes: ${evidence.size}.\nRespond with the next action only.`,
 					});
 				}
 			}

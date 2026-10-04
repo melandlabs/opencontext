@@ -417,32 +417,29 @@ describe("createIdentityIterativePlanner", () => {
 });
 
 describe("opt-in planner diagnostics", () => {
-	it.each([3, 6])("reports the actual remaining action budget (%i)", async (maxIterations) => {
+	it("keeps planner prompts and evidence identical when diagnostics are enabled", async () => {
 		const replies = [
 			'Action: search\nAction Input: {"keywords":["topic"]}',
 			'Action: note\nAction Input: {"indices":[1]}',
 			"Action: finish\nAction Input: {}",
 		];
-		const complete = vi.fn(async (_prompt: string) => replies.shift() ?? "Action: finish\nAction Input: {}");
-		const planner = createIterativeRecallPlanner({ complete, options: { maxIterations } });
-		const result = await planner.plan({
+		const input = {
 			query: "topic",
 			executor: { search: async () => ({ candidates: [makeCandidate("m1", "evidence")] }) },
-		});
-		for (const [index, call] of complete.mock.calls.entries()) {
-			const prompt = call[0] as string;
-			expect(prompt).toContain(`Planner actions remaining: ${maxIterations - index}.`);
+		};
+		const runs = [];
+		for (const collectDiagnostics of [false, true]) {
+			let step = 0;
+			const complete = vi.fn(async (_prompt: string) => replies[step++]);
+			const planner = createIterativeRecallPlanner({ complete });
+			const result = await planner.plan({ ...input, options: { collectDiagnostics } });
+			runs.push({ result, prompts: complete.mock.calls.map(([prompt]) => prompt) });
 		}
-		expect(result.evidence.map((hit) => hit.id)).toEqual(["m1"]);
-		expect(result.stats.iterations).toBe(3);
-	});
-
-	it("does not forbid the initial search when only one action is configured", async () => {
-		const complete = vi.fn(async (_prompt: string) => 'Action: search\nAction Input: {"keywords":["topic"]}');
-		const planner = createIterativeRecallPlanner({ complete, options: { maxIterations: 1 } });
-		await planner.plan({ query: "topic", executor: { search: async () => ({ candidates: [] }) } });
-		expect(complete.mock.calls[0]?.[0]).toContain("Planner actions remaining: 1.");
-		expect(complete.mock.calls[0]?.[0]).not.toContain("Do not start another search");
+		expect(runs[1].prompts).toEqual(runs[0].prompts);
+		expect(runs[1].result.evidence).toEqual(runs[0].result.evidence);
+		expect(runs[1].result.stats).toEqual(runs[0].result.stats);
+		expect(runs[0].result.diagnostics).toBeUndefined();
+		expect(runs[1].result.diagnostics).toMatchObject({ searches: 1, notes: 1 });
 	});
 
 	it("explains invalid actions and fallback without changing evidence", async () => {
