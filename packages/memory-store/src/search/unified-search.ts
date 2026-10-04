@@ -537,6 +537,13 @@ async function runLexicalSearchForKeywords(
 				}));
 		} catch (error) {
 			logger.warn?.("[memory-store] lexical memory search failed:", error);
+			warnings.push({
+				source: "memory",
+				code: "memory_lexical_search_failed",
+				message: (error as Error).message ?? "memory_lexical_search_failed",
+			});
+			// A host-owned provider failure must not silently read another store.
+			return [];
 		}
 	}
 	if (runtimeContext !== undefined) {
@@ -829,6 +836,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		}
 
 		let semantic: UnifiedMemorySearchResult[] = [];
+		let lexicalQueries = [input.query];
 
 		// At this point embedQuery is guaranteed to be a function because the
 		// non-function case returns early above. Capture it in a local constant so
@@ -874,6 +882,18 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					userId: input.userId,
 					authToken: input.authToken,
 				});
+				if (deps.reasoning.rewriteLexical === true) {
+					const seen = new Set<string>();
+					lexicalQueries = [input.query, ...variants]
+						.map((query) => query.trim())
+						.filter((query) => {
+							const key = query.toLowerCase();
+							if (!key || seen.has(key)) return false;
+							seen.add(key);
+							return true;
+						})
+						.slice(0, 4);
+				}
 				if (reasoningInfo) {
 					reasoningInfo.rewrittenQueries = variants;
 					// The rewriter catches its own LLM errors and degrades to
@@ -937,7 +957,37 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		// similarity-equivalent single-list RRF).
 		let lexical: UnifiedMemorySearchResult[] = [];
 		const keywords = deriveLexicalKeywords(input.query);
-		if (keywords.length > 0) {
+		if (
+			activeMergeStrategy === "rrf" &&
+			lexicalQueries.length > 1 &&
+			typeof deps.searchRawMessagesLexical === "function"
+		) {
+			const lists = await Promise.all(
+				lexicalQueries.map(async (query) => ({
+					name: "memory-bm25",
+					hits: dedupeChannelByParent(
+						await runLexicalSearchForKeywords(
+							deps,
+							input,
+							deriveLexicalKeywords(query),
+							limit,
+							logger,
+							peerPeers,
+							warnings,
+							runtimeContext,
+						),
+						"memory-bm25",
+					),
+				})),
+			);
+			// Raw BM25 scales differ between queries. Preserve the existing
+			// candidate budget and make the folded rank survive parent dedupe.
+			lexical = mergeUnifiedMemorySearchResultsRrf(lists, limit).map((hit) => ({
+				...hit,
+				similarity: Number(hit.metadata.rrfScore),
+			}));
+			if (reasoningInfo) reasoningInfo.lexicalRewrittenQueries = lexicalQueries;
+		} else if (keywords.length > 0) {
 			if (typeof deps.searchRawMessagesLexical === "function") {
 				try {
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];

@@ -108,6 +108,8 @@ export interface UnifiedMemoryReasoningInfo {
 	degraded?: boolean;
 	/** Query variants produced by the rewriter (original + rewritten). */
 	rewrittenQueries?: string[];
+	/** Bounded query variants actually used by the opt-in lexical rewrite path. */
+	lexicalRewrittenQueries?: string[];
 	/** Number of planner iterations executed (iterative mode only). */
 	iterations?: number;
 	/** Number of evidence items collected by the planner (iterative mode only). */

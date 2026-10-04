@@ -146,6 +146,8 @@ export interface UnifiedSearchReasoningDeps {
 	defaultMergeStrategy?: import("./search/utilities").UnifiedMemoryMergeStrategy;
 	/** Optional query rewriter. When present, "rewrite" strategy is available. */
 	queryRewriter?: QueryRewriter;
+	/** Also search rewritten expressions with BM25 under RRF. At most four distinct queries, including the original. @default false */
+	rewriteLexical?: boolean;
 	/** Optional iterative recall planner. When present, "iterative" strategy is available. */
 	iterativePlanner?: IterativeRecallPlanner;
 	/** Default reasoning strategy when callers do not specify one. @default "none" */

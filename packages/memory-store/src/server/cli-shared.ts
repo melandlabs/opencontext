@@ -693,6 +693,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 
 		if (!unified.reasoning) unified.reasoning = {};
 		unified.reasoning.queryRewriter = queryRewriter;
+		if (process.env.OPENCONTEXT_LLM_QUERY_REWRITE_LEXICAL === "1") {
+			unified.reasoning.rewriteLexical = true;
+			log("query rewrite wired to lexical retrieval under RRF");
+		}
 		unified.reasoning.iterativePlanner = iterativePlanner;
 		if (process.env.OPENCONTEXT_LLM_EVIDENCE_SELECTION === "1") {
 			unified.reasoning.evidenceSelector = createExtractiveEvidenceSelector({ complete });
