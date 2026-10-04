@@ -344,3 +344,24 @@ A separate read-only probe used the actual production SQLite FTS5 manager and cu
 Across eighteen annotated questions, lexical-only source recall was **0.34722 at 48 candidates**, **0.41204 at 192 candidates**, but only **0.33333** after the hypothetical 24-user reservation. All twenty native ordinary prefixes retained identical parent IDs in the widened result; wider lexical recall improved for three questions. However, the extra required sources from widening were already present in the frozen semantic/planner channels plus the current native 48-hit lexical control. No expanded user-source candidate supplied an additional required source missing from that combined pool. A historical-only channel comparison initially exposes one new assistant source, but it is already in the current native ordinary prefix and is therefore keyword-derivation drift, not a benefit of widening. That distinction prevents a false gain claim.
 
 The probe completed its forty native FTS queries in approximately 25.7 seconds. Its artifact is `outputs-beam10m-native-lexical-role-audit-20261005/audit.json`; production core/SQLite/source-map hashes are frozen in the artifact. These repeated diagnostic questions do not prove that widening never helps elsewhere. Nevertheless, they do not support implementing this specific role-reserved lexical lane, so no new candidate-generation switch was added. The two active full QA validations remain unchanged. The above-0.5 goal is not achieved.
+
+### Matched native-control QA completed (changed arm still evaluating)
+
+The fresh current-keyword lexical control has completed **200/200 inputs, retrieval traces, answers and judgements** under `outputs-beam10m-lexical-native-full200-20261005/final/control/beam`. Its official mean rubric score is **0.2956136**, comprising 52 perfect, 17 partial and 131 zero-score questions. This is a complete fixed-semantic native-control result, not yet the lexical-rewrite intervention's score and not a new independent end-to-end planning comparison. The old historical 0.24625 answer/judge file is not its matched control and the difference is not attributed to lexical rewriting.
+
+| Category (20 scored each) | Current native control QA score |
+| --- | ---: |
+| Abstention | 0.75000 |
+| Contradiction resolution | 0.08750 |
+| Event ordering | 0.01364 |
+| Information extraction | 0.60000 |
+| Instruction following | 0.26250 |
+| Knowledge update | 0.70000 |
+| Multi-session reasoning | 0.06250 |
+| Preference following | 0.42500 |
+| Summarization | 0.03000 |
+| Temporal reasoning | 0.02500 |
+
+All 200 answer calls succeeded on DeepSeek Flash/OpenInference. All **514** successful rubric/event subrequests used Qwen Flash/Alibaba; 515 attempts include one initial length truncation on `10m_5_q_5`, recovered within the existing bounded policy. A complete ledger audit shows zero provider/model mismatches, zero reported reasoning tokens and no pending/skipped questions. The larger event-alignment call count is official line-by-line reference matching, not repeated retries.
+
+The changed lexical arm is now evaluating after completing its own 200 answers. The role-coverage full run has also completed all 200 answers (200 attempts, all OpenInference, zero mismatch/reasoning) and entered evaluation. Neither changed full score is complete, so there is no paired gain claim or default promotion. The above-0.5 target remains unmet.
