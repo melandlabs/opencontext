@@ -234,6 +234,7 @@ try {
 				"Reranker/budget contract changed",
 			);
 			const after = changed.results.map(serialize);
+			assert(diagnostics.candidateCounts, "Core candidate counts are required for the trace");
 			const found = [...new Set(after.flatMap((hit) => hit.source_turn_ids))];
 			const row = {
 				record: { ...record, retrieved_context: changed.results.map((hit) => hit.content) },
@@ -242,6 +243,8 @@ try {
 				trace: {
 					...trace,
 					reasoning: changed.reasoning,
+					candidate_counts: diagnostics.candidateCounts,
+					warnings: changed.warnings ?? [],
 					channels: {
 						...trace.channels,
 						keyword: (diagnostics.channels.lexical ?? []).map(serialize),
