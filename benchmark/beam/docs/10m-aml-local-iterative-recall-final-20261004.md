@@ -369,3 +369,19 @@ All six answers and judgements completed under `outputs-beam10m-conflict-guidanc
 The matched full lexical generation reached a validator failure for `10m_7_q_0`: its original question ends in whitespace, while the production core and saved rewrite use the trimmed question. This is **not** a failed rewrite, provider mismatch or changed retrieval policy. The harness now validates the original-first expression against `trace.query.trim()`, without changing the official input question, and permits explicit diagnostic IDs. No other frozen record has this original-first mismatch.
 
 That one question has completed all fresh-control/default-replay/intervention checks under `recovery/{control,changed}/beam`, using revised generation harness SHA256 `4e52e1d62eb2d7ae784e7586f7c624f9d374aa71dfc2fcc765f38afc10af5031`. The original generation continues and its successful pairs are preserved under the original frozen harness. The original QA gate was cancelled before any paid stage; the replacement gate waits for terminal generation and validates a disjoint, complete set of 199 original pairs plus this one recovery pair. It checks matching core/backend/model/input/source-map identities, unchanged question/rubric fields, identical paired semantic channels, actual reranker diagnostics, parent scopes, source-span hashes and final context hashes. Reconciled artifacts will reside under `final/{control,changed}/beam` with per-question executor/checkpoint provenance; the original pending run is not overwritten or relabeled complete. No full QA score is available at this point, and the above-0.5 goal remains unachieved.
+
+### Matched lexical full retrieval completed; official QA running
+
+The original generation terminated with 199 successful pairs and its single whitespace-validator case still recorded as pending. The one-question recovery completed separately. The finalizer verified all 200 disjoint pairs, including read-only parent ownership and matched-span hashes, and wrote complete reconciled control/changed artifacts under `final/{control,changed}/beam`. Original pending artifacts remain untouched. Official QA began only after the complete reconciliation and paired-field/context gates passed.
+
+Across the 176 source-annotated questions, real current-control versus lexical-rewrite source coverage was:
+
+| Stage | Current native control | Lexical rewrite |
+| --- | ---: | ---: |
+| Combined semantic/keyword candidates | 0.50568 | 0.50944 |
+| Fused candidates before local reranking | 0.40239 | 0.42176 |
+| Final Top12 | 0.34053 | 0.35376 |
+
+Final source recall improved for seven questions, regressed for two and stayed unchanged for 167. Complete final coverage increased from 36 to 38 questions; any final coverage increased from 97 to 98. Returned contexts changed for 187 of the 200 questions. Preference-source recall moved from 0.30000 to 0.36667, contradiction from 0.58881 to 0.62214, event ordering from 0.01042 to 0.02192 and multi-session reasoning from 0.33833 to 0.34333; the other category means were unchanged. These parent-source metrics do not prove answer-bearing span visibility or a QA-score improvement.
+
+The new input hashes are control `7181bba115855e7fe040e273b2126457a6ddb3f6174857494149fc6d6b0797f8` and changed `b45a417d393150d3d050537a659e076bc2bf70c6ec4f2abe3c2cc06a2e13e117`. The fresh control's answer stage is currently running with the pinned DeepSeek Flash/OpenInference route, zero reported reasoning tokens in the successful requests audited so far, and no initial failures. It will be followed by changed-arm answers and both pinned Qwen Flash/Alibaba evaluations. A full paired QA delta is not yet available, so the historical 0.24625 score is not used as the new control and no default promotion or above-0.5 success is claimed.
