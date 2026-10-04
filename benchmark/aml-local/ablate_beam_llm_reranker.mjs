@@ -29,7 +29,11 @@ const chunk = db.prepare(
 	"SELECT chunk_id, message_id, chunk_index, chunk_count FROM raw_message_chunks WHERE chunk_id = ?",
 );
 const sourceMaps = new Map(rows(options["source-map"]).map((row) => [row.user_id, row.source_ids]));
-const records = selectRecords(rows(path.join(run, "input.jsonl")), 2);
+const selection = options.selection ?? "stratified";
+assert(["stratified", "all"].includes(selection), "Unknown question selection");
+const inputRecords = rows(path.join(run, "input.jsonl"));
+const records = selection === "all" ? inputRecords : selectRecords(inputRecords, 2);
+assert.equal(new Set(records.map((record) => record.id)).size, records.length, "Duplicate question IDs");
 const traces = new Map(rows(path.join(run, "retrieval-traces.jsonl")).map((row) => [row.question_id, row]));
 const frozenResponses = new Map();
 if (options["response-ledger"]) {
@@ -55,6 +59,7 @@ const identity = {
 	harness_sha256: sha256(fs.readFileSync(new URL(import.meta.url))),
 	source_map_sha256: sha256(fs.readFileSync(options["source-map"])),
 	selected_ids: records.map((record) => record.id),
+	question_selection: selection,
 	model,
 	provider,
 	reasoning_effort: "none",
