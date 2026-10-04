@@ -16,12 +16,25 @@ const run = path.resolve(options.run);
 const root = path.resolve(options.root);
 const output = path.resolve(options.output);
 const intervention = options.intervention ?? "lexical";
-assert(["lexical", "semantic-rrf"].includes(intervention), "Unknown intervention");
+assert(["lexical", "semantic-rrf", "evidence-query"].includes(intervention), "Unknown intervention");
 const semanticRrf = intervention === "semantic-rrf";
+const evidenceQuery = intervention === "evidence-query";
+const nativeSemantic = semanticRrf || evidenceQuery;
+if (evidenceQuery) {
+	assert.equal(
+		process.env.OPENCONTEXT_LLM_MODEL,
+		"deepseek/deepseek-v4-flash-0731",
+		"Unexpected rewrite model",
+	);
+	assert.equal(process.env.OPENCONTEXT_LLM_PROVIDER, "OpenInference", "Unexpected rewrite provider");
+	assert.equal(process.env.OPENCONTEXT_LLM_REASONING_EFFORT, "none", "Rewrite reasoning must be disabled");
+	assert(process.env.OPENCONTEXT_LLM_API_KEY, "Missing process-local rewrite API key");
+}
 const controlMode = options["control-mode"] ?? "frozen";
 assert(["frozen", "fresh-native"].includes(controlMode), "Unknown control mode");
 const freshControl = controlMode === "fresh-native";
-assert(!freshControl || !semanticRrf, "Fresh native control is only supported for lexical rewrite");
+assert(!freshControl || !semanticRrf, "Semantic RRF requires exact frozen native replay");
+assert(!evidenceQuery || freshControl, "Evidence queries require a fresh native paired control");
 if (freshControl) assert(options["control-output"], "Fresh control requires --control-output");
 const controlOutput = freshControl ? path.resolve(options["control-output"]) : null;
 if (freshControl) {
@@ -41,7 +54,7 @@ const manager = new SQLiteRawMessageManager({ db, enableVectorSearch: false });
 manager.init = async () => {}; // Existing read-only schema; real queries and hydration remain enabled.
 let embedding;
 const embeddingModule = path.join(root, "packages/ai/rag/dist/local-transformers-embedding-provider.js");
-if (semanticRrf) {
+if (nativeSemantic) {
 	require("sqlite-vec").load(db);
 	assert(
 		db.prepare("SELECT name FROM sqlite_master WHERE name = 'raw_message_chunks_vec_d384'").get(),
@@ -99,7 +112,7 @@ const identity = {
 	selected_ids: records.map((r) => r.id),
 	reference_questions: referenceRecords.length,
 	complete_reference_coverage: records.length === referenceRecords.length,
-	semantic_candidates: semanticRrf
+	semantic_candidates: nativeSemantic
 		? "real native ANN"
 		: "frozen verified semantic channel, identical in both arms",
 	model: reranker.getModelName(),
@@ -107,17 +120,30 @@ const identity = {
 	max_tokens: 512,
 	batch_size: 8,
 	top_k: 12,
-	intervention: semanticRrf
-		? "actual core semantic variant RRF; frozen expressions; real native ANN/FTS5; exact old-core replay; original local reranker"
-		: "actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
-	...(semanticRrf
+	intervention: evidenceQuery
+		? "actual core evidence-expression rewriter (three variants) plus lexical rewrite; paired native ANN/FTS5; unchanged local reranker"
+		: semanticRrf
+			? "actual core semantic variant RRF; frozen expressions; real native ANN/FTS5; exact old-core replay; original local reranker"
+			: "actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
+	...(nativeSemantic
 		? {
 				embedding_model: embedding.getModelName(),
 				embedding_dtype: "fp32",
 				embedding_module_sha256: sha256(fs.readFileSync(embeddingModule)),
 			}
 		: {}),
-	new_planner_calls: 0,
+	new_planner_calls: evidenceQuery ? "bounded per-question calls recorded in rewrite-requests.jsonl" : 0,
+	...(evidenceQuery
+		? {
+				rewriter_module_sha256: sha256(
+					fs.readFileSync(path.join(root, "packages/memory-store/dist/index.js")),
+				),
+				rewrite_model: process.env.OPENCONTEXT_LLM_MODEL,
+				rewrite_provider: process.env.OPENCONTEXT_LLM_PROVIDER,
+				rewrite_reasoning_effort: process.env.OPENCONTEXT_LLM_REASONING_EFFORT,
+				rewrite_max_variants: 3,
+			}
+		: {}),
 	official_prompts_changed: false,
 };
 fs.mkdirSync(path.join(output, "retrieval-checkpoints"), { recursive: true });
@@ -134,6 +160,99 @@ if (freshControl) {
 }
 const completed = [];
 const pending = [];
+let createUserVoiceRewriter;
+const rewriteResponses = new Map();
+if (evidenceQuery) {
+	({ createUserVoiceRewriter } = await import(
+		pathToFileURL(path.join(root, "packages/memory-store/dist/index.js")).href
+	));
+	const file = path.join(output, "rewrite-responses.jsonl");
+	if (fs.existsSync(file))
+		for (const row of rows(file)) rewriteResponses.set(`${row.id}:${row.prompt_sha256}`, row);
+}
+const completeRewrite = async (id, prompt) => {
+	const promptHash = sha256(prompt);
+	const cached = rewriteResponses.get(`${id}:${promptHash}`);
+	if (cached) {
+		assert.equal(cached.provider, "OpenInference");
+		assert.equal(cached.model, "deepseek/deepseek-v4-flash-0731");
+		assert.equal(sha256(cached.content), cached.content_sha256);
+		return cached.content;
+	}
+	let lastError;
+	for (let attempt = 1; attempt <= 3; attempt++) {
+		const started = Date.now();
+		let audit = {
+			id,
+			prompt_sha256: promptHash,
+			attempt,
+			requested_provider: "OpenInference",
+			status: "error",
+		};
+		try {
+			const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+				method: "POST",
+				signal: AbortSignal.timeout(120000),
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${process.env.OPENCONTEXT_LLM_API_KEY}`,
+				},
+				body: JSON.stringify({
+					model: process.env.OPENCONTEXT_LLM_MODEL,
+					provider: { order: ["OpenInference"], allow_fallbacks: false },
+					reasoning: { effort: "none" },
+					temperature: 0,
+					messages: [{ role: "user", content: prompt }],
+				}),
+			});
+			const payload = await response.json();
+			const choice = payload.choices?.[0];
+			audit = {
+				...audit,
+				provider: payload.provider,
+				model: payload.model,
+				http_status: response.status,
+				finish_reason: choice?.finish_reason,
+				usage: payload.usage,
+			};
+			assert(response.ok, `Rewrite HTTP ${response.status}`);
+			assert.equal(payload.provider?.toLowerCase(), "openinference", "Rewrite provider mismatch");
+			assert.equal(payload.model, process.env.OPENCONTEXT_LLM_MODEL, "Rewrite model mismatch");
+			assert.equal(
+				payload.usage?.completion_tokens_details?.reasoning_tokens ?? 0,
+				0,
+				"Unexpected rewrite reasoning tokens",
+			);
+			assert.equal(choice?.finish_reason, "stop", "Incomplete rewrite completion");
+			assert(
+				typeof choice?.message?.content === "string" && choice.message.content.trim(),
+				"Empty rewrite completion",
+			);
+			const row = {
+				id,
+				prompt_sha256: promptHash,
+				provider: payload.provider,
+				model: payload.model,
+				content: choice.message.content,
+				content_sha256: sha256(choice.message.content),
+			};
+			fs.appendFileSync(path.join(output, "rewrite-responses.jsonl"), `${JSON.stringify(row)}\n`);
+			rewriteResponses.set(`${id}:${promptHash}`, row);
+			audit.status = "success";
+			return row.content;
+		} catch (error) {
+			lastError = error;
+			audit.error = String(error);
+		} finally {
+			fs.appendFileSync(
+				path.join(output, "rewrite-requests.jsonl"),
+				`${JSON.stringify({ ...audit, elapsed_ms: Date.now() - started })}\n`,
+			);
+		}
+		if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 2000));
+	}
+	throw lastError;
+};
 const saveStatus = (status) => {
 	const payload = `${JSON.stringify({ status, succeeded: completed.length, total: records.length, pending_ids: pending, updated_at: new Date().toISOString() }, null, 2)}\n`;
 	fs.writeFileSync(path.join(output, "retrieval-status.json"), payload);
@@ -217,7 +336,7 @@ try {
 				);
 			}
 			const deps = {
-				embedQuery: semanticRrf
+				embedQuery: nativeSemantic
 					? async ({ query: text }) => {
 							assert.equal(typeof text, "string", "Tokenizer requires request.query, not the request object");
 							if (!embeddings.has(text)) embeddings.set(text, await embedding.embedQuery(text));
@@ -230,7 +349,7 @@ try {
 							return [...vector];
 						}
 					: async () => [1],
-				searchRawMessagesAnn: semanticRrf ? nativeAnn : async () => structuredClone(semantic),
+				searchRawMessagesAnn: nativeSemantic ? nativeAnn : async () => structuredClone(semantic),
 				searchRawMessagesLexical: nativeLexical,
 				reranker,
 				reasoning: {
@@ -272,19 +391,50 @@ try {
 			// Current default must also replay identically before the one-switch intervention.
 			if (semanticRrf) assertReplay(await current.createUnifiedSearch(deps).search(input), trace, record);
 			arm = "changed";
+			const evidenceRewriter = evidenceQuery
+				? createUserVoiceRewriter({
+						style: "evidence",
+						maxVariants: 3,
+						complete: (prompt) => completeRewrite(record.id, prompt),
+					})
+				: null;
 			const changed = await current
 				.createUnifiedSearch({
 					...deps,
 					reasoning: {
 						...deps.reasoning,
 						...(semanticRrf ? { rewriteSemanticMerge: "rrf" } : { rewriteLexical: true }),
+						...(evidenceRewriter ? { queryRewriter: evidenceRewriter } : {}),
 					},
 				})
 				.search(input);
+			if (evidenceQuery)
+				assert(!changed.reasoning?.degraded, "Evidence rewrite degraded; preserve this question as pending");
 			const sourceMap = sources.get(trace.user_id);
 			assert(sourceMap, "Missing canonical user source map");
 			const serialize = (hit, index) => {
 				assert(sourceMap[hit.id], `Unmapped parent ${hit.id}`);
+				const message = parent.get(hit.id);
+				assert(message, `Missing native parent ${hit.id}`);
+				assert.equal(message.user_id, trace.user_id, `Native parent scope mismatch ${hit.id}`);
+				assert.equal(message.archived_at, null, `Archived native parent ${hit.id}`);
+				for (const span of hit.metadata.matchedSpans ?? []) {
+					assert(
+						Number.isSafeInteger(span.startPosition) &&
+							Number.isSafeInteger(span.endPosition) &&
+							span.startPosition >= 0 &&
+							span.endPosition >= span.startPosition &&
+							span.endPosition <= message.content.length,
+						`Invalid native span ${hit.id}`,
+					);
+					assert.equal(
+						message.content.slice(span.startPosition, span.endPosition),
+						span.content,
+						`Native span differs from raw evidence ${hit.id}`,
+					);
+					for (const id of span.sourceChunkIds ?? (span.sourceChunkId ? [span.sourceChunkId] : []))
+						assert.equal(chunk.get(id)?.message_id, hit.id, `Native child belongs to another parent ${id}`);
+				}
 				return {
 					id: hit.id,
 					type: hit.type,
@@ -323,7 +473,7 @@ try {
 					trace: {
 						...trace,
 						ablation_control_mode: controlMode,
-						semantic_execution: semanticRrf ? "native-ann" : "frozen-verified-channel",
+						semantic_execution: nativeSemantic ? "native-ann" : "frozen-verified-channel",
 						reasoning: result.reasoning,
 						candidate_counts: diagnostics.candidateCounts,
 						warnings: result.warnings ?? [],
