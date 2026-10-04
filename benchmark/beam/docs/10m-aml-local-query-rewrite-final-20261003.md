@@ -1,4 +1,18 @@
 # BEAM 10M: Query Rewrite, Pinned-Provider Local Evaluation
+## Current validation summary (2026-10-05)
+
+The latest completed experiments do **not** meet the above-0.5 target. Module switches remain default-off. This report retains the original frozen branch run below, followed by the chronological ablations and their evidence; original scores are not silently replaced by newer, differently scoped controls.
+
+| Complete 200-question run | Mean official QA | Source Recall@12 (176 annotated) | Comparison limitation |
+| --- | ---: | ---: | --- |
+| Original query rewrite | 0.24625 | 0.34230 | Historical complete branch run |
+| Original iterative union | 0.28442 | 0.34510 | Historical complete branch run |
+| Current native-FTS control | 0.29561 | 0.34053 | Frozen semantic candidates and query expressions; not fresh end-to-end planning |
+| Lexical rewrite | 0.27532 | 0.35376 | Matched current native-FTS control; score delta -0.02030 |
+| Six-user minimum selection | 0.28063 | 0.36052 | Exact fixed-pool replay; reference QA historical and inference non-identical |
+
+Two complete validations are running: existing evidence-expression rewriting plus lexical rewriting with native ANN/FTS5 in both arms, and the existing selector's twelve-user quota with fixed candidate pools. Neither has a complete QA score yet. Official AML answer/judge prompts, pinned DeepSeek Flash/OpenInference answer routing, Qwen Flash/Alibaba judge routing, Top12, immutable corpus and the deferred 512-token reranker behavior are unchanged. No run here is an official hosted AML submission, and no work has been pushed.
+
 
 ## Scope and reproducibility
 
