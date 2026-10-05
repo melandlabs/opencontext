@@ -1,6 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertReplay, hydrateHit, selectRecords, sha256 } from "./ablate_beam_reranker.mjs";
+import {
+	assertCompleteRerankerScores,
+	assertReplay,
+	hydrateHit,
+	selectRecords,
+	sha256,
+} from "./ablate_beam_reranker.mjs";
+
+test("complete reranker scores preserve actual model order and reject incomplete evidence", () => {
+	const candidates = [{ id: "a" }, { id: "b" }];
+	const scores = [
+		{ id: "b", score: 0.9 },
+		{ id: "a", score: 0.2 },
+	];
+	assert.deepEqual(assertCompleteRerankerScores(scores, candidates), scores);
+	assert.notEqual(assertCompleteRerankerScores(scores, candidates)[0], scores[0]);
+	assert.throws(() => assertCompleteRerankerScores(scores.slice(0, 1), candidates));
+	assert.throws(() => assertCompleteRerankerScores([scores[0], scores[0]], candidates));
+	assert.throws(() => assertCompleteRerankerScores([scores[0], { id: "c", score: 1 }], candidates));
+	assert.throws(() => assertCompleteRerankerScores([scores[0], { id: "a", score: Number.NaN }], candidates));
+	assert.throws(() =>
+		assertCompleteRerankerScores([scores[0], { id: "a", score: Number.POSITIVE_INFINITY }], candidates),
+	);
+});
 
 test("selection is independent of answers and stable under input order", () => {
 	const records = Array.from({ length: 12 }, (_, index) => ({

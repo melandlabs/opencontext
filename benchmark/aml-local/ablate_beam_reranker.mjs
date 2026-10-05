@@ -13,6 +13,21 @@ export const sha256 = (text) => createHash("sha256").update(text).digest("hex");
 const rows = (file) => fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean).map(JSON.parse);
 const average = (values) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null);
 
+export function assertCompleteRerankerScores(scores, candidates) {
+	assert(Array.isArray(scores), "Missing model reranker scores");
+	const expected = new Set(candidates.map((candidate) => candidate.id));
+	assert.equal(expected.size, candidates.length, "Duplicate reranker candidates");
+	assert.equal(scores.length, expected.size, "Model did not score every candidate");
+	const seen = new Set();
+	for (const score of scores) {
+		assert(expected.has(score.id), "Model scored an unknown candidate");
+		assert(!seen.has(score.id), "Model scored a candidate twice");
+		assert(Number.isFinite(score.score), "Invalid model reranker score");
+		seen.add(score.id);
+	}
+	return scores.map((score) => ({ id: score.id, score: score.score }));
+}
+
 export function selectRecords(records, perCategory) {
 	const groups = new Map();
 	for (const record of records) {

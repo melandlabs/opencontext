@@ -6,7 +6,7 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { hydrateHit, selectRecords, sha256 } from "./ablate_beam_reranker.mjs";
+import { assertCompleteRerankerScores, hydrateHit, selectRecords, sha256 } from "./ablate_beam_reranker.mjs";
 
 const options = {};
 for (let index = 2; index < process.argv.length; index += 2)
@@ -78,6 +78,7 @@ const identity = {
 	scorer_module_sha256: sha256(fs.readFileSync(moduleFile)),
 	search_module_sha256: sha256(fs.readFileSync(searchFile)),
 	harness_sha256: sha256(fs.readFileSync(new URL(import.meta.url))),
+	hydration_helper_sha256: sha256(fs.readFileSync(new URL("./ablate_beam_reranker.mjs", import.meta.url))),
 	source_map_sha256: sha256(fs.readFileSync(options["source-map"])),
 	selected_ids: records.map((record) => record.id),
 	question_selection: selection,
@@ -241,6 +242,7 @@ try {
 				batchSize: 6,
 				maxRequestCharacters,
 			});
+			let modelScores;
 			const changed = await createUnifiedSearch({
 				...deps,
 				reranker: {
@@ -257,10 +259,17 @@ try {
 								"Original scoring text changed",
 							),
 						);
-						return scorer.rerank(request);
+						modelScores = assertCompleteRerankerScores(await scorer.rerank(request), request.candidates);
+						return modelScores;
 					},
 				},
 			}).search(input);
+			assert(modelScores, "Core did not invoke the evidence reranker");
+			assert.deepEqual(
+				changed.results.map((hit) => hit.id),
+				modelScores.slice(0, trace.top_k).map((score) => score.id),
+				"Core final ranking differs from the accepted model scores",
+			);
 			const originalById = new Map(trace.before_rerank.map((hit) => [hit.id, hit]));
 			const sourceMap = sourceMaps.get(trace.user_id);
 			assert(sourceMap, `Missing canonical source map ${trace.user_id}`);
@@ -286,6 +295,12 @@ try {
 				trace: {
 					...trace,
 					original_after_rerank: trace.after_rerank,
+					after_model_rerank_before_selection: modelScores.map((score, index) => ({
+						...originalById.get(score.id),
+						rank: index + 1,
+						reranker_score: score.score,
+						scoring_content_sha256: originalById.get(score.id).content_sha256,
+					})),
 					after_rerank: after,
 					search_response: changed.results.map((hit) => ({
 						id: hit.id,
