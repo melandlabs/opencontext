@@ -18,7 +18,8 @@ const root = path.resolve(options.root);
 assert.notEqual(run, output, "Cannot overwrite the control");
 assert(process.env.OPENROUTER_API_KEY, "Missing OpenRouter credentials");
 const rows = (file) => fs.readFileSync(file, "utf8").split(/\r?\n/).filter(Boolean).map(JSON.parse);
-const moduleFile = path.join(root, "packages/memory-store/dist/search/llm-reranker.js");
+const scorerRoot = path.resolve(options["scorer-root"] ?? root);
+const moduleFile = path.join(scorerRoot, "packages/memory-store/dist/search/llm-reranker.js");
 const searchFile = path.join(root, "packages/memory-store/dist/search/unified-search.js");
 const { createEvidenceReranker } = await import(pathToFileURL(moduleFile).href);
 const { createUnifiedSearch } = await import(pathToFileURL(searchFile).href);
@@ -71,6 +72,7 @@ assert(["pointwise", "listwise"].includes(mode), "Unknown reranker mode");
 const maxRequestCharacters = mode === "listwise" ? 256000 : 32000;
 const identity = {
 	control: run,
+	scorer_root: scorerRoot,
 	control_input_sha256: sha256(fs.readFileSync(path.join(run, "input.jsonl"))),
 	control_traces_sha256: sha256(fs.readFileSync(path.join(run, "retrieval-traces.jsonl"))),
 	scorer_module_sha256: sha256(fs.readFileSync(moduleFile)),
@@ -203,7 +205,11 @@ try {
 						const valid =
 							response.ok &&
 							payload.provider?.toLowerCase() === provider.toLowerCase() &&
-							typeof payload.choices?.[0]?.message?.content === "string";
+							payload.model === model &&
+							payload.choices?.[0]?.finish_reason === "stop" &&
+							(payload.usage?.completion_tokens_details?.reasoning_tokens ?? 0) === 0 &&
+							typeof payload.choices?.[0]?.message?.content === "string" &&
+							payload.choices[0].message.content.trim().length > 0;
 						fs.appendFileSync(
 							path.join(output, "ranking-requests.jsonl"),
 							`${JSON.stringify({ id: record.id, request, attempt, status: valid ? "success" : "error", requested_provider: provider, provider: payload.provider, model: payload.model, http_status: response.status, finish_reason: payload.choices?.[0]?.finish_reason, elapsed_ms: Date.now() - started, usage: payload.usage, prompt_sha256: sha256(prompt) })}\n`,
