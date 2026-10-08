@@ -280,6 +280,7 @@ export class ClaudeAgent extends BaseAgent {
 			agentOptions: {
 				permissionMode: options?.permissionMode,
 				disallowedTools: options?.disallowedTools,
+				subagents: options?.subagents,
 			},
 			abortController,
 			env,
