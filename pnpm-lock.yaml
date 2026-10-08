@@ -11,6 +11,11 @@ overrides:
   '@whiskeysockets/libsignal-node': git+https://github.com/WhiskeySockets/libsignal-node.git#1c30d7d7e76a3b0aa120b04dc6a26f5a12dccf67
   '@melandlabs/workspace': link:packages/workspace
 
+patchedDependencies:
+  '@huggingface/transformers@3.8.1':
+    hash: df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234
+    path: patches/@huggingface__transformers@3.8.1.patch
+
 importers:
 
   .:
@@ -377,10 +382,10 @@ importers:
         version: 0.1.9
       '@huggingface/transformers':
         specifier: ^3.8.1
-        version: 3.8.1
+        version: 3.8.1(patch_hash=df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234)
       '@langchain/community':
         specifier: ^1.1.1
-        version: 1.1.29(3f864a0df6396d5ff5465ffa827e2840)
+        version: 1.1.29(4b409c2326630476dc65ce0984ba1b78)
       '@langchain/core':
         specifier: ^1.1.8
         version: 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -1324,7 +1329,7 @@ importers:
     dependencies:
       '@langchain/community':
         specifier: ^1.1.1
-        version: 1.1.29(a24e589bd446827cd97e456eb9fc0299)
+        version: 1.1.29(a3e3d6a2cc787ffd658520ad67152ea4)
       '@langchain/core':
         specifier: ^1.1.8
         version: 1.2.5(@opentelemetry/api@1.9.0)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))
@@ -8118,7 +8123,7 @@ snapshots:
   '@chroma-core/default-embed@0.1.9':
     dependencies:
       '@chroma-core/ai-embeddings-common': 0.1.11
-      '@huggingface/transformers': 3.8.1
+      '@huggingface/transformers': 3.8.1(patch_hash=df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234)
 
   '@clack/core@1.4.2':
     dependencies:
@@ -8498,7 +8503,7 @@ snapshots:
       sharp: 0.33.5
     optional: true
 
-  '@huggingface/transformers@3.8.1':
+  '@huggingface/transformers@3.8.1(patch_hash=df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234)':
     dependencies:
       '@huggingface/jinja': 0.5.9
       onnxruntime-node: 1.21.0
@@ -8806,7 +8811,7 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/community@1.1.29(3f864a0df6396d5ff5465ffa827e2840)':
+  '@langchain/community@1.1.29(4b409c2326630476dc65ce0984ba1b78)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3)
       '@ibm-cloud/watsonx-ai': 1.7.16
@@ -8826,7 +8831,7 @@ snapshots:
       '@aws-sdk/client-s3': 3.1112.0
       '@aws-sdk/credential-provider-node': 3.972.80
       '@browserbasehq/sdk': 2.16.0(encoding@0.1.13)
-      '@huggingface/transformers': 3.8.1
+      '@huggingface/transformers': 3.8.1(patch_hash=df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234)
       '@mozilla/readability': 0.6.0
       '@smithy/signature-v4': 5.7.2
       '@zilliz/milvus2-sdk-node': 2.6.17(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -8850,7 +8855,7 @@ snapshots:
       - '@smithy/hash-node'
       - peggy
 
-  '@langchain/community@1.1.29(a24e589bd446827cd97e456eb9fc0299)':
+  '@langchain/community@1.1.29(a3e3d6a2cc787ffd658520ad67152ea4)':
     dependencies:
       '@browserbasehq/stagehand': 1.14.0(@playwright/test@1.62.1)(bufferutil@4.1.0)(deepmerge@4.3.1)(dotenv@17.4.2)(encoding@0.1.13)(openai@4.104.0(encoding@0.1.13)(ws@8.21.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.4.3))(utf-8-validate@5.0.10)(zod@4.4.3)
       '@ibm-cloud/watsonx-ai': 1.7.16
@@ -8870,7 +8875,7 @@ snapshots:
       '@aws-sdk/client-s3': 3.1112.0
       '@aws-sdk/credential-provider-node': 3.972.80
       '@browserbasehq/sdk': 2.16.0(encoding@0.1.13)
-      '@huggingface/transformers': 3.8.1
+      '@huggingface/transformers': 3.8.1(patch_hash=df52a3db52ec5499a5e3a0867e9a21434a63cac055ef3bf0d82c55f7b7978234)
       '@lancedb/lancedb': 0.37.1(@types/node@26.2.0)(apache-arrow@18.1.0)(encoding@0.1.13)
       '@mozilla/readability': 0.6.0
       '@smithy/signature-v4': 5.7.2

@@ -11,6 +11,7 @@
  */
 
 import {
+	type IterativeRecallCompletionOptions,
 	type IterativeRecallPlanner,
 	type IterativeRecallPlannerOptions,
 	type QueryRewriter,
@@ -88,7 +89,7 @@ function createComplete(options: ReasoningModelOptions) {
 	const model = createModel(options);
 	const timeoutMs = options.timeoutMs ?? 30000;
 
-	return async (prompt: string): Promise<string> => {
+	return async (prompt: string, requestOptions?: IterativeRecallCompletionOptions): Promise<string> => {
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), timeoutMs);
 		// `unref()` so a long-running `await` (test harness, hot reload, …) does
@@ -101,7 +102,7 @@ function createComplete(options: ReasoningModelOptions) {
 		try {
 			const result = await generateText({
 				model,
-				prompt,
+				...(requestOptions ? { messages: [...requestOptions.messages] } : { prompt }),
 				temperature: 0,
 				abortSignal: controller.signal,
 			});

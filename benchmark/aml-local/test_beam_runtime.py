@@ -184,6 +184,74 @@ class RuntimeTests(unittest.TestCase):
         self.assertTrue(all(p["model"] == os.environ["ANSWER_MODEL"] for p in payloads))
         self.assertEqual(self.read(runtime.requests_path)[0]["finish_reason"], "length")
 
+    def test_common_reasoning_flag_applies_to_answer_and_judge(self):
+        os.environ["AML_DISABLE_PROVIDER_REASONING"] = "1"
+        payloads = []
+        def handler(request):
+            payload = json.loads(request.content)
+            payloads.append(payload)
+            if payload.get("response_format"):
+                return response('{"scores":[{"index":0,"score":1,"reason":"ok"}]}')
+            return response("answer")
+        answer_code, _ = self.execute(handler)
+        judge_code, _ = self.execute(handler, "evaluate")
+        self.assertEqual((answer_code, judge_code), (0, 0))
+        self.assertEqual(len(payloads), 4)
+        self.assertTrue(all(payload["reasoning"] == {"effort": "none"} for payload in payloads))
+
+    def test_answer_provider_is_pinned_and_audited(self):
+        os.environ["AML_BEAM_ANSWER_PROVIDER"] = "OpenInference"
+        payloads = []
+        def handler(request):
+            payloads.append(json.loads(request.content))
+            return httpx.Response(200, json={"provider": "OpenInference", "model": "test-model",
+                "choices": [{"message": {"content": "answer"}, "finish_reason": "stop"}]})
+        code, runtime = self.execute(handler)
+        self.assertEqual(code, 0)
+        self.assertTrue(all(payload["provider"] == {"order": ["OpenInference"], "allow_fallbacks": False}
+                            for payload in payloads))
+        self.assertTrue(all(row["provider"] == row["requested_provider"] == "OpenInference"
+                            for row in self.read(runtime.requests_path)))
+
+    def test_pinned_provider_mismatch_cannot_be_scored(self):
+        os.environ["AML_BEAM_ANSWER_PROVIDER"] = "OpenInference"
+        code, runtime = self.execute(lambda request: response())
+        self.assertEqual(code, 2)
+        self.assertEqual(self.read(self.answers), [])
+        self.assertTrue(all("provider mismatch" in row["error"] for row in self.read(runtime.requests_path)))
+
+    def test_pinned_judge_provider_covers_rubric_and_event_requests(self):
+        os.environ["AML_BEAM_JUDGE_PROVIDER"] = "Alibaba"
+        os.environ["AML_BEAM_EVENT_PROVIDER"] = "Alibaba"
+        self.items[0]["category"] = "event_ordering"
+        self.save(self.inputs, self.items)
+        self.save(self.answers, [{"id": x["id"], "generated_answer": "fact"} for x in self.items])
+        payloads = []
+        def handler(request):
+            payload = json.loads(request.content)
+            payloads.append(payload)
+            content = "YES" if len(payload["messages"]) == 2 else '{"scores":[{"index":0,"score":1,"reason":"ok"}]}'
+            return httpx.Response(200, json={"provider": "Alibaba", "model": "test-model",
+                "choices": [{"message": {"content": content}, "finish_reason": "stop"}]})
+        code, runtime = self.execute(handler, "evaluate")
+        self.assertEqual(code, 0)
+        self.assertTrue(any(len(payload["messages"]) == 2 for payload in payloads))
+        self.assertTrue(all(payload["provider"] == {"order": ["Alibaba"], "allow_fallbacks": False}
+                            for payload in payloads))
+        self.assertTrue(all(row["provider"] == row["requested_provider"] == "Alibaba"
+                            for row in self.read(runtime.requests_path)))
+
+    def test_provider_pin_change_cannot_resume_existing_answers(self):
+        os.environ["AML_BEAM_ANSWER_PROVIDER"] = "OpenInference"
+        def handler(request):
+            return httpx.Response(200, json={"provider": "OpenInference", "model": "test-model",
+                "choices": [{"message": {"content": "answer"}, "finish_reason": "stop"}]})
+        code, _ = self.execute(handler)
+        self.assertEqual(code, 0)
+        os.environ["AML_BEAM_ANSWER_PROVIDER"] = "Sail Research"
+        with self.assertRaisesRegex(ValueError, "configuration changed"):
+            self.execute(handler)
+
     def test_judge_format_failure_continues_and_missing_answer_is_not_fabricated(self):
         self.save(self.answers, [{"id": x["id"], "generated_answer": "answer"} for x in self.items])
         calls = []

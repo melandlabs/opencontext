@@ -59,7 +59,10 @@
 			"msw",
 			"sharp",
 			"utf-8-validate"
-		]
+		],
+		"patchedDependencies": {
+			"@huggingface/transformers@3.8.1": "patches/@huggingface__transformers@3.8.1.patch"
+		}
 	},
 	"dependencies": {
 		"better-sqlite3": "^13.0.0"

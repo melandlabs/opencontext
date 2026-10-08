@@ -17,7 +17,11 @@
 import { ChromaVectorStore } from "@melandlabs/rag/chroma-vector-store";
 import type { IVectorStore } from "@melandlabs/rag/vector-service";
 import type { UnifiedSearchDeps } from "../config";
-import { createIterativeRecallPlanner } from "../search/iterative-recall";
+import { createExtractiveEvidenceSelector } from "../search/evidence-selector";
+import {
+	type IterativeRecallCompletionOptions,
+	createIterativeRecallPlanner,
+} from "../search/iterative-recall";
 import { createUserVoiceRewriter } from "../search/query-rewriter";
 import { RawMessageChildVectorIndex } from "../storage/raw-message-child-vector-index";
 import { createRawMessageStore } from "../storage/raw-message-store";
@@ -27,11 +31,22 @@ export interface UnifiedArgs {
 	embeddingProvider: "local" | "openrouter" | "none";
 	embeddingModel?: string;
 	embeddingCacheDir?: string;
+	embeddingPooling?: "mean" | "cls";
+	chunkMaxTokens?: number;
+	chunkOverlapTokens?: number;
 	rerankerProvider: "local" | "none";
 	rerankerModel?: string;
 	rerankerCacheDir?: string;
 	rerankerBatchSize?: number;
 	rerankerMaxTokens?: number;
+	rerankerCandidateMode?: "window" | "matched-chunks";
+	rrfDenseWeight?: number;
+	rrfLexicalWeight?: number;
+	rrfK?: number;
+	sessionNeighborSeedK?: number;
+	sessionNeighborWindow?: number;
+	sessionNeighborMode?: "union" | "protected";
+	sessionNeighborMaxSlots?: number;
 	chromaUrl?: string;
 	memoryBackend: "sqlite-vec" | "chroma" | "lancedb" | "milvus" | "none";
 	lancedbUri?: string;
@@ -62,15 +77,23 @@ export interface UnifiedArgs {
 }
 
 interface AiRagModules {
-	LocalTransformersEmbeddingProvider: new (opts: { modelName?: string; cacheDir?: string }) => {
+	LocalTransformersEmbeddingProvider: new (opts: {
+		modelName?: string;
+		cacheDir?: string;
+		pooling?: "mean" | "cls";
+	}) => {
 		embedQuery(text: string): Promise<number[]>;
 		embedDocuments(texts: string[]): Promise<number[][]>;
+		getTokenCounter(): Promise<(text: string) => number>;
+		getMaxTokens(): number;
+		getModelName(): string;
 	};
 	LocalTransformersReranker: new (opts: {
 		modelName?: string;
 		cacheDir?: string;
 		batchSize?: number;
 		maxTokens?: number;
+		candidateMode?: "window" | "matched-chunks";
 	}) => {
 		rerank(input: {
 			query: string;
@@ -118,9 +141,8 @@ async function loadAiRag(): Promise<AiRagModules> {
 	}
 }
 
-export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
-	const env = process.env;
-	const args: UnifiedArgs = {
+export function unifiedArgsFromEnv(env: NodeJS.ProcessEnv = process.env): UnifiedArgs {
+	return {
 		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
 		embeddingModel: env.EMBEDDING_MODEL,
 		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
@@ -132,6 +154,27 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 			: undefined,
 		rerankerMaxTokens: env.LOCAL_RERANKER_MAX_TOKENS
 			? Number.parseInt(env.LOCAL_RERANKER_MAX_TOKENS, 10)
+			: undefined,
+		rrfDenseWeight: env.OPENCONTEXT_RRF_DENSE_WEIGHT
+			? Number.parseFloat(env.OPENCONTEXT_RRF_DENSE_WEIGHT)
+			: undefined,
+		rrfLexicalWeight: env.OPENCONTEXT_RRF_LEXICAL_WEIGHT
+			? Number.parseFloat(env.OPENCONTEXT_RRF_LEXICAL_WEIGHT)
+			: undefined,
+		rrfK: env.OPENCONTEXT_RRF_K ? Number.parseInt(env.OPENCONTEXT_RRF_K, 10) : undefined,
+		sessionNeighborSeedK: env.OPENCONTEXT_SESSION_NEIGHBOR_SEED_K
+			? Number.parseInt(env.OPENCONTEXT_SESSION_NEIGHBOR_SEED_K, 10)
+			: undefined,
+		sessionNeighborWindow: env.OPENCONTEXT_SESSION_NEIGHBOR_WINDOW
+			? Number.parseInt(env.OPENCONTEXT_SESSION_NEIGHBOR_WINDOW, 10)
+			: undefined,
+		sessionNeighborMode:
+			env.OPENCONTEXT_SESSION_NEIGHBOR_MODE === "union" ||
+			env.OPENCONTEXT_SESSION_NEIGHBOR_MODE === "protected"
+				? env.OPENCONTEXT_SESSION_NEIGHBOR_MODE
+				: undefined,
+		sessionNeighborMaxSlots: env.OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS
+			? Number.parseInt(env.OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS, 10)
 			: undefined,
 		chromaUrl: env.CHROMA_URL,
 		memoryBackend: (env.MEMORY_BACKEND as UnifiedArgs["memoryBackend"] | undefined) ?? "none",
@@ -153,98 +196,111 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 			? Number.parseInt(env.OPENCONTEXT_LLM_TIMEOUT_MS, 10)
 			: undefined,
 	};
-	for (let i = 0; i < argv.length; i += 1) {
-		const arg = argv[i];
-		const next = argv[i + 1];
-		const takeValue = () => {
-			if (next === undefined) throw new Error(`[memory-store/http] ${arg} requires a value`);
-			i += 1;
-			return next;
-		};
-		switch (arg) {
-			case "--embedding-provider":
-				args.embeddingProvider = takeValue() as UnifiedArgs["embeddingProvider"];
-				break;
-			case "--embedding-model":
-				args.embeddingModel = takeValue();
-				break;
-			case "--embedding-cache-dir":
-				args.embeddingCacheDir = takeValue();
-				break;
-			case "--reranker-provider":
-				args.rerankerProvider = takeValue() as UnifiedArgs["rerankerProvider"];
-				break;
-			case "--reranker-model":
-				args.rerankerModel = takeValue();
-				break;
-			case "--reranker-cache-dir":
-				args.rerankerCacheDir = takeValue();
-				break;
-			case "--reranker-batch-size":
-				args.rerankerBatchSize = Number.parseInt(takeValue(), 10);
-				break;
-			case "--reranker-max-tokens":
-				args.rerankerMaxTokens = Number.parseInt(takeValue(), 10);
-				break;
-			case "--chroma-url":
-				args.chromaUrl = takeValue();
-				break;
-			case "--memory-backend":
-				args.memoryBackend = takeValue() as UnifiedArgs["memoryBackend"];
-				break;
-			case "--lancedb-uri":
-				args.lancedbUri = takeValue();
-				break;
-			case "--lancedb-table":
-				args.lancedbTable = takeValue();
-				break;
-			case "--milvus-address":
-				args.milvusAddress = takeValue();
-				break;
-			case "--milvus-token":
-				args.milvusToken = takeValue();
-				break;
-			case "--milvus-database":
-				args.milvusDatabase = takeValue();
-				break;
-			case "--milvus-collection":
-				args.milvusCollection = takeValue();
-				break;
-			case "--milvus-dimension":
-				args.milvusDimension = Number.parseInt(takeValue(), 10);
-				break;
-			case "--insights-backend":
-				args.insightsBackend = takeValue() as UnifiedArgs["insightsBackend"];
-				break;
-			case "--insights-collection":
-				args.insightsCollection = takeValue();
-				break;
-			case "--knowledge-backend":
-				args.knowledgeBackend = takeValue() as UnifiedArgs["knowledgeBackend"];
-				break;
-			case "--knowledge-collection":
-				args.knowledgeCollection = takeValue();
-				break;
-			case "--reasoning":
-				args.reasoning = true;
-				break;
-			case "--no-reasoning":
-				args.reasoning = false;
-				break;
-			case "--reasoning-base-url":
-				args.reasoningBaseUrl = takeValue();
-				break;
-			case "--reasoning-model":
-				args.reasoningModel = takeValue();
-				break;
-			case "--reasoning-timeout-ms":
-				args.reasoningTimeoutMs = Number.parseInt(takeValue(), 10);
-				break;
-		}
+}
+
+/** Return false for server-specific flags; callers decide whether to reject them. */
+export function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => string): boolean {
+	switch (arg) {
+		case "--embedding-provider":
+			args.embeddingProvider = takeValue() as UnifiedArgs["embeddingProvider"];
+			break;
+		case "--embedding-model":
+			args.embeddingModel = takeValue();
+			break;
+		case "--embedding-cache-dir":
+			args.embeddingCacheDir = takeValue();
+			break;
+		case "--embedding-pooling":
+			args.embeddingPooling = takeValue() as UnifiedArgs["embeddingPooling"];
+			break;
+		case "--chunk-max-tokens":
+			args.chunkMaxTokens = Number(takeValue());
+			break;
+		case "--chunk-overlap-tokens":
+			args.chunkOverlapTokens = Number(takeValue());
+			break;
+		case "--reranker-provider":
+			args.rerankerProvider = takeValue() as UnifiedArgs["rerankerProvider"];
+			break;
+		case "--reranker-model":
+			args.rerankerModel = takeValue();
+			break;
+		case "--reranker-cache-dir":
+			args.rerankerCacheDir = takeValue();
+			break;
+		case "--reranker-batch-size":
+			args.rerankerBatchSize = Number.parseInt(takeValue(), 10);
+			break;
+		case "--reranker-max-tokens":
+			args.rerankerMaxTokens = Number.parseInt(takeValue(), 10);
+			break;
+		case "--reranker-candidate-mode":
+			args.rerankerCandidateMode = takeValue() as UnifiedArgs["rerankerCandidateMode"];
+			break;
+		case "--chroma-url":
+			args.chromaUrl = takeValue();
+			break;
+		case "--memory-backend":
+			args.memoryBackend = takeValue() as UnifiedArgs["memoryBackend"];
+			break;
+		case "--lancedb-uri":
+			args.lancedbUri = takeValue();
+			break;
+		case "--lancedb-table":
+			args.lancedbTable = takeValue();
+			break;
+		case "--milvus-address":
+			args.milvusAddress = takeValue();
+			break;
+		case "--milvus-token":
+			args.milvusToken = takeValue();
+			break;
+		case "--milvus-database":
+			args.milvusDatabase = takeValue();
+			break;
+		case "--milvus-collection":
+			args.milvusCollection = takeValue();
+			break;
+		case "--milvus-dimension":
+			args.milvusDimension = Number.parseInt(takeValue(), 10);
+			break;
+		case "--insights-backend":
+			args.insightsBackend = takeValue() as UnifiedArgs["insightsBackend"];
+			break;
+		case "--insights-collection":
+			args.insightsCollection = takeValue();
+			break;
+		case "--knowledge-backend":
+			args.knowledgeBackend = takeValue() as UnifiedArgs["knowledgeBackend"];
+			break;
+		case "--knowledge-collection":
+			args.knowledgeCollection = takeValue();
+			break;
+		case "--reasoning":
+			args.reasoning = true;
+			break;
+		case "--no-reasoning":
+			args.reasoning = false;
+			break;
+		case "--reasoning-base-url":
+			args.reasoningBaseUrl = takeValue();
+			break;
+		case "--reasoning-model":
+			args.reasoningModel = takeValue();
+			break;
+		case "--reasoning-timeout-ms":
+			args.reasoningTimeoutMs = Number.parseInt(takeValue(), 10);
+			break;
+		default:
+			return false;
 	}
+	return true;
+}
+
+export function validateUnifiedArgs(args: UnifiedArgs, logPrefix = "[memory-store/cli]"): void {
 	const validate = (name: string, value: string, allowed: string[]) => {
 		if (!allowed.includes(value)) {
-			throw new Error(`[memory-store/cli] ${name} must be one of: ${allowed.join(", ")} (got "${value}")`);
+			throw new Error(`${logPrefix} ${name} must be one of: ${allowed.join(", ")} (got "${value}")`);
 		}
 	};
 	validate("--embedding-provider", args.embeddingProvider, ["local", "openrouter", "none"]);
@@ -252,26 +308,106 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 	validate("--memory-backend", args.memoryBackend, ["sqlite-vec", "chroma", "lancedb", "milvus", "none"]);
 	validate("--insights-backend", args.insightsBackend, ["sqlite-vec", "chroma", "none"]);
 	validate("--knowledge-backend", args.knowledgeBackend, ["chroma", "none"]);
+	if (args.embeddingPooling !== undefined) {
+		validate("--embedding-pooling", args.embeddingPooling, ["mean", "cls"]);
+		if (args.embeddingProvider !== "local")
+			throw new Error("--embedding-pooling requires --embedding-provider local");
+	}
 	if (
 		args.milvusDimension !== undefined &&
 		(!Number.isInteger(args.milvusDimension) || args.milvusDimension <= 0)
 	) {
-		throw new Error("[memory-store/cli] --milvus-dimension must be a positive integer");
+		throw new Error(`${logPrefix} --milvus-dimension must be a positive integer`);
 	}
 	for (const [name, value] of [
 		["--reranker-batch-size", args.rerankerBatchSize],
 		["--reranker-max-tokens", args.rerankerMaxTokens],
+		["OPENCONTEXT_RRF_K", args.rrfK],
+		["OPENCONTEXT_SESSION_NEIGHBOR_SEED_K", args.sessionNeighborSeedK],
+		["OPENCONTEXT_SESSION_NEIGHBOR_WINDOW", args.sessionNeighborWindow],
+		["OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS", args.sessionNeighborMaxSlots],
 	] as const) {
 		if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
-			throw new Error(`[memory-store/cli] ${name} must be a positive integer`);
+			throw new Error(`${logPrefix} ${name} must be a positive integer`);
 		}
 	}
+	for (const [name, value] of [
+		["OPENCONTEXT_RRF_DENSE_WEIGHT", args.rrfDenseWeight],
+		["OPENCONTEXT_RRF_LEXICAL_WEIGHT", args.rrfLexicalWeight],
+	] as const) {
+		if (value !== undefined && (!Number.isFinite(value) || value < 0)) {
+			throw new Error(`${logPrefix} ${name} must be a finite non-negative number`);
+		}
+	}
+	if (args.rrfK !== undefined && args.rrfK <= 0) {
+		throw new Error(`${logPrefix} OPENCONTEXT_RRF_K must be positive`);
+	}
+	if (args.sessionNeighborWindow !== undefined && args.sessionNeighborWindow <= 0) {
+		throw new Error(`${logPrefix} OPENCONTEXT_SESSION_NEIGHBOR_WINDOW must be positive`);
+	}
+	if (args.sessionNeighborSeedK !== undefined && args.sessionNeighborSeedK <= 0) {
+		throw new Error(`${logPrefix} OPENCONTEXT_SESSION_NEIGHBOR_SEED_K must be positive`);
+	}
+	if (args.sessionNeighborMaxSlots !== undefined && args.sessionNeighborMaxSlots <= 0) {
+		throw new Error(`${logPrefix} OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS must be positive`);
+	}
+	if (args.chunkMaxTokens !== undefined || args.chunkOverlapTokens !== undefined) {
+		if (args.embeddingProvider !== "local")
+			throw new Error("Tokenizer-aware chunking requires --embedding-provider local");
+		if (
+			!Number.isSafeInteger(args.chunkMaxTokens) ||
+			(args.chunkMaxTokens ?? 0) <= 0 ||
+			!Number.isSafeInteger(args.chunkOverlapTokens) ||
+			(args.chunkOverlapTokens ?? -1) < 0 ||
+			(args.chunkOverlapTokens ?? 0) >= (args.chunkMaxTokens ?? 0)
+		) {
+			throw new Error(
+				"--chunk-max-tokens and --chunk-overlap-tokens require positive size and 0 <= overlap < size",
+			);
+		}
+	}
+	if (args.rerankerCandidateMode !== undefined) {
+		validate("--reranker-candidate-mode", args.rerankerCandidateMode, ["window", "matched-chunks"]);
+		if (args.rerankerProvider !== "local")
+			throw new Error("--reranker-candidate-mode requires a local reranker");
+	}
+}
+
+export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
+	const args = unifiedArgsFromEnv();
+	for (let i = 0; i < argv.length; i += 1) {
+		const arg = argv[i];
+		applyUnifiedFlag(args, arg, () => {
+			const value = argv[i + 1];
+			if (value === undefined) throw new Error(`[memory-store/http] ${arg} requires a value`);
+			i += 1;
+			return value;
+		});
+	}
+	validateUnifiedArgs(args);
 	return args;
 }
 
 export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps> {
 	const unified: UnifiedSearchDeps = {};
 	const log = (msg: string) => console.warn(`[memory-store/cli] ${msg}`);
+	if (args.rrfDenseWeight !== undefined || args.rrfLexicalWeight !== undefined) {
+		unified.defaultRrfWeights = {
+			semantic: args.rrfDenseWeight ?? 1,
+			lexical: args.rrfLexicalWeight ?? 1,
+		};
+	}
+	if (args.rrfK !== undefined) unified.defaultRrfK = args.rrfK;
+	if (args.sessionNeighborSeedK !== undefined || args.sessionNeighborWindow !== undefined) {
+		unified.defaultSessionNeighborExpansion = {
+			seedLimit: args.sessionNeighborSeedK ?? 12,
+			window: args.sessionNeighborWindow ?? 1,
+			mode: args.sessionNeighborMode ?? "union",
+			...(args.sessionNeighborMaxSlots !== undefined
+				? { maxNeighborSlots: args.sessionNeighborMaxSlots }
+				: {}),
+		};
+	}
 
 	const wantsAiRag =
 		args.embeddingProvider === "local" ||
@@ -290,11 +426,24 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			const provider = new aiRag.LocalTransformersEmbeddingProvider({
 				modelName: args.embeddingModel,
 				cacheDir: args.embeddingCacheDir,
+				pooling: args.embeddingPooling,
 			});
+			if (args.chunkMaxTokens !== undefined && args.chunkOverlapTokens !== undefined) {
+				if (args.chunkMaxTokens + 2 > provider.getMaxTokens()) {
+					throw new Error("Document chunk budget exceeds the embedding input limit including special tokens");
+				}
+				const maxTokens = args.chunkMaxTokens;
+				const overlapTokens = args.chunkOverlapTokens;
+				unified.getDocumentChunking = async () => ({
+					maxTokens,
+					overlapTokens,
+					countTokens: await provider.getTokenCounter(),
+				});
+			}
 			unified.embeddingInfo = {
 				provider: "local",
-				model: args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2",
-				maxTokens: 512,
+				model: provider.getModelName(),
+				maxTokens: provider.getMaxTokens(),
 			};
 			unified.embedQuery = async ({ query }) => {
 				const embedding = await provider.embedQuery(query);
@@ -309,9 +458,10 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 				return embeddings;
 			};
 			log(
-				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${args.embeddingModel ?? "Xenova/all-MiniLM-L6-v2"})`,
+				`embedQuery wired via LocalTransformersEmbeddingProvider (model=${provider.getModelName()}, pooling=${args.embeddingPooling ?? "mean"})`,
 			);
 		} catch (error) {
+			if (args.chunkMaxTokens !== undefined || args.embeddingPooling !== undefined) throw error;
 			log(`Warning: Failed to initialize LocalTransformersEmbeddingProvider: ${(error as Error).message}`);
 			log("Semantic search will be disabled. The server will continue with keyword-only search.");
 			log("To fix: Ensure the model is downloaded or check your network connection to huggingface.co");
@@ -355,6 +505,7 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			cacheDir: args.rerankerCacheDir,
 			batchSize: args.rerankerBatchSize,
 			maxTokens: args.rerankerMaxTokens,
+			candidateMode: args.rerankerCandidateMode,
 		});
 		// A configured reranker is a required ranking stage. Warm it up at
 		// startup so download/model incompatibility cannot silently turn a
@@ -424,6 +575,40 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 					metadata?: Record<string, unknown>;
 				}>;
 				return rows.map((row) => ({ ...row, metadata: row.metadata ?? {} }));
+			};
+		}
+		if (typeof manager.getRawMessageSessionNeighbors === "function") {
+			unified.searchRawMessageNeighbors = async ({
+				userId,
+				sessionId,
+				messageSequences,
+				window,
+				includeDeprecated,
+			}) => {
+				const rows =
+					(await manager.getRawMessageSessionNeighbors?.({
+						userId,
+						sessionId,
+						messageSequences,
+						window,
+						includeDeprecated,
+					})) ?? [];
+				return rows.map((row) => ({
+					id: row.messageId,
+					content: row.content,
+					similarity: 0,
+					metadata: {
+						...(row.metadata ?? {}),
+						userId: row.userId,
+						platform: row.platform,
+						botId: row.botId,
+						...(row.channel ? { channel: row.channel } : {}),
+						...(row.person ? { person: row.person } : {}),
+						...(row.timestamp !== undefined ? { timestamp: row.timestamp } : {}),
+						...(row.messageSequence !== undefined ? { messageSequence: row.messageSequence } : {}),
+						sourceMessageId: row.messageId,
+					},
+				}));
 			};
 		}
 
@@ -622,8 +807,20 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			args.reasoningBaseUrl ?? process.env.OPENCONTEXT_LLM_BASE_URL ?? "https://openrouter.ai/api/v1";
 		const model = args.reasoningModel ?? process.env.OPENCONTEXT_LLM_MODEL ?? "openai/gpt-4o-mini";
 		const timeoutMs = args.reasoningTimeoutMs ?? 30_000;
+		const reasoningEffort = process.env.OPENCONTEXT_LLM_REASONING_EFFORT?.trim();
+		const reasoningProvider = process.env.OPENCONTEXT_LLM_PROVIDER?.trim();
+		if (reasoningEffort && !["none", "minimal", "low", "medium", "high"].includes(reasoningEffort)) {
+			throw new Error("OPENCONTEXT_LLM_REASONING_EFFORT must be none, minimal, low, medium, or high");
+		}
+		const reasoningHost = new URL(baseUrl).hostname;
+		if (reasoningProvider && reasoningHost !== "openrouter.ai" && !reasoningHost.endsWith(".openrouter.ai")) {
+			throw new Error("OPENCONTEXT_LLM_PROVIDER requires an OpenRouter base URL");
+		}
 
-		const complete = async (prompt: string): Promise<string> => {
+		const complete = async (
+			prompt: string,
+			requestOptions?: IterativeRecallCompletionOptions,
+		): Promise<string> => {
 			const controller = new AbortController();
 			const timer = setTimeout(() => controller.abort(), timeoutMs);
 			timer.unref?.();
@@ -638,15 +835,25 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 					},
 					body: JSON.stringify({
 						model,
-						messages: [{ role: "user", content: prompt }],
+						messages: requestOptions?.messages ?? [{ role: "user", content: prompt }],
 						temperature: 0,
+						...(reasoningProvider
+							? { provider: { order: [reasoningProvider], allow_fallbacks: false } }
+							: {}),
+						...(reasoningEffort ? { reasoning: { effort: reasoningEffort } } : {}),
 					}),
 					signal: controller.signal,
 				});
 				if (!res.ok) throw new Error(`reasoning LLM ${res.status}: ${await res.text()}`);
 				const body = (await res.json()) as {
+					provider?: string;
 					choices?: Array<{ message?: { content?: string } }>;
 				};
+				if (reasoningProvider && body.provider?.toLowerCase() !== reasoningProvider.toLowerCase()) {
+					throw new Error(
+						`reasoning LLM provider mismatch: expected ${reasoningProvider}, got ${body.provider ?? "none"}`,
+					);
+				}
 				const text = body.choices?.[0]?.message?.content?.trim();
 				if (!text) throw new Error("reasoning LLM response missing choices[0].message.content");
 				return text;
@@ -655,13 +862,36 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			}
 		};
 
-		const queryRewriter = createUserVoiceRewriter({ complete });
+		const rewriteStyle = process.env.OPENCONTEXT_LLM_QUERY_REWRITE_STYLE?.trim();
+		if (rewriteStyle && rewriteStyle !== "user-voice" && rewriteStyle !== "evidence") {
+			throw new Error("OPENCONTEXT_LLM_QUERY_REWRITE_STYLE must be user-voice or evidence");
+		}
+		const queryRewriter = createUserVoiceRewriter({
+			complete,
+			...(rewriteStyle === "evidence" ? { style: "evidence", maxVariants: 3 } : {}),
+		});
 		const iterativePlanner = createIterativeRecallPlanner({ complete });
 
 		if (!unified.reasoning) unified.reasoning = {};
 		unified.reasoning.queryRewriter = queryRewriter;
+		const semanticMerge = process.env.OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE?.trim();
+		if (semanticMerge && semanticMerge !== "max-score" && semanticMerge !== "rrf") {
+			throw new Error("OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE must be max-score or rrf");
+		}
+		if (semanticMerge === "rrf") {
+			unified.reasoning.rewriteSemanticMerge = "rrf";
+			log("query rewrite wired to semantic variant rank fusion under RRF");
+		}
+		if (process.env.OPENCONTEXT_LLM_QUERY_REWRITE_LEXICAL === "1") {
+			unified.reasoning.rewriteLexical = true;
+			log("query rewrite wired to lexical retrieval under RRF");
+		}
 		unified.reasoning.iterativePlanner = iterativePlanner;
-		log(`reasoning wired (model=${model}, baseUrl=${baseUrl})`);
+		if (process.env.OPENCONTEXT_LLM_EVIDENCE_SELECTION === "1") {
+			unified.reasoning.evidenceSelector = createExtractiveEvidenceSelector({ complete });
+			log("extractive evidence selection wired after ranking");
+		}
+		log(`reasoning wired (model=${model}, baseUrl=${baseUrl}, provider=${reasoningProvider ?? "auto"})`);
 	}
 
 	return unified;
@@ -678,9 +908,13 @@ export function printUnifiedHelp(): void {
   --embedding-provider <name>     local | openrouter | none
                                   (env: EMBEDDING_PROVIDER, default: none)
   --embedding-model <name>        Model name
+  --embedding-pooling <mode>      Local mean (default) or cls pooling; BGE-M3 uses cls
                                   (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
                                   openrouter → text-embedding-3-small)
 	--embedding-cache-dir <path>    Local embedding cache (env: LOCAL_EMBEDDING_CACHE_DIR)
+  --chunk-max-tokens <int>        Opt-in exact model-tokenizer document size (e.g. 384)
+  --chunk-overlap-tokens <int>    Required overlap with --chunk-max-tokens (e.g. 64)
+                                  Requires local embeddings; existing indexes are not migrated
   Note: "local" dynamically imports @melandlabs/ai-rag (a peer install).
 
 Reranking (after RRF/source fusion, before final Top-K):
@@ -694,6 +928,14 @@ Reranking (after RRF/source fusion, before final Top-K):
                                   default: 8)
   --reranker-max-tokens <int>     Query/document pair token limit
                                   (env: LOCAL_RERANKER_MAX_TOKENS, default: 512)
+  --reranker-candidate-mode <mode> window (default) or matched-chunks (token-budgeted hit scoring)
+
+Retrieval experiments (disabled unless configured):
+  OPENCONTEXT_RRF_DENSE_WEIGHT / OPENCONTEXT_RRF_LEXICAL_WEIGHT
+  OPENCONTEXT_RRF_K
+  OPENCONTEXT_SESSION_NEIGHBOR_SEED_K / OPENCONTEXT_SESSION_NEIGHBOR_WINDOW
+  OPENCONTEXT_SESSION_NEIGHBOR_MODE=union|protected
+  OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS
 
 Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
   --chroma-url <url>              Chroma server URL
@@ -733,5 +975,7 @@ Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
   Required env when --reasoning is set:
     OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
     OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
-    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model`);
+    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
+    OPENCONTEXT_LLM_REASONING_EFFORT
+                                   (optional) none | minimal | low | medium | high`);
 }

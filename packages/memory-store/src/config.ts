@@ -37,8 +37,10 @@ import type { Peer } from "@melandlabs/contracts/peer";
 import type { RawMessage as IndexedRawMessage, RawMessageSearchChunk } from "@melandlabs/indexeddb";
 import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import type { RawMessage } from "./contracts";
+import type { EvidenceSelector } from "./search/evidence-selector";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
+import type { SessionNeighborExpansionOptions, UnifiedMemoryRrfWeights } from "./search/utilities";
 
 export interface MemoryStoreDb {
 	/** Resolve the active Drizzle DB handle. Must be server-side. */
@@ -131,6 +133,8 @@ export interface UnifiedSearchInsightsResult {
 }
 
 export interface UnifiedSearchReasoningDeps {
+	/** Optional extractive context selection after ranking. Disabled unless supplied. */
+	evidenceSelector?: EvidenceSelector;
 	/**
 	 * LLM single-turn synthesis callback. Wired into
 	 * `search({ synthesize: true })` so a host that wants synthesis
@@ -143,6 +147,10 @@ export interface UnifiedSearchReasoningDeps {
 	defaultMergeStrategy?: import("./search/utilities").UnifiedMemoryMergeStrategy;
 	/** Optional query rewriter. When present, "rewrite" strategy is available. */
 	queryRewriter?: QueryRewriter;
+	/** Also search rewritten expressions with BM25 under RRF. At most four distinct queries, including the original. @default false */
+	rewriteLexical?: boolean;
+	/** Optional rank fusion across semantic query variants under RRF. @default "max-score" */
+	rewriteSemanticMerge?: "max-score" | "rrf";
 	/** Optional iterative recall planner. When present, "iterative" strategy is available. */
 	iterativePlanner?: IterativeRecallPlanner;
 	/** Default reasoning strategy when callers do not specify one. @default "none" */
@@ -172,10 +180,22 @@ export interface SearchProviderApplicabilityInput {
 }
 
 export interface UnifiedSearchDeps {
+	/** Default rank-fusion weights; omitted channels use weight 1. */
+	defaultRrfWeights?: UnifiedMemoryRrfWeights;
+	/** Default reciprocal-rank damping constant. */
+	defaultRrfK?: number;
+	/** Default opt-in session-neighbor expansion configuration. */
+	defaultSessionNeighborExpansion?: SessionNeighborExpansionOptions;
 	/** Embed a query string using the active user's provider. */
 	embedQuery?: EmbedQueryFn;
 	/** Batch document embedding used by child indexing when the provider supports it. */
 	embedDocuments?: EmbedDocumentsFn;
+	/** Model-tokenizer chunking for new writes; omitted hosts retain legacy splitting. */
+	getDocumentChunking?: () => Promise<{
+		maxTokens: number;
+		overlapTokens: number;
+		countTokens: (text: string) => number;
+	}>;
 	/** Safe, non-secret identity used by health checks and child-index metadata. */
 	embeddingInfo?: {
 		provider?: string;
@@ -319,6 +339,21 @@ export interface UnifiedSearchDeps {
 			content: string;
 			similarity: number;
 			metadata: Record<string, unknown>;
+		}>
+	>;
+	/** Optional bounded lookup for messages adjacent to fused seed messages. */
+	searchRawMessageNeighbors?: (input: {
+		userId: string;
+		sessionId: string;
+		messageSequences: number[];
+		window: number;
+		includeDeprecated?: boolean;
+	}) => Promise<
+		Array<{
+			id: string;
+			content: string;
+			metadata: Record<string, unknown>;
+			similarity: number;
 		}>
 	>;
 	/**

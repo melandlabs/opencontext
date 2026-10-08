@@ -57,6 +57,27 @@ describe("IdentityReranker", () => {
 });
 
 describe("applyReranker", () => {
+	it("retains answer context and exact per-chunk scoring provenance", async () => {
+		const hit = makeHit("memory", "m1", 0.9);
+		const evidenceScores = [
+			{
+				sourceChunkId: "c1",
+				startPosition: 10,
+				endPosition: 20,
+				contentSha256: "hash",
+				score: 4,
+				inputTokens: 100,
+				queryTruncated: false,
+			},
+		];
+		const result = await applyReranker(
+			{ rerank: async () => [{ id: "m1", score: 4, evidenceScores }] },
+			"q",
+			[hit],
+		);
+		expect(result[0].content).toBe(hit.content);
+		expect(result[0].metadata.rerankerEvidenceScores).toEqual(evidenceScores);
+	});
 	it("returns the input unchanged when no reranker is configured", async () => {
 		const hits = [makeHit("memory", "m1", 0.9), makeHit("memory", "m2", 0.7)];
 		const out = await applyReranker(undefined, "q", hits);

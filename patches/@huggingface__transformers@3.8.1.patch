@@ -1,0 +1,179 @@
+diff --git a/dist/transformers.js b/dist/transformers.js
+index bbcc8933d81f85f0eb7ce54b9e4bcba9c38992c7..8dd017698e0470ddb95e127884245168c8522d2f 100644
+--- a/dist/transformers.js
++++ b/dist/transformers.js
+@@ -31097,8 +31097,7 @@ class Unigram extends TokenizerModel {
+             let hasSingleNode = false;
+ 
+             const tokens = [];
+-            const sliced = chars.slice(beginPos).join('');
+-            const prefixedTokens = this.trie.commonPrefixSearch(sliced);
++            const prefixedTokens = this.trie.commonPrefixSearch(chars, beginPos);
+             for (const token of prefixedTokens) {
+                 tokens.push(token);
+                 const tokenId = this.tokens_to_ids.get(token);
+@@ -36415,15 +36414,17 @@ class CharTrie {
+ 
+     /**
+      * Searches the trie for all strings with a common prefix of `text`.
+-     * @param {string} text The common prefix to search for.
++     * @param {string[]} text Unicode code points to search.
++     * @param {number} [start=0] Starting code-point offset.
+      * @yields {string} Each string in the trie that has `text` as a prefix.
+      */
+-    *commonPrefixSearch(text) {
++    *commonPrefixSearch(text, start = 0) {
+         let node = this.root;
+         if (node === undefined) return;
+ 
+         let prefix = "";
+-        for (const ch of text) {
++        for (let i = start; i < text.length; ++i) {
++            const ch = text[i];
+             prefix += ch;
+             node = node.children.get(ch);
+             if (node === undefined) return;
+diff --git a/dist/transformers.node.cjs b/dist/transformers.node.cjs
+index e22c8380852a7656a0e6320f2398a6f69afef1bc..eec085752b636d7c1b629ad8876280b7ccb5e9ea 100644
+--- a/dist/transformers.node.cjs
++++ b/dist/transformers.node.cjs
+@@ -26582,8 +26582,7 @@ class Unigram extends TokenizerModel {
+             let hasSingleNode = false;
+ 
+             const tokens = [];
+-            const sliced = chars.slice(beginPos).join('');
+-            const prefixedTokens = this.trie.commonPrefixSearch(sliced);
++            const prefixedTokens = this.trie.commonPrefixSearch(chars, beginPos);
+             for (const token of prefixedTokens) {
+                 tokens.push(token);
+                 const tokenId = this.tokens_to_ids.get(token);
+@@ -31904,15 +31903,17 @@ class CharTrie {
+ 
+     /**
+      * Searches the trie for all strings with a common prefix of `text`.
+-     * @param {string} text The common prefix to search for.
++     * @param {string[]} text Unicode code points to search.
++     * @param {number} [start=0] Starting code-point offset.
+      * @yields {string} Each string in the trie that has `text` as a prefix.
+      */
+-    *commonPrefixSearch(text) {
++    *commonPrefixSearch(text, start = 0) {
+         let node = this.root;
+         if (node === undefined) return;
+ 
+         let prefix = "";
+-        for (const ch of text) {
++        for (let i = start; i < text.length; ++i) {
++            const ch = text[i];
+             prefix += ch;
+             node = node.children.get(ch);
+             if (node === undefined) return;
+diff --git a/dist/transformers.node.mjs b/dist/transformers.node.mjs
+index e39f187b18f77540817f465fa3f0044231955bf0..2d5be99284452f423fff33a28144f2a61ae49abb 100644
+--- a/dist/transformers.node.mjs
++++ b/dist/transformers.node.mjs
+@@ -26475,8 +26475,7 @@ class Unigram extends TokenizerModel {
+             let hasSingleNode = false;
+ 
+             const tokens = [];
+-            const sliced = chars.slice(beginPos).join('');
+-            const prefixedTokens = this.trie.commonPrefixSearch(sliced);
++            const prefixedTokens = this.trie.commonPrefixSearch(chars, beginPos);
+             for (const token of prefixedTokens) {
+                 tokens.push(token);
+                 const tokenId = this.tokens_to_ids.get(token);
+@@ -31793,15 +31792,17 @@ class CharTrie {
+ 
+     /**
+      * Searches the trie for all strings with a common prefix of `text`.
+-     * @param {string} text The common prefix to search for.
++     * @param {string[]} text Unicode code points to search.
++     * @param {number} [start=0] Starting code-point offset.
+      * @yields {string} Each string in the trie that has `text` as a prefix.
+      */
+-    *commonPrefixSearch(text) {
++    *commonPrefixSearch(text, start = 0) {
+         let node = this.root;
+         if (node === undefined) return;
+ 
+         let prefix = "";
+-        for (const ch of text) {
++        for (let i = start; i < text.length; ++i) {
++            const ch = text[i];
+             prefix += ch;
+             node = node.children.get(ch);
+             if (node === undefined) return;
+diff --git a/dist/transformers.web.js b/dist/transformers.web.js
+index 8158381bf49fa32a4fa8a3919807a0307c649ad0..3266f12169d83ea9030f2487dc603d94cdb64ad0 100644
+--- a/dist/transformers.web.js
++++ b/dist/transformers.web.js
+@@ -26491,8 +26491,7 @@ class Unigram extends TokenizerModel {
+             let hasSingleNode = false;
+ 
+             const tokens = [];
+-            const sliced = chars.slice(beginPos).join('');
+-            const prefixedTokens = this.trie.commonPrefixSearch(sliced);
++            const prefixedTokens = this.trie.commonPrefixSearch(chars, beginPos);
+             for (const token of prefixedTokens) {
+                 tokens.push(token);
+                 const tokenId = this.tokens_to_ids.get(token);
+@@ -31809,15 +31808,17 @@ class CharTrie {
+ 
+     /**
+      * Searches the trie for all strings with a common prefix of `text`.
+-     * @param {string} text The common prefix to search for.
++     * @param {string[]} text Unicode code points to search.
++     * @param {number} [start=0] Starting code-point offset.
+      * @yields {string} Each string in the trie that has `text` as a prefix.
+      */
+-    *commonPrefixSearch(text) {
++    *commonPrefixSearch(text, start = 0) {
+         let node = this.root;
+         if (node === undefined) return;
+ 
+         let prefix = "";
+-        for (const ch of text) {
++        for (let i = start; i < text.length; ++i) {
++            const ch = text[i];
+             prefix += ch;
+             node = node.children.get(ch);
+             if (node === undefined) return;
+diff --git a/src/tokenizers.js b/src/tokenizers.js
+index 51c9d23dc7795252b3b15d0b099c6aa5361baf13..925dee7347228ca42c5b090305ca5718709743ee 100644
+--- a/src/tokenizers.js
++++ b/src/tokenizers.js
+@@ -597,8 +597,7 @@ class Unigram extends TokenizerModel {
+             let hasSingleNode = false;
+ 
+             const tokens = [];
+-            const sliced = chars.slice(beginPos).join('');
+-            const prefixedTokens = this.trie.commonPrefixSearch(sliced);
++            const prefixedTokens = this.trie.commonPrefixSearch(chars, beginPos);
+             for (const token of prefixedTokens) {
+                 tokens.push(token);
+                 const tokenId = this.tokens_to_ids.get(token);
+diff --git a/src/utils/data-structures.js b/src/utils/data-structures.js
+index f9eb04913b12bd3a9c9024c7580548c2586e9d4e..c78e4c1ba3eaa32bce83fe87fbfa6ab46349c45f 100644
+--- a/src/utils/data-structures.js
++++ b/src/utils/data-structures.js
+@@ -253,15 +253,17 @@ export class CharTrie {
+ 
+     /**
+      * Searches the trie for all strings with a common prefix of `text`.
+-     * @param {string} text The common prefix to search for.
++     * @param {string[]} text Unicode code points to search.
++     * @param {number} [start=0] Starting code-point offset.
+      * @yields {string} Each string in the trie that has `text` as a prefix.
+      */
+-    *commonPrefixSearch(text) {
++    *commonPrefixSearch(text, start = 0) {
+         let node = this.root;
+         if (node === undefined) return;
+ 
+         let prefix = "";
+-        for (const ch of text) {
++        for (let i = start; i < text.length; ++i) {
++            const ch = text[i];
+             prefix += ch;
+             node = node.children.get(ch);
+             if (node === undefined) return;

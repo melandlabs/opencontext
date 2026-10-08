@@ -14,12 +14,37 @@ import { describe, expect, it } from "vitest";
 import {
 	type UnifiedMemorySearchInput,
 	type UnifiedMemorySearchResult,
+	deriveLexicalKeywords,
 	listNameToChannel,
 	materializeSignals,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
 } from "./utilities";
+
+describe("deriveLexicalKeywords", () => {
+	it("deduplicates before spending the keyword budget", () => {
+		const query = `${Array.from({ length: 16 }, () => "repeat").join(" ")} invoice renewal`;
+		expect(deriveLexicalKeywords(query)).toEqual(["repeat", "invoice", "renewal"]);
+	});
+
+	it("preserves first occurrence, Unicode, numbers and negative terms", () => {
+		expect(deriveLexicalKeywords("NEVER never 2025 北京 北京 WITHOUT Alpha alpha")).toEqual([
+			"never",
+			"2025",
+			"北京",
+			"without",
+			"alpha",
+		]);
+	});
+
+	it("caps unique terms and retains existing token boundaries", () => {
+		const words = Array.from({ length: 20 }, (_, index) => `term${index}`);
+		expect(deriveLexicalKeywords(words.join(" "))).toEqual(words.slice(0, 16));
+		expect(deriveLexicalKeywords("A b x_n v2")).toEqual(["v2"]);
+		expect(deriveLexicalKeywords("")).toEqual([]);
+	});
+});
 
 function makeResult(
 	overrides: Partial<UnifiedMemorySearchResult> & { type: UnifiedMemorySearchResult["type"]; id: string },
@@ -133,6 +158,27 @@ describe("mergeUnifiedMemorySearchResultsRrf", () => {
 	it("returns an empty array when no lists are provided", () => {
 		expect(mergeUnifiedMemorySearchResultsRrf([], 10)).toEqual([]);
 	});
+
+	it("applies channel weights without changing the default score contract", () => {
+		const merged = mergeUnifiedMemorySearchResultsRrf(
+			[
+				{
+					name: "memory-semantic",
+					hits: [makeResult({ type: "memory", id: "dense-only", similarity: 0.9 })],
+				},
+				{
+					name: "memory-bm25",
+					hits: [makeResult({ type: "memory", id: "lexical-only", similarity: 0.8 })],
+				},
+			],
+			10,
+			60,
+			{ semantic: 0.2, lexical: 1 },
+		);
+		expect(merged[0]?.id).toBe("lexical-only");
+		expect(merged[0]?.metadata.rrfScore).toBeCloseTo(1 / 61);
+		expect(merged[1]?.metadata.rrfScore).toBeCloseTo(0.2 / 61);
+	});
 });
 
 describe("UnifiedMemorySearchInput new fields", () => {
@@ -166,6 +212,10 @@ describe("listNameToChannel", () => {
 
 	it("maps memory-entity to entity", () => {
 		expect(listNameToChannel("memory-entity")).toBe("entity");
+	});
+
+	it("maps memory-planner to its own evidence channel", () => {
+		expect(listNameToChannel("memory-planner")).toBe("planner");
 	});
 
 	it("returns undefined for non-channel list names (insights, knowledge, summary)", () => {

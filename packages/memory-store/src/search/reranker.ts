@@ -26,6 +26,15 @@ export interface RerankerInput {
 export interface RerankerScore {
 	id: string;
 	score: number;
+	evidenceScores?: Array<{
+		sourceChunkId?: string;
+		startPosition?: number;
+		endPosition?: number;
+		contentSha256: string;
+		score: number;
+		inputTokens: number;
+		queryTruncated: boolean;
+	}>;
 }
 
 export interface Reranker {
@@ -77,13 +86,20 @@ export async function applyReranker<
 	const byId = new Map(results.map((result) => [result.id, result]));
 	const reordered: T[] = [];
 	const seen = new Set<string>();
-	for (const { id, score } of scores) {
+	for (const { id, score, evidenceScores } of scores) {
 		const hit = byId.get(id);
 		if (!hit || seen.has(id)) {
 			continue;
 		}
 		seen.add(id);
-		reordered.push({ ...hit, metadata: { ...hit.metadata, rerankerScore: score } });
+		reordered.push({
+			...hit,
+			metadata: {
+				...hit.metadata,
+				rerankerScore: score,
+				...(evidenceScores ? { rerankerEvidenceScores: evidenceScores } : {}),
+			},
+		});
 	}
 
 	// Append any candidates the reranker omitted so we never silently lose

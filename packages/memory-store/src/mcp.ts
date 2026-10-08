@@ -166,6 +166,24 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				"Optional similarity floor. Omit it to let the default RRF pipeline fuse the full candidate window.",
 			),
 		mergeStrategy: z.enum(["rrf", "similarity"]).optional(),
+		rrfK: z.number().int().positive().optional(),
+		rrfWeights: z
+			.object({
+				semantic: z.number().nonnegative().optional(),
+				lexical: z.number().nonnegative().optional(),
+				planner: z.number().nonnegative().optional(),
+				hybrid: z.number().nonnegative().optional(),
+				entity: z.number().nonnegative().optional(),
+			})
+			.optional(),
+		sessionNeighborExpansion: z
+			.object({
+				seedLimit: z.number().int().positive().optional(),
+				window: z.number().int().positive().optional(),
+				mode: z.enum(["union", "protected"]).optional(),
+				maxNeighborSlots: z.number().int().positive().optional(),
+			})
+			.optional(),
 		includeRetrievalDiagnostics: z.boolean().optional(),
 		botIds: z.array(z.string()).optional(),
 		documentIds: z.array(z.string()).optional(),
@@ -252,6 +270,14 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				limit?: number;
 				threshold?: number;
 				mergeStrategy?: "rrf" | "similarity";
+				rrfK?: number;
+				rrfWeights?: Record<string, number>;
+				sessionNeighborExpansion?: {
+					seedLimit?: number;
+					window?: number;
+					mode?: "union" | "protected";
+					maxNeighborSlots?: number;
+				};
 				includeRetrievalDiagnostics?: boolean;
 				botIds?: string[];
 				documentIds?: string[];
@@ -273,6 +299,9 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 				limit: a.limit,
 				threshold: a.threshold,
 				mergeStrategy: a.mergeStrategy,
+				rrfK: a.rrfK,
+				rrfWeights: a.rrfWeights,
+				sessionNeighborExpansion: a.sessionNeighborExpansion,
 				includeRetrievalDiagnostics: a.includeRetrievalDiagnostics,
 				botIds: a.botIds,
 				documentIds: a.documentIds,

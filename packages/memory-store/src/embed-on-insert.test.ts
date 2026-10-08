@@ -28,6 +28,36 @@ const baseMessage = (overrides: Partial<RawMessage> = {}): RawMessage => ({
 });
 
 describe("applyEmbedOnInsertPolicy", () => {
+	it("uses model-tokenizer budgets before embedding while preserving the exact source", async () => {
+		const text = "😀 dense-code_value ".repeat(30);
+		const countTokens = (value: string) => Array.from(value).length;
+		const embedDocuments = vi.fn(async ({ texts }: { texts: string[] }) => texts.map(() => [1, 0]));
+		const prepared = await prepareRawMessageIngest([baseMessage({ content: text })], true, {
+			getDocumentChunking: async () => ({ maxTokens: 32, overlapTokens: 4, countTokens }),
+			embedDocuments,
+			embeddingInfo: { model: "new-model", dimensions: 2 },
+		});
+		expect(prepared.messages[0].content).toBe(text);
+		for (const chunk of prepared.chunks) {
+			expect(countTokens(chunk.content)).toBeLessThanOrEqual(32);
+			expect(chunk.content).toBe(text.slice(chunk.startPosition, chunk.endPosition));
+			expect(chunk.embeddingModel).toBe("new-model");
+		}
+		expect(embedDocuments.mock.calls[0][0].texts).toEqual(prepared.chunks.map((chunk) => chunk.content));
+	});
+
+	it("does not reuse an old-model parent vector after a model switch", async () => {
+		const message = baseMessage({ embedding: [0, 1], embeddingModel: "old-model" });
+		const embedDocuments = vi.fn(async () => [[1, 0]]);
+		const prepared = await prepareRawMessageIngest([message], true, {
+			embedDocuments,
+			embeddingInfo: { model: "new-model", dimensions: 2 },
+		});
+		expect(prepared.messages[0]).toEqual(message);
+		expect(prepared.chunks[0].embedding).toEqual([1, 0]);
+		expect(prepared.chunks[0].embeddingModel).toBe("new-model");
+		expect(embedDocuments).toHaveBeenCalledTimes(1);
+	});
 	it("path (a) — `embedOnInsert: true` fills missing embeddings without warnings", async () => {
 		const embedQuery = vi.fn(async () => [0.1, 0.2, 0.3]);
 		const unified: UnifiedSearchDeps = { embedQuery };

@@ -94,8 +94,10 @@ class MockHandler(BaseHTTPRequestHandler):
                         "channels": {
                             "semantic": [{"id": "memory-1", "content": "semantic candidate", "similarity": 0.7}],
                             "lexical": [{"id": "memory-1", "content": "keyword candidate", "similarity": 0.6}],
+                            "planner": [{"id": "memory-1", "content": "planner candidate", "similarity": 0.5}],
                         },
                         "fusedBeforeRerank": [{"id": "memory-1", "content": "before rerank", "similarity": 0.4}],
+                        "final": [{"id": "memory-1", "content": f"retrieved: {payload['query']}", "similarity": 0.9}],
                         "reranker": {"enabled": True, "provider": "local", "model": "test-model", "inputCount": 1, "outputCount": 1, "latencyMs": 1, "orderChanged": False},
                     },
                     "warnings": [],
@@ -125,6 +127,43 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.server.requests.clear()
         self.server.reranker_ready = True
         self.server.fail_query = None
+
+    def test_beam_reasoning_requires_a_matching_non_degraded_trace(self) -> None:
+        client = retrieve.AmlClient(self.aml_client.base_url, top_k=12, reasoning="iterative")
+        reply = {
+            "data": [{"id": "memory-1", "content": "answer"}],
+            "_local_diagnostics": {
+                "retrieval": {"fusedBeforeRerank": [], "reranker": {"enabled": True}},
+                "reasoning": {"strategy": "iterative", "iterations": 2, "degraded": False},
+            },
+        }
+        with mock.patch.object(client, "_post", return_value=reply) as post:
+            hits, diagnostics = client.search_with_diagnostics("user", "question")
+        self.assertEqual(hits[0]["id"], "memory-1")
+        self.assertEqual(diagnostics["reasoning"]["iterations"], 2)
+        self.assertEqual(post.call_args.kwargs["headers"]["X-OpenContext-Local-Reasoning"], "iterative")
+        reply["_local_diagnostics"]["reasoning"]["degraded"] = True
+        with mock.patch.object(client, "_post", return_value=reply):
+            _, degraded = client.search_with_diagnostics("user", "question")
+        self.assertTrue(degraded["reasoning"]["degraded"])
+        reply["_local_diagnostics"]["reasoning"]["strategy"] = "rewrite"
+        with mock.patch.object(client, "_post", return_value=reply):
+            with self.assertRaisesRegex(RuntimeError, "did not report"):
+                client.search_with_diagnostics("user", "question")
+
+    def test_beam_union_uses_local_header_and_requires_matching_trace(self) -> None:
+        client = retrieve.AmlClient(self.aml_client.base_url, top_k=12, reasoning="union")
+        reply = {
+            "data": [{"id": "memory-1", "content": "answer"}],
+            "_local_diagnostics": {
+                "retrieval": {"fusedBeforeRerank": [], "reranker": {"enabled": True}},
+                "reasoning": {"strategy": "union", "iterations": 2, "evidenceCount": 1},
+            },
+        }
+        with mock.patch.object(client, "_post", return_value=reply) as post:
+            _, diagnostics = client.search_with_diagnostics("user", "question")
+        self.assertEqual(diagnostics["reasoning"]["strategy"], "union")
+        self.assertEqual(post.call_args.kwargs["headers"]["X-OpenContext-Local-Reasoning"], "union")
 
     def test_beam_preflight_requires_ready_reranker(self) -> None:
         self.server.reranker_ready = False
@@ -326,9 +365,10 @@ class RetrieveFixtureTests(unittest.TestCase):
             self.assertEqual(len(traces), 1)
             self.assertEqual(traces[0]["before_rerank"][0]["content_excerpt"], "before rerank")
             self.assertEqual(traces[0]["after_rerank"][0]["id"], "memory-1")
-            self.assertEqual(traces[0]["after_rerank"][0]["retrieval_channels"], ["keyword", "semantic"])
+            self.assertEqual(traces[0]["after_rerank"][0]["retrieval_channels"], ["keyword", "semantic", "planner"])
             self.assertEqual(traces[0]["channel_summary"]["keyword"]["candidate_count"], 1)
             self.assertEqual(traces[0]["channel_summary"]["semantic"]["candidate_count"], 1)
+            self.assertEqual(traces[0]["channel_summary"]["planner"]["candidate_count"], 1)
             self.assertTrue(traces[0]["reranker"]["enabled"])
 
             self.server.requests.clear()
@@ -345,6 +385,43 @@ class RetrieveFixtureTests(unittest.TestCase):
                 retrieve.completed_beam_add_requests(
                     [entry], dataset, {f"aml:{user_id}:chunk:1:0"}
                 )
+
+    def test_beam_question_subset_preserves_full_ingestion_and_freezes_selection(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = Path(temp_dir) / "beam.json"
+            entries = [
+                {"entry_id": f"entry-{index}", "chat": [{"speaker": "user", "text": f"fact {index}"}],
+                 "probing_questions": [{"question_id": f"q-{index}", "question": f"question {index}"}]}
+                for index in range(2)
+            ]
+            dataset.write_text(json.dumps({"conversations": entries}), encoding="utf-8")
+            output_root = Path(temp_dir) / "outputs"
+            output = retrieve.run_benchmark(
+                "beam", dataset, self.aml_client, output_root, question_ids={"q-1"}
+            )
+            records = retrieve.read_jsonl(output)
+            self.assertEqual([record["id"] for record in records], ["q-1"])
+            self.assertEqual(records[0]["question"], "question 1")
+            self.assertEqual([path for path, _ in self.server.requests], ["/add", "/add", "/search"])
+            state = retrieve.read_json(output_root / "beam" / "retrieval-state.json")
+            self.assertEqual(state["question_ids"], ["q-1"])
+            saved_ids = {
+                f"aml:{retrieve.scope_id('beam', dataset, entry['entry_id'])}:chunk:0:0"
+                for entry in entries
+            }
+            self.server.requests.clear()
+            with self.assertRaisesRegex(ValueError, "selection"):
+                retrieve.run_benchmark(
+                    "beam", dataset, self.aml_client, output_root,
+                    question_ids={"q-0"}, resume_message_ids=saved_ids,
+                )
+            self.assertEqual(self.server.requests, [])
+            with self.assertRaisesRegex(ValueError, "unknown BEAM question"):
+                retrieve.run_benchmark(
+                    "beam", dataset, self.aml_client, Path(temp_dir) / "unknown",
+                    question_ids={"missing"},
+                )
+            self.assertEqual(self.server.requests, [])
 
     def test_beam_finishes_all_adds_before_searching(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -381,6 +458,21 @@ class RetrieveFixtureTests(unittest.TestCase):
             self.assertEqual(len(retrieve.read_jsonl(output)), 2)
             self.assertEqual([body["query"] for path, body in self.server.requests if path == "/search"], ["second"])
             self.assertFalse([path for path, _ in self.server.requests if path == "/add"])
+
+    def test_beam_evidence_previews_original_text_but_hashes_full_context(self) -> None:
+        content = (
+            "[Message order guidance]\n" + "Guidance. " * 60
+            + "\n\n[Message metadata]\nmessageSequence: 9"
+            + "\n\n[Original excerpt]\nA 50-page album costs $75."
+        )
+        evidence = retrieve.beam_hit_evidence(
+            {"id": "m1", "content": content}, 1, {"m1": "turn-7"}, {"turn-7"}
+        )
+        self.assertEqual(evidence["content_excerpt"], "A 50-page album costs $75.")
+        self.assertEqual(
+            evidence["content_sha256"], retrieve.hashlib.sha256(content.encode()).hexdigest()
+        )
+        self.assertEqual(evidence["matched_source_turn_ids"], ["turn-7"])
 
     def test_beam_hit_evidence_maps_exact_source_id(self) -> None:
         hit = {"id": "aml:request:0", "content": "answer", "similarity": 0.5}

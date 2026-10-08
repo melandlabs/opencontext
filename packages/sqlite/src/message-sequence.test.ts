@@ -59,6 +59,62 @@ describe("per-user message order", () => {
 		}
 	});
 
+	it("returns bounded neighbors within the same session only", async () => {
+		const manager = new SQLiteRawMessageManager({ dbPath: ":memory:" });
+		try {
+			await manager.storeMessages([
+				message("s1", "alice", { metadata: { sessionId: "session-a" } }),
+				message("s2", "alice", { metadata: { sessionId: "session-a" } }),
+				message("other", "alice", { metadata: { sessionId: "session-b" } }),
+				message("s3", "alice", { metadata: { sessionId: "session-a" } }),
+			]);
+			const neighbors = await manager.getRawMessageSessionNeighbors({
+				userId: "alice",
+				sessionId: "session-a",
+				messageSequences: [2, 4],
+				window: 1,
+			});
+			expect(neighbors.map((row) => row.messageId)).toEqual(["s1", "s2", "s3"]);
+			expect(neighbors.every((row) => row.metadata?.sessionId === "session-a")).toBe(true);
+		} finally {
+			await manager.close();
+		}
+	});
+
+	it("does not fill the gap between distant seed windows or cross user boundaries", async () => {
+		const manager = new SQLiteRawMessageManager({ dbPath: ":memory:" });
+		try {
+			await manager.storeMessages(
+				Array.from({ length: 100 }, (_, i) =>
+					message(`a-${i + 1}`, "alice", { metadata: { sessionId: "session-a" } }),
+				),
+			);
+			await manager.storeMessages(
+				Array.from({ length: 100 }, (_, i) =>
+					message(`b-${i + 1}`, "bob", { metadata: { sessionId: "session-a" } }),
+				),
+			);
+			const neighbors = await manager.getRawMessageSessionNeighbors({
+				userId: "alice",
+				sessionId: "session-a",
+				messageSequences: [2, 99, 99],
+				window: 1,
+			});
+			expect(neighbors.map((row) => row.messageSequence)).toEqual([1, 2, 3, 98, 99, 100]);
+			expect(neighbors.every((row) => row.userId === "alice")).toBe(true);
+			expect(
+				await manager.getRawMessageSessionNeighbors({
+					userId: "alice",
+					sessionId: "session-a",
+					messageSequences: [Number.NaN, Number.POSITIVE_INFINITY],
+					window: 1,
+				}),
+			).toEqual([]);
+		} finally {
+			await manager.close();
+		}
+	});
+
 	it("upgrades a required timestamp without losing parents, children, FTS or existing insertion order", () => {
 		const db = new Database(":memory:");
 		try {

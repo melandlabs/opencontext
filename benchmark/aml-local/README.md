@@ -124,14 +124,15 @@ you apply at agentmemories.ai.
 ## Enhanced retrieval (AI multi-step reasoning)
 
 The daemon can run `/v1/search` through OpenContext's reasoning layer instead of
-one-shot hybrid retrieval. Two strategies are available (per request, via
+one-shot hybrid retrieval. Three strategies are available (per request, via
 `reasoningStrategy`):
 
 - `rewrite` — an LLM rephrases the question into first-person "user voice"
   variants before embedding (helps when memories are chat logs)
 - `iterative` — an LLM planner drives **multi-step retrieval**: search → note
-  evidence → search again (up to `OPENCONTEXT_LLM_REASONING_MAX_ITERATIONS`,
-  default 4), which helps on multi-hop / implicit-preference questions
+  evidence → search again, with a default budget of four actions.
+- `union` — keep the original-query BM25 and semantic channels, adding evidence
+  collected by the same iterative planner rather than replacing the baseline.
 
 Both degrade gracefully to the baseline hybrid search (BM25 + vector + RRF)
 when the LLM call fails. No code changes are needed — the CLI wires the
@@ -165,9 +166,17 @@ python retrieve.py personamem --skip-ingest
 Reasoning retrieval costs extra LLM calls (rewrite: 1 per question; iterative:
 up to maxIterations per question), so full 5,000-question runs should use
 `-SkipIngest` (memories are already embedded) and `AML_RETRIEVE_WORKERS`.
-A reranker plug-in exists in the SDK (`unified.reranker`) but is not wired by
-the CLI; consolidation (`/v1/consolidate:apply`) is a separate write-side
+A local reranker is wired by the CLI with `--reranker-provider local`;
+consolidation (`/v1/consolidate:apply`) is a separate write-side
 endpoint not used by these benchmarks.
+
+An experimental, default-off core context selector can be wired with
+`OPENCONTEXT_LLM_EVIDENCE_SELECTION=1` when the reasoning LLM is configured.
+It selects exact original passages **after** ranking; it does not change
+reranker inputs or stored messages. Quotes must be verified against source
+spans, and invalid selections retain the original excerpt. It requires extra
+LLM calls and has no established benchmark-score benefit. SDK hosts can inject
+`unified.reasoning.evidenceSelector` using `createExtractiveEvidenceSelector`.
 
 ## serve.py — AML Add/Search adapter (for official submission)
 

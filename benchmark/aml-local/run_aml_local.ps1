@@ -23,12 +23,15 @@ param(
   [switch]$SkipIngest,
   [string]$ResumeDbPath = "",
   [int]$MaxQuestions = 0,
+  [int]$TopK = 0,
+  [int]$CandidateK = 0,
+  [string]$QuestionIds = "",
   [ValidateSet("mcq","generative")][string]$Mode = "mcq",
   [string]$AnswerModel = "",
   [string]$JudgeModel = "",
   # retrieval reasoning strategy forwarded to /v1/search (daemon must be started
   # with OPENCONTEXT_LLM_API_KEY — see README "Enhanced retrieval")
-  [ValidateSet("none","rewrite","iterative")][string]$Reasoning = "none",
+  [ValidateSet("none","rewrite","iterative","union")][string]$Reasoning = "none",
   # redirect artifacts to outputs-<Tag>/ instead of outputs/ (keeps enhanced
   # runs separate from the baseline results)
   [string]$Tag = ""
@@ -36,9 +39,9 @@ param(
 
 $startedAt = [DateTimeOffset]::UtcNow
 $PSNativeCommandUseErrorActionPreference = $false
-if ($Bench -eq "beam" -and $Reasoning -ne "none") { throw "BEAM public-flow mode does not accept a retrieval reasoning override" }
 if ($Bench -eq "beam" -and $SkipIngest) { throw "BEAM public-flow mode requires Add before Search; -SkipIngest is diagnostic only" }
 if ($ResumeDbPath -and $Bench -ne "beam") { throw "-ResumeDbPath is supported only for BEAM" }
+if ($QuestionIds -and ($Bench -ne "beam" -or $MaxQuestions -gt 0)) { throw "-QuestionIds requires BEAM and cannot be combined with -MaxQuestions" }
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $amlRepo = Join-Path $here "..\AML-agent-memory-leaderboard"
 $python = Join-Path $amlRepo ".venv\Scripts\python.exe"
@@ -92,6 +95,7 @@ if ($Bench -eq "beam") { $retrieveArgs += @("--dataset", $Dataset) }
 if ($SkipIngest)    { $retrieveArgs += "--skip-ingest" }
 if ($ResumeDbPath)  { $retrieveArgs += @("--resume-db", $ResumeDbPath) }
 if ($MaxQuestions -gt 0) { $retrieveArgs += @("--max-questions", $MaxQuestions) }
+if ($QuestionIds) { $retrieveArgs += @("--question-ids", $QuestionIds) }
 
 function Test-WritableTarget([string]$TargetPath) {
   $candidate = [IO.Path]::GetFullPath($TargetPath)
@@ -148,6 +152,17 @@ if ($Bench -eq "beam") {
 }
 
 $topK = if ($Bench -eq "beam") { 12 } else { 10 }
+$candidateK = $null
+if ($TopK -gt 0) { $topK = $TopK }
+if ($TopK -lt 0) { $preflightErrors.Add("-TopK must be zero or a positive integer") }
+if ($CandidateK -lt 0) { $preflightErrors.Add("-CandidateK must be zero or a positive integer") }
+if ($CandidateK -gt 0) {
+  if ($CandidateK -lt $topK) { $preflightErrors.Add("-CandidateK must be at least -TopK") }
+  $candidateK = $CandidateK
+  $env:AML_CANDIDATE_K = "$CandidateK"
+} else {
+  Remove-Item Env:AML_CANDIDATE_K -ErrorAction SilentlyContinue
+}
 if ($Bench -ne "beam" -and $env:AML_TOP_K) {
   $parsedTopK = 0
   if (-not [int]::TryParse($env:AML_TOP_K, [ref]$parsedTopK) -or $parsedTopK -lt 1) {
@@ -196,13 +211,18 @@ if ($Bench -eq "beam") {
   $runConfig = [ordered]@{
     dataset = [IO.Path]::GetFullPath($datasetPath)
     top_k = $topK
+    candidate_k = $candidateK
     answer_model = $AnswerModel
     judge_model = $JudgeModel
     limit = $Limit
     samples = $Samples
     max_questions = $MaxQuestions
     reasoning = $Reasoning
+    reasoning_model = if ($env:OPENCONTEXT_LLM_MODEL) { $env:OPENCONTEXT_LLM_MODEL } else { "auto" }
+    reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" }
+    reasoning_effort = if ($env:OPENCONTEXT_LLM_REASONING_EFFORT) { $env:OPENCONTEXT_LLM_REASONING_EFFORT } else { "auto" }
   }
+  if ($QuestionIds) { $runConfig["question_ids"] = $QuestionIds }
   $runConfigJson = $runConfig | ConvertTo-Json -Compress
   if (Test-Path -LiteralPath $configPath) {
     if ((Get-Content -LiteralPath $configPath -Raw).Trim() -ne $runConfigJson) {
@@ -291,10 +311,11 @@ $manifest = [ordered]@{
   git_commit = $gitCommit
   dataset = Get-DatasetIdentity $datasetPath
   answerer_model = $AnswerModel
+  answerer_routing = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_ANSWER_PROVIDER) { $env:AML_BEAM_ANSWER_PROVIDER } else { "auto" }); allow_fallbacks = (-not [bool]$env:AML_BEAM_ANSWER_PROVIDER) } } else { $null }
   judge_model = $JudgeModel
   judge_rubric_routing = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_JUDGE_PROVIDER) { $env:AML_BEAM_JUDGE_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "NextBit" } else { "auto" }); response_format = "json_object"; invalid_format = "skip_after_bounded_retries" } } else { $null }
   judge_event_alignment = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_EVENT_PROVIDER) { $env:AML_BEAM_EVENT_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "Alibaba" } else { "auto" }); reasoning = "none"; initial_max_tokens = 8 } } else { $null }
-  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam") }
+  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam"); reasoning_model = if ($env:OPENCONTEXT_LLM_MODEL) { $env:OPENCONTEXT_LLM_MODEL } else { "auto" }; reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" }; reasoning_effort = if ($env:OPENCONTEXT_LLM_REASONING_EFFORT) { $env:OPENCONTEXT_LLM_REASONING_EFFORT } else { "auto" } }
   resume = [bool]$ResumeDbPath
   started_at = $startedAt.ToString("o")
   finished_at = $finishedAt.ToString("o")
@@ -304,6 +325,7 @@ $manifest = [ordered]@{
     limit = if ($Limit -gt 0) { $Limit } else { $null }
     samples = if ($Samples) { $Samples } else { $null }
     max_questions = if ($MaxQuestions -gt 0) { $MaxQuestions } else { $null }
+    question_ids = if ($QuestionIds) { @($QuestionIds.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }) } else { $null }
     mode = if ($Bench -eq "personamem") { $Mode } else { $null }
     skip_ingest = [bool]$SkipIngest
     resume_db = if ($ResumeDbPath) { [IO.Path]::GetFullPath($ResumeDbPath) } else { $null }

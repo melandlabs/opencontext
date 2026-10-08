@@ -187,6 +187,7 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 				? (body.tiers as Array<"summary" | "raw" | "insight" | "knowledge">)
 				: undefined,
 			limit: typeof body.limit === "number" ? body.limit : undefined,
+			candidateLimit: typeof body.candidateLimit === "number" ? body.candidateLimit : undefined,
 			threshold: typeof body.threshold === "number" ? body.threshold : undefined,
 			botIds: Array.isArray(body.botIds) ? (body.botIds as string[]) : undefined,
 			documentIds: Array.isArray(body.documentIds) ? (body.documentIds as string[]) : undefined,
@@ -202,6 +203,15 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 					: undefined,
 			mergeStrategy:
 				body.mergeStrategy === "rrf" || body.mergeStrategy === "similarity" ? body.mergeStrategy : undefined,
+			rrfK: typeof body.rrfK === "number" ? body.rrfK : undefined,
+			rrfWeights:
+				body.rrfWeights && typeof body.rrfWeights === "object"
+					? (body.rrfWeights as SearchInput["rrfWeights"])
+					: undefined,
+			sessionNeighborExpansion:
+				body.sessionNeighborExpansion && typeof body.sessionNeighborExpansion === "object"
+					? (body.sessionNeighborExpansion as SearchInput["sessionNeighborExpansion"])
+					: undefined,
 			includeRetrievalDiagnostics: body.includeRetrievalDiagnostics === true,
 			...(wantsSynthesis
 				? {

@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 /**
  * Tests for the additions to `search/unified-search`:
  *   - the optional lexical (BM25) sub-query alongside the semantic one
@@ -9,7 +12,9 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { SQLiteRawMessageManager } from "../../../sqlite/src/raw-message-manager";
 import type { UnifiedSearchDeps } from "../config";
+import { createExtractiveEvidenceSelector } from "./evidence-selector";
 import { createIterativeRecallPlanner } from "./iterative-recall";
 import { type QueryRewriter, createUserVoiceRewriter } from "./query-rewriter";
 import type { RerankerInput } from "./reranker";
@@ -84,6 +89,197 @@ afterEach(() => {
 });
 
 describe("createUnifiedSearch", () => {
+	it("retains ranked evidence when a host's selector fails", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			reasoning: {
+				evidenceSelector: {
+					select: async () => {
+						throw new Error("private error details");
+					},
+				},
+			},
+		});
+		const input = { userId: "u1", query: "topic", sources: ["memory"] as const, limit: 2 };
+		const failed = await search.search({ ...input, sources: ["memory"] });
+		const baseline = await createUnifiedSearch(baseDeps).search({ ...input, sources: ["memory"] });
+		expect(failed.results).toEqual(baseline.results);
+		expect(failed.warnings).toContainEqual({
+			source: "memory",
+			code: "evidence_selection_failed",
+			message: "Evidence selection failed; original ranked excerpts retained.",
+		});
+		expect(JSON.stringify(failed)).not.toContain("private error details");
+	});
+	it.each(["search", "searchUnifiedMemory"] as const)(
+		"selects exact evidence only after Top-K and reranking via %s",
+		async (method) => {
+			const original = "Unrelated background. I spent $75. Historical question?";
+			const rerank = vi.fn(async (_input: RerankerInput) => [
+				{ id: "m1", score: 0.99 },
+				{ id: "m2", score: 0.1 },
+			]);
+			const complete = vi.fn(
+				async (_prompt: string) =>
+					'{"selections":[{"id":"m1","quotes":[{"excerpt":0,"text":"I spent $75."}]}]}',
+			);
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1],
+				searchRawMessagesAnn: async () => [
+					{ id: "m1", content: original, similarity: 0.9, metadata: { messageSequence: 1, userId: "u1" } },
+					{
+						id: "m2",
+						content: "Another source",
+						similarity: 0.8,
+						metadata: { messageSequence: 2, userId: "u1" },
+					},
+				],
+				searchRawMessagesLexical: async () => [],
+				reranker: { rerank },
+				reasoning: { evidenceSelector: createExtractiveEvidenceSelector({ complete }) },
+			});
+			const output = await search[method]({
+				userId: "u1",
+				query: "cost?",
+				sources: ["memory"],
+				limit: 1,
+				includeRetrievalDiagnostics: true,
+			});
+			expect(output.results.map((item) => item.id)).toEqual(["m1"]);
+			expect(output.results[0].content).toContain("I spent $75.");
+			expect(output.results[0].content).not.toContain("Unrelated background");
+			expect(complete).toHaveBeenCalledTimes(1);
+			expect(complete.mock.calls[0]?.[0]).not.toContain("Another source");
+			expect(output.retrievalDiagnostics?.fusedBeforeRerank[0].content).toBe(original);
+			expect(output.retrievalDiagnostics?.final[0].metadata.contextSelection).toMatchObject({
+				status: "selected",
+			});
+		},
+	);
+	it("keeps real FTS5 relevance order through parent dedupe and RRF", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "unified-fts-order-"));
+		const manager = new SQLiteRawMessageManager({ dbPath: join(dir, "store.db") });
+		try {
+			const base = { platform: "test", botId: "bot", userId: "u1", timestamp: 1, createdAt: 1 };
+			await manager.storeMessages([
+				{ ...base, messageId: "strong", content: "mars mars mars mars mars rover" },
+				{ ...base, messageId: "weak", content: "mars rover and other unrelated words" },
+			]);
+			const raw = await manager.lexicalSearchMessages({ userId: "u1", keywords: ["mars"], limit: 2 });
+			expect(raw.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+			expect(raw[0]?.bm25Rank).toBeLessThan(raw[1]?.bm25Rank ?? 0);
+			expect(raw[0]?.similarity).toBeGreaterThan(raw[1]?.similarity ?? 0);
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1, 0],
+				searchRawMessagesAnn: async () => [],
+				searchRawMessagesLexical: (input) => manager.lexicalSearchMessages(input),
+			});
+			const output = await search.search({
+				userId: "u1",
+				query: "mars",
+				sources: ["memory"],
+				limit: 2,
+				mergeStrategy: "rrf",
+				includeRetrievalDiagnostics: true,
+			});
+			expect(output.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+			expect(output.results.map((hit) => hit.id)).toEqual(["strong", "weak"]);
+		} finally {
+			await manager.close();
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("exposes two distant FTS5 matches from a single parent to the answer context", async () => {
+		const dir = mkdtempSync(join(tmpdir(), "unified-fts-spans-"));
+		const manager = new SQLiteRawMessageManager({ dbPath: join(dir, "store.db") });
+		try {
+			const paragraphs = Array.from(
+				{ length: 22 },
+				(_, index) =>
+					`Section ${index}. ${"context detail ".repeat(38)} ${index === 2 || index === 18 ? "rareevidence" : "ordinary"}.`,
+			);
+			await manager.storeMessage({
+				messageId: "long-parent",
+				platform: "test",
+				botId: "bot",
+				userId: "u1",
+				timestamp: 1,
+				createdAt: 1,
+				content: paragraphs.join("\n\n"),
+			});
+			const search = createUnifiedSearch({
+				embedQuery: async () => [1, 0],
+				searchRawMessagesAnn: async () => [],
+				searchRawMessagesLexical: (input) => manager.lexicalSearchMessages(input),
+			});
+			const output = await search.search({
+				userId: "u1",
+				query: "rareevidence",
+				sources: ["memory"],
+				limit: 1,
+				mergeStrategy: "rrf",
+			});
+			expect(output.results).toHaveLength(1);
+			expect(output.results[0]?.content).toContain("Section 2.");
+			expect(output.results[0]?.content).toContain("Section 18.");
+			expect((output.results[0]?.metadata.matchedSpans as unknown[]).length).toBeGreaterThanOrEqual(2);
+		} finally {
+			await manager.close();
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("returns distinct semantic and lexical excerpts from one parent", async () => {
+		const search = createUnifiedSearch({
+			embedQuery: async () => [1, 0],
+			searchRawMessagesAnn: async () => [
+				{
+					id: "parent",
+					content: "Background about the trip.",
+					similarity: 0.9,
+					metadata: {
+						userId: "u1",
+						messageSequence: 1,
+						sourceChunkId: "a",
+						sourceStartPosition: 0,
+						sourceEndPosition: 26,
+					},
+				},
+			],
+			searchRawMessagesLexical: async () => [
+				{
+					id: "parent",
+					content: "The answer is the blue train.",
+					similarity: 0.8,
+					metadata: {
+						userId: "u1",
+						messageSequence: 1,
+						sourceChunkId: "b",
+						sourceStartPosition: 100,
+						sourceEndPosition: 129,
+					},
+				},
+			],
+		});
+		for (const mergeStrategy of ["rrf", "similarity"] as const) {
+			const output = await search.search({
+				userId: "u1",
+				query: "blue train",
+				sources: ["memory"],
+				limit: 1,
+				mergeStrategy,
+			});
+			expect(output.results).toHaveLength(1);
+			expect(output.results[0]?.content).toContain("Background about the trip.");
+			expect(output.results[0]?.content).toContain("The answer is the blue train.");
+			expect(
+				(output.results[0]?.metadata.matchedSpans as Array<{ sourceChunkId: string }>).map(
+					(span) => span.sourceChunkId,
+				),
+			).toEqual(["a", "b"]);
+		}
+	});
 	it("accepts the public AML top_k=100 without silently clamping to 50", async () => {
 		const candidates = Array.from({ length: 110 }, (_, i) => ({
 			id: `m${i}`,
@@ -160,6 +356,103 @@ describe("createUnifiedSearch", () => {
 		expect(top?.metadata.rrfScore).toBeGreaterThan(0);
 	});
 
+	it("expands same-session neighbors after fusion and records diagnostics", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn: async () => [
+				{
+					id: "seed",
+					content: "seed",
+					similarity: 0.9,
+					metadata: { sessionId: "s1", messageSequence: 2 },
+				},
+			],
+			searchRawMessagesLexical: async () => [],
+			searchRawMessageNeighbors: async (input) => {
+				expect(input).toMatchObject({ userId: "u1", sessionId: "s1", messageSequences: [2], window: 1 });
+				return [
+					{
+						id: "neighbor",
+						content: "neighbor evidence",
+						similarity: 0,
+						metadata: { userId: "u1", sessionId: "s1", messageSequence: 1 },
+					},
+				];
+			},
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "seed",
+			sources: ["memory"],
+			limit: 2,
+			candidateLimit: 2,
+			sessionNeighborExpansion: { seedLimit: 1, window: 1 },
+			includeRetrievalDiagnostics: true,
+		});
+		expect(out.results.map((hit) => hit.id)).toEqual(["seed", "neighbor"]);
+		expect(out.results[1]?.metadata).toMatchObject({ sessionNeighbor: true, neighborDistance: 1 });
+		expect(out.retrievalDiagnostics?.sessionNeighborExpansion).toMatchObject({
+			enabled: true,
+			seedCount: 1,
+			neighborCount: 1,
+			sessions: 1,
+		});
+	});
+
+	it("rejects provider rows outside the requested user/session and caps protected neighbors", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn: async () => [
+				{
+					id: "seed",
+					content: "seed",
+					similarity: 0.9,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 10 },
+				},
+				...Array.from({ length: 2 }, (_, index) => ({
+					id: `direct-${index}`,
+					content: `direct-${index}`,
+					similarity: 0.8 - index / 100,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 20 + index },
+				})),
+			],
+			searchRawMessagesLexical: async () => [],
+			searchRawMessageNeighbors: async () => [
+				{
+					id: "wrong-user",
+					content: "wrong",
+					similarity: 0,
+					metadata: { userId: "u2", sessionId: "s1", messageSequence: 9 },
+				},
+				{
+					id: "wrong-session",
+					content: "wrong",
+					similarity: 0,
+					metadata: { userId: "u1", sessionId: "s2", messageSequence: 9 },
+				},
+				...Array.from({ length: 8 }, (_, index) => ({
+					id: `neighbor-${index}`,
+					content: `neighbor-${index}`,
+					similarity: 0,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 9 },
+				})),
+			],
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "seed",
+			sources: ["memory"],
+			limit: 4,
+			candidateLimit: 4,
+			sessionNeighborExpansion: { seedLimit: 1, window: 1, mode: "protected", maxNeighborSlots: 1 },
+			includeRetrievalDiagnostics: true,
+		});
+		expect(out.results).toHaveLength(4);
+		expect(out.results[0]?.id).toBe("seed");
+		expect(out.results.filter((hit) => hit.metadata.sessionNeighbor === true)).toHaveLength(1);
+		expect(out.retrievalDiagnostics?.sessionNeighborExpansion?.neighborCount).toBe(8);
+	});
+
 	it("overfetches per channel and exposes pre-fusion candidates only when requested", async () => {
 		const searchRawMessagesAnn = vi.fn(baseDeps.searchRawMessagesAnn);
 		const searchRawMessagesLexical = vi.fn(baseDeps.searchRawMessagesLexical);
@@ -182,9 +475,30 @@ describe("createUnifiedSearch", () => {
 		expect(out.results).toHaveLength(2);
 		expect(out.retrievalDiagnostics?.mergeStrategy).toBe("rrf");
 		expect(out.retrievalDiagnostics?.candidateLimit).toBe(8);
+		expect(out.retrievalDiagnostics?.timings).toEqual(
+			expect.objectContaining({
+				totalMs: expect.any(Number),
+				memorySourceMs: expect.any(Number),
+				semanticMs: expect.any(Number),
+				lexicalMs: expect.any(Number),
+				fusionMs: expect.any(Number),
+				rerankerMs: expect.any(Number),
+			}),
+		);
 		expect(out.retrievalDiagnostics?.channels.semantic.map((hit) => hit.id)).toEqual(["m1", "m2"]);
 		expect(out.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["m2", "m3"]);
 		expect(out.retrievalDiagnostics?.fusedBeforeRerank).toHaveLength(3);
+
+		await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			limit: 2,
+			candidateLimit: 5,
+			mergeStrategy: "rrf",
+		});
+		expect(searchRawMessagesAnn).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 5 }));
+		expect(searchRawMessagesLexical).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 5 }));
 	});
 
 	it("uses an unfiltered semantic candidate window for default RRF, while respecting explicit thresholds", async () => {
@@ -504,10 +818,45 @@ describe("createUnifiedSearch", () => {
 		expect(out.results.some((r) => r.type === "memory" && r.id === "m2")).toBe(true);
 	});
 
-	it("merges planner evidence with baseline top-k when reasoningStrategy='union'", async () => {
-		// Planner notes m1 (rank 3 in its own search, absent from the baseline
-		// lexical path); baseline semantic returns m2/m3. Union must keep m1 in
-		// front, fill the rest from baseline, cap at limit.
+	it("keeps semantic evidence visible to the planner when BM25 scores saturate", async () => {
+		const replies = [
+			'Thought: search for the answer\nAction: search\nAction Input: {"keywords":["answer"]}',
+			'Thought: save the observed evidence\nAction: note\nAction Input: {"indices":[1,2,3,4,5]}',
+			"Thought: finish\nAction: finish\nAction Input: {}",
+		];
+		const planner = createIterativeRecallPlanner({
+			complete: vi.fn().mockImplementation(() => Promise.resolve(replies.shift())),
+			options: { maxIterations: 3 },
+		});
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesLexical: async () =>
+				Array.from({ length: 5 }, (_, index) => ({
+					id: `lexical-${index}`,
+					content: `Broad keyword match ${index}`,
+					similarity: 1,
+					metadata: {},
+				})),
+			searchRawMessagesAnn: async () => [
+				{ id: "a-semantic", content: "The answer-bearing message.", similarity: 0.8, metadata: {} },
+			],
+			reasoning: { iterativePlanner: planner },
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "What is the answer?",
+			sources: ["memory"],
+			limit: 5,
+			reasoningStrategy: "iterative",
+		});
+
+		expect(out.reasoning?.degraded).toBeUndefined();
+		expect(out.results.map((hit) => hit.id)).toContain("a-semantic");
+	});
+
+	it("fuses planner evidence with separate baseline semantic and BM25 channels", async () => {
+		// The planner notes m1, while m2 occurs in both baseline channels.
+		// RRF must reward m2's two independent hits and still retain m1.
 		const m1 = {
 			id: "m1",
 			content: "I adopted a cat named Luna.",
@@ -517,7 +866,7 @@ describe("createUnifiedSearch", () => {
 		const embedQuery = vi.fn().mockResolvedValue(new Array(4).fill(0.1));
 		const replies = [
 			'Thought: search for cat\nAction: search\nAction Input: {"keywords":["cat"]}',
-			'Thought: note it\nAction: note\nAction Input: {"indices":[3]}',
+			'Thought: note it\nAction: note\nAction Input: {"indices":[1]}',
 			"Thought: finish\nAction: finish\nAction Input: {}",
 		];
 		const complete = vi.fn().mockImplementation(() => {
@@ -528,10 +877,12 @@ describe("createUnifiedSearch", () => {
 		const searchDeps: UnifiedSearchDeps = {
 			...baseDeps,
 			embedQuery,
-			// Planner searches with a single keyword ("cat") and sees m1; the
-			// baseline lexical path (multi-keyword query) finds nothing.
+			// Planner searches with a single keyword ("cat") and sees m1;
+			// baseline lexical search also contributes m2.
 			searchRawMessagesLexical: async (req: { keywords: string[] }) =>
-				req.keywords.length === 1 ? [m1] : [],
+				req.keywords.length === 1
+					? [m1]
+					: [{ id: "m2", content: "My cat Luna loves tuna.", similarity: 0.7, metadata: {} }],
 			searchRawMessagesAnn: async () => [
 				{
 					id: "m2",
@@ -555,12 +906,18 @@ describe("createUnifiedSearch", () => {
 			reasoningStrategy: "union",
 			sources: ["memory"],
 			limit: 2,
+			includeRetrievalDiagnostics: true,
 		});
 
 		expect(out.reasoning?.strategy).toBe("union");
 		const memoryIds = out.results.filter((r) => r.type === "memory").map((r) => r.id);
-		// planner evidence first, baseline fills up to limit=2
-		expect(memoryIds).toEqual(["m1", "m2"]);
+		expect(memoryIds).toEqual(["m2", "m1"]);
+		expect(out.retrievalDiagnostics?.channels.semantic.map((hit) => hit.id)).toEqual(["m2", "m3"]);
+		expect(out.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["m2"]);
+		expect(out.retrievalDiagnostics?.channels.planner?.map((hit) => hit.id)).toEqual(["m1"]);
+		expect(out.retrievalDiagnostics?.candidateCounts?.planner).toBe(1);
+		expect(out.results[0]?.signals?.channels).toEqual(["semantic", "lexical"]);
+		expect(out.results[1]?.signals?.channels).toEqual(["planner"]);
 	});
 
 	it("filters memory results by dateFrom/dateTo", async () => {
@@ -747,6 +1104,30 @@ describe("createUnifiedSearch", () => {
 
 		expect(out.reasoning?.degraded).toBe(true);
 		expect(out.warnings.some((w) => w.code === "memory_query_rewrite_failed")).toBe(true);
+	});
+
+	it("exposes planner diagnostics only on request without changing search results", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () => "Action: finish\nAction Input: {}",
+		});
+		const search = createUnifiedSearch({ ...baseDeps, reasoning: { iterativePlanner: planner } });
+		const input = {
+			userId: "u1",
+			query: "alpha",
+			sources: ["memory"] as ["memory"],
+			reasoningStrategy: "union" as const,
+			mergeStrategy: "rrf" as const,
+		};
+		const plain = await search.search(input);
+		const diagnosed = await search.search({ ...input, includeRetrievalDiagnostics: true });
+		expect(plain.reasoning?.plannerDiagnostics).toBeUndefined();
+		expect(diagnosed.results).toEqual(plain.results);
+		expect(diagnosed.reasoning?.plannerDiagnostics).toMatchObject({
+			fallback: "baseline",
+			searches: 1,
+			notes: 0,
+		});
+		expect(diagnosed.reasoning?.plannerDiagnostics?.steps[0]?.action).toBe("finish");
 	});
 
 	it("emits reasoning.dateRange even when strategy is 'none'", async () => {

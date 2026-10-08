@@ -62,6 +62,10 @@ AML_EVAL_KEY = os.environ.get("AML_EVAL_KEY", "")
 # real header once the platform issues your Eval Key.
 EVAL_KEY_HEADERS = ("X-Eval-Key", "X-Aml-Eval-Key")
 PORT = int(os.environ.get("AML_ADAPTER_PORT", "7422"))
+# The local daemon may need a few seconds to report health while the
+# embedding/reranker providers are warming up. Keep this separate from the
+# request timeouts so readiness checks do not reject a healthy daemon.
+HEALTH_TIMEOUT = float(os.environ.get("AML_ADAPTER_HEALTH_TIMEOUT", "15"))
 # Seconds advertised via Retry-After on transient (retriable) failures.
 RETRY_AFTER_SECONDS = os.environ.get("AML_RETRY_AFTER", "5")
 
@@ -130,7 +134,7 @@ def handle_add(body: dict) -> dict:
     return {"success": True, "request_id": request_id, "user_id": user_id, "session_id": session_id}
 
 
-def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
+def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasoning: str = "none") -> dict:
     if not isinstance(body, dict):
         raise ValueError("Search body must be an object")
     query = body.get("query")
@@ -138,13 +142,24 @@ def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
     top_k = body.get("top_k")
     if not isinstance(query, str) or not query.strip() or not isinstance(user_id, str) or not user_id.strip() or isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
         raise ValueError("query, user_id and positive integer top_k are required")
+    candidate_k = body.get("candidate_k")
+    if candidate_k is not None and (isinstance(candidate_k, bool) or not isinstance(candidate_k, int) or candidate_k < 1):
+        raise ValueError("candidate_k must be a positive integer when supplied")
+    if candidate_k is not None and candidate_k < top_k:
+        raise ValueError("candidate_k must be at least top_k")
     options = body.get("options")
     if options is not None and (not isinstance(options, list) or any(not isinstance(option, str) for option in options)):
         raise ValueError("options must be an array of strings when supplied")
+    if local_reasoning not in ("none", "rewrite", "iterative", "union"):
+        raise ValueError("unsupported local reasoning strategy")
+    if local_reasoning != "none" and not local_diagnostics:
+        raise ValueError("local reasoning requires local diagnostics")
 
     res = oc_post(
         "/v1/search",
         {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"],
+         **({"candidateLimit": candidate_k} if candidate_k is not None else {}),
+         **({"reasoningStrategy": local_reasoning} if local_reasoning != "none" else {}),
          **({"includeRetrievalDiagnostics": True} if local_diagnostics else {})},
         timeout=1800,
     )
@@ -172,10 +187,13 @@ def handle_search(body: dict, *, local_diagnostics: bool = False) -> dict:
         diagnostics = res.get("retrievalDiagnostics")
         if not isinstance(diagnostics, dict) or not isinstance(diagnostics.get("fusedBeforeRerank"), list) or not isinstance(diagnostics.get("reranker"), dict) or not isinstance(diagnostics.get("final"), list):
             raise RuntimeError("OpenContext did not return complete retrieval diagnostics")
-        if [hit.get("id") for hit in diagnostics["final"]] != [hit.get("id") for hit in hits]:
-            raise RuntimeError("OpenContext diagnostics do not match final Search order")
+        if [(hit.get("id"), hit.get("content")) for hit in diagnostics["final"]] != [
+            (hit.get("id"), hit.get("content")) for hit in hits
+        ]:
+            raise RuntimeError("OpenContext diagnostics do not match final Search evidence")
         response["_local_diagnostics"] = {
             "retrieval": diagnostics,
+            "reasoning": res.get("reasoning"),
             "warnings": res.get("warnings", []),
         }
     return response
@@ -215,7 +233,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path.rstrip("/") == "/health":
             try:
-                with urllib.request.urlopen(OPENCONTEXT_URL + "/health", timeout=5) as response:
+                with urllib.request.urlopen(OPENCONTEXT_URL + "/health", timeout=HEALTH_TIMEOUT) as response:
                     if not 200 <= response.status < 300:
                         raise RuntimeError(f"daemon health returned {response.status}")
                     daemon_health = json.loads(response.read().decode("utf-8"))
@@ -237,8 +255,10 @@ class Handler(BaseHTTPRequestHandler):
         if not self._authorized():
             self._send(401, {"error": "unauthorized"})
             return
-        if self.headers.get("X-OpenContext-Local-Diagnostics") == "1" and self.client_address[0] not in ("127.0.0.1", "::1"):
-            self._send(403, {"error": "local diagnostics require a loopback client"})
+        local_diagnostics = self.headers.get("X-OpenContext-Local-Diagnostics") == "1"
+        local_reasoning = self.headers.get("X-OpenContext-Local-Reasoning", "none")
+        if (local_diagnostics or local_reasoning != "none") and self.client_address[0] not in ("127.0.0.1", "::1"):
+            self._send(403, {"error": "local retrieval controls require a loopback client"})
             return
         try:
             length = int(self.headers.get("Content-Length", "0"))
@@ -248,7 +268,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             result = handle_add(body) if path == "/add" else handle_search(
-                body, local_diagnostics=self.headers.get("X-OpenContext-Local-Diagnostics") == "1"
+                body, local_diagnostics=local_diagnostics, local_reasoning=local_reasoning
             )
             self._send(200, result)
         except ValueError as e:

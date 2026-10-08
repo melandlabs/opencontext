@@ -54,6 +54,22 @@ describe("createIterativeRecallPlanner", () => {
 		expect(result.stats.iterations).toBe(3);
 		expect(result.stats.searches).toBe(1);
 		expect(result.stats.notes).toBe(1);
+		const firstRequest = complete.mock.calls[0]?.[1];
+		const secondRequest = complete.mock.calls[1]?.[1];
+		expect(firstRequest.messages.map((message: { role: string }) => message.role)).toEqual([
+			"system",
+			"user",
+		]);
+		expect(secondRequest.messages.map((message: { role: string }) => message.role)).toEqual([
+			"system",
+			"user",
+			"assistant",
+			"user",
+		]);
+		expect(firstRequest.messages[1].content).not.toContain("You are a research assistant");
+		expect(secondRequest.messages[3].content).toContain("I adopted a cat named Luna.");
+		// Later actions must not mutate the earlier request's message snapshot.
+		expect(firstRequest.messages).toHaveLength(2);
 	});
 
 	it("performs multiple searches when the planner asks for them", async () => {
@@ -397,5 +413,98 @@ describe("createIdentityIterativePlanner", () => {
 	it("reports lastDegraded=false (the no-op planner never degrades)", async () => {
 		const planner = createIdentityIterativePlanner();
 		expect(planner.lastDegraded?.()).toBe(false);
+	});
+});
+
+describe("opt-in planner diagnostics", () => {
+	it("keeps planner prompts and evidence identical when diagnostics are enabled", async () => {
+		const replies = [
+			'Action: search\nAction Input: {"keywords":["topic"]}',
+			'Action: note\nAction Input: {"indices":[1]}',
+			"Action: finish\nAction Input: {}",
+		];
+		const input = {
+			query: "topic",
+			executor: { search: async () => ({ candidates: [makeCandidate("m1", "evidence")] }) },
+		};
+		const runs = [];
+		for (const collectDiagnostics of [false, true]) {
+			let step = 0;
+			const complete = vi.fn(async (_prompt: string) => replies[step++]);
+			const planner = createIterativeRecallPlanner({ complete });
+			const result = await planner.plan({ ...input, options: { collectDiagnostics } });
+			runs.push({ result, prompts: complete.mock.calls.map(([prompt]) => prompt) });
+		}
+		expect(runs[1].prompts).toEqual(runs[0].prompts);
+		expect(runs[1].result.evidence).toEqual(runs[0].result.evidence);
+		expect(runs[1].result.stats).toEqual(runs[0].result.stats);
+		expect(runs[0].result.diagnostics).toBeUndefined();
+		expect(runs[1].result.diagnostics).toMatchObject({ searches: 1, notes: 1 });
+	});
+
+	it("explains invalid actions and fallback without changing evidence", async () => {
+		const executor = { search: vi.fn().mockResolvedValue({ candidates: [makeCandidate("m1", "evidence")] }) };
+		const planner = createIterativeRecallPlanner({ complete: async () => "invalid ".repeat(200) });
+		const baseline = await planner.plan({ query: "topic", executor });
+		const diagnosed = await planner.plan({ query: "topic", executor, options: { collectDiagnostics: true } });
+		expect(baseline.diagnostics).toBeUndefined();
+		expect(diagnosed.evidence).toEqual(baseline.evidence);
+		expect(diagnosed.stats).toEqual(baseline.stats);
+		expect(diagnosed.diagnostics).toMatchObject({ fallback: "baseline", searches: 1, notes: 0 });
+		expect(diagnosed.diagnostics?.steps).toHaveLength(4);
+		expect(diagnosed.diagnostics?.steps.every((step) => step.action === "invalid")).toBe(true);
+		expect(diagnosed.diagnostics?.steps[0]?.responseExcerpt).toHaveLength(1000);
+	});
+
+	it("records transport status without exposing the error body", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () => {
+				throw new Error("reasoning LLM 429: private provider body");
+			},
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [] }) },
+			options: { collectDiagnostics: true },
+		});
+		expect(result.diagnostics?.steps).toEqual([
+			{ iteration: 1, action: "completion_error", errorName: "Error", httpStatus: 429 },
+		]);
+		expect(JSON.stringify(result.diagnostics)).not.toContain("private provider body");
+	});
+
+	it("distinguishes a timeout from an invalid action", async () => {
+		const timeout = new Error("private timeout details");
+		timeout.name = "AbortError";
+		const planner = createIterativeRecallPlanner({
+			complete: async () => {
+				throw timeout;
+			},
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [] }) },
+			options: { collectDiagnostics: true },
+		});
+		expect(result.diagnostics?.steps[0]).toEqual({
+			iteration: 1,
+			action: "completion_error",
+			errorName: "AbortError",
+		});
+	});
+
+	it("detects multiple actions without executing invented follow-up observations", async () => {
+		const planner = createIterativeRecallPlanner({
+			complete: async () =>
+				'Action: search\nAction Input: {"keywords":["topic"]}\nAction: note\nAction Input: {"indices":[1]}',
+		});
+		const result = await planner.plan({
+			query: "topic",
+			executor: { search: async () => ({ candidates: [makeCandidate("m1", "evidence")] }) },
+			options: { collectDiagnostics: true, maxIterations: 1 },
+		});
+		expect(result.diagnostics?.steps[0]).toMatchObject({ action: "search", multipleActions: true });
+		expect(result.diagnostics?.notes).toBe(0);
+		expect(result.diagnostics?.fallback).toBe("recent-hits");
 	});
 });

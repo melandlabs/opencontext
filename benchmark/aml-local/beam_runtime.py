@@ -16,6 +16,13 @@ import httpx
 retry_sleep = asyncio.sleep
 
 
+def provider_reasoning_disabled():
+    return any(
+        os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+        for name in ("AML_DISABLE_PROVIDER_REASONING", "AML_BEAM_DISABLE_REASONING")
+    )
+
+
 class RequestFailure(RuntimeError):
     pass
 
@@ -82,8 +89,11 @@ class BeamRuntime:
         # Keep the previously tested 14B routes scoped to that model. Other
         # models use OpenRouter routing unless an operator explicitly pins it.
         old_model = args.model.lower() == "qwen/qwen3-14b"
-        self.rubric_provider = os.environ.get("AML_BEAM_JUDGE_PROVIDER", "NextBit" if old_model else "")
-        self.event_provider = os.environ.get("AML_BEAM_EVENT_PROVIDER", "Alibaba" if old_model else "")
+        self.answer_provider = os.environ.get("AML_BEAM_ANSWER_PROVIDER", "") if self.stage == "answer" else ""
+        self.rubric_provider = os.environ.get("AML_BEAM_JUDGE_PROVIDER", "NextBit" if old_model else "") if self.stage == "evaluate" else ""
+        self.event_provider = os.environ.get("AML_BEAM_EVENT_PROVIDER", "Alibaba" if old_model else "") if self.stage == "evaluate" else ""
+        if any((self.answer_provider, self.rubric_provider, self.event_provider)) and "openrouter.ai" not in args.base_url:
+            raise ValueError("BEAM provider pinning requires an OpenRouter API base URL")
         self.state = {"stage": self.stage, "model": args.model, "status": "starting",
                       "question_id": None, "succeeded": 0, "failed_this_run": 0,
                       "missing_answers": 0, "request_count": 0}
@@ -113,11 +123,12 @@ class BeamRuntime:
             payload["enable_thinking"] = False
         if json_mode:
             payload["response_format"] = {"type": "json_object"}
+        provider = ""
         if "openrouter.ai" in args.base_url:
-            provider = self.event_provider if event else self.rubric_provider if json_mode else ""
+            provider = self.event_provider if event else self.rubric_provider if json_mode else self.answer_provider
             if provider:
                 payload["provider"] = {"order": [provider], "allow_fallbacks": False}
-            if event or os.environ.get("AML_BEAM_DISABLE_REASONING", "").lower() in {"1", "true", "yes"}:
+            if event or provider_reasoning_disabled():
                 payload["reasoning"] = {"effort": "none"}
         # Resume successful subrequests within an unfinished event-ordering
         # judgement. Reuse only the exact question, endpoint and request payload.
@@ -133,7 +144,8 @@ class BeamRuntime:
             self.state.update(attempt=attempt, max_tokens=budget)
             audit = {"id": self.state["question_id"], "stage": self.stage, "model": args.model,
                      "kind": "event_alignment" if event else "rubric" if json_mode else "answer",
-                     "attempt": attempt, "max_tokens": budget, "timestamp": timestamp()}
+                     "attempt": attempt, "max_tokens": budget, "timestamp": timestamp(),
+                     "requested_provider": provider or "auto"}
             truncated = False
             try:
                 try:
@@ -156,6 +168,9 @@ class BeamRuntime:
                 content = choice["message"].get("content")
                 audit.update(provider=result.get("provider"), response_model=result.get("model"),
                              finish_reason=choice.get("finish_reason"), usage=result.get("usage"))
+                if provider and (not isinstance(result.get("provider"), str)
+                                 or result["provider"].casefold() != provider.casefold()):
+                    raise ValueError(f"provider mismatch: requested {provider}, received {result.get('provider')}")
                 truncated = choice.get("finish_reason") == "length"
                 if not isinstance(content, str) or not content.strip():
                     raise ValueError("empty completion")
@@ -215,10 +230,11 @@ class BeamRuntime:
         identity = {"input_sha256": hashlib.sha256(Path(self.args.input).read_bytes()).hexdigest(),
                     "model": self.args.model, "base_url": self.args.base_url,
                     "initial_max_tokens": getattr(self.args, "max_tokens", getattr(self.args, "judge_max_tokens", None)),
+                    "answer_provider": self.answer_provider,
                     "rubric_provider": self.rubric_provider, "event_provider": self.event_provider,
                     "request_attempts": self.attempts, "request_timeout": self.timeout,
                     "max_tokens_ceiling": self.ceiling,
-                    "disable_reasoning": os.environ.get("AML_BEAM_DISABLE_REASONING", "0")}
+                    "disable_reasoning": provider_reasoning_disabled()}
         config = self.output.with_name(self.output.stem + "-config.json")
         if config.exists() and json.loads(config.read_text(encoding="utf-8"))["identity"] != identity:
             raise ValueError("Execution configuration changed; choose a new output directory")
@@ -227,6 +243,7 @@ class BeamRuntime:
         self.output.touch(exist_ok=True)
         self.state.update(total=len(items), succeeded=len(done), status="running")
         self.log(f"{self.stage} model={self.args.model}; resumed={len(done)}/{len(items)}; "
+                 f"answer_provider={self.answer_provider or 'auto'}; "
                  f"rubric_provider={self.rubric_provider or 'auto'}; event_provider={self.event_provider or 'auto'}; "
                  f"max_attempts={self.attempts}; request_timeout={self.timeout}s")
         # The upstream event matcher calls call_model internally. Replace only

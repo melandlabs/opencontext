@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import * as os from "node:os";
 import * as path from "node:path";
+import { chunkTextByTokenBudget } from "@melandlabs/shared";
 
 const DEFAULT_LOCAL_RERANKER_MODEL = "Xenova/ms-marco-MiniLM-L-6-v2";
 const DEFAULT_LOCAL_RERANKER_CACHE_DIR = path.join(os.homedir(), ".cache", "opencontext", "local-reranker");
@@ -9,6 +11,7 @@ const DEFAULT_LOCAL_RERANKER_MAX_TOKENS = 512;
 interface RerankerCandidate {
 	id: string;
 	content: string;
+	metadata?: Record<string, unknown>;
 }
 
 interface RerankerInput {
@@ -20,6 +23,15 @@ interface RerankerInput {
 interface RerankerScore {
 	id: string;
 	score: number;
+	evidenceScores?: Array<{
+		sourceChunkId?: string;
+		startPosition?: number;
+		endPosition?: number;
+		contentSha256: string;
+		score: number;
+		inputTokens: number;
+		queryTruncated: boolean;
+	}>;
 }
 
 interface TensorLike {
@@ -27,7 +39,7 @@ interface TensorLike {
 	dims?: number[];
 }
 
-type Tokenizer = (
+type Tokenizer = ((
 	texts: string[],
 	options: {
 		text_pair: string[];
@@ -35,7 +47,9 @@ type Tokenizer = (
 		truncation: boolean;
 		max_length: number;
 	},
-) => Record<string, unknown>;
+) => Record<string, unknown>) & {
+	encode(text: string, options: { text_pair?: string; add_special_tokens: boolean }): number[];
+};
 
 type SequenceClassificationModel = (inputs: Record<string, unknown>) => Promise<{ logits: TensorLike }>;
 
@@ -70,6 +84,8 @@ export interface LocalTransformersRerankerOptions {
 	dtype?: string;
 	localFilesOnly?: boolean;
 	maxTokens?: number;
+	/** Opt-in hit-centered scoring; expanded windows remain available to answerers. */
+	candidateMode?: "window" | "matched-chunks";
 	/** Test seam for the otherwise lazy dynamic Transformers.js import. */
 	runtimeLoader?: RuntimeLoader;
 }
@@ -92,6 +108,7 @@ export class LocalTransformersReranker {
 	private readonly dtype?: string;
 	private readonly localFilesOnly: boolean;
 	private readonly maxTokens: number;
+	private readonly candidateMode: "window" | "matched-chunks";
 	private readonly runtimeLoader: RuntimeLoader;
 	private componentsPromise?: Promise<{ tokenizer: Tokenizer; model: SequenceClassificationModel }>;
 
@@ -114,6 +131,9 @@ export class LocalTransformersReranker {
 			"maxTokens",
 		);
 		this.runtimeLoader = options.runtimeLoader ?? loadTransformersRuntime;
+		this.candidateMode = options.candidateMode ?? "window";
+		if (!["window", "matched-chunks"].includes(this.candidateMode))
+			throw new Error("Unknown reranker candidate mode");
 	}
 
 	getModelName(): string {
@@ -140,6 +160,7 @@ export class LocalTransformersReranker {
 	async rerank(input: RerankerInput): Promise<RerankerScore[]> {
 		if (input.candidates.length === 0) return [];
 		const { tokenizer, model } = await this.getComponents();
+		if (this.candidateMode === "matched-chunks") return this.rerankMatchedChunks(input, tokenizer, model);
 		const scored: Array<RerankerScore & { originalIndex: number }> = [];
 
 		for (let offset = 0; offset < input.candidates.length; offset += this.batchSize) {
@@ -170,6 +191,114 @@ export class LocalTransformersReranker {
 				? Math.min(Math.floor(input.topK), scored.length)
 				: scored.length;
 		return scored.slice(0, limit).map(({ id, score }) => ({ id, score }));
+	}
+
+	private async rerankMatchedChunks(
+		input: RerankerInput,
+		tokenizer: Tokenizer,
+		model: SequenceClassificationModel,
+	): Promise<RerankerScore[]> {
+		const countTokens = (text: string) => tokenizer.encode(text, { add_special_tokens: false }).length;
+		const pairOverhead = tokenizer.encode("", { text_pair: "", add_special_tokens: true }).length;
+		const queryLimit = Math.min(128, Math.floor((this.maxTokens - pairOverhead) / 2));
+		if (queryLimit < 1) throw new Error("Reranker input budget cannot fit a query/document pair");
+		const queryTruncated = countTokens(input.query) > queryLimit;
+		const query = queryTruncated
+			? chunkTextByTokenBudget(input.query, { maxTokens: queryLimit, overlapTokens: 0, countTokens })[0]
+					.content
+			: input.query;
+		const documentLimit = this.maxTokens - pairOverhead - countTokens(query);
+		const work: Array<{
+			parentIndex: number;
+			content: string;
+			sourceChunkId?: string;
+			startPosition?: number;
+			endPosition?: number;
+			inputTokens: number;
+		}> = [];
+		for (const [parentIndex, candidate] of input.candidates.entries()) {
+			const spans = candidate.metadata?.matchedSpans;
+			const matched = Array.isArray(spans)
+				? spans.filter(
+						(
+							span,
+						): span is { matchedContent: string; sourceChunkId?: string; matchedStartPosition?: number } =>
+							typeof span === "object" && span !== null && typeof span.matchedContent === "string",
+					)
+				: [];
+			const sources = matched.length > 0 ? matched : [{ matchedContent: candidate.content }];
+			const seen = new Set<string>();
+			for (const source of sources) {
+				const key = JSON.stringify([
+					source.sourceChunkId,
+					source.matchedStartPosition,
+					source.matchedContent,
+				]);
+				if (seen.has(key)) continue;
+				seen.add(key);
+				const pieces = chunkTextByTokenBudget(source.matchedContent, {
+					maxTokens: documentLimit,
+					overlapTokens: Math.min(64, Math.floor(documentLimit / 6)),
+					countTokens,
+				});
+				for (const piece of pieces.length ? pieces : [{ content: "", startPosition: 0, endPosition: 0 }]) {
+					const inputTokens = tokenizer.encode(query, {
+						text_pair: piece.content,
+						add_special_tokens: true,
+					}).length;
+					if (inputTokens > this.maxTokens)
+						throw new Error("Reranker pair exceeds its verified tokenizer budget");
+					work.push({
+						parentIndex,
+						content: piece.content,
+						inputTokens,
+						sourceChunkId: source.sourceChunkId,
+						...(typeof source.matchedStartPosition === "number"
+							? {
+									startPosition: source.matchedStartPosition + piece.startPosition,
+									endPosition: source.matchedStartPosition + piece.endPosition,
+								}
+							: {}),
+					});
+				}
+			}
+		}
+		const parents = input.candidates.map((candidate, index) => ({
+			id: candidate.id,
+			score: Number.NEGATIVE_INFINITY,
+			index,
+			evidenceScores: [] as NonNullable<RerankerScore["evidenceScores"]>,
+		}));
+		for (let offset = 0; offset < work.length; offset += this.batchSize) {
+			const batch = work.slice(offset, offset + this.batchSize);
+			const encoded = tokenizer(
+				batch.map(() => query),
+				{
+					text_pair: batch.map((item) => item.content),
+					padding: true,
+					truncation: false,
+					max_length: this.maxTokens,
+				},
+			);
+			const scores = extractScores((await model(encoded)).logits, batch.length);
+			for (const [index, item] of batch.entries()) {
+				const parent = parents[item.parentIndex];
+				parent.score = Math.max(parent.score, scores[index]);
+				parent.evidenceScores.push({
+					sourceChunkId: item.sourceChunkId,
+					startPosition: item.startPosition,
+					endPosition: item.endPosition,
+					contentSha256: createHash("sha256").update(item.content).digest("hex"),
+					score: scores[index],
+					inputTokens: item.inputTokens,
+					queryTruncated,
+				});
+			}
+		}
+		parents.sort((a, b) => b.score - a.score || a.index - b.index);
+		const limit =
+			input.topK && input.topK > 0 ? Math.min(Math.floor(input.topK), parents.length) : parents.length;
+		return parents.slice(0, limit).map(({ id, score, evidenceScores }) => ({ id, score, evidenceScores }));
 	}
 
 	private async getComponents(): Promise<{

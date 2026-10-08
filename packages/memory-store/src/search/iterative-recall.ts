@@ -45,6 +45,22 @@ export interface IterativeRecallResult {
 	evidence: IterativeRecallCandidate[];
 	/** Diagnostic statistics. */
 	stats: IterativeRecallStats;
+	/** Opt-in action diagnostics. Never used to select or rank evidence. */
+	diagnostics?: IterativeRecallDiagnostics;
+}
+
+export interface IterativeRecallDiagnostics {
+	steps: Array<{
+		iteration: number;
+		action: PlannerAction["type"] | "invalid" | "completion_error";
+		responseExcerpt?: string;
+		multipleActions?: boolean;
+		errorName?: string;
+		httpStatus?: number;
+	}>;
+	fallback?: "recent-hits" | "baseline";
+	searches: number;
+	notes: number;
 }
 
 export interface IterativeRecallPlanner {
@@ -86,11 +102,19 @@ export interface IterativeRecallPlannerOptions {
 	 * @default true
 	 */
 	fallbackToBaseline?: boolean;
+	/** Include bounded response excerpts and degradation causes. @default false */
+	collectDiagnostics?: boolean;
+}
+
+export interface IterativeRecallCompletionOptions {
+	/** Preserve real chat roles instead of asking the model to continue a transcript. */
+	messages: ReadonlyArray<{ role: "system" | "user" | "assistant"; content: string }>;
 }
 
 export interface IterativeRecallPlannerDeps {
-	/** LLM completion callback. */
-	complete: (prompt: string) => Promise<string>;
+	/** LLM completion callback. Chat transports should send options.messages
+	 * verbatim; the string prompt is also supplied for plain completion hosts. */
+	complete: (prompt: string, options?: IterativeRecallCompletionOptions) => Promise<string>;
 	/** Default options. */
 	options?: IterativeRecallPlannerOptions;
 }
@@ -137,9 +161,9 @@ function formatDateHint(dateFrom?: string, dateTo?: string): string | undefined 
 	return `Restrict searches to the date range ${fromText} to ${toText}. You may still emit narrower date_from/date_to bounds when useful.`;
 }
 
-function buildInitialPrompt(query: string, dateHint?: string): string {
+function buildInitialPrompt(query: string, dateHint: string | undefined): string {
 	const hintText = dateHint ? `\n${dateHint}` : "";
-	return `${SYSTEM_PROMPT}\n\nQuestion to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
+	return `Question to research: ${query}${hintText}\nSearch the conversation history and collect all relevant evidence. Start with a broad keyword search.`;
 }
 
 function buildObservationPrompt(hits: IterativeRecallCandidate[]): string {
@@ -264,6 +288,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 		searchTopK: 5,
 		disabled: false,
 		fallbackToBaseline: true,
+		collectDiagnostics: false,
 	};
 
 	let lastDegraded = false;
@@ -304,24 +329,44 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			let notes = 0;
 			let iterations = 0;
 			let completeThrew = false;
+			const diagnostics: IterativeRecallDiagnostics = { steps: [], searches: 0, notes: 0 };
 
 			for (let i = 0; i < opts.maxIterations; i += 1) {
 				iterations = i + 1;
 				let reply: string;
 				try {
-					reply = await complete(messages.map((m) => `${m.role}: ${m.content}`).join("\n\n"));
-				} catch {
+					reply = await complete(messages.map((m) => `${m.role}: ${m.content}`).join("\n\n"), {
+						messages: messages.map((message) => ({ ...message })),
+					});
+				} catch (error) {
 					// Catch the LLM error locally so the planner degrades
 					// gracefully (empty evidence + lastDegraded=true) instead
 					// of bubbling up to the unified-search caller. This mirrors
 					// the QueryRewriter pattern: surface degraded state through
 					// lastDegraded() rather than via a thrown error.
 					completeThrew = true;
+					if (opts.collectDiagnostics) {
+						const status = error instanceof Error ? error.message.match(/reasoning LLM (\d{3}):/) : null;
+						diagnostics.steps.push({
+							iteration: iterations,
+							action: "completion_error",
+							errorName: error instanceof Error ? error.name : "UnknownError",
+							...(status ? { httpStatus: Number(status[1]) } : {}),
+						});
+					}
 					break;
 				}
 				messages.push({ role: "assistant", content: reply });
 
 				const action = parseAction(reply);
+				if (opts.collectDiagnostics) {
+					diagnostics.steps.push({
+						iteration: iterations,
+						action: action?.type ?? "invalid",
+						responseExcerpt: reply.slice(0, 1000),
+						multipleActions: (reply.match(/^\s*Action:\s*/gm)?.length ?? 0) > 1,
+					});
+				}
 				if (!action) {
 					messages.push({
 						role: "user",
@@ -347,7 +392,10 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 						excludedIds.add(hit.id);
 					}
 					searches += 1;
-					messages.push({ role: "user", content: buildObservationPrompt(lastHits) });
+					messages.push({
+						role: "user",
+						content: buildObservationPrompt(lastHits),
+					});
 					continue;
 				}
 
@@ -380,12 +428,14 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			if (evidence.size === 0 && opts.fallbackToBaseline) {
 				fallbackRan = true;
 				if (lastHits.length > 0) {
+					diagnostics.fallback = "recent-hits";
 					for (const hit of lastHits) {
 						if (!evidence.has(hit.id)) {
 							evidence.set(hit.id, hit);
 						}
 					}
 				} else {
+					diagnostics.fallback = "baseline";
 					// Last resort: search with keywords derived from the original query
 					// so the fallback is not a total loss, while still honouring the
 					// caller-supplied date range.
@@ -412,6 +462,7 @@ export function createIterativeRecallPlanner(deps: IterativeRecallPlannerDeps): 
 			return {
 				evidence: Array.from(evidence.values()),
 				stats: { iterations, searches, notes },
+				...(opts.collectDiagnostics ? { diagnostics: { ...diagnostics, searches, notes } } : {}),
 			};
 		},
 	};

@@ -86,6 +86,37 @@ class AdapterContractTests(unittest.TestCase):
         self.assertEqual(list(public), ["data"])
         self.assertNotIn("includeRetrievalDiagnostics", post.call_args.args[1])
 
+    def test_local_reasoning_is_explicit_and_does_not_change_public_search(self) -> None:
+        hit = {"id": "memory-1", "content": "answer", "similarity": 0.8}
+        diagnostics = {"fusedBeforeRerank": [hit], "reranker": {"enabled": True}, "final": [hit]}
+        core = {
+            "results": [hit],
+            "retrievalDiagnostics": diagnostics,
+            "reasoning": {"strategy": "rewrite", "rewrittenQueries": ["original", "rewritten"]},
+        }
+        body = {"query": "what?", "user_id": "user", "top_k": 12}
+        with patch.object(serve, "oc_post", return_value=core) as post:
+            result = serve.handle_search(body, local_diagnostics=True, local_reasoning="rewrite")
+        self.assertEqual(result["_local_diagnostics"]["reasoning"]["strategy"], "rewrite")
+        self.assertEqual(post.call_args.args[1]["reasoningStrategy"], "rewrite")
+        with patch.object(serve, "oc_post") as post:
+            with self.assertRaisesRegex(ValueError, "requires local diagnostics"):
+                serve.handle_search(body, local_reasoning="rewrite")
+            post.assert_not_called()
+
+    def test_local_union_uses_existing_core_strategy_without_changing_public_body(self) -> None:
+        hit = {"id": "memory-1", "content": "answer", "similarity": 0.8}
+        diagnostics = {"fusedBeforeRerank": [hit], "reranker": {"enabled": True}, "final": [hit]}
+        core = {"results": [hit], "retrievalDiagnostics": diagnostics,
+                "reasoning": {"strategy": "union", "iterations": 2, "evidenceCount": 1}}
+        body = {"query": "what?", "user_id": "user", "top_k": 12}
+        with patch.object(serve, "oc_post", return_value=core) as post:
+            result = serve.handle_search(body, local_diagnostics=True, local_reasoning="union")
+        self.assertEqual(result["data"], [{"id": "memory-1", "content": "answer", "score": 0.8}])
+        self.assertEqual(result["_local_diagnostics"]["reasoning"]["strategy"], "union")
+        self.assertEqual(post.call_args.args[1]["reasoningStrategy"], "union")
+        self.assertEqual(body, {"query": "what?", "user_id": "user", "top_k": 12})
+
 
 if __name__ == "__main__":
     unittest.main()

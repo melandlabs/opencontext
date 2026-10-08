@@ -377,11 +377,10 @@ function cosineSimilarity(vecA: number[], vecB: number[]): number {
 	return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-function sqliteDistanceToScore(distance: number): number {
-	if (!Number.isFinite(distance)) {
-		return 0;
-	}
-	return 1 / (1 + Math.max(0, distance));
+/** FTS5 ranks are ordered ascending: a smaller rank is a stronger match. */
+function sqliteBm25RankToScore(rank: number): number {
+	if (!Number.isFinite(rank)) return 0;
+	return 1 / (1 + Math.exp(rank));
 }
 
 /**
@@ -591,6 +590,47 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				)
 				.all(params) as RawMessageSearchChunkRow[]
 		).map(toSearchChunk);
+	}
+
+	/** Replace derived indexes without rewriting the original messages or their metadata. */
+	async replaceMessageSearchChunks(
+		items: Array<{
+			messageId: string;
+			userId: string;
+			contentHash: string;
+			chunks: RawMessageSearchChunk[];
+		}>,
+	): Promise<void> {
+		await this.init();
+		const read = this.db.prepare("SELECT * FROM raw_messages WHERE message_id = ?");
+		this.db
+			.transaction(() => {
+				for (const item of items) {
+					const row = read.get(item.messageId) as RawMessageRow | undefined;
+					if (!row || row.user_id !== item.userId) throw new Error("raw_message_scope_conflict");
+					if (sha256(row.content) !== item.contentHash) throw new Error("raw_message_content_conflict");
+					const ordered = [...item.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+					let coveredEnd = 0;
+					for (const [index, chunk] of ordered.entries()) {
+						if (
+							chunk.chunkIndex !== index ||
+							!Number.isSafeInteger(chunk.startPosition) ||
+							!Number.isSafeInteger(chunk.endPosition) ||
+							chunk.startPosition < 0 ||
+							chunk.startPosition > coveredEnd ||
+							chunk.endPosition <= coveredEnd ||
+							chunk.endPosition > row.content.length
+						)
+							throw new Error(`invalid_raw_message_chunk_coverage:${item.messageId}`);
+						coveredEnd = chunk.endPosition;
+					}
+					if (coveredEnd !== row.content.length) {
+						throw new Error(`incomplete_raw_message_chunks:${item.messageId}`);
+					}
+					this.replaceSearchChunksSync(toRawMessage(row), ordered);
+				}
+			})
+			.immediate();
 	}
 
 	async getRawMessageSearchIndexStats(): Promise<RawMessageSearchIndexStats> {
@@ -811,6 +851,49 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			| RawMessageRow
 			| undefined;
 		return row ? toRawMessage(row) : null;
+	}
+
+	/**
+	 * Return messages adjacent to one or more seed messageSequence values in
+	 * the same user/session. This is deliberately bounded and uses ingestion
+	 * order only; messageSequence is not treated as an event timestamp.
+	 */
+	async getRawMessageSessionNeighbors(input: {
+		userId: string;
+		sessionId: string;
+		messageSequences: number[];
+		window: number;
+		includeDeprecated?: boolean;
+	}): Promise<RawMessage[]> {
+		await this.init();
+		const sequences = Array.from(
+			new Set(input.messageSequences.filter((value) => Number.isSafeInteger(value) && value >= 0)),
+		);
+		const window = Number.isFinite(input.window) ? Math.max(0, Math.min(16, Math.floor(input.window))) : 0;
+		if (!input.userId || !input.sessionId || sequences.length === 0 || window === 0) return [];
+		// Seek only each seed's bounded window through (user_id, message_sequence).
+		// A min/max envelope between distant seeds includes unrelated messages and
+		// can accidentally send an entire session to the reranker.
+		const adjacentSequences = new Set<number>();
+		for (const sequence of sequences.slice(0, 100)) {
+			for (let offset = -window; offset <= window; offset++) {
+				const adjacent = sequence + offset;
+				if (Number.isSafeInteger(adjacent) && adjacent >= 0) adjacentSequences.add(adjacent);
+			}
+		}
+		const placeholders = [...adjacentSequences].map(() => "?").join(",");
+		const rows = this.db
+			.prepare(`
+        SELECT * FROM raw_messages
+        WHERE user_id = ?
+          AND message_sequence IN (${placeholders})
+          AND json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END, '$.sessionId') = ?
+          AND archived_at IS NULL
+          ${input.includeDeprecated === true ? "" : "AND deprecated_at IS NULL"}
+        ORDER BY message_sequence ASC
+      `)
+			.all(input.userId, ...adjacentSequences, input.sessionId) as RawMessageRow[];
+		return rows.map(toRawMessage);
 	}
 
 	async deleteOldMessages(olderThan: number, userId?: string): Promise<number> {
@@ -1514,7 +1597,34 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10)),
 		);
 		const threshold = input.threshold ?? 0.7;
+		let bestResults: SQLiteRawMessageSemanticSearchResult[] = [];
+		let lastScanLimit = currentScanLimit;
+		const finish = (
+			results: SQLiteRawMessageSemanticSearchResult[],
+			scanLimit: number,
+		): SQLiteRawMessageSemanticSearchResult[] =>
+			results.slice(0, limit).map((result) =>
+				results.length < limit
+					? {
+							...result,
+							metadata: { ...result.metadata, vectorScanUnderfilled: true, vectorScanLimit: scanLimit },
+						}
+					: result,
+			);
+		const scopedFallback = (): SQLiteRawMessageSemanticSearchResult[] => {
+			// The vec0 table has no user partition. A global top-K can be filled
+			// with other users' vectors, so an exhausted widening budget must
+			// search this user's stored child embeddings instead of returning an
+			// incomplete global sample.
+			const scoped = this.searchChunksWithStoredEmbeddings(input, true);
+			const candidates = scoped.length >= bestResults.length ? scoped : bestResults;
+			return finish(candidates, lastScanLimit).map((result) => ({
+				...result,
+				metadata: { ...result.metadata, vectorSearchFallback: "user-scoped-exact" },
+			}));
+		};
 		for (let attempt = 0; attempt <= maxWideningAttempts; attempt += 1) {
+			lastScanLimit = currentScanLimit;
 			const rows = this.db
 				.prepare(
 					`
@@ -1540,6 +1650,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				})),
 				input,
 			).filter((result) => result.similarity >= threshold);
+			if (results.length > bestResults.length) bestResults = results;
 
 			// If post-filtering (deprecated / archived / peer) ate enough rows
 			// to underflow `limit`, widen the vec scan and retry — mirroring
@@ -1547,20 +1658,22 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			// conditions: (a) we already have enough rows, (b) the vec scan
 			// returned fewer rows than we asked for, so widening cannot help.
 			if (results.length >= limit || rows.length < currentScanLimit) {
-				return results.slice(0, limit);
+				return finish(results, currentScanLimit);
 			}
 			if (currentScanLimit >= vecKnnMaxK) {
-				return results.slice(0, limit);
+				return scopedFallback();
 			}
 			currentScanLimit = Math.min(currentScanLimit * 2, vecKnnMaxK);
 		}
-		// Unreachable: the loop above always returns. Returning an empty slice
-		// keeps the signature honest in case the bounds ever change.
-		return [];
+		// The retry budget can expire before the next, wider scan. Preserve the
+		// candidates already found instead of turning an underfilled search into
+		// an empty one.
+		return scopedFallback();
 	}
 
 	private searchChunksWithStoredEmbeddings(
 		input: SQLiteRawMessageSemanticSearchInput,
+		exact = false,
 	): SQLiteRawMessageSemanticSearchResult[] {
 		const limit = Math.max(1, Math.floor(input.limit ?? 10));
 		const scanLimit = Math.max(limit * 4, Math.floor(input.scanLimit ?? limit * 10));
@@ -1583,8 +1696,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 								: "AND raw_messages.deprecated_at IS NULL"
 					}
           ${asOf.clause ? `AND ${asOf.clause}` : ""}
-        ORDER BY raw_messages.timestamp DESC
-        LIMIT @scanLimit
+        ${exact ? "" : "ORDER BY raw_messages.timestamp DESC LIMIT @scanLimit"}
       `)
 			.all({
 				userId: input.userId,
@@ -1615,22 +1727,34 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		rows: Array<{ chunk: RawMessageSearchChunkRow; similarity: number }>,
 		input: SQLiteRawMessageSemanticSearchInput,
 	): SQLiteRawMessageSemanticSearchResult[] {
-		const strongestByParent = new Map<string, { chunk: RawMessageSearchChunkRow; similarity: number }>();
-		for (const row of rows.sort((a, b) => b.similarity - a.similarity)) {
-			if (!strongestByParent.has(row.chunk.message_id)) strongestByParent.set(row.chunk.message_id, row);
+		const byParent = new Map<
+			string,
+			Array<{ chunk: RawMessageSearchChunkRow; similarity: number; rank: number }>
+		>();
+		for (const [index, row] of rows.sort((a, b) => b.similarity - a.similarity).entries()) {
+			const group = byParent.get(row.chunk.message_id) ?? [];
+			group.push({ ...row, rank: index + 1 });
+			byParent.set(row.chunk.message_id, group);
 		}
 		const parents = new Map(
-			this.getRowsByMessageIds([...strongestByParent.keys()]).map((row) => [
-				row.message_id,
-				toRawMessage(row),
-			]),
+			this.getRowsByMessageIds([...byParent.keys()]).map((row) => [row.message_id, toRawMessage(row)]),
 		);
-		return [...strongestByParent.values()]
-			.map(({ chunk, similarity }) => {
-				const message = parents.get(chunk.message_id);
+		return [...byParent.entries()]
+			.map(([messageId, matches]) => {
+				const message = parents.get(messageId);
 				if (!message || !this.matchesSemanticFilters(message, { ...input, embeddingModel: undefined }))
 					return null;
-				return this.toChildSemanticSearchResult(message, chunk, similarity);
+				const primary = matches[0];
+				const result = this.toChildSemanticSearchResult(message, primary.chunk, primary.similarity);
+				if (!message.archivedAt) {
+					result.metadata.matchedSpans = this.matchedChunkSpans(
+						message,
+						matches.map(({ chunk, rank }) => ({ chunk, rank })),
+						"memory-semantic",
+					);
+					result.metadata.matchedSpansTruncated = Math.max(0, matches.length - 3);
+				}
+				return result;
 			})
 			.filter((result): result is SQLiteRawMessageSemanticSearchResult => result !== null)
 			.sort((a, b) => b.similarity - a.similarity);
@@ -1640,26 +1764,30 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		rows: Array<RawMessageSearchChunkRow & { bm25_rank: number }>,
 		_input: SQLiteRawMessageLexicalSearchInput,
 	): SQLiteRawMessageLexicalSearchResult[] {
-		const strongestByParent = new Map<string, RawMessageSearchChunkRow & { bm25_rank: number }>();
-		for (const row of rows) {
-			if (!strongestByParent.has(row.message_id)) strongestByParent.set(row.message_id, row);
+		const byParent = new Map<
+			string,
+			Array<{ chunk: RawMessageSearchChunkRow & { bm25_rank: number }; rank: number }>
+		>();
+		for (const [index, row] of rows.entries()) {
+			const group = byParent.get(row.message_id) ?? [];
+			group.push({ chunk: row, rank: index + 1 });
+			byParent.set(row.message_id, group);
 		}
 		const parents = new Map(
-			this.getRowsByMessageIds([...strongestByParent.keys()]).map((row) => [
-				row.message_id,
-				toRawMessage(row),
-			]),
+			this.getRowsByMessageIds([...byParent.keys()]).map((row) => [row.message_id, toRawMessage(row)]),
 		);
-		return [...strongestByParent.values()]
-			.map((chunk) => {
-				const message = parents.get(chunk.message_id);
+		return [...byParent.entries()]
+			.map(([messageId, matches]) => {
+				const message = parents.get(messageId);
 				if (!message) return null;
-				const content = this.searchResultContent(message, chunk);
+				const chunk = matches[0].chunk;
+				const window = this.searchResultWindow(message, chunk);
+				const content = window.content;
 				return {
 					type: "memory" as const,
 					id: message.messageId,
 					content: message.archivedAt ? "" : content,
-					similarity: sqliteDistanceToScore(-chunk.bm25_rank),
+					similarity: sqliteBm25RankToScore(chunk.bm25_rank),
 					bm25Rank: chunk.bm25_rank,
 					metadata: {
 						...(message.metadata ?? {}),
@@ -1678,6 +1806,14 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 						sourceChunkId: chunk.chunk_id,
 						sourceChunkIndex: chunk.chunk_index,
 						sourceChunkCount: chunk.chunk_count,
+						sourceStartPosition: window.startPosition,
+						sourceEndPosition: window.endPosition,
+						...(!message.archivedAt
+							? {
+									matchedSpans: this.matchedChunkSpans(message, matches, "memory-bm25"),
+									matchedSpansTruncated: Math.max(0, matches.length - 3),
+								}
+							: {}),
 					},
 					message: { ...message, content },
 				};
@@ -1690,7 +1826,8 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		chunk: RawMessageSearchChunkRow,
 		similarity: number,
 	): SQLiteRawMessageSemanticSearchResult {
-		const content = this.searchResultContent(message, chunk);
+		const window = this.searchResultWindow(message, chunk);
+		const content = window.content;
 		return {
 			type: "memory",
 			id: message.messageId,
@@ -1712,13 +1849,19 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				sourceChunkId: chunk.chunk_id,
 				sourceChunkIndex: chunk.chunk_index,
 				sourceChunkCount: chunk.chunk_count,
+				sourceStartPosition: window.startPosition,
+				sourceEndPosition: window.endPosition,
 			},
 			message: { ...message, content },
 		};
 	}
 
-	private searchResultContent(message: RawMessage, hit: RawMessageSearchChunkRow): string {
-		if (hit.chunk_count <= 1) return message.content;
+	private searchResultWindow(
+		message: RawMessage,
+		hit: RawMessageSearchChunkRow,
+	): { content: string; startPosition: number; endPosition: number } {
+		if (hit.chunk_count <= 1)
+			return { content: message.content, startPosition: 0, endPosition: message.content.length };
 		const window = this.db
 			.prepare(`
         SELECT MIN(start_position) AS start_position, MAX(end_position) AS end_position
@@ -1731,10 +1874,42 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				startIndex: Math.max(0, hit.chunk_index - 1),
 				endIndex: Math.min(hit.chunk_count - 1, hit.chunk_index + 1),
 			}) as { start_position: number | null; end_position: number | null };
-		return message.content.slice(
-			window.start_position ?? hit.start_position,
-			window.end_position ?? hit.end_position,
-		);
+		const startPosition = window.start_position ?? hit.start_position;
+		const endPosition = window.end_position ?? hit.end_position;
+		return {
+			content: message.content.slice(startPosition, endPosition),
+			startPosition,
+			endPosition,
+		};
+	}
+
+	private matchedChunkSpans(
+		message: RawMessage,
+		matches: Array<{ chunk: RawMessageSearchChunkRow; rank: number }>,
+		channel: string,
+	): Array<{
+		content: string;
+		matchedContent: string;
+		matchedStartPosition: number;
+		matchedEndPosition: number;
+		sourceChunkId: string;
+		startPosition: number;
+		endPosition: number;
+		channels: Array<{ name: string; rank: number }>;
+	}> {
+		return matches.slice(0, 3).map(({ chunk, rank }) => {
+			const window = this.searchResultWindow(message, chunk);
+			return {
+				content: window.content,
+				matchedContent: chunk.content,
+				matchedStartPosition: chunk.start_position,
+				matchedEndPosition: chunk.end_position,
+				sourceChunkId: chunk.chunk_id,
+				startPosition: window.startPosition,
+				endPosition: window.endPosition,
+				channels: [{ name: channel, rank }],
+			};
+		});
 	}
 
 	private getSearchChunkRowsByIds(chunkIds: string[]): RawMessageSearchChunkRow[] {
@@ -1798,7 +1973,7 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				type: "memory",
 				id: message.messageId,
 				content: message.content,
-				similarity: sqliteDistanceToScore(-row.bm25_rank),
+				similarity: sqliteBm25RankToScore(row.bm25_rank),
 				bm25Rank: row.bm25_rank,
 				metadata: {
 					...(message.metadata ?? {}),
