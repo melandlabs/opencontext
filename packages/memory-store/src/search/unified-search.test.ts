@@ -418,8 +418,18 @@ describe("createUnifiedSearch", () => {
 			],
 			searchRawMessagesLexical: async () => [],
 			searchRawMessageNeighbors: async () => [
-				{ id: "wrong-user", content: "wrong", similarity: 0, metadata: { userId: "u2", sessionId: "s1", messageSequence: 9 } },
-				{ id: "wrong-session", content: "wrong", similarity: 0, metadata: { userId: "u1", sessionId: "s2", messageSequence: 9 } },
+				{
+					id: "wrong-user",
+					content: "wrong",
+					similarity: 0,
+					metadata: { userId: "u2", sessionId: "s1", messageSequence: 9 },
+				},
+				{
+					id: "wrong-session",
+					content: "wrong",
+					similarity: 0,
+					metadata: { userId: "u1", sessionId: "s2", messageSequence: 9 },
+				},
 				...Array.from({ length: 8 }, (_, index) => ({
 					id: `neighbor-${index}`,
 					content: `neighbor-${index}`,

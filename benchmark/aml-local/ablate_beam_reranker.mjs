@@ -224,7 +224,10 @@ async function main() {
 	const rerankerCandidateMode = options["reranker-candidate-mode"] ?? "window";
 	assert(["window", "matched-chunks"].includes(rerankerCandidateMode), "Unknown reranker candidate mode");
 	const rerankerBatchSize = Number(options["reranker-batch-size"] ?? 8);
-	assert(Number.isSafeInteger(rerankerBatchSize) && rerankerBatchSize > 0 && rerankerBatchSize <= 32, "Invalid reranker batch size");
+	assert(
+		Number.isSafeInteger(rerankerBatchSize) && rerankerBatchSize > 0 && rerankerBatchSize <= 32,
+		"Invalid reranker batch size",
+	);
 	const reranker = new LocalTransformersReranker({
 		modelName: rerankerModel,
 		dtype: "q8",
@@ -247,8 +250,8 @@ async function main() {
 		baseline_module_sha256: sha256(fs.readFileSync(baselinePath)),
 		current_module_sha256: sha256(fs.readFileSync(currentPath)),
 		selected_ids: selected.map((record) => record.id),
-			reranker_model: reranker.getModelName(),
-			reranker_candidate_mode: rerankerCandidateMode,
+		reranker_model: reranker.getModelName(),
+		reranker_candidate_mode: rerankerCandidateMode,
 		dtype: "q8",
 		max_tokens: 512,
 		batch_size: rerankerBatchSize,
@@ -260,12 +263,12 @@ async function main() {
 			: {}),
 		selection: "lowest SHA256(question ID), independently per category",
 		official_prompts_changed: false,
-			intervention:
-				intervention === "fusion-window"
-					? "core fusion window only; fixed semantic, lexical, and planner candidates"
-					: intervention === "lexical-dedup"
-						? "core lexical keyword deduplication only; fixed semantic and planner candidates; unchanged fusion window"
-						: "local reranker model and candidate mode only; fixed semantic, lexical, planner candidates and Top-K",
+		intervention:
+			intervention === "fusion-window"
+				? "core fusion window only; fixed semantic, lexical, and planner candidates"
+				: intervention === "lexical-dedup"
+					? "core lexical keyword deduplication only; fixed semantic and planner candidates; unchanged fusion window"
+					: "local reranker model and candidate mode only; fixed semantic, lexical, planner candidates and Top-K",
 	};
 	fs.mkdirSync(path.join(output, "replay-checkpoints"), { recursive: true });
 	const manifestPath = path.join(output, "ablation-manifest.json");

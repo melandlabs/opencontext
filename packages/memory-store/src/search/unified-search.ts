@@ -304,6 +304,11 @@ function warnApplicabilityNotEnforced(warnings: UnifiedMemorySearchWarning[]): v
 	});
 }
 
+function monotonicNow(): number {
+	const performanceNow = globalThis.performance?.now;
+	return typeof performanceNow === "function" ? performanceNow.call(globalThis.performance) : Date.now();
+}
+
 async function embedQueryVariant(
 	embedQuery: NonNullable<UnifiedSearchDeps["embedQuery"]>,
 	input: UnifiedMemorySearchInput,
@@ -545,6 +550,9 @@ async function runLexicalSearchForKeywords(
 				code: "memory_lexical_search_failed",
 				message: (error as Error).message ?? "memory_lexical_search_failed",
 			});
+			if (runtimeContext !== undefined) {
+				warnApplicabilityNotEnforced(warnings);
+			}
 			// A host-owned provider failure must not silently read another store.
 			return [];
 		}
@@ -688,7 +696,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		peerPeers: ReadonlyArray<Peer> = [],
 		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<MemorySourceRun> {
-		const sourceStartedAt = Date.now();
+		const sourceStartedAt = monotonicNow();
 		const timings: Omit<MemorySourceTimings, "memorySourceMs"> = {
 			semanticMs: 0,
 			lexicalMs: 0,
@@ -696,16 +704,16 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			plannerMs: 0,
 		};
 		const measure = async <T>(bucket: keyof typeof timings, operation: () => Promise<T>): Promise<T> => {
-			const startedAt = Date.now();
+			const startedAt = monotonicNow();
 			try {
 				return await operation();
 			} finally {
-				timings[bucket] += Date.now() - startedAt;
+				timings[bucket] += monotonicNow() - startedAt;
 			}
 		};
 		const finish = (results: MemorySubQueries): MemorySourceRun => ({
 			results,
-			timings: { ...timings, memorySourceMs: Date.now() - sourceStartedAt },
+			timings: { ...timings, memorySourceMs: monotonicNow() - sourceStartedAt },
 		});
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
@@ -1062,7 +1070,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			if (reasoningInfo) reasoningInfo.lexicalRewrittenQueries = lexicalQueries;
 		} else if (keywords.length > 0) {
 			if (typeof deps.searchRawMessagesLexical === "function") {
-				const lexicalStartedAt = Date.now();
+				const lexicalStartedAt = monotonicNow();
 				try {
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 					const searchRawMessagesLexical = deps.searchRawMessagesLexical;
@@ -1099,7 +1107,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						message: (error as Error).message ?? "memory_lexical_search_failed",
 					});
 				} finally {
-					timings.lexicalMs += Date.now() - lexicalStartedAt;
+					timings.lexicalMs += monotonicNow() - lexicalStartedAt;
 				}
 			} else if (input.mergeStrategy === "rrf") {
 				warnings.push({
@@ -1169,7 +1177,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		input: UnifiedMemorySearchInput,
 		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<UnifiedMemorySearchOutput> {
-		const searchStartedAt = Date.now();
+		const searchStartedAt = monotonicNow();
 		const query = input.query.trim();
 		const sources = normalizeUnifiedMemorySearchSources(input.sources);
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
@@ -1369,7 +1377,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			// Users need to upload and index documents first
 		}
 
-		const fusionStartedAt = Date.now();
+		const fusionStartedAt = monotonicNow();
 		const merged = mergeAcrossSources({
 			memorySubs,
 			insightHits,
@@ -1379,22 +1387,22 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			rrfK,
 			rrfWeights,
 		});
-		const fusionLatencyMs = Date.now() - fusionStartedAt;
-		const neighborStartedAt = Date.now();
+		const fusionLatencyMs = monotonicNow() - fusionStartedAt;
+		const neighborStartedAt = monotonicNow();
 		const neighborExpansion = await expandSessionNeighbors({
 			deps,
 			input,
 			candidates: merged,
 			options: sessionNeighborExpansion,
 		});
-		const neighborLatencyMs = Date.now() - neighborStartedAt;
+		const neighborLatencyMs = monotonicNow() - neighborStartedAt;
 		const rerankCandidates = neighborExpansion.candidates;
 
 		// The optional host reranker sees the complete overfetched window. Only
 		// after reranking do we truncate to the public Top-K.
-		const rerankerStartedAt = deps.reranker ? Date.now() : undefined;
+		const rerankerStartedAt = deps.reranker ? monotonicNow() : undefined;
 		const rerankedAll = await applyReranker(deps.reranker, input.query, rerankCandidates);
-		const rerankerLatencyMs = rerankerStartedAt === undefined ? 0 : Date.now() - rerankerStartedAt;
+		const rerankerLatencyMs = rerankerStartedAt === undefined ? 0 : monotonicNow() - rerankerStartedAt;
 		const rerankerOrderChanged =
 			Boolean(deps.reranker) && rerankCandidates.some((hit, index) => hit.id !== rerankedAll[index]?.id);
 		const reranked = selectSessionNeighborResults(rerankedAll, neighborExpansion.options, limit);
@@ -1413,7 +1421,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				candidateLimit,
 				rrf: { k: rrfK, weights: rrfWeights },
 				timings: {
-					totalMs: Date.now() - searchStartedAt,
+					totalMs: monotonicNow() - searchStartedAt,
 					memorySourceMs: memoryTimings?.memorySourceMs ?? 0,
 					semanticMs: memoryTimings?.semanticMs ?? 0,
 					lexicalMs: memoryTimings?.lexicalMs ?? 0,
