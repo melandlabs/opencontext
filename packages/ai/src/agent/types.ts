@@ -53,6 +53,17 @@ export interface AgentSubagentDefinition {
 	disallowedTools?: string[];
 	/** Model alias or concrete model id. "inherit" uses the parent model. */
 	model?: "inherit" | "haiku" | "sonnet" | "opus" | string;
+	/**
+	 * Cap on agentic turns (API round-trips) before the subagent stops. Omit for
+	 * no subagent-specific cap.
+	 */
+	maxTurns?: number;
+	/**
+	 * Reasoning effort. A named level or a raw numeric value; omit to inherit
+	 * the parent's effort. Kept in sync with the Claude Agent SDK's
+	 * `AgentDefinition["effort"]`.
+	 */
+	effort?: "low" | "medium" | "high" | "xhigh" | "max" | number;
 }
 
 // ============================================================================

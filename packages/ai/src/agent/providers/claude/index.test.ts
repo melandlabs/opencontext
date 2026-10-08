@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { AgentConfig, AgentMessage, TaskPlan } from "../../types";
+import type { AgentConfig, AgentMessage, AgentSubagentDefinition, TaskPlan } from "../../types";
 import { type ClaudeAgent, createClaudeAgent } from "./index";
 
 const queryMock = vi.hoisted(() => vi.fn());
@@ -130,6 +130,89 @@ describe("ClaudeAgent run", () => {
 		expect(options.allowedTools).toEqual(["Read", "Write"]);
 		expect(options.maxTurns).toBe(42);
 		expect(options.cwd).toBe(workDir);
+	});
+
+	it("forwards host subagents to the SDK agents option", async () => {
+		queryMock.mockImplementation(async function* () {
+			yield resultMessage();
+		});
+
+		const workDir = await mkdtemp(join(tmpdir(), "opencontext-claude-test-"));
+		tempDirs.push(workDir);
+
+		const agent = createAgent({ workDir });
+		await collectMessages(
+			agent.run("test", {
+				subagents: {
+					"code-reviewer": {
+						description: "Reviews code for best practices",
+						prompt: "You are a code reviewer...",
+						tools: ["Read", "Grep"],
+						model: "sonnet",
+						maxTurns: 8,
+						effort: "high",
+					},
+				},
+			}),
+		);
+
+		const call = queryMock.mock.calls[0] as [{ options: Record<string, unknown> }];
+		expect(call[0].options.agents).toEqual({
+			"code-reviewer": {
+				description: "Reviews code for best practices",
+				prompt: "You are a code reviewer...",
+				tools: ["Read", "Grep"],
+				model: "sonnet",
+				maxTurns: 8,
+				effort: "high",
+			},
+		});
+	});
+
+	it("drops subagent fields the SDK does not accept", async () => {
+		queryMock.mockImplementation(async function* () {
+			yield resultMessage();
+		});
+
+		const workDir = await mkdtemp(join(tmpdir(), "opencontext-claude-test-"));
+		tempDirs.push(workDir);
+
+		const agent = createAgent({ workDir });
+		await collectMessages(
+			agent.run("test", {
+				subagents: {
+					// Hosts are plain JS callers too, so the runtime guard is the
+					// only thing standing between an unknown key and a rejected
+					// `agents` payload.
+					noisy: {
+						description: "Has unsupported fields",
+						prompt: "prompt",
+						mcpServers: [{ name: "server" }],
+						background: true,
+					} as AgentSubagentDefinition,
+				},
+			}),
+		);
+
+		const call = queryMock.mock.calls[0] as [{ options: Record<string, unknown> }];
+		expect(call[0].options.agents).toEqual({
+			noisy: { description: "Has unsupported fields", prompt: "prompt" },
+		});
+	});
+
+	it("omits the agents option when the host declares no subagents", async () => {
+		queryMock.mockImplementation(async function* () {
+			yield resultMessage();
+		});
+
+		const workDir = await mkdtemp(join(tmpdir(), "opencontext-claude-test-"));
+		tempDirs.push(workDir);
+
+		const agent = createAgent({ workDir });
+		await collectMessages(agent.run("test"));
+
+		const call = queryMock.mock.calls[0] as [{ options: Record<string, unknown> }];
+		expect(call[0].options).not.toHaveProperty("agents");
 	});
 
 	it("forwards the abort signal to the SDK and still yields done", async () => {

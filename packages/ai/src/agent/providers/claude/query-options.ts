@@ -10,9 +10,9 @@
  * `query()`.
  */
 
-import type { Options } from "@anthropic-ai/claude-agent-sdk";
+import type { AgentDefinition, Options } from "@anthropic-ai/claude-agent-sdk";
 
-import type { AgentConfig, AgentOptions } from "../../types";
+import type { AgentConfig, AgentOptions, AgentSubagentDefinition } from "../../types";
 
 // Baseline tool surface for Claude Code sessions. Hosts that need extra tools
 // should append them on top of this list.
@@ -37,7 +37,7 @@ export interface CreateClaudeQueryOptionsInput {
 	settingSources: ("user" | "project")[];
 	settings?: string;
 	allowedTools: string[];
-	agentOptions?: Pick<AgentOptions, "permissionMode" | "disallowedTools">;
+	agentOptions?: Pick<AgentOptions, "permissionMode" | "disallowedTools" | "subagents">;
 	abortController: AbortController;
 	env: Record<string, string>;
 	config: AgentConfig;
@@ -47,6 +47,47 @@ export interface CreateClaudeQueryOptionsInput {
 	maxTurns?: number;
 	includePartialMessages?: boolean;
 	spawnClaudeCodeProcess: NonNullable<Options["spawnClaudeCodeProcess"]>;
+}
+
+/**
+ * The only subagent fields the SDK understands. Hosts own the definition shape
+ * (`AgentSubagentDefinition`), so anything outside this list is dropped instead
+ * of forwarded — an unknown key reaches the Claude Code CLI verbatim and the
+ * whole `agents` payload is rejected.
+ */
+const SDK_AGENT_FIELDS = [
+	"description",
+	"prompt",
+	"tools",
+	"disallowedTools",
+	"model",
+	"maxTurns",
+	"effort",
+] as const satisfies readonly (keyof AgentDefinition)[];
+
+/**
+ * Project host subagent definitions onto the SDK `agents` option.
+ *
+ * Returns `undefined` (rather than an empty record) for the no-subagent case so
+ * the caller can omit the key entirely.
+ */
+function toSdkAgents(
+	subagents: Record<string, AgentSubagentDefinition> | undefined,
+): Record<string, AgentDefinition> | undefined {
+	if (!subagents) return undefined;
+
+	const entries = Object.entries(subagents).map(([name, definition]) => {
+		const source = definition as unknown as Record<string, unknown>;
+		const agent: Record<string, unknown> = {};
+		for (const field of SDK_AGENT_FIELDS) {
+			if (source[field] !== undefined) agent[field] = source[field];
+		}
+		return [name, agent] as const;
+	});
+
+	return Object.keys(entries).length > 0
+		? (Object.fromEntries(entries) as Record<string, AgentDefinition>)
+		: undefined;
 }
 
 /**
@@ -74,6 +115,7 @@ export function createClaudeQueryOptions({
 	spawnClaudeCodeProcess,
 }: CreateClaudeQueryOptionsInput): Options {
 	const effectivePermissionMode = agentOptions?.permissionMode ?? "bypassPermissions";
+	const agents = toSdkAgents(agentOptions?.subagents);
 
 	return {
 		cwd,
@@ -88,6 +130,8 @@ export function createClaudeQueryOptions({
 		// functional.
 		permissionMode: effectivePermissionMode,
 		...(agentOptions?.disallowedTools?.length ? { disallowedTools: agentOptions.disallowedTools } : {}),
+		// Subagents the host declared; the SDK surfaces them as Task/Agent types.
+		...(agents ? { agents } : {}),
 		allowDangerouslySkipPermissions: effectivePermissionMode === "bypassPermissions",
 		abortController,
 		env,
