@@ -1,6 +1,10 @@
 /** Search-only excerpts from one parent message. They are never persisted. */
 export interface MatchedEvidenceSpan {
 	content: string;
+	/** Exact hit chunk, distinct from its expanded answer window. */
+	matchedContent?: string;
+	matchedStartPosition?: number;
+	matchedEndPosition?: number;
 	sourceChunkId?: string;
 	sourceChunkIds?: string[];
 	startPosition?: number;
@@ -40,6 +44,14 @@ export function spansFor(hit: EvidenceHit): MatchedEvidenceSpan[] {
 }
 
 function sameSpan(left: MatchedEvidenceSpan, right: MatchedEvidenceSpan): boolean {
+	if (left.matchedContent !== undefined || right.matchedContent !== undefined) {
+		return (
+			left.sourceChunkId === right.sourceChunkId &&
+			left.matchedContent === right.matchedContent &&
+			left.matchedStartPosition === right.matchedStartPosition &&
+			left.matchedEndPosition === right.matchedEndPosition
+		);
+	}
 	if (
 		left.startPosition !== undefined &&
 		left.endPosition !== undefined &&
@@ -132,5 +144,6 @@ export function renderMatchedEvidence(hit: EvidenceHit): string {
 			end: span.endPosition,
 		});
 	}
+	if (windows.length === 1 && windows[0].content === hit.content) return hit.content;
 	return windows.map((window, index) => `[Matched excerpt ${index + 1}]\n${window.content}`).join("\n\n");
 }

@@ -64,8 +64,34 @@ export function hydrateHit(hit, userId, getMessage, getChunk) {
 		);
 		const content = parent.content.slice(start, end);
 		assert.equal(sha256(content), span.content_sha256, `Span content changed for ${hit.id}`);
+		let primary;
+		if (span.matched_content_sha256 !== undefined) {
+			const primaryStart = span.matched_start_position;
+			const primaryEnd = span.matched_end_position;
+			assert(
+				Number.isSafeInteger(primaryStart) &&
+					Number.isSafeInteger(primaryEnd) &&
+					primaryStart >= start &&
+					primaryEnd > primaryStart &&
+					primaryEnd <= end,
+				`Invalid primary UTF-16 span in ${hit.id}`,
+			);
+			const matchedContent = parent.content.slice(primaryStart, primaryEnd);
+			assert.equal(
+				sha256(matchedContent),
+				span.matched_content_sha256,
+				`Primary content changed for ${hit.id}`,
+			);
+			for (const id of span.source_chunk_ids ?? []) {
+				const child = getChunk(id);
+				assert(child, `Missing primary child ${id}`);
+				assert.equal(child.message_id, hit.id, `Child belongs to another parent: ${id}`);
+			}
+			primary = { matchedContent, matchedStartPosition: primaryStart, matchedEndPosition: primaryEnd };
+		}
 		return {
 			content,
+			...primary,
 			sourceChunkId: span.source_chunk_ids?.[0],
 			sourceChunkIds: [...(span.source_chunk_ids ?? [])],
 			startPosition: start,
@@ -97,6 +123,45 @@ export function hydrateHit(hit, userId, getMessage, getChunk) {
 			matchedSpansTruncated: hit.matched_spans_truncated ?? 0,
 		},
 	};
+}
+
+/** Restore actually matched child IDs from older traces, without expanding scoring text. */
+export function hydratePrimaryHit(hit, userId, getMessage, getChunk) {
+	const restored = hydrateHit(hit, userId, getMessage, getChunk);
+	const parent = getMessage(hit.id);
+	const primarySpans = [];
+	const seen = new Set();
+	for (const span of restored.metadata.matchedSpans) {
+		assert(span.sourceChunkIds.length > 0, `Missing matched child IDs: ${hit.id}`);
+		for (const id of span.sourceChunkIds) {
+			if (seen.has(id)) continue;
+			const child = getChunk(id);
+			assert(child, `Missing matched child: ${id}`);
+			assert.equal(child.message_id, hit.id, `Matched child belongs to another parent: ${id}`);
+			assert.equal(child.user_id, userId, `Matched child scope mismatch: ${id}`);
+			assert(
+				Number.isSafeInteger(child.start_position) &&
+					Number.isSafeInteger(child.end_position) &&
+					child.start_position >= span.startPosition &&
+					child.end_position > child.start_position &&
+					child.end_position <= span.endPosition,
+				`Matched child outside its recorded window: ${id}`,
+			);
+			assert.equal(child.content, parent.content.slice(child.start_position, child.end_position));
+			assert.equal(child.content_hash, sha256(child.content), `Matched child hash mismatch: ${id}`);
+			seen.add(id);
+			primarySpans.push({
+				...span,
+				sourceChunkId: id,
+				sourceChunkIds: [id],
+				matchedContent: child.content,
+				matchedStartPosition: child.start_position,
+				matchedEndPosition: child.end_position,
+			});
+		}
+	}
+	assert(primarySpans.length > 0, `No exact primary evidence: ${hit.id}`);
+	return { ...restored, metadata: { ...restored.metadata, matchedSpans: primarySpans } };
 }
 
 export function assertReplay(output, trace, record) {
@@ -134,7 +199,7 @@ async function main() {
 	const perCategory = Number(options["per-category"] ?? 2);
 	assert(Number.isSafeInteger(perCategory) && perCategory > 0);
 	const intervention = options.intervention ?? "fusion-window";
-	assert(["fusion-window", "lexical-dedup"].includes(intervention), "Unknown intervention");
+	assert(["fusion-window", "lexical-dedup", "reranker-model"].includes(intervention), "Unknown intervention");
 	const run = path.resolve(options.run);
 	const output = path.resolve(options.output);
 	assert.notEqual(output, run, "Cannot overwrite the reference run");
@@ -155,11 +220,18 @@ async function main() {
 			path.resolve(options["baseline-root"], "packages/ai/rag/dist/local-transformers-reranker.js"),
 		).href
 	);
+	const rerankerModel = options["reranker-model"] ?? "Xenova/ms-marco-MiniLM-L-6-v2";
+	const rerankerCandidateMode = options["reranker-candidate-mode"] ?? "window";
+	assert(["window", "matched-chunks"].includes(rerankerCandidateMode), "Unknown reranker candidate mode");
+	const rerankerBatchSize = Number(options["reranker-batch-size"] ?? 8);
+	assert(Number.isSafeInteger(rerankerBatchSize) && rerankerBatchSize > 0 && rerankerBatchSize <= 32, "Invalid reranker batch size");
 	const reranker = new LocalTransformersReranker({
+		modelName: rerankerModel,
 		dtype: "q8",
 		maxTokens: 512,
-		batchSize: 8,
+		batchSize: rerankerBatchSize,
 		localFilesOnly: true,
+		candidateMode: rerankerCandidateMode,
 	});
 	const selected = selectRecords(rows(path.join(run, "input.jsonl")), perCategory);
 	const selectedIds = new Set(selected.map((record) => record.id));
@@ -175,10 +247,11 @@ async function main() {
 		baseline_module_sha256: sha256(fs.readFileSync(baselinePath)),
 		current_module_sha256: sha256(fs.readFileSync(currentPath)),
 		selected_ids: selected.map((record) => record.id),
-		reranker_model: reranker.getModelName(),
+			reranker_model: reranker.getModelName(),
+			reranker_candidate_mode: rerankerCandidateMode,
 		dtype: "q8",
 		max_tokens: 512,
-		batch_size: 8,
+		batch_size: rerankerBatchSize,
 		...(intervention === "lexical-dedup"
 			? {
 					sqlite_version: db.prepare("SELECT sqlite_version() AS version").get().version,
@@ -187,10 +260,12 @@ async function main() {
 			: {}),
 		selection: "lowest SHA256(question ID), independently per category",
 		official_prompts_changed: false,
-		intervention:
-			intervention === "fusion-window"
-				? "core fusion window only; fixed semantic, lexical, and planner candidates"
-				: "core lexical keyword deduplication only; fixed semantic and planner candidates; unchanged fusion window",
+			intervention:
+				intervention === "fusion-window"
+					? "core fusion window only; fixed semantic, lexical, and planner candidates"
+					: intervention === "lexical-dedup"
+						? "core lexical keyword deduplication only; fixed semantic and planner candidates; unchanged fusion window"
+						: "local reranker model and candidate mode only; fixed semantic, lexical, planner candidates and Top-K",
 	};
 	fs.mkdirSync(path.join(output, "replay-checkpoints"), { recursive: true });
 	const manifestPath = path.join(output, "ablation-manifest.json");
@@ -319,7 +394,7 @@ async function main() {
 				)
 				.search(input);
 			const replayed = await baseline.createUnifiedSearch(deps).search(input);
-			assertReplay(replayed, trace, record);
+			if (intervention !== "reranker-model") assertReplay(replayed, trace, record);
 			const sources = knownSources;
 			const required = new Set(trace.required_source_turn_ids ?? []);
 			const recall = (hits) => {
@@ -386,10 +461,14 @@ async function main() {
 	);
 	if (options["source-map"]) {
 		const supplementText = fs.readFileSync(options["source-map"], "utf8");
-		const sources = new Map([
-			...knownSources,
-			...Object.entries(JSON.parse(supplementText)).map(([id, source]) => [id, [source]]),
-		]);
+		const sources = new Map(knownSources);
+		for (const line of supplementText.split(/\r?\n/)) {
+			if (!line.trim()) continue;
+			const entry = JSON.parse(line);
+			for (const [id, source] of Object.entries(entry.source_ids ?? {})) {
+				if (typeof source === "string" || typeof source === "number") sources.set(id, [String(source)]);
+			}
+		}
 		const recalls = completed
 			.map((checkpoint) => {
 				const required = new Set(checkpoints.get(checkpoint.record.id).trace.required_source_turn_ids ?? []);

@@ -1,7 +1,216 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildUnified, parseUnifiedArgs } from "./cli-shared";
+import {
+	applyUnifiedFlag,
+	buildUnified,
+	parseUnifiedArgs,
+	unifiedArgsFromEnv,
+	validateUnifiedArgs,
+} from "./cli-shared";
 
 describe("memory-store backend CLI", () => {
+	it("validates explicit local pooling without changing its default", () => {
+		expect(parseUnifiedArgs([]).embeddingPooling).toBeUndefined();
+		for (const pooling of ["mean", "cls"] as const) {
+			expect(
+				parseUnifiedArgs(["--embedding-provider", "local", "--embedding-pooling", pooling]),
+			).toMatchObject({ embeddingPooling: pooling });
+		}
+		expect(() =>
+			parseUnifiedArgs(["--embedding-provider", "local", "--embedding-pooling", "invalid"]),
+		).toThrow("--embedding-pooling must be one of");
+		expect(() => parseUnifiedArgs(["--embedding-pooling", "cls"])).toThrow(
+			"requires --embedding-provider local",
+		);
+		expect(() => parseUnifiedArgs(["--embedding-provider", "local", "--embedding-pooling"])).toThrow(
+			"requires a value",
+		);
+	});
+
+	it("reads retrieval experiment defaults without enabling them implicitly", () => {
+		const defaults = unifiedArgsFromEnv({});
+		expect(defaults.rrfDenseWeight).toBeUndefined();
+		expect(defaults.sessionNeighborSeedK).toBeUndefined();
+		const configured = unifiedArgsFromEnv({
+			OPENCONTEXT_RRF_DENSE_WEIGHT: "0.7",
+			OPENCONTEXT_RRF_LEXICAL_WEIGHT: "0.3",
+			OPENCONTEXT_RRF_K: "60",
+			OPENCONTEXT_SESSION_NEIGHBOR_SEED_K: "20",
+			OPENCONTEXT_SESSION_NEIGHBOR_WINDOW: "1",
+			OPENCONTEXT_SESSION_NEIGHBOR_MODE: "union",
+			OPENCONTEXT_SESSION_NEIGHBOR_MAX_SLOTS: "4",
+		});
+		expect(configured).toMatchObject({
+			rrfDenseWeight: 0.7,
+			rrfLexicalWeight: 0.3,
+			rrfK: 60,
+			sessionNeighborSeedK: 20,
+			sessionNeighborWindow: 1,
+			sessionNeighborMode: "union",
+			sessionNeighborMaxSlots: 4,
+		});
+		validateUnifiedArgs(configured);
+	});
+
+	it("shares model, chunk and scoring flags with facade server parsers", () => {
+		const argv = [
+			"--embedding-provider",
+			"local",
+			"--embedding-model",
+			"Xenova/bge-m3",
+			"--embedding-pooling",
+			"cls",
+			"--chunk-max-tokens",
+			"1024",
+			"--chunk-overlap-tokens",
+			"128",
+			"--reranker-provider",
+			"local",
+			"--reranker-candidate-mode",
+			"matched-chunks",
+		];
+		const args = unifiedArgsFromEnv();
+		for (let i = 0; i < argv.length; i += 1) {
+			expect(applyUnifiedFlag(args, argv[i], () => argv[++i])).toBe(true);
+		}
+		validateUnifiedArgs(args, "[opencontext/http]");
+		expect(args).toEqual(parseUnifiedArgs(argv));
+		const takeValue = vi.fn();
+		expect(applyUnifiedFlag(args, "--host", takeValue)).toBe(false);
+		expect(takeValue).not.toHaveBeenCalled();
+		args.embeddingPooling = "invalid" as typeof args.embeddingPooling;
+		expect(() => validateUnifiedArgs(args, "[opencontext/http]")).toThrow(
+			"[opencontext/http] --embedding-pooling",
+		);
+	});
+
+	it("wires CLS and reports the actual provider model, cap and output dimensions", async () => {
+		const constructed = vi.fn();
+		vi.doMock("@melandlabs/ai-rag/local-transformers-embedding-provider", () => ({
+			LocalTransformersEmbeddingProvider: class {
+				constructor(options: unknown) {
+					constructed(options);
+				}
+				getModelName() {
+					return "Xenova/bge-m3";
+				}
+				getMaxTokens() {
+					return 1152;
+				}
+				async getTokenCounter() {
+					return (text: string) => text.length;
+				}
+				async embedQuery() {
+					return Array.from({ length: 1024 }, () => 0);
+				}
+				async embedDocuments(texts: string[]) {
+					return texts.map(() => Array.from({ length: 1024 }, () => 0));
+				}
+			},
+		}));
+		const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+		try {
+			const args = parseUnifiedArgs([
+				"--embedding-provider",
+				"local",
+				"--embedding-model",
+				"Xenova/bge-m3",
+				"--embedding-pooling",
+				"cls",
+				"--chunk-max-tokens",
+				"1024",
+				"--chunk-overlap-tokens",
+				"128",
+				"--memory-backend",
+				"none",
+				"--reranker-provider",
+				"none",
+				"--insights-backend",
+				"none",
+				"--knowledge-backend",
+				"none",
+				"--no-reasoning",
+			]);
+			const unified = await buildUnified(args);
+			expect(constructed).toHaveBeenCalledWith({
+				modelName: "Xenova/bge-m3",
+				cacheDir: args.embeddingCacheDir,
+				pooling: "cls",
+			});
+			expect(unified.embeddingInfo).toMatchObject({ model: "Xenova/bge-m3", maxTokens: 1152 });
+			expect(await unified.getDocumentChunking?.()).toMatchObject({ maxTokens: 1024, overlapTokens: 128 });
+			await unified.embedDocuments?.({ userId: "test-user", texts: ["source"] });
+			expect(unified.embeddingInfo?.dimensions).toBe(1024);
+			await buildUnified({ ...args, embeddingPooling: undefined });
+			expect(constructed).toHaveBeenLastCalledWith({
+				modelName: "Xenova/bge-m3",
+				cacheDir: args.embeddingCacheDir,
+				pooling: undefined,
+			});
+			const inferred = await buildUnified({ ...args, embeddingModel: undefined });
+			expect(inferred.embeddingInfo?.model).toBe("Xenova/bge-m3");
+			constructed.mockImplementationOnce(() => {
+				throw new Error("local initialization failed");
+			});
+			await expect(
+				buildUnified({ ...args, chunkMaxTokens: undefined, chunkOverlapTokens: undefined }),
+			).rejects.toThrow("local initialization failed");
+		} finally {
+			warn.mockRestore();
+			vi.doUnmock("@melandlabs/ai-rag/local-transformers-embedding-provider");
+			vi.resetModules();
+		}
+	});
+
+	it("requires a local reranker for explicit matched-chunk scoring", () => {
+		expect(
+			parseUnifiedArgs(["--reranker-provider", "local", "--reranker-candidate-mode", "matched-chunks"]),
+		).toMatchObject({ rerankerCandidateMode: "matched-chunks" });
+		expect(() => parseUnifiedArgs(["--reranker-candidate-mode", "matched-chunks"])).toThrow(
+			"requires a local reranker",
+		);
+		expect(() =>
+			parseUnifiedArgs(["--reranker-provider", "local", "--reranker-candidate-mode", "invalid"]),
+		).toThrow("reranker-candidate-mode");
+	});
+	it("validates explicit model-tokenizer chunk budgets without changing legacy defaults", () => {
+		expect(parseUnifiedArgs([]).chunkMaxTokens).toBeUndefined();
+		expect(
+			parseUnifiedArgs([
+				"--embedding-provider",
+				"local",
+				"--chunk-max-tokens",
+				"384",
+				"--chunk-overlap-tokens",
+				"64",
+			]),
+		).toMatchObject({ chunkMaxTokens: 384, chunkOverlapTokens: 64 });
+		expect(() => parseUnifiedArgs(["--embedding-provider", "local", "--chunk-max-tokens", "384"])).toThrow(
+			"require positive size",
+		);
+		expect(() =>
+			parseUnifiedArgs([
+				"--embedding-provider",
+				"local",
+				"--chunk-max-tokens",
+				"384.5",
+				"--chunk-overlap-tokens",
+				"64",
+			]),
+		).toThrow("require positive size");
+		expect(() =>
+			parseUnifiedArgs([
+				"--embedding-provider",
+				"local",
+				"--chunk-max-tokens",
+				"64",
+				"--chunk-overlap-tokens",
+				"64",
+			]),
+		).toThrow("require positive size");
+		expect(() => parseUnifiedArgs(["--chunk-max-tokens", "384", "--chunk-overlap-tokens", "64"])).toThrow(
+			"requires --embedding-provider local",
+		);
+	});
 	it("requires an explicit valid semantic-variant merge switch", async () => {
 		const keys = ["OPENCONTEXT_LLM_API_KEY", "OPENCONTEXT_LLM_QUERY_REWRITE_SEMANTIC_MERGE"] as const;
 		const saved = keys.map((key) => process.env[key]);

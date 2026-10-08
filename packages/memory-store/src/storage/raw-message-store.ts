@@ -15,6 +15,7 @@
  */
 
 import type {
+	RawMessage,
 	RawMessageSearchChunk,
 	RawMessageSearchIndexStats,
 	RawMessageStorageManager,
@@ -26,6 +27,13 @@ import { closeSQLiteRawMessageManager, getSQLiteRawMessageManager } from "./sqli
 export type RawMessageStorageBackend = "sqlite" | "postgres";
 
 export type RawMessageStorageManagerWithSearch = RawMessageStorageManager & {
+	getRawMessageSessionNeighbors?: (input: {
+		userId: string;
+		sessionId: string;
+		messageSequences: number[];
+		window: number;
+		includeDeprecated?: boolean;
+	}) => Promise<RawMessage[]>;
 	getRawMessageSearchChunks?: (input: {
 		chunkIds?: string[];
 		messageIds?: string[];

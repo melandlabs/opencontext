@@ -23,6 +23,8 @@ param(
   [switch]$SkipIngest,
   [string]$ResumeDbPath = "",
   [int]$MaxQuestions = 0,
+  [int]$TopK = 0,
+  [int]$CandidateK = 0,
   [string]$QuestionIds = "",
   [ValidateSet("mcq","generative")][string]$Mode = "mcq",
   [string]$AnswerModel = "",
@@ -150,6 +152,17 @@ if ($Bench -eq "beam") {
 }
 
 $topK = if ($Bench -eq "beam") { 12 } else { 10 }
+$candidateK = $null
+if ($TopK -gt 0) { $topK = $TopK }
+if ($TopK -lt 0) { $preflightErrors.Add("-TopK must be zero or a positive integer") }
+if ($CandidateK -lt 0) { $preflightErrors.Add("-CandidateK must be zero or a positive integer") }
+if ($CandidateK -gt 0) {
+  if ($CandidateK -lt $topK) { $preflightErrors.Add("-CandidateK must be at least -TopK") }
+  $candidateK = $CandidateK
+  $env:AML_CANDIDATE_K = "$CandidateK"
+} else {
+  Remove-Item Env:AML_CANDIDATE_K -ErrorAction SilentlyContinue
+}
 if ($Bench -ne "beam" -and $env:AML_TOP_K) {
   $parsedTopK = 0
   if (-not [int]::TryParse($env:AML_TOP_K, [ref]$parsedTopK) -or $parsedTopK -lt 1) {
@@ -198,6 +211,7 @@ if ($Bench -eq "beam") {
   $runConfig = [ordered]@{
     dataset = [IO.Path]::GetFullPath($datasetPath)
     top_k = $topK
+    candidate_k = $candidateK
     answer_model = $AnswerModel
     judge_model = $JudgeModel
     limit = $Limit

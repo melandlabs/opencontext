@@ -356,6 +356,93 @@ describe("createUnifiedSearch", () => {
 		expect(top?.metadata.rrfScore).toBeGreaterThan(0);
 	});
 
+	it("expands same-session neighbors after fusion and records diagnostics", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn: async () => [
+				{
+					id: "seed",
+					content: "seed",
+					similarity: 0.9,
+					metadata: { sessionId: "s1", messageSequence: 2 },
+				},
+			],
+			searchRawMessagesLexical: async () => [],
+			searchRawMessageNeighbors: async (input) => {
+				expect(input).toMatchObject({ userId: "u1", sessionId: "s1", messageSequences: [2], window: 1 });
+				return [
+					{
+						id: "neighbor",
+						content: "neighbor evidence",
+						similarity: 0,
+						metadata: { userId: "u1", sessionId: "s1", messageSequence: 1 },
+					},
+				];
+			},
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "seed",
+			sources: ["memory"],
+			limit: 2,
+			candidateLimit: 2,
+			sessionNeighborExpansion: { seedLimit: 1, window: 1 },
+			includeRetrievalDiagnostics: true,
+		});
+		expect(out.results.map((hit) => hit.id)).toEqual(["seed", "neighbor"]);
+		expect(out.results[1]?.metadata).toMatchObject({ sessionNeighbor: true, neighborDistance: 1 });
+		expect(out.retrievalDiagnostics?.sessionNeighborExpansion).toMatchObject({
+			enabled: true,
+			seedCount: 1,
+			neighborCount: 1,
+			sessions: 1,
+		});
+	});
+
+	it("rejects provider rows outside the requested user/session and caps protected neighbors", async () => {
+		const search = createUnifiedSearch({
+			...baseDeps,
+			searchRawMessagesAnn: async () => [
+				{
+					id: "seed",
+					content: "seed",
+					similarity: 0.9,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 10 },
+				},
+				...Array.from({ length: 2 }, (_, index) => ({
+					id: `direct-${index}`,
+					content: `direct-${index}`,
+					similarity: 0.8 - index / 100,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 20 + index },
+				})),
+			],
+			searchRawMessagesLexical: async () => [],
+			searchRawMessageNeighbors: async () => [
+				{ id: "wrong-user", content: "wrong", similarity: 0, metadata: { userId: "u2", sessionId: "s1", messageSequence: 9 } },
+				{ id: "wrong-session", content: "wrong", similarity: 0, metadata: { userId: "u1", sessionId: "s2", messageSequence: 9 } },
+				...Array.from({ length: 8 }, (_, index) => ({
+					id: `neighbor-${index}`,
+					content: `neighbor-${index}`,
+					similarity: 0,
+					metadata: { userId: "u1", sessionId: "s1", messageSequence: 9 },
+				})),
+			],
+		});
+		const out = await search.search({
+			userId: "u1",
+			query: "seed",
+			sources: ["memory"],
+			limit: 4,
+			candidateLimit: 4,
+			sessionNeighborExpansion: { seedLimit: 1, window: 1, mode: "protected", maxNeighborSlots: 1 },
+			includeRetrievalDiagnostics: true,
+		});
+		expect(out.results).toHaveLength(4);
+		expect(out.results[0]?.id).toBe("seed");
+		expect(out.results.filter((hit) => hit.metadata.sessionNeighbor === true)).toHaveLength(1);
+		expect(out.retrievalDiagnostics?.sessionNeighborExpansion?.neighborCount).toBe(8);
+	});
+
 	it("overfetches per channel and exposes pre-fusion candidates only when requested", async () => {
 		const searchRawMessagesAnn = vi.fn(baseDeps.searchRawMessagesAnn);
 		const searchRawMessagesLexical = vi.fn(baseDeps.searchRawMessagesLexical);
@@ -378,9 +465,30 @@ describe("createUnifiedSearch", () => {
 		expect(out.results).toHaveLength(2);
 		expect(out.retrievalDiagnostics?.mergeStrategy).toBe("rrf");
 		expect(out.retrievalDiagnostics?.candidateLimit).toBe(8);
+		expect(out.retrievalDiagnostics?.timings).toEqual(
+			expect.objectContaining({
+				totalMs: expect.any(Number),
+				memorySourceMs: expect.any(Number),
+				semanticMs: expect.any(Number),
+				lexicalMs: expect.any(Number),
+				fusionMs: expect.any(Number),
+				rerankerMs: expect.any(Number),
+			}),
+		);
 		expect(out.retrievalDiagnostics?.channels.semantic.map((hit) => hit.id)).toEqual(["m1", "m2"]);
 		expect(out.retrievalDiagnostics?.channels.lexical.map((hit) => hit.id)).toEqual(["m2", "m3"]);
 		expect(out.retrievalDiagnostics?.fusedBeforeRerank).toHaveLength(3);
+
+		await search.search({
+			userId: "u1",
+			query: "anything here",
+			sources: ["memory"],
+			limit: 2,
+			candidateLimit: 5,
+			mergeStrategy: "rrf",
+		});
+		expect(searchRawMessagesAnn).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 5 }));
+		expect(searchRawMessagesLexical).toHaveBeenLastCalledWith(expect.objectContaining({ limit: 5 }));
 	});
 
 	it("uses an unfiltered semantic candidate window for default RRF, while respecting explicit thresholds", async () => {

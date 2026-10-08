@@ -158,6 +158,27 @@ describe("mergeUnifiedMemorySearchResultsRrf", () => {
 	it("returns an empty array when no lists are provided", () => {
 		expect(mergeUnifiedMemorySearchResultsRrf([], 10)).toEqual([]);
 	});
+
+	it("applies channel weights without changing the default score contract", () => {
+		const merged = mergeUnifiedMemorySearchResultsRrf(
+			[
+				{
+					name: "memory-semantic",
+					hits: [makeResult({ type: "memory", id: "dense-only", similarity: 0.9 })],
+				},
+				{
+					name: "memory-bm25",
+					hits: [makeResult({ type: "memory", id: "lexical-only", similarity: 0.8 })],
+				},
+			],
+			10,
+			60,
+			{ semantic: 0.2, lexical: 1 },
+		);
+		expect(merged[0]?.id).toBe("lexical-only");
+		expect(merged[0]?.metadata.rrfScore).toBeCloseTo(1 / 61);
+		expect(merged[1]?.metadata.rrfScore).toBeCloseTo(0.2 / 61);
+	});
 });
 
 describe("UnifiedMemorySearchInput new fields", () => {

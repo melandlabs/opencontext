@@ -29,7 +29,11 @@
 
 import {
 	type UnifiedArgs,
+	applyUnifiedFlag,
 	buildUnified as buildMemoryStoreUnified,
+	printUnifiedHelp,
+	unifiedArgsFromEnv as unifiedFromEnv,
+	validateUnifiedArgs,
 } from "@melandlabs/memory-store/cli-shared";
 import { parseOkfArgs, printOkfHelp, startOkf } from "@melandlabs/okf";
 import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
@@ -53,154 +57,6 @@ interface HttpArgs extends UnifiedArgs {
 interface McpArgs extends UnifiedArgs {
 	name?: string;
 	version?: string;
-}
-
-function unifiedFromEnv(env: NodeJS.ProcessEnv): UnifiedArgs {
-	return {
-		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
-		embeddingModel: env.EMBEDDING_MODEL,
-		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
-		rerankerProvider: (env.RERANKER_PROVIDER as UnifiedArgs["rerankerProvider"] | undefined) ?? "none",
-		rerankerModel: env.LOCAL_RERANKER_MODEL,
-		rerankerCacheDir: env.LOCAL_RERANKER_CACHE_DIR,
-		rerankerBatchSize: env.LOCAL_RERANKER_BATCH_SIZE
-			? Number.parseInt(env.LOCAL_RERANKER_BATCH_SIZE, 10)
-			: undefined,
-		rerankerMaxTokens: env.LOCAL_RERANKER_MAX_TOKENS
-			? Number.parseInt(env.LOCAL_RERANKER_MAX_TOKENS, 10)
-			: undefined,
-		chromaUrl: env.CHROMA_URL,
-		memoryBackend: (env.MEMORY_BACKEND as UnifiedArgs["memoryBackend"] | undefined) ?? "none",
-		lancedbUri: env.LANCEDB_URI,
-		lancedbTable: env.LANCEDB_TABLE,
-		milvusAddress: env.MILVUS_ADDRESS,
-		milvusToken: env.MILVUS_TOKEN,
-		milvusDatabase: env.MILVUS_DATABASE,
-		milvusCollection: env.MILVUS_COLLECTION,
-		milvusDimension: env.MILVUS_DIMENSION ? Number.parseInt(env.MILVUS_DIMENSION, 10) : undefined,
-		insightsBackend: (env.INSIGHTS_BACKEND as UnifiedArgs["insightsBackend"] | undefined) ?? "none",
-		insightsCollection: env.INSIGHTS_COLLECTION ?? "opencontext_insights",
-		knowledgeBackend: (env.KNOWLEDGE_BACKEND as UnifiedArgs["knowledgeBackend"] | undefined) ?? "none",
-		knowledgeCollection: env.KNOWLEDGE_COLLECTION ?? "opencontext_knowledge",
-		reasoning: env.REASONING === "1" || env.REASONING === "true",
-		reasoningBaseUrl: env.OPENCONTEXT_LLM_BASE_URL,
-		reasoningModel: env.OPENCONTEXT_LLM_MODEL,
-		reasoningTimeoutMs: env.OPENCONTEXT_LLM_TIMEOUT_MS
-			? Number.parseInt(env.OPENCONTEXT_LLM_TIMEOUT_MS, 10)
-			: undefined,
-	};
-}
-
-function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () => string, logPrefix: string): void {
-	switch (arg) {
-		case "--embedding-provider":
-			args.embeddingProvider = takeValue() as UnifiedArgs["embeddingProvider"];
-			break;
-		case "--embedding-model":
-			args.embeddingModel = takeValue();
-			break;
-		case "--embedding-cache-dir":
-			args.embeddingCacheDir = takeValue();
-			break;
-		case "--reranker-provider":
-			args.rerankerProvider = takeValue() as UnifiedArgs["rerankerProvider"];
-			break;
-		case "--reranker-model":
-			args.rerankerModel = takeValue();
-			break;
-		case "--reranker-cache-dir":
-			args.rerankerCacheDir = takeValue();
-			break;
-		case "--reranker-batch-size":
-			args.rerankerBatchSize = Number.parseInt(takeValue(), 10);
-			break;
-		case "--reranker-max-tokens":
-			args.rerankerMaxTokens = Number.parseInt(takeValue(), 10);
-			break;
-		case "--chroma-url":
-			args.chromaUrl = takeValue();
-			break;
-		case "--memory-backend":
-			args.memoryBackend = takeValue() as UnifiedArgs["memoryBackend"];
-			break;
-		case "--lancedb-uri":
-			args.lancedbUri = takeValue();
-			break;
-		case "--lancedb-table":
-			args.lancedbTable = takeValue();
-			break;
-		case "--milvus-address":
-			args.milvusAddress = takeValue();
-			break;
-		case "--milvus-token":
-			args.milvusToken = takeValue();
-			break;
-		case "--milvus-database":
-			args.milvusDatabase = takeValue();
-			break;
-		case "--milvus-collection":
-			args.milvusCollection = takeValue();
-			break;
-		case "--milvus-dimension":
-			args.milvusDimension = Number.parseInt(takeValue(), 10);
-			break;
-		case "--insights-backend":
-			args.insightsBackend = takeValue() as UnifiedArgs["insightsBackend"];
-			break;
-		case "--insights-collection":
-			args.insightsCollection = takeValue();
-			break;
-		case "--knowledge-backend":
-			args.knowledgeBackend = takeValue() as UnifiedArgs["knowledgeBackend"];
-			break;
-		case "--knowledge-collection":
-			args.knowledgeCollection = takeValue();
-			break;
-		case "--reasoning":
-			args.reasoning = true;
-			break;
-		case "--no-reasoning":
-			args.reasoning = false;
-			break;
-		case "--reasoning-base-url":
-			args.reasoningBaseUrl = takeValue();
-			break;
-		case "--reasoning-model":
-			args.reasoningModel = takeValue();
-			break;
-		case "--reasoning-timeout-ms":
-			args.reasoningTimeoutMs = Number.parseInt(takeValue(), 10);
-			break;
-		default:
-			throw new Error(`${logPrefix} unknown flag: ${arg}`);
-	}
-}
-
-function validateUnifiedArgs(args: UnifiedArgs, logPrefix: string): void {
-	const validate = (name: string, value: string, allowed: string[]) => {
-		if (!allowed.includes(value)) {
-			throw new Error(`${logPrefix} ${name} must be one of: ${allowed.join(", ")} (got "${value}")`);
-		}
-	};
-	validate("--embedding-provider", args.embeddingProvider, ["local", "openrouter", "none"]);
-	validate("--reranker-provider", args.rerankerProvider, ["local", "none"]);
-	validate("--memory-backend", args.memoryBackend, ["sqlite-vec", "chroma", "lancedb", "milvus", "none"]);
-	validate("--insights-backend", args.insightsBackend, ["sqlite-vec", "chroma", "none"]);
-	validate("--knowledge-backend", args.knowledgeBackend, ["chroma", "none"]);
-	if (
-		args.milvusDimension !== undefined &&
-		(!Number.isInteger(args.milvusDimension) || args.milvusDimension <= 0)
-	) {
-		throw new Error(`${logPrefix} --milvus-dimension must be a positive integer`);
-	}
-	for (const [name, value] of [
-		["--reranker-batch-size", args.rerankerBatchSize],
-		["--reranker-max-tokens", args.rerankerMaxTokens],
-	] as const) {
-		if (value !== undefined && (!Number.isInteger(value) || value <= 0)) {
-			throw new Error(`${logPrefix} ${name} must be a positive integer`);
-		}
-	}
 }
 
 function parseHttpArgs(argv: string[]): HttpArgs {
@@ -232,7 +88,7 @@ function parseHttpArgs(argv: string[]): HttpArgs {
 				process.exit(0);
 				break;
 			default:
-				applyUnifiedFlag(args, arg, takeValue, logPrefix);
+				if (!applyUnifiedFlag(args, arg, takeValue)) throw new Error(`${logPrefix} unknown flag: ${arg}`);
 		}
 	}
 	if (!Number.isFinite(args.port) || args.port <= 0) {
@@ -271,7 +127,7 @@ function parseMcpArgs(argv: string[]): McpArgs {
 				process.exit(0);
 				break;
 			default:
-				applyUnifiedFlag(args, arg, takeValue, logPrefix);
+				if (!applyUnifiedFlag(args, arg, takeValue)) throw new Error(`${logPrefix} unknown flag: ${arg}`);
 		}
 	}
 	validateUnifiedArgs(args, logPrefix);
@@ -333,64 +189,9 @@ Usage:
 Server:
   --port <port>                   Port to listen on (default: 7421, env: MEMORY_HTTP_PORT)
   --host <host>                   Host to bind (default: 127.0.0.1, env: MEMORY_HTTP_HOST)
-
-Embedding (wires unified.embedQuery):
-  --embedding-provider <name>     local | openrouter | none
-                                  (env: EMBEDDING_PROVIDER, default: none)
-  --embedding-model <name>        Model name
-                                  (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
-                                  openrouter → text-embedding-3-small)
-  --embedding-cache-dir <path>    Directory for local ONNX model weights
-                                  (env: LOCAL_EMBEDDING_CACHE_DIR; default:
-                                  ~/.cache/opencontext/local-embeddings)
-
-Reranking (after RRF/source fusion, before final Top-K):
-  --reranker-provider <name>      local | none (env: RERANKER_PROVIDER)
-  --reranker-model <name>         Sequence-classification model
-                                  (env: LOCAL_RERANKER_MODEL)
-  --reranker-cache-dir <path>     Persistent model cache
-                                  (env: LOCAL_RERANKER_CACHE_DIR)
-  --reranker-batch-size <int>     Pair scoring batch size (default: 8)
-  --reranker-max-tokens <int>     Query/document pair token limit (default: 512)
-
-Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
-  --chroma-url <url>              Chroma server URL
-                                  (env: CHROMA_URL; required when any *-backend=chroma)
-  --memory-backend <name>         sqlite-vec | chroma | lancedb | milvus | none
-                                  (env: MEMORY_BACKEND, default: none)
-  --lancedb-uri <uri>             LanceDB directory or URI (env: LANCEDB_URI)
-  --lancedb-table <name>          Optional table name (env: LANCEDB_TABLE)
-  --milvus-address <address>      Milvus endpoint (env: MILVUS_ADDRESS)
-  --milvus-token <token>          Optional Milvus token (env: MILVUS_TOKEN)
-  --milvus-database <name>        Optional database (env: MILVUS_DATABASE)
-  --milvus-collection <name>      Optional collection (env: MILVUS_COLLECTION)
-  --milvus-dimension <int>        Optional vector dimension (env: MILVUS_DIMENSION)
-  --insights-backend <name>       sqlite-vec | chroma | none
-                                  (env: INSIGHTS_BACKEND, default: none)
-  --insights-collection <name>    Chroma collection (default: opencontext_insights)
-  --knowledge-backend <name>      chroma | none
-                                  (env: KNOWLEDGE_BACKEND, default: none)
-  --knowledge-collection <name>   Chroma collection (default: opencontext_knowledge)
-
-Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
-  --reasoning                     Enable the LLM reasoning layer so /v1/search and
-                                  memory.search can honor reasoningStrategy:
-                                    "rewrite"    — first-person memory-check rephrase
-                                    "iterative"  — planner that searches, notes evidence,
-                                                   searches again
-                                  (env: REASONING=1, default: off)
-  --no-reasoning                  Explicitly disable even if REASONING=1 is set.
-  --reasoning-base-url <url>      OpenAI-compatible base URL for the reasoning LLM.
-                                  (env: OPENCONTEXT_LLM_BASE_URL, default: https://openrouter.ai/api/v1)
-  --reasoning-model <name>        Reasoning LLM model identifier.
-                                  (env: OPENCONTEXT_LLM_MODEL, default: openai/gpt-4o-mini)
-  --reasoning-timeout-ms <int>    Per-request timeout (default: 30000).
-
-  Required env when --reasoning is set:
-    OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
-    OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
-    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
-
+`);
+	printUnifiedHelp();
+	console.log(`
 Examples:
   opencontext http
   opencontext http --port 8080
@@ -425,61 +226,9 @@ Usage:
 Server identity (advertised to MCP clients):
   --name <name>                   Server name (env: MEMORY_MCP_NAME)
   --version <version>             Server version (env: MEMORY_MCP_VERSION)
-
-Embedding (wires unified.embedQuery):
-  --embedding-provider <name>     local | openrouter | none
-                                  (env: EMBEDDING_PROVIDER, default: none)
-  --embedding-model <name>        Model name
-                                  (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
-                                  openrouter → text-embedding-3-small)
-  --embedding-cache-dir <path>    Directory for local ONNX model weights
-                                  (env: LOCAL_EMBEDDING_CACHE_DIR; default:
-                                  ~/.cache/opencontext/local-embeddings)
-
-Reranking (after RRF/source fusion, before final Top-K):
-  --reranker-provider <name>      local | none (env: RERANKER_PROVIDER)
-  --reranker-model <name>         Sequence-classification model
-                                  (env: LOCAL_RERANKER_MODEL)
-  --reranker-cache-dir <path>     Persistent model cache
-                                  (env: LOCAL_RERANKER_CACHE_DIR)
-  --reranker-batch-size <int>     Pair scoring batch size (default: 8)
-  --reranker-max-tokens <int>     Query/document pair token limit (default: 512)
-
-Cross-source search (wires unified.searchKnowledge / searchInsights / searchRawMessagesAnn):
-  --chroma-url <url>              Chroma server URL
-                                  (env: CHROMA_URL; required when any *-backend=chroma)
-  --memory-backend <name>         sqlite-vec | chroma | lancedb | milvus | none
-                                  (env: MEMORY_BACKEND, default: none)
-  --lancedb-uri <uri>             LanceDB directory or URI (env: LANCEDB_URI)
-  --lancedb-table <name>          Optional table name (env: LANCEDB_TABLE)
-  --milvus-address <address>      Milvus endpoint (env: MILVUS_ADDRESS)
-  --milvus-token <token>          Optional Milvus token (env: MILVUS_TOKEN)
-  --milvus-database <name>        Optional database (env: MILVUS_DATABASE)
-  --milvus-collection <name>      Optional collection (env: MILVUS_COLLECTION)
-  --milvus-dimension <int>        Optional vector dimension (env: MILVUS_DIMENSION)
-  --insights-backend <name>       sqlite-vec | chroma | none
-                                  (env: INSIGHTS_BACKEND, default: none)
-  --insights-collection <name>    Chroma collection (default: opencontext_insights)
-  --knowledge-backend <name>      chroma | none
-                                  (env: KNOWLEDGE_BACKEND, default: none)
-  --knowledge-collection <name>   Chroma collection (default: opencontext_knowledge)
-
-Reasoning (wires unified.reasoning.{queryRewriter, iterativePlanner}):
-  --reasoning                     Enable the LLM reasoning layer so memory.search
-                                  can honor reasoningStrategy: 'rewrite' | 'iterative'.
-                                  (env: REASONING=1, default: off)
-  --no-reasoning                  Explicitly disable even if REASONING=1 is set.
-  --reasoning-base-url <url>      OpenAI-compatible base URL for the reasoning LLM.
-                                  (env: OPENCONTEXT_LLM_BASE_URL, default: https://openrouter.ai/api/v1)
-  --reasoning-model <name>        Reasoning LLM model identifier.
-                                  (env: OPENCONTEXT_LLM_MODEL, default: openai/gpt-4o-mini)
-  --reasoning-timeout-ms <int>    Per-request timeout (default: 30000).
-
-  Required env when --reasoning is set:
-    OPENCONTEXT_LLM_API_KEY        Bearer token (no default)
-    OPENCONTEXT_LLM_BASE_URL       (optional) overrides --reasoning-base-url
-    OPENCONTEXT_LLM_MODEL          (optional) overrides --reasoning-model
-
+`);
+	printUnifiedHelp();
+	console.log(`
 Examples:
   # Default — all three *_not_configured warnings remain
   opencontext mcp

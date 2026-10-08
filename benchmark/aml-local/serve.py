@@ -62,6 +62,10 @@ AML_EVAL_KEY = os.environ.get("AML_EVAL_KEY", "")
 # real header once the platform issues your Eval Key.
 EVAL_KEY_HEADERS = ("X-Eval-Key", "X-Aml-Eval-Key")
 PORT = int(os.environ.get("AML_ADAPTER_PORT", "7422"))
+# The local daemon may need a few seconds to report health while the
+# embedding/reranker providers are warming up. Keep this separate from the
+# request timeouts so readiness checks do not reject a healthy daemon.
+HEALTH_TIMEOUT = float(os.environ.get("AML_ADAPTER_HEALTH_TIMEOUT", "15"))
 # Seconds advertised via Retry-After on transient (retriable) failures.
 RETRY_AFTER_SECONDS = os.environ.get("AML_RETRY_AFTER", "5")
 
@@ -138,6 +142,11 @@ def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasonin
     top_k = body.get("top_k")
     if not isinstance(query, str) or not query.strip() or not isinstance(user_id, str) or not user_id.strip() or isinstance(top_k, bool) or not isinstance(top_k, int) or top_k < 1:
         raise ValueError("query, user_id and positive integer top_k are required")
+    candidate_k = body.get("candidate_k")
+    if candidate_k is not None and (isinstance(candidate_k, bool) or not isinstance(candidate_k, int) or candidate_k < 1):
+        raise ValueError("candidate_k must be a positive integer when supplied")
+    if candidate_k is not None and candidate_k < top_k:
+        raise ValueError("candidate_k must be at least top_k")
     options = body.get("options")
     if options is not None and (not isinstance(options, list) or any(not isinstance(option, str) for option in options)):
         raise ValueError("options must be an array of strings when supplied")
@@ -149,6 +158,7 @@ def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasonin
     res = oc_post(
         "/v1/search",
         {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"],
+         **({"candidateLimit": candidate_k} if candidate_k is not None else {}),
          **({"reasoningStrategy": local_reasoning} if local_reasoning != "none" else {}),
          **({"includeRetrievalDiagnostics": True} if local_diagnostics else {})},
         timeout=1800,
@@ -223,7 +233,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path.rstrip("/") == "/health":
             try:
-                with urllib.request.urlopen(OPENCONTEXT_URL + "/health", timeout=5) as response:
+                with urllib.request.urlopen(OPENCONTEXT_URL + "/health", timeout=HEALTH_TIMEOUT) as response:
                     if not 200 <= response.status < 300:
                         raise RuntimeError(f"daemon health returned {response.status}")
                     daemon_health = json.loads(response.read().decode("utf-8"))

@@ -37,14 +37,26 @@ type TransformersModule = {
 		model: string,
 		options: Record<string, unknown>,
 	) => Promise<FeatureExtractionPipeline>;
+	AutoTokenizer: {
+		from_pretrained(
+			model: string,
+			options: Record<string, unknown>,
+		): Promise<{
+			encode(text: string, options: { add_special_tokens: boolean }): number[];
+		}>;
+	};
 };
 
 export interface LocalTransformersEmbeddingProviderOptions {
 	modelName?: string;
 	batchSize?: number;
+	/** Group similar token lengths to reduce padding, retaining input/output order. */
+	lengthAwareBatching?: boolean;
 	cacheDir?: string;
 	remoteHost?: string;
 	device?: string;
+	/** Optional ONNX session configuration, e.g. the DirectML adapter index. */
+	sessionOptions?: Record<string, unknown>;
 	dtype?: string;
 	localFilesOnly?: boolean;
 	maxTokens?: number;
@@ -55,9 +67,11 @@ export interface LocalTransformersEmbeddingProviderOptions {
 export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 	private modelName: string;
 	private batchSize: number;
+	private lengthAwareBatching: boolean;
 	private cacheDir?: string;
 	private remoteHost?: string;
 	private device?: string;
+	private sessionOptions?: Record<string, unknown>;
 	private dtype?: string;
 	private localFilesOnly: boolean;
 	private maxTokens: number;
@@ -65,10 +79,12 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 	private normalize: boolean;
 	private dimensions?: number;
 	private extractorPromise?: Promise<FeatureExtractionPipeline>;
+	private tokenCounterPromise?: Promise<(text: string) => number>;
 
 	constructor(options: LocalTransformersEmbeddingProviderOptions = {}) {
 		this.modelName = options.modelName || process.env.LOCAL_EMBEDDING_MODEL || DEFAULT_LOCAL_EMBEDDING_MODEL;
 		this.batchSize = options.batchSize ?? getLocalEmbeddingBatchSize();
+		this.lengthAwareBatching = options.lengthAwareBatching ?? false;
 		// Use a stable, user-level cache directory by default so the model weights
 		// survive `npx` installs (which use a fresh, throw-away node_modules tree).
 		// Without this, Transformers.js falls back to `<transformers-pkg>/.cache`,
@@ -77,6 +93,7 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 			options.cacheDir || process.env.LOCAL_EMBEDDING_CACHE_DIR || DEFAULT_LOCAL_EMBEDDING_CACHE_DIR;
 		this.remoteHost = options.remoteHost || process.env.LOCAL_EMBEDDING_REMOTE_HOST || undefined;
 		this.device = options.device || process.env.LOCAL_EMBEDDING_DEVICE || undefined;
+		this.sessionOptions = options.sessionOptions;
 		this.dtype = options.dtype || process.env.LOCAL_EMBEDDING_DTYPE || undefined;
 		this.localFilesOnly = options.localFilesOnly ?? process.env.LOCAL_EMBEDDING_LOCAL_ONLY === "true";
 		this.maxTokens = options.maxTokens ?? getLocalEmbeddingMaxTokens();
@@ -96,17 +113,40 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 		return this.cacheDir;
 	}
 
+	getMaxTokens(): number {
+		return this.maxTokens;
+	}
+
+	/** Exact content-token count; loading the tokenizer does not load model weights. */
+	getTokenCounter(): Promise<(text: string) => number> {
+		this.tokenCounterPromise ??= this.createTokenCounter();
+		return this.tokenCounterPromise;
+	}
+
+	private async createTokenCounter(): Promise<(text: string) => number> {
+		const transformers = (await import("@huggingface/transformers")) as TransformersModule;
+		if (this.remoteHost) transformers.env.remoteHost = this.remoteHost;
+		const tokenizer = await transformers.AutoTokenizer.from_pretrained(this.modelName, {
+			cache_dir: this.cacheDir,
+			local_files_only: this.localFilesOnly,
+		});
+		return (text) => tokenizer.encode(text, { add_special_tokens: false }).length;
+	}
+
 	async embedDocuments(texts: string[]): Promise<number[][]> {
 		if (texts.length === 0) {
 			throw new Error("No texts provided for embedding");
 		}
 
-		const results: number[][] = [];
+		const countTokens = this.lengthAwareBatching ? await this.getTokenCounter() : undefined;
+		const ordered = texts.map((text, index) => ({ text, index, tokens: countTokens?.(text) ?? 0 }));
+		if (countTokens) ordered.sort((a, b) => a.tokens - b.tokens || a.index - b.index);
+		const results: number[][] = new Array(texts.length);
 
 		for (let i = 0; i < texts.length; i += this.batchSize) {
-			const batch = texts.slice(i, i + this.batchSize);
-			const batchEmbeddings = await this.embedBatch(batch);
-			results.push(...batchEmbeddings);
+			const batch = ordered.slice(i, i + this.batchSize);
+			const batchEmbeddings = await this.embedBatch(batch.map((row) => row.text));
+			for (const [index, row] of batch.entries()) results[row.index] = batchEmbeddings[index];
 		}
 
 		return results;
@@ -150,6 +190,7 @@ export class LocalTransformersEmbeddingProvider implements EmbeddingProvider {
 			device: this.device,
 			dtype: this.dtype,
 			local_files_only: this.localFilesOnly,
+			...(this.sessionOptions ? { session_options: this.sessionOptions } : {}),
 		});
 
 		// Transformers.js feature-extraction always enables truncation, but relies

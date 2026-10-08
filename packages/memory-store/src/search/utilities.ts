@@ -26,6 +26,8 @@ export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
  */
 export type HitChannel = "semantic" | "lexical" | "planner" | "hybrid" | "entity";
 
+export type UnifiedMemoryRrfWeights = Partial<Record<HitChannel, number>>;
+
 /**
  * Per-hit score breakdown. Always emitted by `search()` (default merge
  * strategy) so callers can threshold / re-rank without losing the
@@ -127,6 +129,8 @@ export interface UnifiedMemorySearchInput {
 	query: string;
 	sources?: UnifiedMemorySearchSource[];
 	limit?: number;
+	/** Optional diagnostic candidate budget; defaults to max(limit, limit * 4). */
+	candidateLimit?: number;
 	threshold?: number;
 	authToken?: string;
 	includeArchivedInsights?: boolean;
@@ -167,6 +171,12 @@ export interface UnifiedMemorySearchInput {
 	 * fusion. `"similarity"` preserves the legacy global similarity sort.
 	 */
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
+	/** Optional per-channel RRF weights. Omitted channels retain weight 1. */
+	rrfWeights?: UnifiedMemoryRrfWeights;
+	/** Optional reciprocal-rank damping constant. Defaults to 60. */
+	rrfK?: number;
+	/** Opt-in post-fusion session-neighbor expansion used by retrieval experiments. */
+	sessionNeighborExpansion?: SessionNeighborExpansionOptions;
 	/**
 	 * Optional additive scope-narrowing filter expressed as structured
 	 * peers. Coexists with `userId`/`botIds`. When supplied, the host's
@@ -216,6 +226,19 @@ export interface UnifiedMemoryRankedList {
 	hits: UnifiedMemorySearchResult[];
 }
 
+export type SessionNeighborExpansionMode = "union" | "protected";
+
+export interface SessionNeighborExpansionOptions {
+	/** Number of fused seed messages used to find neighbors. */
+	seedLimit?: number;
+	/** Number of messageSequence steps to inspect on each side. */
+	window?: number;
+	/** `union` lets reranking choose all candidates; `protected` reserves slots for direct hits. */
+	mode?: SessionNeighborExpansionMode;
+	/** Maximum neighbor results in `protected` mode. */
+	maxNeighborSlots?: number;
+}
+
 export interface UnifiedMemorySearchResult {
 	type: "memory" | "insight" | "knowledge";
 	id: string;
@@ -248,8 +271,21 @@ export interface UnifiedMemorySearchOutput {
 export interface UnifiedMemoryRetrievalDiagnostics {
 	mergeStrategy: UnifiedMemoryMergeStrategy;
 	candidateLimit: number;
+	rrf?: { k: number; weights: UnifiedMemoryRrfWeights };
 	backend?: string;
 	semanticDegradedReason?: string;
+	/** Wall-clock timings for the retrieval stages, in milliseconds. */
+	timings?: {
+		totalMs: number;
+		memorySourceMs: number;
+		semanticMs: number;
+		lexicalMs: number;
+		hybridMs: number;
+		plannerMs: number;
+		fusionMs: number;
+		rerankerMs: number;
+		neighborMs?: number;
+	};
 	candidateCounts?: {
 		semantic: number;
 		lexical: number;
@@ -257,6 +293,7 @@ export interface UnifiedMemoryRetrievalDiagnostics {
 		hybrid: number;
 		entity: number;
 		fused: number;
+		expanded?: number;
 		final: number;
 	};
 	channels: {
@@ -268,6 +305,16 @@ export interface UnifiedMemoryRetrievalDiagnostics {
 	};
 	/** Results after channel/source fusion and before an optional host reranker. */
 	fusedBeforeRerank: UnifiedMemorySearchResult[];
+	/** Candidates after optional session-neighbor expansion and before reranking. */
+	expandedBeforeRerank?: UnifiedMemorySearchResult[];
+	sessionNeighborExpansion?: {
+		enabled: boolean;
+		mode?: SessionNeighborExpansionMode;
+		seedCount: number;
+		neighborCount: number;
+		sessions: number;
+		latencyMs: number;
+	};
 	reranker?: {
 		enabled: boolean;
 		provider?: string;
@@ -328,6 +375,8 @@ export interface SearchInput {
 	synthesize?: boolean | { responseSchema?: Record<string, unknown> };
 
 	limit?: number;
+	/** Optional diagnostic candidate budget; defaults to max(limit, limit * 4). */
+	candidateLimit?: number;
 	threshold?: number;
 	botIds?: string[];
 	documentIds?: string[];
@@ -338,6 +387,9 @@ export interface SearchInput {
 	authToken?: string;
 	factTypes?: FactType[];
 	mergeStrategy?: UnifiedMemoryMergeStrategy;
+	rrfWeights?: UnifiedMemoryRrfWeights;
+	rrfK?: number;
+	sessionNeighborExpansion?: SessionNeighborExpansionOptions;
 	reasoningStrategy?: UnifiedMemoryReasoningStrategy;
 	/**
 	 * Backward-compat pass-through for callers that previously passed
@@ -430,14 +482,19 @@ export function clampUnifiedMemorySearchThreshold(threshold: unknown): number {
 export function mergeUnifiedMemorySearchResults(
 	results: UnifiedMemorySearchResult[],
 	limit: number,
-	options: { strategy?: UnifiedMemoryMergeStrategy; rankedLists?: UnifiedMemoryRankedList[] } = {},
+	options: {
+		strategy?: UnifiedMemoryMergeStrategy;
+		rankedLists?: UnifiedMemoryRankedList[];
+		rrfK?: number;
+		rrfWeights?: UnifiedMemoryRrfWeights;
+	} = {},
 ): UnifiedMemorySearchResult[] {
 	const strategy = normalizeUnifiedMemoryMergeStrategy(options.strategy);
 	if (strategy === "rrf") {
 		const lists: UnifiedMemoryRankedList[] = options.rankedLists ?? [
 			{ name: "memory-semantic", hits: results },
 		];
-		return mergeUnifiedMemorySearchResultsRrf(lists, limit);
+		return mergeUnifiedMemorySearchResultsRrf(lists, limit, options.rrfK, options.rrfWeights);
 	}
 	return [...results]
 		.sort((a, b) => {
@@ -477,19 +534,32 @@ export function mergeUnifiedMemorySearchResultsRrf(
 	lists: UnifiedMemoryRankedList[],
 	limit: number,
 	k: number = DEFAULT_RRF_K,
+	weights: UnifiedMemoryRrfWeights = {},
 ): UnifiedMemorySearchResult[] {
 	if (!Array.isArray(lists) || lists.length === 0) {
 		return [];
 	}
 	const safeK = Number.isFinite(k) && k > 0 ? k : DEFAULT_RRF_K;
+	const hasConfiguredWeights = Object.keys(weights).length > 0;
+	const hasPositiveWeight = Object.values(weights).some(
+		(value) => typeof value === "number" && Number.isFinite(value) && value > 0,
+	);
+	const effectiveWeights = hasConfiguredWeights && !hasPositiveWeight ? {} : weights;
 	const scores = new Map<string, { hit: UnifiedMemorySearchResult; rrf: number }>();
 	const order: string[] = [];
 
 	for (const list of lists) {
+		const channel = listNameToChannel(list.name);
+		const configuredWeight = channel ? effectiveWeights[channel] : undefined;
+		const weight =
+			typeof configuredWeight === "number" && Number.isFinite(configuredWeight) && configuredWeight >= 0
+				? configuredWeight
+				: 1;
+		if (weight === 0) continue;
 		for (let index = 0; index < list.hits.length; index += 1) {
 			const hit = list.hits[index];
 			const key = `${hit.type}::${hit.id}`;
-			const contribution = 1 / (safeK + index + 1);
+			const contribution = weight / (safeK + index + 1);
 			const existing = scores.get(key);
 			const rankedHit = hit.type === "memory" ? withMatchedEvidence(hit, list.name, index + 1) : hit;
 			if (existing) {

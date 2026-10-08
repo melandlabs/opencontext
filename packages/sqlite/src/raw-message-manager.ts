@@ -592,6 +592,47 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		).map(toSearchChunk);
 	}
 
+	/** Replace derived indexes without rewriting the original messages or their metadata. */
+	async replaceMessageSearchChunks(
+		items: Array<{
+			messageId: string;
+			userId: string;
+			contentHash: string;
+			chunks: RawMessageSearchChunk[];
+		}>,
+	): Promise<void> {
+		await this.init();
+		const read = this.db.prepare("SELECT * FROM raw_messages WHERE message_id = ?");
+		this.db
+			.transaction(() => {
+				for (const item of items) {
+					const row = read.get(item.messageId) as RawMessageRow | undefined;
+					if (!row || row.user_id !== item.userId) throw new Error("raw_message_scope_conflict");
+					if (sha256(row.content) !== item.contentHash) throw new Error("raw_message_content_conflict");
+					const ordered = [...item.chunks].sort((a, b) => a.chunkIndex - b.chunkIndex);
+					let coveredEnd = 0;
+					for (const [index, chunk] of ordered.entries()) {
+						if (
+							chunk.chunkIndex !== index ||
+							!Number.isSafeInteger(chunk.startPosition) ||
+							!Number.isSafeInteger(chunk.endPosition) ||
+							chunk.startPosition < 0 ||
+							chunk.startPosition > coveredEnd ||
+							chunk.endPosition <= coveredEnd ||
+							chunk.endPosition > row.content.length
+						)
+							throw new Error(`invalid_raw_message_chunk_coverage:${item.messageId}`);
+						coveredEnd = chunk.endPosition;
+					}
+					if (coveredEnd !== row.content.length) {
+						throw new Error(`incomplete_raw_message_chunks:${item.messageId}`);
+					}
+					this.replaceSearchChunksSync(toRawMessage(row), ordered);
+				}
+			})
+			.immediate();
+	}
+
 	async getRawMessageSearchIndexStats(): Promise<RawMessageSearchIndexStats> {
 		await this.init();
 		const counts = this.db
@@ -810,6 +851,49 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			| RawMessageRow
 			| undefined;
 		return row ? toRawMessage(row) : null;
+	}
+
+	/**
+	 * Return messages adjacent to one or more seed messageSequence values in
+	 * the same user/session. This is deliberately bounded and uses ingestion
+	 * order only; messageSequence is not treated as an event timestamp.
+	 */
+	async getRawMessageSessionNeighbors(input: {
+		userId: string;
+		sessionId: string;
+		messageSequences: number[];
+		window: number;
+		includeDeprecated?: boolean;
+	}): Promise<RawMessage[]> {
+		await this.init();
+		const sequences = Array.from(
+			new Set(input.messageSequences.filter((value) => Number.isSafeInteger(value) && value >= 0)),
+		);
+		const window = Number.isFinite(input.window) ? Math.max(0, Math.min(16, Math.floor(input.window))) : 0;
+		if (!input.userId || !input.sessionId || sequences.length === 0 || window === 0) return [];
+		// Seek only each seed's bounded window through (user_id, message_sequence).
+		// A min/max envelope between distant seeds includes unrelated messages and
+		// can accidentally send an entire session to the reranker.
+		const adjacentSequences = new Set<number>();
+		for (const sequence of sequences.slice(0, 100)) {
+			for (let offset = -window; offset <= window; offset++) {
+				const adjacent = sequence + offset;
+				if (Number.isSafeInteger(adjacent) && adjacent >= 0) adjacentSequences.add(adjacent);
+			}
+		}
+		const placeholders = [...adjacentSequences].map(() => "?").join(",");
+		const rows = this.db
+			.prepare(`
+        SELECT * FROM raw_messages
+        WHERE user_id = ?
+          AND message_sequence IN (${placeholders})
+          AND json_extract(CASE WHEN json_valid(metadata) THEN metadata ELSE '{}' END, '$.sessionId') = ?
+          AND archived_at IS NULL
+          ${input.includeDeprecated === true ? "" : "AND deprecated_at IS NULL"}
+        ORDER BY message_sequence ASC
+      `)
+			.all(input.userId, ...adjacentSequences, input.sessionId) as RawMessageRow[];
+		return rows.map(toRawMessage);
 	}
 
 	async deleteOldMessages(olderThan: number, userId?: string): Promise<number> {
@@ -1805,6 +1889,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 		channel: string,
 	): Array<{
 		content: string;
+		matchedContent: string;
+		matchedStartPosition: number;
+		matchedEndPosition: number;
 		sourceChunkId: string;
 		startPosition: number;
 		endPosition: number;
@@ -1814,6 +1901,9 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 			const window = this.searchResultWindow(message, chunk);
 			return {
 				content: window.content,
+				matchedContent: chunk.content,
+				matchedStartPosition: chunk.start_position,
+				matchedEndPosition: chunk.end_position,
 				sourceChunkId: chunk.chunk_id,
 				startPosition: window.startPosition,
 				endPosition: window.endPosition,

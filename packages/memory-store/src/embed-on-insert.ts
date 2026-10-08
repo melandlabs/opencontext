@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import type { RawMessage, RawMessageSearchChunk } from "@melandlabs/indexeddb";
-import { chunkTextByEstimatedTokens } from "../../shared/src/text-chunking";
+import { chunkTextByEstimatedTokens, chunkTextByTokenBudget } from "../../shared/src/text-chunking";
 import type { UnifiedSearchDeps } from "./config";
 
 export interface EmbedOnInsertWarning {
@@ -94,13 +94,16 @@ export async function prepareRawMessageIngest(
 	const embedderAvailable =
 		typeof deps.embedQuery === "function" || typeof deps.embedDocuments === "function";
 	const shouldEmbed = embedOnInsert === true || embedderAvailable;
+	const chunking = await deps.getDocumentChunking?.();
 	const messages: RawMessage[] = [];
 	const chunks: RawMessageSearchChunk[] = [];
 	let missingSemanticEmbedding = false;
 	let generatedEmbedding = false;
 	const plans = incoming.map((message) => ({
 		message,
-		pieces: chunkTextByEstimatedTokens(message.content),
+		pieces: chunking
+			? chunkTextByTokenBudget(message.content, chunking)
+			: chunkTextByEstimatedTokens(message.content),
 	}));
 	const generatedEmbeddings = new Map<string, number[]>();
 	const storedByKey = new Map(
@@ -108,10 +111,17 @@ export async function prepareRawMessageIngest(
 	);
 	const reusedChunks = new Map<string, RawMessageSearchChunk>();
 	const pendingByUser = new Map<string, Array<{ key: string; text: string }>>();
+	const canReuseParent = (message: RawMessage, pieceCount: number): boolean =>
+		pieceCount === 1 &&
+		isUsableEmbedding(message.embedding) &&
+		(!deps.embeddingInfo?.model || message.embeddingModel === deps.embeddingInfo.model) &&
+		(deps.embeddingInfo?.dimensions === undefined ||
+			message.embedding?.length === deps.embeddingInfo.dimensions) &&
+		(!message.embeddingContentHash || message.embeddingContentHash === sha256(message.content));
 
 	for (const [messageIndex, plan] of plans.entries()) {
 		for (const piece of plan.pieces) {
-			const canReuseParentEmbedding = plan.pieces.length === 1 && isUsableEmbedding(plan.message.embedding);
+			const canReuseParentEmbedding = canReuseParent(plan.message, plan.pieces.length);
 			if (canReuseParentEmbedding || !shouldEmbed || piece.content.length === 0) continue;
 			const stored = storedByKey.get(
 				JSON.stringify([plan.message.userId, plan.message.messageId, piece.chunkIndex]),
@@ -173,7 +183,7 @@ export async function prepareRawMessageIngest(
 		for (const piece of pieces) {
 			const contentHash = sha256(piece.content);
 			const reused = reusedChunks.get(`${messageIndex}:${piece.chunkIndex}`);
-			const canReuseParentEmbedding = pieces.length === 1 && isUsableEmbedding(incomingMessage.embedding);
+			const canReuseParentEmbedding = canReuseParent(incomingMessage, pieces.length);
 			const embedding = canReuseParentEmbedding
 				? incomingMessage.embedding
 				: (reused?.embedding ?? generatedEmbeddings.get(`${messageIndex}:${piece.chunkIndex}`));

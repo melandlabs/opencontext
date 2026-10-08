@@ -2,6 +2,28 @@ import { describe, expect, it } from "vitest";
 import { mergeMatchedEvidence, renderMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 
 describe("matched evidence", () => {
+	it("retains distinct hit chunks sharing one expanded answer window", () => {
+		const hit = (chunkId: string, matchedContent: string, matchedStartPosition: number) => ({
+			content: "0123456789",
+			metadata: {
+				matchedSpans: [
+					{
+						content: "0123456789",
+						startPosition: 0,
+						endPosition: 10,
+						matchedContent,
+						matchedStartPosition,
+						matchedEndPosition: matchedStartPosition + matchedContent.length,
+						sourceChunkId: chunkId,
+						channels: [],
+					},
+				],
+			},
+		});
+		const merged = mergeMatchedEvidence(hit("a", "012", 0), hit("b", "789", 7));
+		expect(merged.metadata.matchedSpans).toHaveLength(2);
+		expect(renderMatchedEvidence(merged)).toBe("0123456789");
+	});
 	it("coalesces overlapping windows without losing either source chunk", () => {
 		const first = withMatchedEvidence(
 			{

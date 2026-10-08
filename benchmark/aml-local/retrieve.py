@@ -230,9 +230,10 @@ def collect_preflight_errors(
 
 
 class OpenContextClient:
-    def __init__(self, base_url: str, top_k: int, reasoning: str = "none") -> None:
+    def __init__(self, base_url: str, top_k: int, reasoning: str = "none", candidate_k: int | None = None) -> None:
         self.base_url = base_url.rstrip("/")
         self.top_k = top_k
+        self.candidate_k = candidate_k
         self.reasoning = reasoning
 
     def _post(self, path: str, payload: dict[str, Any], timeout: int, *, headers: dict[str, str] | None = None) -> dict[str, Any]:
@@ -286,6 +287,8 @@ class OpenContextClient:
             "limit": self.top_k,
             "sources": ["memory"],
         }
+        if self.candidate_k is not None:
+            payload["candidateLimit"] = self.candidate_k
         if self.reasoning != "none":
             payload["reasoningStrategy"] = self.reasoning
         result = self._post("/v1/search", payload, timeout=600 if self.reasoning != "none" else 120)
@@ -327,7 +330,12 @@ class AmlClient(OpenContextClient):
         if self.reasoning != "none":
             headers["X-OpenContext-Local-Reasoning"] = self.reasoning
         result = self._post(
-            "/search", {"query": query, "user_id": user_id, "top_k": self.top_k}, timeout=1800,
+            "/search", {
+                "query": query,
+                "user_id": user_id,
+                "top_k": self.top_k,
+                **({"candidate_k": self.candidate_k} if self.candidate_k is not None else {}),
+            }, timeout=1800,
             headers=headers or None,
         )
         hits = result.get("data")
@@ -427,6 +435,57 @@ def beam_checkpoint_path(directory: Path, index: int, question_id: str) -> Path:
     return directory / f"{index:04d}-{digest}.json"
 
 
+def percentile(values: list[float], quantile: float) -> float | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * quantile
+    lower = int(position)
+    upper = min(lower + 1, len(ordered) - 1)
+    weight = position - lower
+    return round(ordered[lower] + (ordered[upper] - ordered[lower]) * weight, 3)
+
+
+def write_beam_timing_summary(output_dir: Path, traces: list[dict[str, Any]]) -> None:
+    fields = (
+        "latency_ms",
+        "totalMs",
+        "memorySourceMs",
+        "semanticMs",
+        "lexicalMs",
+        "hybridMs",
+        "plannerMs",
+        "fusionMs",
+        "neighborMs",
+        "rerankerMs",
+    )
+    metrics: dict[str, dict[str, float | int | None]] = {}
+    for field in fields:
+        values: list[float] = []
+        for trace in traces:
+            direct = trace.get(field)
+            timing = trace.get("retrieval_timings")
+            value = direct if isinstance(direct, (int, float)) else timing.get(field) if isinstance(timing, dict) else None
+            if isinstance(value, (int, float)):
+                values.append(float(value))
+        metrics[field] = {
+            "count": len(values),
+            "mean_ms": round(sum(values) / len(values), 3) if values else None,
+            "p50_ms": percentile(values, 0.50),
+            "p95_ms": percentile(values, 0.95),
+            "p99_ms": percentile(values, 0.99),
+            "max_ms": round(max(values), 3) if values else None,
+        }
+    write_json_atomic(
+        output_dir / "retrieval-timing-summary.json",
+        {
+            "questions": len(traces),
+            "metrics": metrics,
+            "interpretation": "latency_ms is the AML adapter wall-clock request; retrieval_timings are core stage timings from retrieval diagnostics.",
+        },
+    )
+
+
 def beam_run_identity(
     dataset: Path, client: AmlClient, *, limit: int | None, samples: set[str] | None,
     max_questions: int | None, question_ids: set[str] | None = None,
@@ -439,6 +498,7 @@ def beam_run_identity(
         "dataset": str(dataset.resolve()),
         "dataset_sha256": file_hash.hexdigest(),
         "top_k": client.top_k,
+        "candidate_k": client.candidate_k,
         "limit": limit,
         "samples": sorted(samples) if samples else None,
         "max_questions": max_questions,
@@ -485,6 +545,13 @@ def beam_hit_evidence(hit: dict[str, Any], rank: int, source_ids_by_message: dic
         "matched_spans_truncated": metadata.get("matchedSpansTruncated", 0),
         "vector_scan_underfilled": metadata.get("vectorScanUnderfilled", False),
         "vector_search_fallback": metadata.get("vectorSearchFallback"),
+        "session_neighbor": metadata.get("sessionNeighbor", False),
+        "session_id": metadata.get("sessionId"),
+        "message_sequence": metadata.get("messageSequence"),
+        "direct_hit": metadata.get("sessionNeighbor") is not True,
+        "neighbor_distance": metadata.get("neighborDistance"),
+        "neighbor_of_message_ids": metadata.get("neighborOfMessageIds", []),
+        "selected_final": False,
     }
 
 
@@ -807,8 +874,15 @@ def run_beam(
             }
             channel_ids = {name: {hit["id"] for hit in values} for name, values in channel_hits.items()}
             before = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["fusedBeforeRerank"], 1)]
+            expanded = [
+                beam_hit_evidence(hit, rank, source_ids_by_message, required_ids)
+                for rank, hit in enumerate(retrieval.get("expandedBeforeRerank") or retrieval["fusedBeforeRerank"], 1)
+            ]
             after = [beam_hit_evidence(hit, rank, source_ids_by_message, required_ids) for rank, hit in enumerate(retrieval["final"], 1)]
-            for hit in before + after:
+            final_ids = {hit["id"] for hit in after}
+            for hit in before + expanded:
+                hit["selected_final"] = hit["id"] in final_ids
+            for hit in before + expanded + after:
                 hit["retrieval_channels"] = [name for name, ids in channel_ids.items() if hit["id"] in ids]
             matched_ids = {source_id for hit in after for source_id in hit["matched_source_turn_ids"]}
             mapped_final_hits = sum(bool(hit["source_turn_ids"]) for hit in after)
@@ -838,10 +912,14 @@ def run_beam(
                 "top_k": client.top_k,
                 "latency_ms": elapsed_ms,
                 "candidate_k": retrieval.get("candidateLimit"),
+                "rrf": retrieval.get("rrf"),
                 "candidate_counts": retrieval.get("candidateCounts"),
+                "retrieval_timings": retrieval.get("timings"),
                 "channels": channel_hits,
                 "channel_summary": channel_summary,
                 "before_rerank": before,
+                "expanded_before_rerank": expanded,
+                "session_neighbor_expansion": retrieval.get("sessionNeighborExpansion"),
                 "reranker": retrieval["reranker"],
                 "reasoning": local_diagnostics.get("reasoning"),
                 "after_rerank": after,
@@ -857,8 +935,13 @@ def run_beam(
             write_json_atomic(checkpoint, {"record": record, "trace": trace})
         records.append(record)
         traces.append(trace)
+        # Keep the timing evidence durable even if a long Top-K experiment is
+        # interrupted before the final output flush.
+        write_jsonl(output_dir / "retrieval-traces.jsonl", traces)
+        write_beam_timing_summary(output_dir, traces)
         print(f"[aml-local] Search {index + 1}/{len(questions)} questions ({'resumed' if resumed else 'done'})", flush=True)
     write_jsonl(output_dir / "retrieval-traces.jsonl", traces)
+    write_beam_timing_summary(output_dir, traces)
     return records
 
 
@@ -1153,8 +1236,14 @@ def main() -> int:
     if top_k < 1:
         parameter_errors.append("AML_TOP_K must be at least 1")
         top_k = 12 if args.benchmark == "beam" else 10
-    if args.benchmark == "beam" and top_k != 12:
-        parameter_errors.append("BEAM local run is configured for top_k=12")
+    candidate_k: int | None = None
+    if os.environ.get("AML_CANDIDATE_K"):
+        try:
+            candidate_k = int(os.environ["AML_CANDIDATE_K"])
+        except ValueError:
+            parameter_errors.append("AML_CANDIDATE_K must be an integer")
+        if candidate_k is not None and candidate_k < top_k:
+            parameter_errors.append("AML_CANDIDATE_K must be at least AML_TOP_K")
 
     dataset = default_dataset(args.benchmark, args.dataset)
     out_dir = Path(os.environ.get("AML_OUT_DIR", DEFAULT_OUT_DIR)).resolve()
@@ -1176,6 +1265,7 @@ def main() -> int:
         os.environ.get("AML_ADAPTER_URL", "http://127.0.0.1:7422") if args.benchmark == "beam" else os.environ.get("OPENCONTEXT_URL", "http://127.0.0.1:7421"),
         top_k,
         reasoning,
+        candidate_k,
     )
     samples = selected_ids(args.samples)
     errors = parameter_errors + collect_preflight_errors(
@@ -1193,7 +1283,7 @@ def main() -> int:
             print(f"- {error}", file=sys.stderr)
         return 2
     print(
-        f"[aml-local] daemon={client.base_url} top_k={top_k} "
+        f"[aml-local] daemon={client.base_url} top_k={top_k} candidate_k={candidate_k or 'auto'} "
         f"reasoning={reasoning} benchmark={args.benchmark}"
     )
     if args.preflight_only:

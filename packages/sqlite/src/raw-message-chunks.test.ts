@@ -1,6 +1,8 @@
+import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { RawMessage } from "../../indexeddb/src/storage";
 import { estimateTokens } from "../../shared/src/tokens";
@@ -33,6 +35,56 @@ function longMessage(): RawMessage {
 }
 
 describe("SQLite RawMessage child index", () => {
+	it("reindexes children without changing any original parent field and rejects stale or incomplete plans", async () => {
+		const db = new Database(join(scratchDir, "reindex.db"));
+		const manager = new SQLiteRawMessageManager({ db });
+		const message = longMessage();
+		await manager.storeMessage(message);
+		const before = db.prepare("SELECT * FROM raw_messages").all();
+		const chunks = await manager.getRawMessageSearchChunks({ messageIds: [message.messageId] });
+		const plan = {
+			messageId: message.messageId,
+			userId: message.userId,
+			contentHash: createHash("sha256").update(message.content).digest("hex"),
+			chunks: chunks.map((chunk) => ({
+				...chunk,
+				embedding: [1, 0, 0],
+				embeddingModel: "new-model",
+				embeddingDimensions: 3,
+			})),
+		};
+		await manager.replaceMessageSearchChunks([plan]);
+		expect(db.prepare("SELECT * FROM raw_messages").all()).toEqual(before);
+		const valid = await manager.getRawMessageSearchChunks({ messageIds: [message.messageId] });
+		await expect(
+			manager.replaceMessageSearchChunks([plan, { ...plan, contentHash: "stale" }]),
+		).rejects.toThrow("content_conflict");
+		await expect(manager.replaceMessageSearchChunks([{ ...plan, userId: "another-user" }])).rejects.toThrow(
+			"scope_conflict",
+		);
+		await expect(
+			manager.replaceMessageSearchChunks([{ ...plan, chunks: plan.chunks.slice(1) }]),
+		).rejects.toThrow("coverage");
+		await expect(
+			manager.replaceMessageSearchChunks([{ ...plan, chunks: plan.chunks.slice(0, -1) }]),
+		).rejects.toThrow("incomplete");
+		expect(await manager.getRawMessageSearchChunks({ messageIds: [message.messageId] })).toEqual(valid);
+		expect(await manager.lexicalSearchMessages({ userId: "user", keywords: ["marker-10"] })).not.toHaveLength(
+			0,
+		);
+		expect(
+			(
+				await manager.searchMessagesSemantically({
+					userId: "user",
+					queryEmbedding: [1, 0, 0],
+					embeddingModel: "new-model",
+					limit: 1,
+				})
+			)[0]?.id,
+		).toBe(message.messageId);
+		await manager.close();
+		db.close();
+	});
 	it("keeps one complete parent and tracks exact child offsets", async () => {
 		const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "store.db") });
 		const message = longMessage();
@@ -52,6 +104,22 @@ describe("SQLite RawMessage child index", () => {
 		expect(lexical[0]?.id).toBe(message.messageId);
 		expect(lexical[0]?.content).toContain("marker-10");
 		expect(estimateTokens(lexical[0]?.content ?? "")).toBeLessThanOrEqual(1_040);
+		const spans = lexical[0]?.metadata.matchedSpans as Array<{
+			matchedContent: string;
+			matchedStartPosition: number;
+			matchedEndPosition: number;
+		}>;
+		for (const span of spans) {
+			expect(span.matchedContent).toBe(
+				message.content.slice(span.matchedStartPosition, span.matchedEndPosition),
+			);
+			expect(
+				chunks.some(
+					(chunk) =>
+						chunk.content === span.matchedContent && chunk.startPosition === span.matchedStartPosition,
+				),
+			).toBe(true);
+		}
 		await manager.close();
 	});
 

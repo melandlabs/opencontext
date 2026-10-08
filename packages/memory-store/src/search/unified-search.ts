@@ -35,6 +35,7 @@ import {
 	type SearchOutput,
 	type SearchSource,
 	type SearchTier,
+	type SessionNeighborExpansionOptions,
 	type UnifiedMemoryMergeStrategy,
 	type UnifiedMemoryRankedList,
 	type UnifiedMemoryReasoningInfo,
@@ -62,6 +63,7 @@ import {
 export type {
 	HitChannel,
 	HitSignals,
+	UnifiedMemoryRrfWeights,
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
 	UnifiedMemoryReasoningStrategy,
@@ -70,6 +72,7 @@ export type {
 	UnifiedMemorySearchResult,
 	UnifiedMemorySearchSource,
 	UnifiedMemorySearchWarning,
+	SessionNeighborExpansionOptions,
 	SearchInput,
 	SearchOutput,
 	SearchSource,
@@ -607,12 +610,26 @@ interface MemorySubQueries {
 	entity?: UnifiedMemorySearchResult[];
 }
 
+interface MemorySourceTimings {
+	semanticMs: number;
+	lexicalMs: number;
+	hybridMs: number;
+	plannerMs: number;
+	memorySourceMs: number;
+}
+
+interface MemorySourceRun {
+	results: MemorySubQueries;
+	timings: MemorySourceTimings;
+}
+
 function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
 	return {
 		userId: input.userId,
 		query: input.query,
 		sources: input.sources ? [...input.sources] : undefined,
 		limit: input.limit,
+		candidateLimit: input.candidateLimit,
 		threshold: input.threshold,
 		authToken: input.authToken,
 		includeArchivedInsights: input.includeArchivedInsights,
@@ -622,6 +639,9 @@ function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
 		dateFrom: input.dateFrom,
 		dateTo: input.dateTo,
 		mergeStrategy: input.mergeStrategy,
+		rrfWeights: input.rrfWeights,
+		rrfK: input.rrfK,
+		sessionNeighborExpansion: input.sessionNeighborExpansion,
 		peerFilter: input.peerFilter,
 		reasoningStrategy: input.reasoningStrategy,
 		factTypes: input.factTypes,
@@ -667,7 +687,26 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		reasoningInfo?: UnifiedMemoryReasoningInfo,
 		peerPeers: ReadonlyArray<Peer> = [],
 		runtimeContext?: ResolvedSearchRuntimeContext,
-	): Promise<MemorySubQueries> {
+	): Promise<MemorySourceRun> {
+		const sourceStartedAt = Date.now();
+		const timings: Omit<MemorySourceTimings, "memorySourceMs"> = {
+			semanticMs: 0,
+			lexicalMs: 0,
+			hybridMs: 0,
+			plannerMs: 0,
+		};
+		const measure = async <T>(bucket: keyof typeof timings, operation: () => Promise<T>): Promise<T> => {
+			const startedAt = Date.now();
+			try {
+				return await operation();
+			} finally {
+				timings[bucket] += Date.now() - startedAt;
+			}
+		};
+		const finish = (results: MemorySubQueries): MemorySourceRun => ({
+			results,
+			timings: { ...timings, memorySourceMs: Date.now() - sourceStartedAt },
+		});
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
 			!deps.reasoning?.iterativePlanner
@@ -712,33 +751,39 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					search: async (request: IterativeRecallSearchRequest): Promise<IterativeRecallSearchResult> => {
 						const keywords =
 							request.keywords.length > 0 ? request.keywords : deriveLexicalKeywords(input.query);
-						const lexicalHits = await runLexicalSearchForKeywords(
-							deps,
-							input,
-							keywords,
-							limit,
-							logger,
-							peerPeers,
-							warnings,
-							runtimeContext,
+						const lexicalHits = await measure("lexicalMs", () =>
+							runLexicalSearchForKeywords(
+								deps,
+								input,
+								keywords,
+								limit,
+								logger,
+								peerPeers,
+								warnings,
+								runtimeContext,
+							),
 						);
 
 						let semanticHits: UnifiedMemorySearchResult[] = [];
 						if (typeof deps.embedQuery === "function") {
 							try {
-								const semanticQuery = keywords.join(" ");
-								const queryEmbedding = await embedQueryVariant(deps.embedQuery, input, semanticQuery);
-								semanticHits = await runSemanticSearchForEmbedding(
-									deps,
-									input,
-									queryEmbedding,
-									limit,
-									threshold,
-									logger,
-									peerPeers,
-									warnings,
-									runtimeContext,
-								);
+								semanticHits = await measure("semanticMs", async () => {
+									const semanticQuery = keywords.join(" ");
+									const queryEmbedder = deps.embedQuery;
+									if (typeof queryEmbedder !== "function") return [];
+									const queryEmbedding = await embedQueryVariant(queryEmbedder, input, semanticQuery);
+									return runSemanticSearchForEmbedding(
+										deps,
+										input,
+										queryEmbedding,
+										limit,
+										threshold,
+										logger,
+										peerPeers,
+										warnings,
+										runtimeContext,
+									);
+								});
 							} catch (error) {
 								logger.warn?.(
 									"[memory-store] Iterative semantic search failed; using lexical results only:",
@@ -798,7 +843,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			}));
 
 			if (reasoningStrategy === "iterative") {
-				return { semantic: evidence, lexical: [] };
+				return finish({ semantic: evidence, lexical: [] });
 			}
 			// union: fall through to the baseline hybrid path; merge below.
 			unionEvidence = evidence;
@@ -832,7 +877,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				input.dateFrom,
 				input.dateTo,
 			);
-			return { semantic: [], lexical };
+			return finish({ semantic: [], lexical });
 		}
 
 		let semantic: UnifiedMemorySearchResult[] = [];
@@ -851,26 +896,32 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			input.threshold === undefined &&
 			typeof deps.searchRawMessagesHybrid === "function"
 		) {
-			const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
-			const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
-			const hybrid = (
-				await Promise.all(
-					filters.map((botId) =>
-						deps.searchRawMessagesHybrid?.({
-							userId: input.userId,
-							query: input.query,
-							queryEmbedding,
-							limit: Math.ceil(limit / filters.length),
-							botId,
-							...(runtimeContext ?? {}),
-						}),
-					),
+			const hybrid = await measure("hybridMs", async () => {
+				const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
+				const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+				return (
+					await Promise.all(
+						filters.map((botId) =>
+							deps.searchRawMessagesHybrid?.({
+								userId: input.userId,
+								query: input.query,
+								queryEmbedding,
+								limit: Math.ceil(limit / filters.length),
+								botId,
+								...(runtimeContext ?? {}),
+							}),
+						),
+					)
 				)
-			)
-				.flatMap((items) => items ?? [])
-				.filter(isRawMemorySemanticResult)
-				.map(toMemoryResult);
-			return { semantic: [], lexical: [], hybrid: filterByDateRange(hybrid, input.dateFrom, input.dateTo) };
+					.flatMap((items) => items ?? [])
+					.filter(isRawMemorySemanticResult)
+					.map(toMemoryResult);
+			});
+			return finish({
+				semantic: [],
+				lexical: [],
+				hybrid: filterByDateRange(hybrid, input.dateFrom, input.dateTo),
+			});
 		}
 
 		// Rewrite strategy: embed multiple variants, then combine their candidates.
@@ -903,24 +954,26 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					}
 				}
 
-				const embeddings = await Promise.all(
-					variants.map((variant) => embedQueryVariant(embedQuery, input, variant)),
-				);
-				const lists = await Promise.all(
-					embeddings.map((embedding) =>
-						runSemanticSearchForEmbedding(
-							deps,
-							input,
-							embedding,
-							limit,
-							threshold,
-							logger,
-							peerPeers,
-							warnings,
-							runtimeContext,
+				const lists = await measure("semanticMs", async () => {
+					const embeddings = await Promise.all(
+						variants.map((variant) => embedQueryVariant(embedQuery, input, variant)),
+					);
+					return Promise.all(
+						embeddings.map((embedding) =>
+							runSemanticSearchForEmbedding(
+								deps,
+								input,
+								embedding,
+								limit,
+								threshold,
+								logger,
+								peerPeers,
+								warnings,
+								runtimeContext,
+							),
 						),
-					),
-				);
+					);
+				});
 				if (
 					activeMergeStrategy === "rrf" &&
 					deps.reasoning.rewriteSemanticMerge === "rrf" &&
@@ -952,18 +1005,20 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 
 		// Default path, also used as fallback when rewrite fails before producing hits.
 		if (semantic.length === 0) {
-			const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
-			semantic = await runSemanticSearchForEmbedding(
-				deps,
-				input,
-				queryEmbedding,
-				limit,
-				threshold,
-				logger,
-				peerPeers,
-				warnings,
-				runtimeContext,
-			);
+			semantic = await measure("semanticMs", async () => {
+				const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
+				return runSemanticSearchForEmbedding(
+					deps,
+					input,
+					queryEmbedding,
+					limit,
+					threshold,
+					logger,
+					peerPeers,
+					warnings,
+					runtimeContext,
+				);
+			});
 		}
 
 		// Optional lexical (BM25) sub-query. Runs in parallel with the semantic
@@ -982,15 +1037,17 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				lexicalQueries.map(async (query) => ({
 					name: "memory-bm25",
 					hits: dedupeChannelByParent(
-						await runLexicalSearchForKeywords(
-							deps,
-							input,
-							deriveLexicalKeywords(query),
-							limit,
-							logger,
-							peerPeers,
-							warnings,
-							runtimeContext,
+						await measure("lexicalMs", () =>
+							runLexicalSearchForKeywords(
+								deps,
+								input,
+								deriveLexicalKeywords(query),
+								limit,
+								logger,
+								peerPeers,
+								warnings,
+								runtimeContext,
+							),
 						),
 						"memory-bm25",
 					),
@@ -1005,6 +1062,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			if (reasoningInfo) reasoningInfo.lexicalRewrittenQueries = lexicalQueries;
 		} else if (keywords.length > 0) {
 			if (typeof deps.searchRawMessagesLexical === "function") {
+				const lexicalStartedAt = Date.now();
 				try {
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 					const searchRawMessagesLexical = deps.searchRawMessagesLexical;
@@ -1040,6 +1098,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						code: "memory_lexical_search_failed",
 						message: (error as Error).message ?? "memory_lexical_search_failed",
 					});
+				} finally {
+					timings.lexicalMs += Date.now() - lexicalStartedAt;
 				}
 			} else if (input.mergeStrategy === "rrf") {
 				warnings.push({
@@ -1102,13 +1162,14 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		if (entity && entity.length > 0) {
 			out.entity = entity;
 		}
-		return out;
+		return finish(out);
 	}
 
 	async function searchUnifiedMemoryWithRuntime(
 		input: UnifiedMemorySearchInput,
 		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<UnifiedMemorySearchOutput> {
+		const searchStartedAt = Date.now();
 		const query = input.query.trim();
 		const sources = normalizeUnifiedMemorySearchSources(input.sources);
 		const limit = clampUnifiedMemorySearchLimit(input.limit);
@@ -1119,7 +1180,10 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		const mergeStrategy = normalizeUnifiedMemoryMergeStrategy(
 			input.mergeStrategy ?? deps.reasoning?.defaultMergeStrategy ?? "rrf",
 		);
-		const candidateLimit = Math.min(400, Math.max(limit, limit * 4));
+		const rrfWeights = input.rrfWeights ?? deps.defaultRrfWeights ?? {};
+		const rrfK = input.rrfK ?? deps.defaultRrfK ?? 60;
+		const sessionNeighborExpansion = input.sessionNeighborExpansion ?? deps.defaultSessionNeighborExpansion;
+		const candidateLimit = Math.min(400, Math.max(limit, input.candidateLimit ?? limit * 4));
 		const threshold = clampUnifiedMemorySearchThreshold(input.threshold);
 		const memoryThreshold =
 			input.threshold === undefined && mergeStrategy === "rrf" ? Number.NEGATIVE_INFINITY : threshold;
@@ -1151,6 +1215,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 		}
 
 		let memorySubs: MemorySubQueries | undefined;
+		let memoryTimings: MemorySourceTimings | undefined;
 		let retrievalStatus:
 			| Awaited<ReturnType<NonNullable<UnifiedSearchDeps["getRawMessageRetrievalStatus"]>>>
 			| undefined;
@@ -1172,7 +1237,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 				typeof deps.searchRawMessagesLexical === "function";
 			if (isRawMessageStorageAvailable() || hasRawProviders) {
 				try {
-					memorySubs = await runMemorySource(
+					const memoryRun = await runMemorySource(
 						input,
 						candidateLimit,
 						memoryThreshold,
@@ -1182,6 +1247,8 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 						peerPeers,
 						runtimeContext,
 					);
+					memorySubs = memoryRun.results;
+					memoryTimings = memoryRun.timings;
 					memorySubs = {
 						semantic: dedupeChannelByParent(memorySubs.semantic, "memory-semantic"),
 						lexical: dedupeChannelByParent(memorySubs.lexical, "memory-bm25"),
@@ -1302,21 +1369,35 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			// Users need to upload and index documents first
 		}
 
+		const fusionStartedAt = Date.now();
 		const merged = mergeAcrossSources({
 			memorySubs,
 			insightHits,
 			knowledgeHits,
 			limit: candidateLimit,
 			strategy: mergeStrategy,
+			rrfK,
+			rrfWeights,
 		});
+		const fusionLatencyMs = Date.now() - fusionStartedAt;
+		const neighborStartedAt = Date.now();
+		const neighborExpansion = await expandSessionNeighbors({
+			deps,
+			input,
+			candidates: merged,
+			options: sessionNeighborExpansion,
+		});
+		const neighborLatencyMs = Date.now() - neighborStartedAt;
+		const rerankCandidates = neighborExpansion.candidates;
 
 		// The optional host reranker sees the complete overfetched window. Only
 		// after reranking do we truncate to the public Top-K.
 		const rerankerStartedAt = deps.reranker ? Date.now() : undefined;
-		const reranked = await applyReranker(deps.reranker, input.query, merged);
+		const rerankedAll = await applyReranker(deps.reranker, input.query, rerankCandidates);
 		const rerankerLatencyMs = rerankerStartedAt === undefined ? 0 : Date.now() - rerankerStartedAt;
 		const rerankerOrderChanged =
-			Boolean(deps.reranker) && merged.some((hit, index) => hit.id !== reranked[index]?.id);
+			Boolean(deps.reranker) && rerankCandidates.some((hit, index) => hit.id !== rerankedAll[index]?.id);
+		const reranked = selectSessionNeighborResults(rerankedAll, neighborExpansion.options, limit);
 		const ranked = reranked.slice(0, limit);
 
 		const output: UnifiedMemorySearchOutput = {
@@ -1330,6 +1411,18 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 			output.retrievalDiagnostics = {
 				mergeStrategy,
 				candidateLimit,
+				rrf: { k: rrfK, weights: rrfWeights },
+				timings: {
+					totalMs: Date.now() - searchStartedAt,
+					memorySourceMs: memoryTimings?.memorySourceMs ?? 0,
+					semanticMs: memoryTimings?.semanticMs ?? 0,
+					lexicalMs: memoryTimings?.lexicalMs ?? 0,
+					hybridMs: memoryTimings?.hybridMs ?? 0,
+					plannerMs: memoryTimings?.plannerMs ?? 0,
+					fusionMs: fusionLatencyMs,
+					rerankerMs: rerankerLatencyMs,
+					neighborMs: neighborLatencyMs,
+				},
 				backend: retrievalStatus?.backend,
 				semanticDegradedReason:
 					retrievalStatus?.semanticDegradedReason ??
@@ -1341,6 +1434,7 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					hybrid: memorySubs?.hybrid?.length ?? 0,
 					entity: memorySubs?.entity?.length ?? 0,
 					fused: merged.length,
+					expanded: rerankCandidates.length,
 					final: ranked.length,
 				},
 				channels: {
@@ -1351,12 +1445,21 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 					...(memorySubs?.entity ? { entity: memorySubs.entity } : {}),
 				},
 				fusedBeforeRerank: merged,
+				expandedBeforeRerank: rerankCandidates,
+				sessionNeighborExpansion: {
+					enabled: neighborExpansion.enabled,
+					...(neighborExpansion.options ? { mode: neighborExpansion.options.mode } : {}),
+					seedCount: neighborExpansion.seedCount,
+					neighborCount: neighborExpansion.neighborCount,
+					sessions: neighborExpansion.sessions,
+					latencyMs: neighborLatencyMs,
+				},
 				reranker: {
 					enabled: Boolean(deps.reranker),
 					provider: deps.rerankerInfo?.provider,
 					model: deps.rerankerInfo?.model,
-					inputCount: merged.length,
-					outputCount: reranked.length,
+					inputCount: rerankCandidates.length,
+					outputCount: rerankedAll.length,
 					latencyMs: rerankerLatencyMs,
 					orderChanged: rerankerOrderChanged,
 				},
@@ -1598,6 +1701,161 @@ export function createUnifiedSearch(deps: UnifiedSearchDeps = {}): UnifiedSearch
 	};
 }
 
+interface SessionNeighborExpansionResult {
+	candidates: UnifiedMemorySearchResult[];
+	options?: SessionNeighborExpansionOptions;
+	enabled: boolean;
+	seedCount: number;
+	neighborCount: number;
+	sessions: number;
+}
+
+function normalizeSessionNeighborOptions(
+	options: SessionNeighborExpansionOptions | undefined,
+): SessionNeighborExpansionOptions | undefined {
+	if (!options) return undefined;
+	const rawSeedLimit =
+		typeof options.seedLimit === "number" && Number.isFinite(options.seedLimit) ? options.seedLimit : 12;
+	const rawWindow =
+		typeof options.window === "number" && Number.isFinite(options.window) ? options.window : 1;
+	const rawMaxNeighborSlots =
+		typeof options.maxNeighborSlots === "number" && Number.isFinite(options.maxNeighborSlots)
+			? options.maxNeighborSlots
+			: 4;
+	const seedLimit = Math.min(100, Math.max(1, Math.floor(rawSeedLimit)));
+	const window = Math.min(16, Math.max(1, Math.floor(rawWindow)));
+	const mode = options.mode === "protected" ? "protected" : "union";
+	const maxNeighborSlots = Math.min(seedLimit, Math.max(1, Math.floor(rawMaxNeighborSlots)));
+	return { seedLimit, window, mode, maxNeighborSlots };
+}
+
+async function expandSessionNeighbors(input: {
+	deps: UnifiedSearchDeps;
+	input: UnifiedMemorySearchInput;
+	candidates: UnifiedMemorySearchResult[];
+	options?: SessionNeighborExpansionOptions;
+}): Promise<SessionNeighborExpansionResult> {
+	const options = normalizeSessionNeighborOptions(input.options);
+	if (!options || typeof input.deps.searchRawMessageNeighbors !== "function") {
+		return {
+			candidates: input.candidates,
+			options,
+			enabled: false,
+			seedCount: 0,
+			neighborCount: 0,
+			sessions: 0,
+		};
+	}
+	const seeds = input.candidates
+		.slice(0, options.seedLimit)
+		.filter((hit) => hit.type === "memory")
+		.map((hit) => ({
+			hit,
+			sessionId: typeof hit.metadata.sessionId === "string" ? hit.metadata.sessionId : undefined,
+			messageSequence:
+				typeof hit.metadata.messageSequence === "number" && Number.isInteger(hit.metadata.messageSequence)
+					? hit.metadata.messageSequence
+					: undefined,
+		}))
+		.filter(
+			(
+				seed,
+			): seed is {
+				hit: UnifiedMemorySearchResult;
+				sessionId: string;
+				messageSequence: number;
+			} => Boolean(seed.sessionId && seed.messageSequence !== undefined),
+		);
+	if (seeds.length === 0) {
+		return {
+			candidates: input.candidates,
+			options,
+			enabled: false,
+			seedCount: 0,
+			neighborCount: 0,
+			sessions: 0,
+		};
+	}
+
+	const grouped = new Map<string, number[]>();
+	for (const seed of seeds) {
+		const values = grouped.get(seed.sessionId) ?? [];
+		values.push(seed.messageSequence);
+		grouped.set(seed.sessionId, values);
+	}
+	const directIds = new Set(input.candidates.map((hit) => hit.id));
+	const neighbors = new Map<string, UnifiedMemorySearchResult>();
+	await Promise.all(
+		Array.from(grouped, async ([sessionId, messageSequences]) => {
+			const rows = await input.deps.searchRawMessageNeighbors?.({
+				userId: input.input.userId,
+				sessionId,
+				messageSequences,
+				window: options.window ?? 1,
+				includeDeprecated: input.input.includeDeprecated,
+			});
+			for (const row of rows ?? []) {
+				if (directIds.has(row.id) || neighbors.has(row.id)) continue;
+				const sequence = row.metadata.messageSequence;
+				if (typeof sequence !== "number" || !Number.isInteger(sequence)) continue;
+				const distance = Math.min(...messageSequences.map((seed) => Math.abs(seed - sequence)));
+				if (
+					row.metadata.userId !== input.input.userId ||
+					row.metadata.sessionId !== sessionId ||
+					distance > (options.window ?? 1)
+				)
+					continue;
+				neighbors.set(row.id, {
+					type: "memory",
+					id: row.id,
+					content: row.content,
+					similarity: row.similarity,
+					metadata: {
+						...row.metadata,
+						sessionNeighbor: true,
+						neighborDistance: distance,
+						neighborOfMessageIds: seeds
+							.filter((seed) => seed.sessionId === sessionId)
+							.filter((seed) => Math.abs(seed.messageSequence - sequence) === distance)
+							.map((seed) => seed.hit.id),
+					},
+				});
+			}
+		}),
+	);
+	return {
+		candidates: [...input.candidates, ...neighbors.values()],
+		options,
+		enabled: neighbors.size > 0,
+		seedCount: seeds.length,
+		neighborCount: neighbors.size,
+		sessions: grouped.size,
+	};
+}
+
+function selectSessionNeighborResults(
+	results: UnifiedMemorySearchResult[],
+	options: SessionNeighborExpansionOptions | undefined,
+	limit: number,
+): UnifiedMemorySearchResult[] {
+	if (!options || options.mode !== "protected") return results;
+	const maxNeighborSlots = Math.min(limit, Math.max(1, options.maxNeighborSlots ?? 4));
+	const direct = results.filter((hit) => hit.metadata.sessionNeighbor !== true);
+	const neighbors = results.filter((hit) => hit.metadata.sessionNeighbor === true);
+	const selected = new Set<UnifiedMemorySearchResult>();
+	// Direct hits always have priority. If there are fewer than `limit` direct
+	// hits, fill only the remaining slots with at most `maxNeighborSlots`
+	// neighbors; never let the fallback fill loop silently exceed the cap.
+	for (const hit of direct.slice(0, limit)) selected.add(hit);
+	if (selected.size < limit) {
+		for (const hit of neighbors.slice(0, maxNeighborSlots)) {
+			if (selected.size >= limit) break;
+			selected.add(hit);
+		}
+	}
+	return results.filter((hit) => selected.has(hit)).slice(0, limit);
+}
+
 /**
  * Combine results across sources. Default behaviour: flatten into a single
  * list and let `mergeUnifiedMemorySearchResults` sort by similarity. RRF
@@ -1614,6 +1872,8 @@ function mergeAcrossSources(input: {
 	knowledgeHits: UnifiedMemorySearchResult[];
 	limit: number;
 	strategy: UnifiedMemoryMergeStrategy;
+	rrfK: number;
+	rrfWeights: import("./utilities").UnifiedMemoryRrfWeights;
 }): UnifiedMemorySearchResult[] {
 	const memorySubs = input.memorySubs ?? { semantic: [], lexical: [] };
 	const lists = buildChannelLists(memorySubs, input.insightHits, input.knowledgeHits);
@@ -1655,7 +1915,9 @@ function mergeAcrossSources(input: {
 				);
 			}
 		}
-		const merged = mergeUnifiedMemorySearchResults(Array.from(seen.values()), input.limit);
+		const merged = mergeUnifiedMemorySearchResults(Array.from(seen.values()), input.limit, {
+			strategy: "similarity",
+		});
 		return attachSignals(merged, lists);
 	}
 
@@ -1669,10 +1931,12 @@ function mergeAcrossSources(input: {
 		...input.knowledgeHits,
 	];
 
-	const merged: UnifiedMemorySearchResult[] =
-		lists.length <= 1
-			? mergeUnifiedMemorySearchResults(all, input.limit)
-			: mergeUnifiedMemorySearchResultsRrf(lists, input.limit);
+	const merged: UnifiedMemorySearchResult[] = mergeUnifiedMemorySearchResultsRrf(
+		lists.length > 0 ? lists : [{ name: "memory-semantic", hits: all }],
+		input.limit,
+		input.rrfK,
+		input.rrfWeights,
+	);
 	return attachSignals(merged, lists);
 }
 

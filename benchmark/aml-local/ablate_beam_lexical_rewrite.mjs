@@ -16,10 +16,17 @@ const run = path.resolve(options.run);
 const root = path.resolve(options.root);
 const output = path.resolve(options.output);
 const intervention = options.intervention ?? "lexical";
-assert(["lexical", "semantic-rrf", "evidence-query"].includes(intervention), "Unknown intervention");
+assert(
+	["lexical", "semantic-rrf", "evidence-query", "embedding", "tokenizer-aware"].includes(intervention),
+	"Unknown intervention",
+);
 const semanticRrf = intervention === "semantic-rrf";
 const evidenceQuery = intervention === "evidence-query";
-const nativeSemantic = semanticRrf || evidenceQuery;
+const rechunking = intervention === "tokenizer-aware";
+const embeddingOnly = intervention === "embedding" || rechunking;
+const nativeSemantic = semanticRrf || evidenceQuery || embeddingOnly;
+if (embeddingOnly)
+	assert(options["embedding-db"], "Embedding intervention needs its separate complete index");
 if (evidenceQuery) {
 	assert.equal(
 		process.env.OPENCONTEXT_LLM_MODEL,
@@ -35,6 +42,7 @@ assert(["frozen", "fresh-native"].includes(controlMode), "Unknown control mode")
 const freshControl = controlMode === "fresh-native";
 assert(!freshControl || !semanticRrf, "Semantic RRF requires exact frozen native replay");
 assert(!evidenceQuery || freshControl, "Evidence queries require a fresh native paired control");
+assert(!embeddingOnly || freshControl, "Embedding comparison requires a fresh native paired control");
 if (freshControl) assert(options["control-output"], "Fresh control requires --control-output");
 const controlOutput = freshControl ? path.resolve(options["control-output"]) : null;
 if (freshControl) {
@@ -53,6 +61,10 @@ const { SQLiteRawMessageManager } = await import(pathToFileURL(sqliteModule).hre
 const manager = new SQLiteRawMessageManager({ db, enableVectorSearch: false });
 manager.init = async () => {}; // Existing read-only schema; real queries and hydration remain enabled.
 let embedding;
+let changedDb;
+let changedManager;
+let changedEmbedding;
+let embeddingManifest;
 const embeddingModule = path.join(root, "packages/ai/rag/dist/local-transformers-embedding-provider.js");
 if (nativeSemantic) {
 	require("sqlite-vec").load(db);
@@ -63,6 +75,79 @@ if (nativeSemantic) {
 	manager.vectorSearchAvailable = true;
 	const { LocalTransformersEmbeddingProvider } = await import(pathToFileURL(embeddingModule).href);
 	embedding = new LocalTransformersEmbeddingProvider({ dtype: "fp32", localFilesOnly: true });
+	if (embeddingOnly) {
+		const {
+			assertConsumableIndex,
+			assertConsumableRechunkIndex,
+			assertEmbeddingProfile,
+			embeddingProfile,
+			rechunkProfile,
+			hashFile,
+		} = await import("./build_raw_embedding_index.mjs");
+		const changedPath = path.resolve(options["embedding-db"]);
+		assert.notEqual(
+			fs.realpathSync(changedPath),
+			fs.realpathSync(options.db),
+			"Cannot compare an index to itself",
+		);
+		changedDb = new (require("better-sqlite3"))(changedPath, { readonly: true, fileMustExist: true });
+		require("sqlite-vec").load(changedDb);
+		const state = changedDb
+			.prepare(
+				`SELECT * FROM ${rechunking ? "rechunk_index_state" : "embedding_index_state"} WHERE singleton=1`,
+			)
+			.get();
+		assert(state, "Separate index has no producer manifest");
+		(rechunking ? assertConsumableRechunkIndex : assertConsumableIndex)(changedDb, state.identity);
+		embeddingManifest = JSON.parse(state.identity);
+		assert.equal(
+			fs.realpathSync(embeddingManifest.source),
+			fs.realpathSync(options.db),
+			"Index belongs to another corpus",
+		);
+		assertEmbeddingProfile(embeddingManifest, rechunking ? rechunkProfile : embeddingProfile);
+		if (embeddingManifest.transformers_sha256)
+			assert.equal(
+				await hashFile(embeddingManifest.transformers_module),
+				embeddingManifest.transformers_sha256,
+				"Embedding runtime changed",
+			);
+		assert.equal(
+			embeddingManifest.provider_sha256,
+			sha256(fs.readFileSync(embeddingManifest.provider_module)),
+			"Embedding provider changed",
+		);
+		assert.equal(
+			embeddingManifest.source_rows.total,
+			db.prepare("SELECT COUNT(*) n FROM raw_message_chunks").get().n,
+		);
+		const { createHash } = await import("node:crypto");
+		const sourceHash = createHash("sha256");
+		for await (const part of fs.createReadStream(options.db)) sourceHash.update(part);
+		assert.equal(sourceHash.digest("hex"), embeddingManifest.source_sha256, "Original corpus changed");
+		const { LocalTransformersEmbeddingProvider: ChangedEmbeddingProvider } = await import(
+			pathToFileURL(embeddingManifest.provider_module).href
+		);
+		changedEmbedding = new ChangedEmbeddingProvider({
+			modelName: embeddingManifest.model,
+			pooling: embeddingManifest.pooling,
+			normalize: embeddingManifest.normalize,
+			dtype: embeddingManifest.dtype,
+			batchSize: embeddingManifest.batch_size,
+			lengthAwareBatching: embeddingManifest.length_aware_batching,
+			maxTokens: embeddingManifest.max_tokens,
+			localFilesOnly: true,
+			device: embeddingManifest.device,
+			sessionOptions: embeddingManifest.session_options,
+		});
+		for (const [file, expected] of Object.entries(embeddingManifest.model_files)) {
+			const modelPath = path.join(changedEmbedding.getCacheDir(), changedEmbedding.getModelName(), file);
+			assert.equal(await hashFile(modelPath), expected, `Embedding model file changed: ${file}`);
+		}
+		changedManager = new SQLiteRawMessageManager({ db: changedDb, enableVectorSearch: false });
+		changedManager.init = async () => {};
+		changedManager.vectorSearchAvailable = true;
+	}
 }
 const embeddings = new Map();
 const rerankerModule = path.join(root, "packages/ai/rag/dist/local-transformers-reranker.js");
@@ -73,6 +158,15 @@ const reranker = new LocalTransformersReranker({
 	batchSize: 8,
 	localFilesOnly: true,
 });
+const matchedChunkReranker = rechunking
+	? new LocalTransformersReranker({
+			dtype: "q8",
+			maxTokens: 512,
+			batchSize: 8,
+			localFilesOnly: true,
+			candidateMode: "matched-chunks",
+		})
+	: null;
 const referenceRecords = rows(path.join(run, "input.jsonl"));
 const maxQuestions = Number(options["max-questions"] ?? referenceRecords.length);
 assert(Number.isSafeInteger(maxQuestions) && maxQuestions > 0, "Invalid --max-questions");
@@ -96,6 +190,11 @@ const parent = db.prepare("SELECT * FROM raw_messages WHERE message_id = ?");
 const chunk = db.prepare(
 	"SELECT chunk_id, message_id, chunk_index, chunk_count FROM raw_message_chunks WHERE chunk_id = ?",
 );
+const changedChunk = rechunking
+	? changedDb.prepare(
+			"SELECT chunk_id,message_id,chunk_index,chunk_count FROM raw_message_chunks WHERE chunk_id=?",
+		)
+	: chunk;
 const identity = {
 	control: run,
 	control_mode: controlMode,
@@ -120,11 +219,24 @@ const identity = {
 	max_tokens: 512,
 	batch_size: 8,
 	top_k: 12,
-	intervention: evidenceQuery
-		? "actual core evidence-expression rewriter (three variants) plus lexical rewrite; paired native ANN/FTS5; unchanged local reranker"
-		: semanticRrf
-			? "actual core semantic variant RRF; frozen expressions; real native ANN/FTS5; exact old-core replay; original local reranker"
-			: "actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
+	...(embeddingOnly
+		? {
+				changed_embedding_index: path.resolve(options["embedding-db"]),
+				changed_embedding_manifest: embeddingManifest,
+				embedding_index_validator_sha256: sha256(
+					fs.readFileSync(new URL("./build_raw_embedding_index.mjs", import.meta.url)),
+				),
+			}
+		: {}),
+	intervention: rechunking
+		? "combined A: BGE-M3 1024-dimensional embedding, actual-tokenizer 1024/128 child catalog and FTS5/ANN, hit-centered reranker; not a pure embedding ablation"
+		: embeddingOnly
+			? "child/query embedding only; separate complete BGE index; frozen identical expressions, original-query FTS5, fusion and local reranker"
+			: evidenceQuery
+				? "actual core evidence-expression rewriter (three variants) plus lexical rewrite; paired native ANN/FTS5; unchanged local reranker"
+				: semanticRrf
+					? "actual core semantic variant RRF; frozen expressions; real native ANN/FTS5; exact old-core replay; original local reranker"
+					: "actual core opt-in lexical rewrite; frozen variants and semantic candidates; production FTS5; original local reranker",
 	...(nativeSemantic
 		? {
 				embedding_model: embedding.getModelName(),
@@ -276,23 +388,28 @@ try {
 			const trace = traces.get(record.id);
 			assert(trace?.reasoning?.strategy === "rewrite", "A frozen rewrite control is required");
 			assert.equal(trace.top_k, 12);
+			assert.equal(trace.candidate_k, 48, "Candidate budget must remain 48");
 			const variants = trace.reasoning.rewrittenQueries;
 			assert(
 				Array.isArray(variants) && variants[0] === trace.query.trim(),
 				"Missing original-first query variants",
 			);
-			const semantic = trace.channels.semantic.map((hit) =>
-				hydrateHit(
-					hit,
-					trace.user_id,
-					(id) => parent.get(id),
-					(id) => chunk.get(id),
-				),
-			);
+			const semantic = nativeSemantic
+				? []
+				: trace.channels.semantic.map((hit) =>
+						hydrateHit(
+							hit,
+							trace.user_id,
+							(id) => parent.get(id),
+							(id) => chunk.get(id),
+						),
+					);
 			const nativeQueries = new Map();
 			let arm = "control";
 			const nativeLexical = async (request) => {
-				const hits = await manager.lexicalSearchMessages(request);
+				const hits = await (rechunking && arm === "changed" ? changedManager : manager).lexicalSearchMessages(
+					request,
+				);
 				fs.appendFileSync(
 					path.join(output, "lexical-queries.jsonl"),
 					`${JSON.stringify({ id: record.id, arm, keywords: request.keywords, limit: request.limit, user_id: request.userId, hits: hits.map((hit) => ({ id: hit.id, bm25_rank: hit.bm25Rank, score: hit.similarity, content_sha256: sha256(hit.content) })) })}\n`,
@@ -300,9 +417,16 @@ try {
 				return hits;
 			};
 			const nativeAnn = async (request) => {
-				const key = JSON.stringify(request);
+				const useChangedIndex = embeddingOnly && arm === "changed";
+				const key = JSON.stringify([useChangedIndex, request]);
 				if (!nativeQueries.has(key))
-					nativeQueries.set(key, await manager.searchMessagesSemantically(request));
+					nativeQueries.set(
+						key,
+						await (useChangedIndex ? changedManager : manager).searchMessagesSemantically({
+							...request,
+							...(useChangedIndex ? { embeddingModel: changedEmbedding.getModelName() } : {}),
+						}),
+					);
 				const hits = nativeQueries.get(key);
 				fs.appendFileSync(
 					path.join(output, "semantic-queries.jsonl"),
@@ -339,19 +463,30 @@ try {
 				embedQuery: nativeSemantic
 					? async ({ query: text }) => {
 							assert.equal(typeof text, "string", "Tokenizer requires request.query, not the request object");
-							if (!embeddings.has(text)) embeddings.set(text, await embedding.embedQuery(text));
-							const vector = embeddings.get(text);
-							assert.equal(vector.length, 384, "Embedding dimension drift");
+							const useChangedIndex = embeddingOnly && arm === "changed";
+							const model = useChangedIndex ? changedEmbedding : embedding;
+							const encodedText = useChangedIndex ? embeddingManifest.query_prefix + text : text;
+							const key = JSON.stringify([model.getModelName(), encodedText]);
+							if (!embeddings.has(key)) embeddings.set(key, await model.embedQuery(encodedText));
+							const vector = embeddings.get(key);
+							assert.equal(
+								vector.length,
+								useChangedIndex ? embeddingManifest.dimensions : 384,
+								"Embedding dimension drift",
+							);
 							fs.appendFileSync(
 								path.join(output, "embedding-queries.jsonl"),
-								`${JSON.stringify({ id: record.id, arm, query: text, embedding_sha256: sha256(JSON.stringify(vector)) })}\n`,
+								`${JSON.stringify({ id: record.id, arm, query: text, encoded_query: encodedText, model: model.getModelName(), embedding_sha256: sha256(JSON.stringify(vector)) })}\n`,
 							);
 							return [...vector];
 						}
 					: async () => [1],
 				searchRawMessagesAnn: nativeSemantic ? nativeAnn : async () => structuredClone(semantic),
 				searchRawMessagesLexical: nativeLexical,
-				reranker,
+				reranker: {
+					rerank: (request) =>
+						(rechunking && arm === "changed" ? matchedChunkReranker : reranker).rerank(request),
+				},
 				reasoning: {
 					queryRewriter: {
 						rewrite: async () => [...variants],
@@ -403,16 +538,33 @@ try {
 					...deps,
 					reasoning: {
 						...deps.reasoning,
-						...(semanticRrf ? { rewriteSemanticMerge: "rrf" } : { rewriteLexical: true }),
+						...(semanticRrf
+							? { rewriteSemanticMerge: "rrf" }
+							: embeddingOnly
+								? {}
+								: { rewriteLexical: true }),
 						...(evidenceRewriter ? { queryRewriter: evidenceRewriter } : {}),
 					},
 				})
 				.search(input);
+			if (embeddingOnly) {
+				assert.deepEqual(
+					changed.reasoning?.rewrittenQueries,
+					control.reasoning?.rewrittenQueries,
+					"Embedding experiment changed query expressions",
+				);
+				if (!rechunking)
+					assert.deepEqual(
+						changed.retrievalDiagnostics.channels.lexical,
+						control.retrievalDiagnostics.channels.lexical,
+						"Embedding experiment changed lexical evidence",
+					);
+			}
 			if (evidenceQuery)
 				assert(!changed.reasoning?.degraded, "Evidence rewrite degraded; preserve this question as pending");
 			const sourceMap = sources.get(trace.user_id);
 			assert(sourceMap, "Missing canonical user source map");
-			const serialize = (hit, index) => {
+			const serialize = (hit, index, useChangedCatalog = false) => {
 				assert(sourceMap[hit.id], `Unmapped parent ${hit.id}`);
 				const message = parent.get(hit.id);
 				assert(message, `Missing native parent ${hit.id}`);
@@ -433,7 +585,30 @@ try {
 						`Native span differs from raw evidence ${hit.id}`,
 					);
 					for (const id of span.sourceChunkIds ?? (span.sourceChunkId ? [span.sourceChunkId] : []))
-						assert.equal(chunk.get(id)?.message_id, hit.id, `Native child belongs to another parent ${id}`);
+						assert.equal(
+							(useChangedCatalog ? changedChunk : chunk).get(id)?.message_id,
+							hit.id,
+							`Native child belongs to another parent ${id}`,
+						);
+					if (span.matchedContent !== undefined)
+						assert.equal(
+							message.content.slice(span.matchedStartPosition, span.matchedEndPosition),
+							span.matchedContent,
+							"Primary hit differs from raw evidence",
+						);
+				}
+				for (const evidence of hit.metadata.rerankerEvidenceScores ?? []) {
+					assert(evidence.inputTokens <= 512, "Reranker input exceeds its real tokenizer budget");
+					assert.equal(
+						sha256(message.content.slice(evidence.startPosition, evidence.endPosition)),
+						evidence.contentSha256,
+						"Reranker scored text differs from raw evidence",
+					);
+					assert.equal(
+						(useChangedCatalog ? changedChunk : chunk).get(evidence.sourceChunkId)?.message_id,
+						hit.id,
+						"Scored child belongs to another parent",
+					);
 				}
 				return {
 					id: hit.id,
@@ -448,6 +623,7 @@ try {
 					role: hit.metadata.role,
 					timestamp: hit.metadata.timestamp,
 					reranker_score: hit.metadata.rerankerScore,
+					reranker_evidence_scores: hit.metadata.rerankerEvidenceScores,
 					content_sha256: sha256(hit.content),
 					content_excerpt: hit.content.slice(0, 300),
 					matched_spans: (hit.metadata.matchedSpans ?? []).map((span) => ({
@@ -456,16 +632,21 @@ try {
 						source_chunk_ids: span.sourceChunkIds ?? (span.sourceChunkId ? [span.sourceChunkId] : []),
 						channels: span.channels,
 						content_sha256: sha256(span.content),
+						matched_start_position: span.matchedStartPosition,
+						matched_end_position: span.matchedEndPosition,
+						matched_content_sha256:
+							span.matchedContent === undefined ? undefined : sha256(span.matchedContent),
 					})),
 				};
 			};
-			const materialize = (result) => {
+			const materialize = (result, useChangedCatalog = false) => {
+				const serializeArm = (hit, index) => serialize(hit, index, useChangedCatalog);
 				const diagnostics = result.retrievalDiagnostics;
 				assert(
 					diagnostics?.reranker.enabled && diagnostics.reranker.inputCount <= trace.candidate_k,
 					"Reranker/budget contract changed",
 				);
-				const after = result.results.map(serialize);
+				const after = result.results.map(serializeArm);
 				assert(diagnostics.candidateCounts, "Core candidate counts are required for the trace");
 				const found = [...new Set(after.flatMap((hit) => hit.source_turn_ids))];
 				return {
@@ -479,12 +660,17 @@ try {
 						warnings: result.warnings ?? [],
 						channels: {
 							...trace.channels,
-							keyword: (diagnostics.channels.lexical ?? []).map(serialize),
-							semantic: (diagnostics.channels.semantic ?? []).map(serialize),
+							keyword: (diagnostics.channels.lexical ?? []).map(serializeArm),
+							semantic: (diagnostics.channels.semantic ?? []).map(serializeArm),
 						},
-						before_rerank: diagnostics.fusedBeforeRerank.map(serialize),
+						before_rerank: diagnostics.fusedBeforeRerank.map(serializeArm),
 						after_rerank: after,
-						reranker: { ...diagnostics.reranker, provider: "local", model: reranker.getModelName() },
+						reranker: {
+							...diagnostics.reranker,
+							provider: "local",
+							model: reranker.getModelName(),
+							candidate_mode: useChangedCatalog ? "matched-chunks" : "window",
+						},
 						retrieved_source_turn_ids: found,
 						mapped_final_hits: after.length,
 						source_recall_at_k: trace.required_source_turn_ids.length
@@ -499,7 +685,7 @@ try {
 					},
 				};
 			};
-			const changedRow = materialize(changed);
+			const changedRow = materialize(changed, rechunking);
 			const controlRow = freshControl ? materialize(control) : null;
 			const row = {
 				...changedRow,
@@ -526,6 +712,7 @@ try {
 	}
 } finally {
 	db.close();
+	changedDb?.close();
 }
 saveStatus(pending.length ? "pending" : "complete");
 if (pending.length) process.exitCode = 1;
