@@ -1,5 +1,13 @@
 # @melandlabs/integrations-runtime
 
+## 0.3.5
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+- Updated dependencies
+  - @melandlabs/contracts@0.8.1
+
 ## 0.3.4
 
 ### Patch Changes

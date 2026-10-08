@@ -1,5 +1,19 @@
 # @melandlabs/i18n
 
+## 0.3.2
+
+### Patch Changes
+
+- Version bump only — no code changes in this package since its last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+
+Skips 0.3.1, which was already present on npm: that version was published without a corresponding commit to this repo, so the working tree was still at 0.3.0 and the automated bump collided with the existing release.
+
+## 0.3.1
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+
 ## 0.3.0
 
 ### Minor Changes

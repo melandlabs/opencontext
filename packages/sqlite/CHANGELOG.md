@@ -1,5 +1,16 @@
 # @melandlabs/sqlite
 
+## 0.5.5
+
+### Patch Changes
+
+- 41096e7: Preserve per-user message insertion order independently of optional source timestamps, expose that order in retrieved evidence, make raw-message child indexing safe to retry, and render timestamp-free messages in the CLI.
+- d653e37: Preserve FTS5 relevance order and underfilled user-scoped vector results, and carry distinct child excerpts through parent-level RRF fusion into returned evidence.
+- Updated dependencies [41096e7]
+- Updated dependencies
+  - @melandlabs/indexeddb@0.5.11
+  - @melandlabs/contracts@0.8.1
+
 ## 0.5.4
 
 ### Patch Changes

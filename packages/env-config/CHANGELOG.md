@@ -1,5 +1,11 @@
 # @melandlabs/env-config
 
+## 0.4.1
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+
 ## 0.4.0
 
 ### Minor Changes

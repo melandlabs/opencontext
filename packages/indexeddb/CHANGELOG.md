@@ -1,5 +1,13 @@
 # @melandlabs/indexeddb
 
+## 0.5.11
+
+### Patch Changes
+
+- 41096e7: Preserve per-user message insertion order independently of optional source timestamps, expose that order in retrieved evidence, make raw-message child indexing safe to retry, and render timestamp-free messages in the CLI.
+- Updated dependencies
+  - @melandlabs/contracts@0.8.1
+
 ## 0.5.10
 
 ### Patch Changes

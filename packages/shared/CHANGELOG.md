@@ -1,5 +1,13 @@
 # @melandlabs/shared
 
+## 0.4.3
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+- Updated dependencies
+  - @melandlabs/ui-runtime@0.3.1
+
 ## 0.4.2
 
 ### Patch Changes

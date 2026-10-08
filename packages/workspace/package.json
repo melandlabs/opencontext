@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/workspace",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"publishConfig": {
@@ -38,12 +38,12 @@
 	"description": "OpenContext · workspace module. Provides project-level indexing, hybrid retrieval, and cross-file reference edges over a project workspace.",
 	"keywords": ["opencontext", "project-context", "hybrid-search", "rag"],
 	"dependencies": {
-		"@melandlabs/contracts": "^0.8.0",
-		"@melandlabs/env-config": "^0.4.0",
-		"@melandlabs/okf": "^0.3.4",
-		"@melandlabs/rag": "^0.3.3",
-		"@melandlabs/shared": "^0.4.2",
-		"@melandlabs/sqlite": "^0.5.4",
+		"@melandlabs/contracts": "^0.8.1",
+		"@melandlabs/env-config": "^0.4.1",
+		"@melandlabs/okf": "^0.3.5",
+		"@melandlabs/rag": "^0.3.4",
+		"@melandlabs/shared": "^0.4.3",
+		"@melandlabs/sqlite": "^0.5.5",
 		"@modelcontextprotocol/sdk": "^1.25.3",
 		"better-sqlite3": "^13.0.0",
 		"hono": "^4.6.14",

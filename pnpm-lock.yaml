@@ -1189,16 +1189,16 @@ importers:
         specifier: ^0.37.1
         version: 0.37.1(@types/node@22.20.1)(apache-arrow@18.1.0)(encoding@0.1.13)
       '@melandlabs/ai-rag':
-        specifier: ^0.2.12
+        specifier: ^0.2.13
         version: link:../ai/rag
       '@melandlabs/integrations':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../integrations
       '@melandlabs/okf':
-        specifier: ^0.3.4
+        specifier: ^0.3.5
         version: link:../okf
       '@melandlabs/security':
-        specifier: ^0.3.0
+        specifier: ^0.3.1
         version: link:../security
       '@melandlabs/workspace':
         specifier: link:../workspace
@@ -1538,22 +1538,22 @@ importers:
   packages/workspace:
     dependencies:
       '@melandlabs/contracts':
-        specifier: ^0.8.0
+        specifier: ^0.8.1
         version: link:../contracts
       '@melandlabs/env-config':
-        specifier: ^0.4.0
+        specifier: ^0.4.1
         version: link:../env-config
       '@melandlabs/okf':
-        specifier: ^0.3.4
+        specifier: ^0.3.5
         version: link:../okf
       '@melandlabs/rag':
-        specifier: ^0.3.3
+        specifier: ^0.3.4
         version: link:../rag
       '@melandlabs/shared':
-        specifier: ^0.4.2
+        specifier: ^0.4.3
         version: link:../shared
       '@melandlabs/sqlite':
-        specifier: ^0.5.4
+        specifier: ^0.5.5
         version: link:../sqlite
       '@modelcontextprotocol/sdk':
         specifier: ^1.25.3

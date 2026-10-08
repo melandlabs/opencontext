@@ -1,5 +1,11 @@
 # @melandlabs/memory-consolidation
 
+## 0.5.4
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+
 ## 0.5.3
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @melandlabs/integrations-linkedin
 
+## 0.3.4
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+- Updated dependencies
+  - @melandlabs/integrations@0.3.1
+  - @melandlabs/integrations-channels@0.3.4
+  - @melandlabs/shared@0.4.3
+
 ## 0.3.3
 
 ### Patch Changes

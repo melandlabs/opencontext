@@ -1,5 +1,21 @@
 # @melandlabs/workspace
 
+## 0.8.1
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+- Updated dependencies [41096e7]
+- Updated dependencies [d653e37]
+- Updated dependencies
+  - @melandlabs/sqlite@0.5.5
+  - @melandlabs/ai-rag@0.2.13
+  - @melandlabs/contracts@0.8.1
+  - @melandlabs/env-config@0.4.1
+  - @melandlabs/rag@0.3.4
+  - @melandlabs/shared@0.4.3
+  - @melandlabs/okf@0.3.5
+
 ## 0.8.0
 
 ### Minor Changes

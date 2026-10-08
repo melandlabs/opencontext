@@ -1,5 +1,31 @@
 # @melandlabs/memory-store
 
+## 1.3.8
+
+### Patch Changes
+
+- 41096e7: Preserve per-user message insertion order independently of optional source timestamps, expose that order in retrieved evidence, make raw-message child indexing safe to retry, and render timestamp-free messages in the CLI.
+- d653e37: Add opt-in query-conditioned extractive evidence selection after ranking, with original-text validation, exact source offsets and safe fallback to unchanged excerpts.
+- d653e37: Add an opt-in evidence-expression query rewriter while preserving default retrieval behavior.
+- d653e37: Preserve system, assistant, and observation roles in iterative retrieval's chat requests through the CLI and SDK reasoning factories, instead of flattening the conversation into a single user message.
+- d653e37: Preserve FTS5 relevance order and underfilled user-scoped vector results, and carry distinct child excerpts through parent-level RRF fusion into returned evidence.
+- d653e37: Deduplicate lexical terms before the keyword limit and add opt-in bounded planner action diagnostics without changing evidence selection.
+- Updated dependencies [41096e7]
+- Updated dependencies [ffb0724]
+- Updated dependencies [d653e37]
+- Updated dependencies
+  - @melandlabs/indexeddb@0.5.11
+  - @melandlabs/sqlite@0.5.5
+  - @melandlabs/ai@1.1.0
+  - @melandlabs/ai-rag@0.2.13
+  - @melandlabs/contracts@0.8.1
+  - @melandlabs/env-config@0.4.1
+  - @melandlabs/memory-consolidation@0.5.4
+  - @melandlabs/rag@0.3.4
+  - @melandlabs/shared@0.4.3
+  - @melandlabs/vsa@0.3.1
+  - @melandlabs/okf@0.3.5
+
 ## 1.3.7
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @melandlabs/ai-rag
 
+## 0.2.13
+
+### Patch Changes
+
+- Version bump only — no code changes in these packages since their last release. Cut to keep the published set in lockstep with the packages that did change in this release.
+- Updated dependencies
+  - @melandlabs/contracts@0.8.1
+  - @melandlabs/shared@0.4.3
+
 ## 0.2.12
 
 ### Patch Changes

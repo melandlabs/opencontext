@@ -1,5 +1,18 @@
 # @melandlabs/opencontext
 
+## 0.13.3
+
+### Patch Changes
+
+- 41096e7: Preserve per-user message insertion order independently of optional source timestamps, expose that order in retrieved evidence, make raw-message child indexing safe to retry, and render timestamp-free messages in the CLI.
+- d653e37: Preserve system, assistant, and observation roles in iterative retrieval's chat requests through the CLI and SDK reasoning factories, instead of flattening the conversation into a single user message.
+- Updated dependencies
+  - @melandlabs/ai-rag@0.2.13
+  - @melandlabs/integrations@0.3.1
+  - @melandlabs/security@0.3.1
+  - @melandlabs/workspace@0.8.1
+  - @melandlabs/okf@0.3.5
+
 ## 0.13.2
 
 ### Patch Changes
