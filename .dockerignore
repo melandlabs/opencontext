@@ -19,6 +19,16 @@ benchmark/aml-local/outputs*
 benchmark/AML-agent-memory-leaderboard/.venv
 **/.venv
 
+# The runtime image copies only these two adapter files from benchmark/.
+# Exclude all benchmark datasets, run artifacts, and historical outputs from
+# the build context so local evaluation artifacts cannot make Docker uploads
+# multi-gigabyte.
+benchmark/*
+!benchmark/aml-local/
+benchmark/aml-local/*
+!benchmark/aml-local/serve.py
+!benchmark/aml-local/docker-entrypoint.sh
+
 # Temp scripts
 .tmp-*
 

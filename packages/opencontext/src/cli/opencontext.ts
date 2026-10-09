@@ -40,7 +40,6 @@ import { closeSQLiteVsaStore } from "@melandlabs/sqlite";
 // Workspace CLI is shipped as an optional subpath import so a host
 // that doesn't install `@melandlabs/workspace` still gets a usable
 // `opencontext` CLI without crashing the bootstrap.
-import { runWorkspaceCli } from "@melandlabs/workspace/cli";
 import { startHttpServer, startMcpServer } from "../index.js";
 import { parseAddArgs, runAdd } from "./add.js";
 import { parseDeprecateArgs, runDeprecate } from "./deprecate.js";
@@ -342,6 +341,11 @@ async function main(): Promise<void> {
 	}
 
 	if (head === "workspace" || head === "WORKSPACE") {
+		// Load the optional workspace CLI only when requested. The workspace
+		// entrypoint has process-level CLI bootstrap behavior in some packaged
+		// layouts; a static import can intercept normal `opencontext http`
+		// startup inside the production Docker image.
+		const { runWorkspaceCli } = await import("@melandlabs/workspace/cli");
 		const exit = await runWorkspaceCli(argv.slice(1));
 		process.exit(exit);
 	}
