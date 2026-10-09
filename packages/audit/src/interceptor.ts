@@ -12,19 +12,23 @@
  * so Edge Runtime bundling is not a concern.
  */
 
-import * as cp from "node:child_process";
-import * as fs from "node:fs";
+import cp from "node:child_process";
+import fs from "node:fs";
 import { resolve } from "node:path";
 
 import { getOpenContextDir } from "@melandlabs/env-config/app-paths";
 
 import { logCommandExec, logFileRead } from "./logger";
 
-// Alias the namespace imports into fresh `any`-typed locals so esbuild and the
-// TypeScript compiler both accept property assignment. Direct `fs.readFileSync
-// = ...` is rejected because ES module namespace bindings are immutable;
-// the aliases below keep the actual fs/cp objects reachable for monkey-patching
-// without sprinkling casts at every call site.
+// The `fs` / `cp` imports above MUST stay default imports. `import * as fs` binds
+// an ES module namespace object, whose properties are getter-only accessors:
+// assigning to one throws "TypeError: Cannot set property readFileSync of [object
+// Module] which has only a getter" whenever the bundle preserves ESM semantics
+// (Next.js server chunks, Turbopack, Vite). The default import is the live
+// CommonJS exports object — mutable, and shared process-wide, so it is the only
+// form that intercepts anything. Keep the aliases below for the assignment type:
+// @types/node marks `fs.readFile` / `cp.exec` with a `__promisify__` property the
+// plain-function wrappers do not carry.
 // biome-ignore lint/suspicious/noExplicitAny: target of monkey-patch needs `any`
 const fsMutable = fs as any;
 // biome-ignore lint/suspicious/noExplicitAny: target of monkey-patch needs `any`
