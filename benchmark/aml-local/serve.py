@@ -49,6 +49,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -68,6 +69,25 @@ PORT = int(os.environ.get("AML_ADAPTER_PORT", "7422"))
 HEALTH_TIMEOUT = float(os.environ.get("AML_ADAPTER_HEALTH_TIMEOUT", "15"))
 # Seconds advertised via Retry-After on transient (retriable) failures.
 RETRY_AFTER_SECONDS = os.environ.get("AML_RETRY_AFTER", "5")
+# Optional audit trace. When set, one JSON object is appended per Add/Search
+# request. The public AML response remains contract-shaped; diagnostics stay
+# on disk only. Keep this on a persistent volume (the submission image uses
+# /data) and do not put credentials in the trace path or payload.
+TRACE_PATH = os.environ.get("AML_TRACE_PATH", "").strip()
+TRACE_LOCK = threading.Lock()
+
+
+def write_trace(event: dict) -> None:
+    if not TRACE_PATH:
+        return
+    parent = os.path.dirname(TRACE_PATH)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    line = json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
+    with TRACE_LOCK:
+        with open(TRACE_PATH, "a", encoding="utf-8") as trace_file:
+            trace_file.write(line)
+            trace_file.flush()
 
 
 def oc_post(path: str, payload: dict, timeout: int = 600) -> dict:
@@ -260,6 +280,7 @@ class Handler(BaseHTTPRequestHandler):
         if (local_diagnostics or local_reasoning != "none") and self.client_address[0] not in ("127.0.0.1", "::1"):
             self._send(403, {"error": "local retrieval controls require a loopback client"})
             return
+        received_at = datetime.now(timezone.utc).isoformat()
         try:
             length = int(self.headers.get("Content-Length", "0"))
             body = json.loads(self.rfile.read(length).decode("utf-8"))
@@ -268,15 +289,34 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             result = handle_add(body) if path == "/add" else handle_search(
-                body, local_diagnostics=local_diagnostics, local_reasoning=local_reasoning
+                body,
+                # Diagnostics are retained locally when tracing is enabled,
+                # but are never returned to the external AML caller.
+                local_diagnostics=local_diagnostics or bool(TRACE_PATH),
+                local_reasoning=local_reasoning,
+            )
+            diagnostics = result.pop("_local_diagnostics", None)
+            write_trace(
+                {
+                    "schema_version": 1,
+                    "received_at": received_at,
+                    "method": path[1:].upper(),
+                    "client": self.client_address[0],
+                    "request": body,
+                    "response": result,
+                    **({"retrieval": diagnostics} if diagnostics is not None else {}),
+                }
             )
             self._send(200, result)
         except ValueError as e:
             # 4xx: client error, NOT retriable per the AML contract
+            write_trace({"schema_version": 1, "received_at": received_at, "method": path[1:].upper(), "request": body, "error": str(e), "status": 400})
             self._send(400, {"error": str(e), "retriable": False})
         except urllib.error.URLError as e:
+            write_trace({"schema_version": 1, "received_at": received_at, "method": path[1:].upper(), "request": body, "error": str(e), "status": 502})
             self._send_retriable(502, f"opencontext daemon unreachable: {e}")
         except Exception as e:  # noqa: BLE001 - surface upstream failures as 500
+            write_trace({"schema_version": 1, "received_at": received_at, "method": path[1:].upper(), "request": body, "error": str(e), "status": 500})
             self._send_retriable(500, str(e))
 
 
@@ -286,5 +326,5 @@ if __name__ == "__main__":
         auth.append("system-key")
     if AML_EVAL_KEY:
         auth.append("eval-key")
-    print(f"[aml-adapter] listening on :{PORT}, forwarding to {OPENCONTEXT_URL}, auth={'+'.join(auth) if auth else 'off'}")
+    print(f"[aml-adapter] listening on :{PORT}, forwarding to {OPENCONTEXT_URL}, auth={'+'.join(auth) if auth else 'off'}, trace={'on' if TRACE_PATH else 'off'}")
     ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
