@@ -61,7 +61,13 @@ describe("Chinese file evidence without embeddings", () => {
 		const input = { workspace_id: "knowledge:alice", user_id: "alice", query: "付款期限", limit: 1 };
 		const selected = store.searchLexical({ ...input, canonical_keys: ["two.md"] });
 		expect(selected).toHaveLength(1);
-		expect(selected[0]!.canonical_key).toBe("two.md");
+		expect(selected[0]?.canonical_key).toBe("two.md");
+		expect(
+			store.searchLexical({
+				...input,
+				canonical_keys: [...Array.from({ length: 40_000 }, (_, index) => `absent-${index}`), "two.md"],
+			})[0]?.canonical_key,
+		).toBe("two.md");
 		expect(store.searchLexical({ ...input, canonical_keys: [] })).toEqual([]);
 		expect(store.searchLexical({ ...input, user_id: "bob", canonical_keys: ["two.md"] })).toEqual([]);
 	});

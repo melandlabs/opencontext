@@ -1409,8 +1409,8 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		}
 		let canonicalKeyFilter = "";
 		if (input.canonical_keys) {
-			canonicalKeyFilter = `AND pr.canonical_key IN (${input.canonical_keys.map(() => "?").join(",")})`;
-			params.push(...input.canonical_keys);
+			canonicalKeyFilter = "AND pr.canonical_key IN (SELECT value FROM json_each(?))";
+			params.push(JSON.stringify(input.canonical_keys));
 		}
 		const sql = `
             SELECT pc.chunk_id,
