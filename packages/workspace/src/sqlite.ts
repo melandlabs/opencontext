@@ -358,7 +358,7 @@ export interface ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
-		user_id?: string;
+		user_id: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -366,7 +366,7 @@ export interface ISqliteWorkspaceStore {
 
 	resolveCitation(input: {
 		workspace_id: string;
-		user_id?: string;
+		user_id: string;
 		citation: Citation;
 	}):
 		| {
@@ -1569,7 +1569,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	// Citation resolution (drift detection)
 	// -------------------------------------------------------------------------
 
-	resolveCitation(input: { workspace_id: string; user_id?: string; citation: Citation }): ReturnType<
+	resolveCitation(input: { workspace_id: string; user_id: string; citation: Citation }): ReturnType<
 		ISqliteWorkspaceStore["resolveCitation"]
 	> {
 		const { workspace_id, citation } = input;
@@ -1592,10 +1592,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                  FROM workspace_chunks pc
                  JOIN workspace_resources pr ON pr.id = pc.resource_id
                  WHERE pc.workspace_id = ? AND pc.chunk_id = ?
-                   AND (? IS NULL OR pr.user_id = ?)
+                   AND pr.user_id = ?
                    AND json_extract(pr.metadata, '$.deleted_at') IS NULL`,
 			)
-			.get(workspace_id, citation.chunk_id, input.user_id ?? null, input.user_id ?? null) as
+			.get(workspace_id, citation.chunk_id, input.user_id) as
 			| {
 					content: string;
 					content_hash: string;
@@ -1641,7 +1641,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
-		user_id?: string;
+		user_id: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -1696,12 +1696,12 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                          JOIN workspace_resources pr ON pr.id = pc.resource_id
                          WHERE pc.resource_id = ?
                          AND pc.workspace_id = ?
-                         AND (? IS NULL OR pr.user_id = ?)
+                         AND pr.user_id = ?
                          AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                          ORDER BY pc.chunk_index ASC
                          LIMIT 1`,
 					)
-					.get(id, input.workspace_id, input.user_id ?? null, input.user_id ?? null) as
+					.get(id, input.workspace_id, input.user_id) as
 					| {
 							chunk_id: string;
 							resource_id: number;
