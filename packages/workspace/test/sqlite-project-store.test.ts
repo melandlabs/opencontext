@@ -38,6 +38,41 @@ function makeResource(
 }
 
 describe("SqliteWorkspaceStore", () => {
+	it("versions metadata-only revisions and conditionally commits or idempotently recovers them", async () => {
+		const store = makeStore(join(scratchDir, "store.db"));
+		const input = {
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({
+				canonical_key: "memory.md",
+				body: "Design partner is Ava",
+				front_matter: { revision: "one", category: "notes" },
+			}),
+		};
+		const original = await store.indexResource(input);
+		const nextInput = {
+			...input,
+			resource: { ...input.resource, front_matter: { revision: "two", category: "strategy" } },
+			expected_version_id: original.version_id,
+		};
+		const next = await store.indexResource(nextInput);
+		expect(next.resource_id).toBe(original.resource_id);
+		expect(next.version_id).not.toBe(original.version_id);
+		expect(
+			store.findResourceByCanonicalKey({ workspace_id: "p1", canonical_key: "memory.md" })?.metadata,
+		).toMatchObject({ revision: "two", category: "strategy" });
+		expect(await store.indexResource(nextInput)).toMatchObject({
+			version_id: next.version_id,
+			change_kind: "unchanged",
+		});
+		await expect(store.indexResource({ ...input, expected_version_id: original.version_id })).rejects.toThrow(
+			"version conflict",
+		);
+		await expect(store.indexResource({ ...nextInput, user_id: "another" })).rejects.toThrow("owner");
+		expect(
+			store.searchLexical({ workspace_id: "p1", user_id: "u1", query: "Ava", limit: 10 })[0]?.version_id,
+		).toBe(next.version_id);
+	});
 	it("completes sequential queue consumers when a version has no pending chunks", async () => {
 		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();

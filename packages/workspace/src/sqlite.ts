@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { type Citation, type CitationEdge, buildCitationId } from "@melandlabs/contracts";
 import { getOpenContextPath } from "@melandlabs/env-config";
 import {
@@ -239,6 +240,8 @@ export interface ISqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
+		/** Compare within the index transaction; an identical committed revision may be retried. */
+		expected_version_id?: number | null;
 	}): Promise<{
 		resource_id: number;
 		version_id: number;
@@ -653,6 +656,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
+		expected_version_id?: number | null;
 	}): Promise<{
 		resource_id: number;
 		version_id: number;
@@ -666,13 +670,47 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		const tx = this.db.transaction(() => {
 			const existing = this.db
 				.prepare(
-					`SELECT id, current_version_id
+					`SELECT id, user_id, current_version_id, title, resource_type, metadata
                      FROM workspace_resources
                      WHERE workspace_id = ? AND canonical_key = ?`,
 				)
 				.get(workspace_id, resource.canonical_key) as
-				| { id: number; current_version_id: number | null }
+				| {
+						id: number;
+						user_id: string;
+						current_version_id: number | null;
+						title: string;
+						resource_type: string;
+						metadata: string | null;
+				  }
 				| undefined;
+			if (existing && existing.user_id !== user_id) throw new Error("Workspace resource owner mismatch");
+			const prevVersion =
+				existing?.current_version_id == null
+					? undefined
+					: (this.db
+							.prepare("SELECT sha256, metadata, source_path FROM workspace_resource_versions WHERE id = ?")
+							.get(existing.current_version_id) as
+							| { sha256: string; metadata: string | null; source_path: string | null }
+							| undefined);
+			const previousFrontMatter = parseJson<Record<string, unknown>>(prevVersion?.metadata, {});
+			const incomingFrontMatter =
+				resource.front_matter === undefined
+					? previousFrontMatter
+					: parseJson<Record<string, unknown>>(stringifyJson(resource.front_matter), {});
+			const sameRevision =
+				prevVersion?.sha256 === contentHash &&
+				isDeepStrictEqual(previousFrontMatter, incomingFrontMatter) &&
+				existing?.title === resource.title &&
+				existing.resource_type === resource.resource_type &&
+				prevVersion.source_path === resource.absolute_path;
+			if (
+				input.expected_version_id !== undefined &&
+				input.expected_version_id !== (existing?.current_version_id ?? null) &&
+				(!sameRevision || parseJson<Record<string, unknown>>(existing?.metadata, {}).deleted_at)
+			) {
+				throw new Error("Workspace resource version conflict");
+			}
 
 			let resourceId: number;
 			let currentVersionId: number | null = existing?.current_version_id ?? null;
@@ -711,10 +749,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			} else {
 				resourceId = existing.id;
 				if (currentVersionId !== null) {
-					const prevVersion = this.db
-						.prepare("SELECT sha256 FROM workspace_resource_versions WHERE id = ?")
-						.get(currentVersionId) as { sha256: string } | undefined;
-					if (prevVersion?.sha256 === contentHash) {
+					if (sameRevision) {
 						changeKind = "unchanged";
 						// A resource that was soft-deleted while its file was
 						// away must become visible again even though the body
@@ -760,7 +795,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					currentVersionId,
 					resource.absolute_path,
 					now,
-					stringifyJson(resource.front_matter),
+					stringifyJson(incomingFrontMatter),
 				);
 			const versionId = Number(insertVersion.lastInsertRowid);
 
@@ -796,6 +831,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				);
 			}
 
+			// Replace source metadata while retaining store-owned lifecycle markers.
+			const metadata = parseJson<Record<string, unknown>>(existing?.metadata, {});
+			for (const key of Object.keys(previousFrontMatter)) delete metadata[key];
+			Object.assign(metadata, incomingFrontMatter);
+			this.db
+				.prepare("UPDATE workspace_resources SET metadata = ? WHERE id = ?")
+				.run(stringifyJson(metadata), resourceId);
 			// Re-indexing a soft-deleted resource (file came back with a new
 			// body) restores it to list/search results.
 			this.clearSoftDeleteMarker(resourceId);
@@ -807,10 +849,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			this.db
 				.prepare(
 					`UPDATE workspace_resources
-                     SET current_version_id = ?, index_status = 'pending', updated_at = ?, title = ?
+                     SET current_version_id = ?, index_status = 'pending', updated_at = ?, title = ?, resource_type = ?
                      WHERE id = ?`,
 				)
-				.run(versionId, now, resource.title, resourceId);
+				.run(versionId, now, resource.title, resource.resource_type, resourceId);
 
 			currentVersionId = versionId;
 			return { resource_id: resourceId, version_id: versionId, change_kind: changeKind };
