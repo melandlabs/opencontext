@@ -9,6 +9,7 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { createEmbeddingQueue } from "../src/embedding-queue";
 import type { OkfFolderResource } from "../src/types";
 import { createWorkspaceStoreFixture } from "./sqlite-fixture";
 
@@ -37,6 +38,24 @@ function makeResource(
 }
 
 describe("SqliteWorkspaceStore", () => {
+	it("completes sequential queue consumers when a version has no pending chunks", async () => {
+		const store = makeStore(join(scratchDir, "store.db"));
+		await store.init();
+		const indexed = await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "empty.md", body: "" }),
+		});
+		const first = store.createJob({ workspace_id: "p1", kind: "index", total: 0 });
+		const second = store.createJob({ workspace_id: "p1", kind: "index", total: 0 });
+		store.markJobDlq(first.id, "Previous provider outage");
+		store.markJobDlq(second.id, "Previous provider outage");
+		const queue = createEmbeddingQueue({ store });
+		await queue.enqueue({ ...indexed, jobId: first.id });
+		await queue.enqueue({ ...indexed, jobId: second.id });
+		await queue.drain();
+		expect(store.getDlqJobs("p1")).toEqual([]);
+	});
 	it("initialises every schema table on init()", async () => {
 		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();

@@ -160,8 +160,6 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 				.catch(() => undefined)
 				.finally(() => {
 					this.inFlight -= 1;
-					const key = `${entry.resource_id}:${entry.version_id}`;
-					if (!this.retrying.has(key)) this.active.delete(key);
 					// Drain any newly-enqueued entries.
 					if (this.pending.length > 0 && this.inFlight < this.concurrency) {
 						queueMicrotask(() => this.tick());
@@ -231,6 +229,10 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 			const message = error instanceof Error ? error.message : String(error);
 			for (const jobId of jobIds) this.store.markJobFailed(jobId, message);
 			this.store.markVersionEmbeddingFailed(resource_id, version_id, message);
+		} finally {
+			// Release terminal work before another enqueue can attach a new consumer.
+			const key = `${resource_id}:${version_id}`;
+			if (!this.retrying.has(key)) this.active.delete(key);
 		}
 	}
 }
