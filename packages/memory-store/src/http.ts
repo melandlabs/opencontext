@@ -62,6 +62,7 @@ import { type ApplyConsolidateInput, applyReflectedPlan } from "./search/apply-r
 import { type DeriveInput, deriveFacts } from "./search/derive";
 import { type DistillInput, distillRawMessage } from "./search/distill";
 import { createUnifiedSearch } from "./search/unified-search";
+import { normalizeUnifiedMemorySearchSources } from "./search/utilities";
 import type { SearchInput } from "./search/utilities";
 import { type VsaRecallFacade, createVsaRecall } from "./search/vsa";
 import { type RawMessageIngestManager, persistRawMessages } from "./storage/raw-message-ingest";
@@ -177,15 +178,17 @@ export async function startHttpServer(options: StartHttpServerOptions = {}): Pro
 				? ((body.synthesize as { responseSchema?: Record<string, unknown> }).responseSchema ??
 					(body.responseSchema as Record<string, unknown> | undefined))
 				: (body.responseSchema as Record<string, unknown> | undefined);
+		let sources: SearchInput["sources"];
+		try {
+			if (body.sources !== undefined) sources = normalizeUnifiedMemorySearchSources(body.sources);
+		} catch (error) {
+			return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
+		}
 		const input: SearchInput = {
 			userId,
 			query,
-			sources: Array.isArray(body.sources)
-				? (body.sources as Array<"memory" | "insights" | "knowledge">)
-				: undefined,
-			tiers: Array.isArray(body.tiers)
-				? (body.tiers as Array<"summary" | "raw" | "insight" | "knowledge">)
-				: undefined,
+			sources,
+			tiers: Array.isArray(body.tiers) ? (body.tiers as SearchInput["tiers"]) : undefined,
 			limit: typeof body.limit === "number" ? body.limit : undefined,
 			candidateLimit: typeof body.candidateLimit === "number" ? body.candidateLimit : undefined,
 			threshold: typeof body.threshold === "number" ? body.threshold : undefined,

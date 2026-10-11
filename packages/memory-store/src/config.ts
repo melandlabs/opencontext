@@ -38,6 +38,7 @@ import type { RawMessage as IndexedRawMessage, RawMessageSearchChunk } from "@me
 import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import type { RawMessage } from "./contracts";
 import type { EvidenceSelector } from "./search/evidence-selector";
+import type { SearchExecutionBudget } from "./search/execution-budget";
 import type { IterativeRecallPlanner } from "./search/iterative-recall";
 import type { QueryRewriter } from "./search/query-rewriter";
 import type { SessionNeighborExpansionOptions, UnifiedMemoryRrfWeights } from "./search/utilities";
@@ -179,7 +180,19 @@ export interface SearchProviderApplicabilityInput {
 	applicabilityAt?: number;
 }
 
-export interface UnifiedSearchDeps {
+export interface UnifiedSearchDeps extends SearchExecutionBudget {
+	/** Host-owned file search; the host must enforce trusted scope before querying. */
+	searchWorkspace?: (
+		input: SearchProviderApplicabilityInput & {
+			userId: string;
+			query: string;
+			limit: number;
+		},
+	) => Promise<{
+		hits: UnifiedSearchInsightsResult[];
+		status: import("./search/utilities").SearchSourceState["status"];
+		message?: string;
+	}>;
 	/** Default rank-fusion weights; omitted channels use weight 1. */
 	defaultRrfWeights?: UnifiedMemoryRrfWeights;
 	/** Default reciprocal-rank damping constant. */

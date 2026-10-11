@@ -10,7 +10,15 @@ import type { FactType } from "@melandlabs/contracts";
 import type { Peer } from "@melandlabs/contracts/peer";
 import { mergeMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 
-export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
+export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge" | "workspace";
+
+/** Retrieval availability and candidate count before cross-source ranking and limits. */
+export interface SearchSourceState {
+	source: UnifiedMemorySearchSource;
+	status: "complete" | "partial" | "not_configured" | "not_ready" | "failed";
+	count: number;
+	message?: string;
+}
 
 /**
  * A retrieval channel that contributed to a hit's final score.
@@ -240,7 +248,7 @@ export interface SessionNeighborExpansionOptions {
 }
 
 export interface UnifiedMemorySearchResult {
-	type: "memory" | "insight" | "knowledge";
+	type: "memory" | "insight" | "knowledge" | "workspace";
 	id: string;
 	content: string;
 	similarity: number;
@@ -259,6 +267,7 @@ export interface UnifiedMemorySearchOutput {
 	results: UnifiedMemorySearchResult[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	sourceStates: SearchSourceState[];
 	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	/**
 	 * Diagnostic information about reasoning and date filtering. Present
@@ -347,7 +356,7 @@ export type SearchSource = UnifiedMemorySearchSource;
  * Per-tier evidence bucket consulted by `reflect`-style synthesis.
  * Includes the `summary` tier that the read-only sources do not surface.
  */
-export type SearchTier = "summary" | "raw" | "insight" | "knowledge";
+export type SearchTier = "summary" | "raw" | "insight" | "knowledge" | "workspace";
 
 export interface SearchInput {
 	userId: string;
@@ -437,6 +446,7 @@ export interface SearchOutput {
 	evidence: SearchEvidence[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	sourceStates: SearchSourceState[];
 	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	reasoning?: UnifiedMemoryReasoningInfo;
 	/** Only present when `synthesize` was truthy. */
@@ -445,12 +455,15 @@ export interface SearchOutput {
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_THRESHOLD = 0.7;
-const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge"];
+const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge", "workspace"];
 const SOURCE_SET = new Set<UnifiedMemorySearchSource>(DEFAULT_SOURCES);
 
 export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMemorySearchSource[] {
-	if (!Array.isArray(sources) || sources.length === 0) {
+	if (sources === undefined) {
 		return [...DEFAULT_SOURCES];
+	}
+	if (!Array.isArray(sources) || sources.length === 0) {
+		throw new TypeError("Search sources must be a non-empty array when specified");
 	}
 
 	const normalized = sources
@@ -460,7 +473,9 @@ export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMe
 			SOURCE_SET.has(source as UnifiedMemorySearchSource),
 		);
 
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : [...DEFAULT_SOURCES];
+	if (normalized.length !== sources.length)
+		throw new TypeError("Search sources contain an unsupported source");
+	return Array.from(new Set(normalized));
 }
 
 export function clampUnifiedMemorySearchLimit(limit: unknown): number {

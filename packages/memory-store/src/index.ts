@@ -215,6 +215,7 @@ export type {
 	SearchSource,
 	SearchTier,
 	SearchEvidence,
+	SearchSourceState,
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
 } from "./search/utilities";

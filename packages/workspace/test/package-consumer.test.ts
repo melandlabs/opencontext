@@ -1,9 +1,10 @@
 import {
+	buildCitationId,
 	createSqliteWorkspaceStore,
 	resolveWorkspaceCitation,
 	searchWorkspaceContext,
 } from "@melandlabs/workspace";
-import type { RuntimeContext, WorkspaceSearchHit } from "@melandlabs/workspace";
+import type { Citation, RuntimeContext, WorkspaceSearchHit } from "@melandlabs/workspace";
 import Database from "better-sqlite3";
 import { expect, it } from "vitest";
 
@@ -30,7 +31,9 @@ it("consumes Chinese search and citations through the built package exports", as
 			strategy: "lexical",
 		});
 		const hit: WorkspaceSearchHit = result.hits[0]!;
-		expect(await resolveWorkspaceCitation(context, store, { citation: hit.citation })).toMatchObject({
+		const citation: Citation = hit.citation;
+		expect(buildCitationId(citation)).toBe(citation.id);
+		expect(await resolveWorkspaceCitation(context, store, { citation })).toMatchObject({
 			status: "resolved",
 			content: "项目代码需要 review。",
 		});

@@ -15,6 +15,8 @@ export {
 	__resetSQLiteWorkspaceStoreForTests,
 } from "./sqlite";
 export type { SqliteWorkspaceStore, SqliteWorkspaceStoreOptions } from "./sqlite";
+export { buildCitationId } from "@melandlabs/contracts";
+export type { Citation } from "@melandlabs/contracts";
 
 export {
 	updateWorkspaceContext,
