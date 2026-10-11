@@ -52,6 +52,7 @@ import {
 	deriveLexicalKeywords,
 	isRawMemorySemanticResult,
 	materializeSignals,
+	mergeSearchResultProvenance,
 	mergeUnifiedMemorySearchResults,
 	mergeUnifiedMemorySearchResultsRrf,
 	normalizeUnifiedMemoryMergeStrategy,
@@ -325,6 +326,11 @@ async function embedQueryVariant(
 	});
 }
 
+interface RetrievalExecution {
+	completed: number;
+	failed: number;
+}
+
 async function runSemanticSearchForEmbedding(
 	deps: UnifiedSearchDeps,
 	input: UnifiedMemorySearchInput,
@@ -335,6 +341,7 @@ async function runSemanticSearchForEmbedding(
 	peerPeers: ReadonlyArray<Peer>,
 	warnings: UnifiedMemorySearchWarning[],
 	runtimeContext?: ResolvedSearchRuntimeContext,
+	execution?: RetrievalExecution,
 ): Promise<UnifiedMemorySearchResult[]> {
 	const filters = input.botIds && input.botIds.length > 0 ? input.botIds.map((botId) => ({ botId })) : [{}];
 	let semantic: UnifiedMemorySearchResult[] = [];
@@ -370,7 +377,10 @@ async function runSemanticSearchForEmbedding(
 				await Promise.all(
 					filters.map((filter) => {
 						const botId = "botId" in filter ? filter.botId : undefined;
-						return searchRawMessagesWithChroma({
+						return boundedSearchOperation(
+							searchRawMessagesWithChroma,
+							deps,
+						)({
 							userId: input.userId,
 							queryEmbedding,
 							limit,
@@ -382,12 +392,14 @@ async function runSemanticSearchForEmbedding(
 			)
 				.flat()
 				.map(toMemoryResult);
+			if (execution) execution.completed++;
 			logger.log?.("[memory-store] Raw message semantic search completed", {
 				backend: "chroma",
 				dimensions: queryEmbedding.length,
 				count: semantic.length,
 			});
 		} catch (error) {
+			if (execution) execution.failed++;
 			logger.warn?.(
 				"[memory-store] Chroma raw message search failed; falling back to database search:",
 				error,
@@ -395,7 +407,7 @@ async function runSemanticSearchForEmbedding(
 		}
 	}
 
-	if (semantic.length === 0 && runtimeContext !== undefined) {
+	if (semantic.length === 0 && runtimeContext !== undefined && !deps.searchRawMessagesAnn) {
 		warnApplicabilityNotEnforced(warnings);
 		return [];
 	}
@@ -406,7 +418,10 @@ async function runSemanticSearchForEmbedding(
 			const manager = await getRawMessageManager();
 			if (typeof manager.searchMessagesSemantically === "function") {
 				const factTypes = input.factTypes?.length ? input.factTypes : undefined;
-				const results = await manager.searchMessagesSemantically({
+				const results = await boundedSearchOperation(
+					manager.searchMessagesSemantically.bind(manager),
+					deps,
+				)({
 					userId: input.userId,
 					queryEmbedding,
 					limit,
@@ -416,6 +431,7 @@ async function runSemanticSearchForEmbedding(
 					...(peerPeers.length > 0 ? { peers: peerPeers } : {}),
 					...(factTypes ? { factTypes } : {}),
 				});
+				if (execution) execution.completed++;
 				semantic = (
 					results as Array<{
 						id: string;
@@ -432,6 +448,7 @@ async function runSemanticSearchForEmbedding(
 				}));
 			}
 		} catch (error) {
+			if (execution) execution.failed++;
 			logger.warn?.("[memory-store] SQLite semantic search failed:", error);
 		}
 	}
@@ -513,6 +530,7 @@ async function runLexicalSearchForKeywords(
 	peerPeers: ReadonlyArray<Peer>,
 	warnings: UnifiedMemorySearchWarning[],
 	runtimeContext?: ResolvedSearchRuntimeContext,
+	execution?: RetrievalExecution,
 ): Promise<UnifiedMemorySearchResult[]> {
 	if (keywords.length === 0) {
 		return [];
@@ -571,10 +589,13 @@ async function runLexicalSearchForKeywords(
 		const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
 		const factTypes = input.factTypes?.length ? input.factTypes : undefined;
 		const includeDeprecated = input.includeDeprecated === true;
-		return (
+		const results = (
 			await Promise.all(
 				filters.map((botId) =>
-					lexicalSearchRawMessages({
+					boundedSearchOperation(
+						lexicalSearchRawMessages,
+						deps,
+					)({
 						userId: input.userId,
 						keywords,
 						limit: Math.ceil(limit / filters.length),
@@ -593,7 +614,10 @@ async function runLexicalSearchForKeywords(
 					r as { id: string; content: string; similarity: number; metadata: Record<string, unknown> },
 				),
 			);
+		if (execution) execution.completed++;
+		return results;
 	} catch (error) {
+		if (execution) execution.failed++;
 		logger.warn?.("[memory-store] SQLite lexical search failed:", error);
 	}
 
@@ -633,7 +657,7 @@ interface MemorySourceTimings {
 interface MemorySourceRun {
 	results: MemorySubQueries;
 	timings: MemorySourceTimings;
-	availability: "complete" | "partial" | "failed";
+	availability: "complete" | "partial" | "failed" | "not_ready";
 }
 
 function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
@@ -727,8 +751,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		peerPeers: ReadonlyArray<Peer> = [],
 		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<MemorySourceRun> {
-		let completed = 0;
-		let failed = 0;
+		const execution: RetrievalExecution = { completed: 0, failed: 0 };
 		const observe = <Args extends unknown[], Result>(
 			operation: ((...args: Args) => Promise<Result>) | undefined,
 			preparation = false,
@@ -737,10 +760,10 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			(async (...args: Args): Promise<Result> => {
 				try {
 					const result = await operation(...args);
-					if (!preparation) completed++;
+					if (!preparation) execution.completed++;
 					return result;
 				} catch (error) {
-					failed++;
+					execution.failed++;
 					throw error;
 				}
 			});
@@ -770,7 +793,14 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		const finish = (results: MemorySubQueries): MemorySourceRun => ({
 			results,
 			timings: { ...timings, memorySourceMs: monotonicNow() - sourceStartedAt },
-			availability: failed > 0 ? (completed > 0 ? "partial" : "failed") : "complete",
+			availability:
+				execution.failed > 0
+					? execution.completed > 0
+						? "partial"
+						: "failed"
+					: execution.completed > 0 || Object.values(results).some((hits) => hits.length > 0)
+						? "complete"
+						: "not_ready",
 		});
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
@@ -826,6 +856,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 								peerPeers,
 								warnings,
 								runtimeContext,
+								execution,
 							),
 						);
 
@@ -847,6 +878,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 										peerPeers,
 										warnings,
 										runtimeContext,
+										execution,
 									);
 								});
 							} catch (error) {
@@ -924,6 +956,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 				peerPeers,
 				warnings,
 				runtimeContext,
+				execution,
 			);
 			return finish({ semantic: [], lexical: filterByDateRange(lexical, input.dateFrom, input.dateTo) });
 		};
@@ -1043,6 +1076,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 								peerPeers,
 								warnings,
 								runtimeContext,
+								execution,
 							),
 						),
 					);
@@ -1091,6 +1125,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 						peerPeers,
 						warnings,
 						runtimeContext,
+						execution,
 					);
 				});
 			} catch (error) {
@@ -1128,6 +1163,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 								peerPeers,
 								warnings,
 								runtimeContext,
+								execution,
 							),
 						),
 						"memory-bm25",
@@ -1308,7 +1344,6 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		}
 
 		if (sources.includes("memory")) {
-			let failed = false;
 			let availability: SearchSourceState["status"] = "not_ready";
 			// Only skip when storage is truly unavailable AND no provider
 			// is wired. The legacy check on `isRawMessageStorageAvailable`
@@ -1372,7 +1407,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 						warnings.push({ source: "memory", code, message });
 					}
 				} catch (error) {
-					failed = true;
+					availability = availability === "complete" || availability === "partial" ? "partial" : "failed";
 					logger.warn?.("[memory-store] memory source failed:", error);
 					warnings.push({
 						source: "memory",
@@ -1387,19 +1422,28 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					message: "Raw memory storage is not available in this environment.",
 				});
 			}
+			const count = new Set(
+				[
+					...(memorySubs?.semantic ?? []),
+					...(memorySubs?.lexical ?? []),
+					...(memorySubs?.hybrid ?? []),
+					...(memorySubs?.planner ?? []),
+					...(memorySubs?.entity ?? []),
+				].map((hit) => hit.id),
+			).size;
+			if (
+				availability === "complete" &&
+				count === 0 &&
+				retrievalStatus?.lexicalReady === false &&
+				(!retrievalStatus.semanticReady || !deps.embedQuery)
+			) {
+				availability = "not_ready";
+			}
 			const memoryWarnings = warnings.filter((warning) => warning.source === "memory");
 			sourceStates.push({
 				source: "memory",
-				status: failed ? (memorySubs ? "partial" : "failed") : availability,
-				count: new Set(
-					[
-						...(memorySubs?.semantic ?? []),
-						...(memorySubs?.lexical ?? []),
-						...(memorySubs?.hybrid ?? []),
-						...(memorySubs?.planner ?? []),
-						...(memorySubs?.entity ?? []),
-					].map((hit) => hit.id),
-				).size,
+				status: availability,
+				count,
 				...(memoryWarnings.length
 					? { message: memoryWarnings.map((warning) => warning.message).join("; ") }
 					: {}),
@@ -2082,9 +2126,12 @@ function mergeAcrossSources(input: {
 				const other = preferred === hit ? existing : hit;
 				seen.set(
 					key,
-					preferred.type === "memory" && other.type === "memory"
-						? mergeMatchedEvidence(preferred, other)
-						: preferred,
+					mergeSearchResultProvenance(
+						preferred.type === "memory" && other.type === "memory"
+							? mergeMatchedEvidence(preferred, other)
+							: preferred,
+						other,
+					),
 				);
 			}
 		}

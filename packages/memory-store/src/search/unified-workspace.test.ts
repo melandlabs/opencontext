@@ -202,6 +202,40 @@ it("explicitly reports unknown provenance instead of implying evidence is comple
 	});
 });
 
+it("includes Workspace evidence and its provenance in optional synthesis", async () => {
+	let prompt = "";
+	const search = createUnifiedSearch({
+		searchWorkspace: async () => ({
+			status: "complete",
+			hits: [
+				{
+					id: "f1",
+					content: "项目代码属于 Ava。",
+					similarity: 0.9,
+					metadata: {},
+					provenance: { origin: "personal_memory", version: 2, contentHash: "hash-v2" },
+				},
+			],
+		}),
+		reasoning: {
+			complete: async (value) => {
+				prompt = value;
+				return "Ava";
+			},
+		},
+	});
+	const result = await search.search({
+		userId: "alice",
+		query: "代码属于谁",
+		sources: ["workspace"],
+		synthesize: true,
+	});
+	expect(result.answer).toBe("Ava");
+	expect(prompt).toContain("项目代码属于 Ava。");
+	expect(prompt).toContain('"contentHash":"hash-v2"');
+	expect(prompt).toContain('"confirmation":null');
+});
+
 it("reports partial availability when readiness diagnostics fail after usable retrieval", async () => {
 	const search = createUnifiedSearch({
 		searchRawMessagesLexical: async () => [
@@ -235,21 +269,29 @@ it("keeps lexical evidence and other sources when optional diagnostics never set
 	expect(result.results.map((hit) => hit.id).sort()).toEqual(["f1", "m1"]);
 }, 1000);
 
-it("reports a failed source when all configured retrieval channels fail", async () => {
-	const search = createUnifiedSearch({
-		embedQuery: async () => {
-			throw new Error("Embedding unavailable");
-		},
-		searchRawMessagesAnn: async () => [],
-		searchRawMessagesLexical: async () => {
-			throw new Error("Lexical unavailable");
-		},
-	});
-	const result = await search.search({ userId: "alice", query: "review", sources: ["memory"] });
-	expect(result.sourceStates).toEqual([
-		expect.objectContaining({ source: "memory", status: "failed", count: 0 }),
-	]);
-});
+it.each([false, true])(
+	"reports a failed source when all retrieval channels fail (diagnostic failure: %s)",
+	async (diagnosticFailure) => {
+		const search = createUnifiedSearch({
+			embedQuery: async () => {
+				throw new Error("Embedding unavailable");
+			},
+			searchRawMessagesAnn: async () => [],
+			searchRawMessagesLexical: async () => {
+				throw new Error("Lexical unavailable");
+			},
+			getRawMessageRetrievalStatus: diagnosticFailure
+				? async () => {
+						throw new Error("Status unavailable");
+					}
+				: undefined,
+		});
+		const result = await search.search({ userId: "alice", query: "review", sources: ["memory"] });
+		expect(result.sourceStates).toEqual([
+			expect.objectContaining({ source: "memory", status: "failed", count: 0 }),
+		]);
+	},
+);
 
 it("cancels a pending source and skips queries for already cancelled requests", async () => {
 	const controller = new AbortController();
@@ -291,6 +333,58 @@ it("deduplicates the same file identity and applies the common result limit", as
 	const result = await search.search({ userId: "alice", query: "代码", sources: ["workspace"], limit: 1 });
 	expect(result.results).toHaveLength(1);
 	expect(result.results[0]?.id).toBe(hit.id);
+});
+
+it.each(["rrf", "similarity"] as const)(
+	"retains known provenance from duplicate candidates under %s",
+	async (mergeStrategy) => {
+		const hit = { id: "file:1", content: "代码", similarity: 0.9, metadata: {} };
+		const search = createUnifiedSearch({
+			searchWorkspace: async () => ({
+				status: "complete",
+				hits: [
+					hit,
+					{ ...hit, provenance: { version: 2, contentHash: "hash-v2", derivedFrom: ["source:1"] } },
+				],
+			}),
+		});
+		const result = await search.search({
+			userId: "alice",
+			query: "代码",
+			sources: ["workspace"],
+			mergeStrategy,
+		});
+		expect(result.evidence).toHaveLength(1);
+		expect(result.evidence[0]?.provenance).toMatchObject({
+			version: 2,
+			contentHash: "hash-v2",
+			derivedFrom: ["source:1"],
+		});
+	},
+);
+
+it("reports not ready when no configured provider can execute within trusted scope", async () => {
+	const search = createUnifiedSearch({ searchRawMessagesHybrid: async () => [] });
+	const result = await search.search(
+		{ userId: "alice", query: "review", sources: ["memory"] },
+		{ applicabilityContexts: [{ scope: "global" }] },
+	);
+	expect(result.sourceStates[0]?.status).toBe("not_ready");
+});
+
+it("honors explicit index readiness when retrieval returns no candidates", async () => {
+	const result = await createUnifiedSearch({
+		searchRawMessagesLexical: async () => [],
+		getRawMessageRetrievalStatus: async () => ({
+			backend: "sqlite",
+			childCount: 0,
+			embeddedChildCount: 0,
+			indexedDimensions: [],
+			semanticReady: false,
+			lexicalReady: false,
+		}),
+	}).search({ userId: "alice", query: "review", sources: ["memory"] });
+	expect(result.sourceStates[0]?.status).toBe("not_ready");
 });
 
 it("cancels even when a downstream reranker is still pending", async () => {

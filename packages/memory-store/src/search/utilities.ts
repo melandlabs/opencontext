@@ -556,6 +556,27 @@ export function normalizeUnifiedMemoryReasoningStrategy(
 
 const DEFAULT_RRF_K = 60;
 
+/** Fill missing provenance only for the same content identity; never mix conflicting versions. */
+export function mergeSearchResultProvenance(
+	preferred: UnifiedMemorySearchResult,
+	other: UnifiedMemorySearchResult,
+): UnifiedMemorySearchResult {
+	const first = preferred.provenance;
+	const second = other.provenance;
+	if (
+		first &&
+		second &&
+		(["version", "contentHash"] as const).some(
+			(key) => first[key] != null && second[key] != null && first[key] !== second[key],
+		)
+	)
+		return preferred;
+	const metadata = { ...other.metadata, ...preferred.metadata };
+	if (!second) return { ...preferred, metadata };
+	const knownFirst = Object.fromEntries(Object.entries(first ?? {}).filter(([, value]) => value != null));
+	return { ...preferred, metadata, provenance: { ...second, ...knownFirst } };
+}
+
 /**
  * Reciprocal Rank Fusion across multiple ranked lists. Each list contributes
  * `1 / (k + rank + 1)` to a hit's accumulated score. Hits are de-duplicated by
@@ -582,6 +603,7 @@ export function mergeUnifiedMemorySearchResultsRrf(
 	const order: string[] = [];
 
 	for (const list of lists) {
+		const seenInList = new Set<string>();
 		const channel = listNameToChannel(list.name);
 		const configuredWeight = channel ? effectiveWeights[channel] : undefined;
 		const weight =
@@ -592,7 +614,8 @@ export function mergeUnifiedMemorySearchResultsRrf(
 		for (let index = 0; index < list.hits.length; index += 1) {
 			const hit = list.hits[index];
 			const key = `${hit.type}::${hit.id}`;
-			const contribution = weight / (safeK + index + 1);
+			const contribution = seenInList.has(key) ? 0 : weight / (safeK + seenInList.size + 1);
+			seenInList.add(key);
 			const existing = scores.get(key);
 			const rankedHit = hit.type === "memory" ? withMatchedEvidence(hit, list.name, index + 1) : hit;
 			if (existing) {
@@ -600,6 +623,7 @@ export function mergeUnifiedMemorySearchResultsRrf(
 				if (hit.type === "memory" && existing.hit.type === "memory") {
 					existing.hit = mergeMatchedEvidence(existing.hit, rankedHit);
 				}
+				existing.hit = mergeSearchResultProvenance(existing.hit, rankedHit);
 			} else {
 				scores.set(key, { hit: rankedHit, rrf: contribution });
 				order.push(key);
