@@ -9,16 +9,18 @@ import { join } from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { SqliteWorkspaceStore } from "../src/sqlite";
 import type { OkfFolderResource } from "../src/types";
+import { createWorkspaceStoreFixture } from "./sqlite-fixture";
 
 let scratchDir: string;
+const { makeStore, closeAll } = createWorkspaceStoreFixture();
 
 beforeEach(() => {
 	scratchDir = mkdtempSync(join(tmpdir(), "workspace-store-"));
 });
 
 afterEach(() => {
+	closeAll();
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
@@ -36,7 +38,7 @@ function makeResource(
 
 describe("SqliteWorkspaceStore", () => {
 	it("initialises every schema table on init()", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const tables = (
 			store as unknown as { __testDb: { prepare: (s: string) => { all: () => unknown[] } } }
@@ -54,7 +56,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("creates a resource + version + chunks on first indexResource", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const result = await store.indexResource({
 			workspace_id: "p1",
@@ -75,7 +77,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("short-circuits with change_kind='unchanged' on identical re-index", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const body = "Identical body for sha256 dedup test.";
 		const first = await store.indexResource({
@@ -95,7 +97,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("creates a new version with parent_version_id on modified content", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await store.indexResource({
 			workspace_id: "p1",
@@ -120,7 +122,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("soft-deletes missing resources when their canonical_key disappears", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		await store.indexResource({
 			workspace_id: "p1",
@@ -148,7 +150,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("softDeleteResource hides one resource from list and search, idempotently", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		await store.indexResource({
 			workspace_id: "p1",
@@ -181,7 +183,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("indexResource resurrects a soft-deleted resource without a body change", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await store.indexResource({
 			workspace_id: "p1",
@@ -207,7 +209,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("indexResource resurrects a soft-deleted resource whose body changed", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		await store.indexResource({
 			workspace_id: "p1",
@@ -229,16 +231,16 @@ describe("SqliteWorkspaceStore", () => {
 
 	it("reuses init() safely across multiple new instances on the same DB", async () => {
 		const dbPath = join(scratchDir, "store.db");
-		const first = new SqliteWorkspaceStore({ dbPath });
+		const first = makeStore(dbPath);
 		await first.init();
 		await first.close();
-		const second = new SqliteWorkspaceStore({ dbPath });
+		const second = makeStore(dbPath);
 		await expect(second.init()).resolves.toBeUndefined();
 		await second.close();
 	});
 
 	it("persists source_mtime across created / modified / unchanged indexResource branches", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const readMeta = (resourceId: number): Record<string, unknown> => {
 			const row = store.__testDb
@@ -289,7 +291,7 @@ describe("SqliteWorkspaceStore", () => {
 	});
 
 	it("getOkfSourceFreshness returns stamped rows and excludes soft-deleted / unstamped rows", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const a = await store.indexResource({
 			workspace_id: "p1",
