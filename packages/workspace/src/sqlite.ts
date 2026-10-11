@@ -347,6 +347,8 @@ export interface ISqliteWorkspaceStore {
 		user_id: string;
 		query: string;
 		resource_types?: string[];
+		/** Host-authorized resource identities; an empty allowlist returns no hits. */
+		canonical_keys?: string[];
 		limit: number;
 	}): WorkspaceSearchHit[];
 
@@ -1392,8 +1394,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		user_id: string;
 		query: string;
 		resource_types?: string[];
+		canonical_keys?: string[];
 		limit: number;
 	}): WorkspaceSearchHit[] {
+		if (input.canonical_keys?.length === 0) return [];
 		const keywords = workspaceSearchWords(input.query);
 		if (keywords.length === 0) return [];
 		const ftsQuery = workspaceFtsQuery(keywords);
@@ -1402,6 +1406,11 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		if (input.resource_types && input.resource_types.length > 0) {
 			resourceTypeFilter = `AND pr.resource_type IN (${input.resource_types.map(() => "?").join(",")})`;
 			params.push(...input.resource_types);
+		}
+		let canonicalKeyFilter = "";
+		if (input.canonical_keys) {
+			canonicalKeyFilter = `AND pr.canonical_key IN (${input.canonical_keys.map(() => "?").join(",")})`;
+			params.push(...input.canonical_keys);
 		}
 		const sql = `
             SELECT pc.chunk_id,
@@ -1422,6 +1431,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
               AND pr.user_id = ?
               AND json_extract(pr.metadata, '$.deleted_at') IS NULL
               ${resourceTypeFilter}
+              ${canonicalKeyFilter}
             ORDER BY bm25_score ASC
             LIMIT ?
         `;

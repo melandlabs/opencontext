@@ -50,6 +50,21 @@ describe("Chinese file evidence without embeddings", () => {
 			await resolveWorkspaceCitation(context, store, { workspace_id: "personal:alice", citation }),
 		).toMatchObject({ status: "resolved", content: expect.stringContaining("项目代码") });
 	});
+	it("filters allowed resource identities before applying the lexical result limit", async () => {
+		writeFileSync(join(directory, "one.md"), "付款期限为十天。", "utf8");
+		writeFileSync(join(directory, "two.md"), "付款期限为二十天。", "utf8");
+		await updateWorkspaceContext(context, store, {
+			workspace_id: "knowledge:alice",
+			source: "okf_folder",
+			path: directory,
+		});
+		const input = { workspace_id: "knowledge:alice", user_id: "alice", query: "付款期限", limit: 1 };
+		const selected = store.searchLexical({ ...input, canonical_keys: ["two.md"] });
+		expect(selected).toHaveLength(1);
+		expect(selected[0]!.canonical_key).toBe("two.md");
+		expect(store.searchLexical({ ...input, canonical_keys: [] })).toEqual([]);
+		expect(store.searchLexical({ ...input, user_id: "bob", canonical_keys: ["two.md"] })).toEqual([]);
+	});
 	it("does not manufacture a Chinese phrase across punctuation", async () => {
 		writeFileSync(join(directory, "notes.md"), "项目代，代码。API项目使用 TypeScript。", "utf8");
 		await updateWorkspaceContext(context, store, {
