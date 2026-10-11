@@ -159,4 +159,52 @@ describe("Chinese file evidence without embeddings", () => {
 			).hits,
 		).toHaveLength(1);
 	});
+	it("keeps cross-file expansion inside the requesting user's resources", async () => {
+		writeFileSync(join(directory, "notes.md"), "项目代码属于 Alice。", "utf8");
+		await updateWorkspaceContext(context, store, {
+			workspace_id: "shared",
+			source: "okf_folder",
+			path: directory,
+		});
+		const own = await searchWorkspaceContext(context, store, {
+			workspace_id: "shared",
+			query: "代码",
+			strategy: "lexical",
+		});
+		const other = await store.indexResource({
+			workspace_id: "shared",
+			user_id: "bob",
+			resource: {
+				canonical_key: "bob.md",
+				absolute_path: "/bob.md",
+				title: "Bob",
+				body: "Bob's private context",
+				size_bytes: 21,
+				resource_type: "note",
+			},
+		});
+		store.upsertReferenceEdges({
+			workspace_id: "shared",
+			edges: [
+				{
+					source_resource_id: own.hits[0]!.resource_id,
+					source_version_id: own.hits[0]!.version_id,
+					target_resource_id: other.resource_id,
+					target_version_id: other.version_id,
+					edge_type: "cites",
+				},
+			],
+		});
+		const result = await searchWorkspaceContext(
+			context,
+			store,
+			{
+				workspace_id: "shared",
+				query: "代码",
+				strategy: "cross-file",
+			},
+			{ embed: async () => new Array(1536).fill(0) },
+		);
+		expect(result.hits.map((hit) => hit.canonical_key)).toEqual(["notes.md"]);
+	});
 });

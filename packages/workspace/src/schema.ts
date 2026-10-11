@@ -203,10 +203,10 @@ export function initializeWorkspaceSchema(db: Database.Database): void {
 
 function initializeLexicalIndex(db: Database.Database): void {
 	db.exec("CREATE TABLE IF NOT EXISTS workspace_schema_migrations (version INTEGER PRIMARY KEY)");
-	if (db.prepare("SELECT 1 FROM workspace_schema_migrations WHERE version = 3").get()) return;
 	// Rebuild old indexes atomically. FTS stores derived terms, while source
 	// chunks retain their original text, offsets, hashes and version identity.
 	db.transaction(() => {
+		if (db.prepare("SELECT 1 FROM workspace_schema_migrations WHERE version = 3").get()) return;
 		db.exec(`
       DROP TRIGGER IF EXISTS workspace_chunks_ai;
       DROP TRIGGER IF EXISTS workspace_chunks_ad;
@@ -227,5 +227,5 @@ function initializeLexicalIndex(db: Database.Database): void {
       END;
       INSERT INTO workspace_schema_migrations(version) VALUES (3);
     `);
-	})();
+	}).immediate();
 }

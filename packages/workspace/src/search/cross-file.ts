@@ -66,6 +66,7 @@ export async function searchCrossFile(
 	const fused = fuseHybridHits({ lexical: lexicalHits, semantic: semanticHits, limit: candidateLimit });
 	return store.expandNeighbors({
 		workspace_id: input.workspace_id,
+		user_id: input.user_id,
 		hits: fused,
 		hops: input.hops ?? 1,
 		limit: input.limit,

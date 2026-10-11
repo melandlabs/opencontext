@@ -358,6 +358,7 @@ export interface ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
+		user_id?: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -1640,6 +1641,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
+		user_id?: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -1693,11 +1695,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                          FROM workspace_chunks pc
                          JOIN workspace_resources pr ON pr.id = pc.resource_id
                          WHERE pc.resource_id = ?
+                         AND pc.workspace_id = ?
+                         AND (? IS NULL OR pr.user_id = ?)
                          AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                          ORDER BY pc.chunk_index ASC
                          LIMIT 1`,
 					)
-					.get(id) as
+					.get(id, input.workspace_id, input.user_id ?? null, input.user_id ?? null) as
 					| {
 							chunk_id: string;
 							resource_id: number;
