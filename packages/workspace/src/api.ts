@@ -233,14 +233,13 @@ export async function resolveWorkspaceCitation(
 			reason: "wrong_workspace" | "chunk_not_found" | "host_resolver_missing";
 	  }
 > {
-	void ctx_rt;
 	const citation = input.citation;
 	if (citation.kind === "workspace_chunk") {
 		const workspaceId = input.workspace_id ?? citation.workspace_id;
 		if (!workspaceId) {
 			return { status: "missing", citation, reason: "wrong_workspace" };
 		}
-		const result = store.resolveCitation({ workspace_id: workspaceId, citation });
+		const result = store.resolveCitation({ workspace_id: workspaceId, user_id: ctx_rt.user_id, citation });
 		if (result.status === "resolved") {
 			return { status: "resolved", citation, content: result.content, drift: false };
 		}

@@ -38,6 +38,7 @@ import { floatArrayToBuffer } from "@melandlabs/sqlite";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { initializeWorkspaceSchema } from "./schema";
+import { workspaceFtsQuery, workspaceSearchWords } from "./search/tokenization";
 import type {
 	EdgeProvenance,
 	ListWorkspaceResourcesInput,
@@ -364,6 +365,7 @@ export interface ISqliteWorkspaceStore {
 
 	resolveCitation(input: {
 		workspace_id: string;
+		user_id?: string;
 		citation: Citation;
 	}):
 		| {
@@ -1349,11 +1351,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		resource_types?: string[];
 		limit: number;
 	}): WorkspaceSearchHit[] {
-		void input.user_id;
-		const keywords = tokenizeQuery(input.query);
+		const keywords = workspaceSearchWords(input.query);
 		if (keywords.length === 0) return [];
-		const ftsQuery = keywords.map((kw) => `"${kw.replace(/"/g, '""')}"`).join(" OR ");
-		const params: Array<string | number> = [];
+		const ftsQuery = workspaceFtsQuery(keywords);
+		const params: Array<string | number> = [ftsQuery, input.workspace_id, input.user_id];
 		let resourceTypeFilter = "";
 		if (input.resource_types && input.resource_types.length > 0) {
 			resourceTypeFilter = `AND pr.resource_type IN (${input.resource_types.map(() => "?").join(",")})`;
@@ -1375,12 +1376,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
             JOIN workspace_resources pr ON pr.id = pc.resource_id
             WHERE workspace_chunks_fts MATCH ?
               AND pc.workspace_id = ?
+              AND pr.user_id = ?
               AND json_extract(pr.metadata, '$.deleted_at') IS NULL
               ${resourceTypeFilter}
             ORDER BY bm25_score ASC
             LIMIT ?
         `;
-		params.unshift(ftsQuery, input.workspace_id, input.limit);
+		params.push(input.limit);
 		const rows = this.db.prepare(sql).all(...params) as Array<{
 			chunk_id: string;
 			resource_id: number;
@@ -1467,7 +1469,11 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				input.resource_types && input.resource_types.length > 0
 					? `AND pr.resource_type IN (${input.resource_types.map(() => "?").join(",")})`
 					: "";
-			const params: Array<string | number> = [input.workspace_id, ...vecRows.map((r) => r.chunk_id)];
+			const params: Array<string | number> = [
+				input.workspace_id,
+				input.user_id,
+				...vecRows.map((r) => r.chunk_id),
+			];
 			if (input.resource_types && input.resource_types.length > 0) {
 				params.push(...input.resource_types);
 			}
@@ -1485,6 +1491,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                      FROM workspace_chunks pc
                      JOIN workspace_resources pr ON pr.id = pc.resource_id
                      WHERE pc.workspace_id = ?
+                       AND pr.user_id = ?
                        AND pc.chunk_id IN (${vecRows.map(() => "?").join(",")})
                        AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                        ${resourceTypeFilter}
@@ -1561,7 +1568,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	// Citation resolution (drift detection)
 	// -------------------------------------------------------------------------
 
-	resolveCitation(input: { workspace_id: string; citation: Citation }): ReturnType<
+	resolveCitation(input: { workspace_id: string; user_id?: string; citation: Citation }): ReturnType<
 		ISqliteWorkspaceStore["resolveCitation"]
 	> {
 		const { workspace_id, citation } = input;
@@ -1580,11 +1587,14 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		this.ensureInitialized();
 		const row = this.db
 			.prepare(
-				`SELECT content, content_hash, resource_id, version_id, chunk_index
-                 FROM workspace_chunks
-                 WHERE workspace_id = ? AND chunk_id = ?`,
+				`SELECT pc.content, pc.content_hash, pc.resource_id, pc.version_id, pc.chunk_index
+                 FROM workspace_chunks pc
+                 JOIN workspace_resources pr ON pr.id = pc.resource_id
+                 WHERE pc.workspace_id = ? AND pc.chunk_id = ?
+                   AND (? IS NULL OR pr.user_id = ?)
+                   AND json_extract(pr.metadata, '$.deleted_at') IS NULL`,
 			)
-			.get(workspace_id, citation.chunk_id) as
+			.get(workspace_id, citation.chunk_id, input.user_id ?? null, input.user_id ?? null) as
 			| {
 					content: string;
 					content_hash: string;
@@ -1593,7 +1603,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					chunk_index: number;
 			  }
 			| undefined;
-		if (!row) return { status: "missing", reason: "chunk_not_found" };
+		if (
+			!row ||
+			(citation.resource_id !== undefined && citation.resource_id !== row.resource_id) ||
+			(citation.version_id !== undefined && citation.version_id !== row.version_id)
+		) {
+			return { status: "missing", reason: "chunk_not_found" };
+		}
 		const drift = row.content_hash !== citation.content_hash;
 		if (drift) {
 			return {
@@ -1966,13 +1982,6 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			.prepare("UPDATE workspace_jobs SET total = ?, updated_at = ? WHERE id = ?")
 			.run(total, currentUnixSeconds(), jobId);
 	}
-}
-
-function tokenizeQuery(query: string): string[] {
-	return query
-		.split(/\s+/u)
-		.map((token) => token.trim())
-		.filter((token) => token.length > 0);
 }
 
 function buildSnippet(content: string, keywords: string[]): string {
