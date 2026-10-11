@@ -363,6 +363,37 @@ it.each(["rrf", "similarity"] as const)(
 	},
 );
 
+it("does not combine a citation with another content version during deduplication", async () => {
+	const citation = {
+		id: "ws:w:c1",
+		kind: "workspace_chunk" as const,
+		workspace_id: "w",
+		chunk_id: "c1",
+		version_id: 1,
+		content_hash: "hash-v1",
+		snippet: "旧正文",
+		scores: {},
+	};
+	const search = createUnifiedSearch({
+		searchWorkspace: async () => ({
+			status: "complete",
+			hits: [
+				{ id: "f1", content: "旧正文", similarity: 0.9, metadata: {}, provenance: { citation } },
+				{
+					id: "f1",
+					content: "新正文",
+					similarity: 0.9,
+					metadata: {},
+					provenance: { version: 2, contentHash: "hash-v2" },
+				},
+			],
+		}),
+	});
+	const result = await search.search({ userId: "alice", query: "正文", sources: ["workspace"] });
+	expect(result.evidence[0]?.snippet).toBe("旧正文");
+	expect(result.evidence[0]?.provenance).toMatchObject({ citation, version: 1, contentHash: "hash-v1" });
+});
+
 it("reports not ready when no configured provider can execute within trusted scope", async () => {
 	const search = createUnifiedSearch({ searchRawMessagesHybrid: async () => [] });
 	const result = await search.search(

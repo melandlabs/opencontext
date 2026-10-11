@@ -563,12 +563,15 @@ export function mergeSearchResultProvenance(
 ): UnifiedMemorySearchResult {
 	const first = preferred.provenance;
 	const second = other.provenance;
+	const firstVersion = first?.version ?? first?.citation?.version_id;
+	const secondVersion = second?.version ?? second?.citation?.version_id;
+	const firstHash = first?.contentHash ?? first?.citation?.content_hash;
+	const secondHash = second?.contentHash ?? second?.citation?.content_hash;
 	if (
-		first &&
-		second &&
-		(["version", "contentHash"] as const).some(
-			(key) => first[key] != null && second[key] != null && first[key] !== second[key],
-		)
+		(firstVersion != null && secondVersion != null && firstVersion !== secondVersion) ||
+		(firstHash != null && secondHash != null && firstHash !== secondHash) ||
+		(first?.citation && second?.citation && first.citation.id !== second.citation.id) ||
+		(preferred.content !== other.content && !(firstHash && firstHash === secondHash))
 	)
 		return preferred;
 	const metadata = { ...other.metadata, ...preferred.metadata };
