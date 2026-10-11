@@ -6,8 +6,9 @@
  * storage/search implementations.
  */
 
-import type { FactType } from "@melandlabs/contracts";
+import type { Citation, FactType } from "@melandlabs/contracts";
 import type { Peer } from "@melandlabs/contracts/peer";
+import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import { mergeMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 
 export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge" | "workspace";
@@ -253,6 +254,8 @@ export interface UnifiedMemorySearchResult {
 	content: string;
 	similarity: number;
 	metadata: Record<string, unknown>;
+	/** Host-supplied evidence identity; absent fields remain explicitly unknown. */
+	provenance?: Partial<SearchEvidenceProvenance>;
 	/**
 	 * Optional per-channel score breakdown. Always populated by the
 	 * pipeline when at least one channel contributed a non-empty list;
@@ -424,11 +427,26 @@ export interface SearchInput {
 	includeDeprecated?: boolean;
 }
 
+/** Host-owned provenance. Null means unknown, never inferred from ranking or index readiness. */
+export interface SearchEvidenceProvenance {
+	citation: Citation | null;
+	origin: string | null;
+	businessReference: string | null;
+	version: string | number | null;
+	contentHash: string | null;
+	scope: readonly MemoryApplicabilityContext[] | null;
+	/** Empty means known to have no derivation; null means unknown. */
+	derivedFrom: readonly string[] | null;
+	confirmation: "confirmed" | "unconfirmed" | null;
+	freshness: { sourceUpdatedAt: string | null; indexedAt: string | null } | null;
+}
+
 export interface SearchEvidence {
 	id: string;
 	source: SearchSource | SearchTier;
 	snippet: string;
 	score: number;
+	provenance: SearchEvidenceProvenance;
 	timestamp?: number;
 	/**
 	 * Forwarded from the underlying hit's `metadata`. Surfaces per-fact

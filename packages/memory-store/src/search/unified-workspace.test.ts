@@ -35,6 +35,16 @@ it("fuses file evidence with other sources while retaining citation identity and
 						content: hit.snippet,
 						similarity: hit.score,
 						metadata: { citation: hit.citation, scope: "user", origin: "personal_memory" },
+						provenance: {
+							citation: hit.citation,
+							origin: "personal_memory",
+							businessReference: "notes.md",
+							version: hit.citation.version_id,
+							contentHash: hit.citation.content_hash,
+							scope: [{ scope: "global" as const }],
+							derivedFrom: [],
+							confirmation: "confirmed" as const,
+						},
 					})),
 				};
 			},
@@ -52,6 +62,17 @@ it("fuses file evidence with other sources while retaining citation identity and
 		expect(result.evidence.find((hit) => hit.source === "workspace")?.metadata).toMatchObject({
 			origin: "personal_memory",
 			citation: { canonical_key: "notes.md", content_hash: expect.any(String) },
+		});
+		expect(result.evidence.find((hit) => hit.source === "workspace")?.provenance).toMatchObject({
+			citation: { canonical_key: "notes.md" },
+			origin: "personal_memory",
+			businessReference: "notes.md",
+			version: expect.any(Number),
+			contentHash: expect.any(String),
+			scope: [{ scope: "global" }],
+			derivedFrom: [],
+			confirmation: "confirmed",
+			freshness: null,
 		});
 		expect(result.sourceStates).toEqual(
 			expect.arrayContaining([
@@ -146,6 +167,41 @@ it("keeps lexical evidence when the optional query embedding never responds", as
 	);
 }, 1000);
 
+it("falls back from native hybrid search when query embedding never responds", async () => {
+	const search = createUnifiedSearch({
+		sourceTimeoutMs: 10,
+		embedQuery: () => new Promise(() => {}),
+		searchRawMessagesHybrid: async () => [],
+		searchRawMessagesLexical: async () => [
+			{ id: "m1", content: "review notes", similarity: 0.9, metadata: {} },
+		],
+	});
+	const result = await search.search({ userId: "alice", query: "review", sources: ["memory"] });
+	expect(result.results.map((hit) => hit.id)).toEqual(["m1"]);
+	expect(result.sourceStates[0]?.status).toBe("partial");
+}, 1000);
+
+it("explicitly reports unknown provenance instead of implying evidence is complete", async () => {
+	const search = createUnifiedSearch({
+		searchWorkspace: async () => ({
+			status: "complete",
+			hits: [{ id: "f1", content: "资料", similarity: 0.9, metadata: {} }],
+		}),
+	});
+	const result = await search.search({ userId: "alice", query: "资料", sources: ["workspace"] });
+	expect(result.evidence[0]?.provenance).toMatchObject({
+		citation: null,
+		origin: null,
+		businessReference: null,
+		version: null,
+		contentHash: null,
+		scope: null,
+		derivedFrom: null,
+		confirmation: null,
+		freshness: null,
+	});
+});
+
 it("reports partial availability when readiness diagnostics fail after usable retrieval", async () => {
 	const search = createUnifiedSearch({
 		searchRawMessagesLexical: async () => [
@@ -159,6 +215,39 @@ it("reports partial availability when readiness diagnostics fail after usable re
 	expect(result.results.map((hit) => hit.id)).toEqual(["m1"]);
 	expect(result.sourceStates).toEqual([
 		expect.objectContaining({ source: "memory", status: "partial", count: 1 }),
+	]);
+});
+
+it("keeps lexical evidence and other sources when optional diagnostics never settle", async () => {
+	const search = createUnifiedSearch({
+		sourceTimeoutMs: 10,
+		searchTimeoutMs: 200,
+		searchRawMessagesLexical: async () => [
+			{ id: "m1", content: "review notes", similarity: 0.9, metadata: {} },
+		],
+		getRawMessageRetrievalStatus: () => new Promise(() => {}),
+		searchWorkspace: async () => ({
+			status: "complete",
+			hits: [{ id: "f1", content: "review file", similarity: 0.9, metadata: {} }],
+		}),
+	});
+	const result = await search.search({ userId: "alice", query: "review", sources: ["memory", "workspace"] });
+	expect(result.results.map((hit) => hit.id).sort()).toEqual(["f1", "m1"]);
+}, 1000);
+
+it("reports a failed source when all configured retrieval channels fail", async () => {
+	const search = createUnifiedSearch({
+		embedQuery: async () => {
+			throw new Error("Embedding unavailable");
+		},
+		searchRawMessagesAnn: async () => [],
+		searchRawMessagesLexical: async () => {
+			throw new Error("Lexical unavailable");
+		},
+	});
+	const result = await search.search({ userId: "alice", query: "review", sources: ["memory"] });
+	expect(result.sourceStates).toEqual([
+		expect.objectContaining({ source: "memory", status: "failed", count: 0 }),
 	]);
 });
 

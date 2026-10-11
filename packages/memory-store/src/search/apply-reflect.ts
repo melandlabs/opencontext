@@ -166,6 +166,7 @@ export async function applyReflectedPlan(
 		snippet: item.snippet,
 		score: item.score,
 		timestamp: item.timestamp,
+		provenance: item.provenance,
 	}));
 
 	const records = evidence.map((item) => toMemoryEvidenceRecord(item, input.userId));

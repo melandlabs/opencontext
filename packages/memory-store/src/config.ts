@@ -126,12 +126,16 @@ export interface UnifiedSearchKnowledgeResult {
 	chunkIndex: number;
 }
 
-export interface UnifiedSearchInsightsResult {
+/** Text candidates shared by host-owned insight and file retrieval. */
+export interface UnifiedSearchTextResult {
 	id: string;
 	content: string;
 	similarity: number;
 	metadata: Record<string, unknown>;
+	provenance?: Partial<import("./search/utilities").SearchEvidenceProvenance>;
 }
+
+export type UnifiedSearchInsightsResult = UnifiedSearchTextResult;
 
 export interface UnifiedSearchReasoningDeps {
 	/** Optional extractive context selection after ranking. Disabled unless supplied. */
@@ -189,7 +193,7 @@ export interface UnifiedSearchDeps extends SearchExecutionBudget {
 			limit: number;
 		},
 	) => Promise<{
-		hits: UnifiedSearchInsightsResult[];
+		hits: UnifiedSearchTextResult[];
 		status: import("./search/utilities").SearchSourceState["status"];
 		message?: string;
 	}>;

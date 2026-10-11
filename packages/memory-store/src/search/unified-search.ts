@@ -80,6 +80,7 @@ export type {
 	SearchSource,
 	SearchTier,
 	SearchEvidence,
+	SearchEvidenceProvenance,
 	SearchSourceState,
 } from "./utilities";
 export type { SearchRuntimeContext } from "./applicability";
@@ -632,6 +633,7 @@ interface MemorySourceTimings {
 interface MemorySourceRun {
 	results: MemorySubQueries;
 	timings: MemorySourceTimings;
+	availability: "complete" | "partial" | "failed";
 }
 
 function searchInputToUnified(input: SearchInput): UnifiedMemorySearchInput {
@@ -697,6 +699,13 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			inputDeps.searchKnowledge && boundedSearchOperation(inputDeps.searchKnowledge, inputDeps),
 		searchSummaries:
 			inputDeps.searchSummaries && boundedSearchOperation(inputDeps.searchSummaries, inputDeps),
+		getRawMessageRetrievalStatus:
+			inputDeps.getRawMessageRetrievalStatus &&
+			boundedSearchOperation(inputDeps.getRawMessageRetrievalStatus, inputDeps),
+		entitySearch: inputDeps.entitySearch && boundedSearchOperation(inputDeps.entitySearch, inputDeps),
+		searchRawMessageNeighbors:
+			inputDeps.searchRawMessageNeighbors &&
+			boundedSearchOperation(inputDeps.searchRawMessageNeighbors, inputDeps),
 	};
 	const logger = deps.logger ?? console;
 
@@ -718,6 +727,31 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		peerPeers: ReadonlyArray<Peer> = [],
 		runtimeContext?: ResolvedSearchRuntimeContext,
 	): Promise<MemorySourceRun> {
+		let completed = 0;
+		let failed = 0;
+		const observe = <Args extends unknown[], Result>(
+			operation: ((...args: Args) => Promise<Result>) | undefined,
+			preparation = false,
+		) =>
+			operation &&
+			(async (...args: Args): Promise<Result> => {
+				try {
+					const result = await operation(...args);
+					if (!preparation) completed++;
+					return result;
+				} catch (error) {
+					failed++;
+					throw error;
+				}
+			});
+		const sourceDeps: UnifiedSearchDeps = {
+			...deps,
+			embedQuery: observe(deps.embedQuery, true),
+			searchRawMessagesAnn: observe(deps.searchRawMessagesAnn),
+			searchRawMessagesHybrid: observe(deps.searchRawMessagesHybrid),
+			searchRawMessagesLexical: observe(deps.searchRawMessagesLexical),
+			entitySearch: observe(deps.entitySearch),
+		};
 		const sourceStartedAt = monotonicNow();
 		const timings: Omit<MemorySourceTimings, "memorySourceMs"> = {
 			semanticMs: 0,
@@ -736,10 +770,11 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		const finish = (results: MemorySubQueries): MemorySourceRun => ({
 			results,
 			timings: { ...timings, memorySourceMs: monotonicNow() - sourceStartedAt },
+			availability: failed > 0 ? (completed > 0 ? "partial" : "failed") : "complete",
 		});
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
-			!deps.reasoning?.iterativePlanner
+			!sourceDeps.reasoning?.iterativePlanner
 		) {
 			warnings.push({
 				source: "memory",
@@ -749,7 +784,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			});
 			if (reasoningInfo) reasoningInfo.degraded = true;
 		}
-		if (reasoningStrategy === "rewrite" && !deps.reasoning?.queryRewriter) {
+		if (reasoningStrategy === "rewrite" && !sourceDeps.reasoning?.queryRewriter) {
 			warnings.push({
 				source: "memory",
 				code: "memory_query_rewrite_not_configured",
@@ -769,9 +804,9 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		let unionEvidence: UnifiedMemorySearchResult[] | null = null;
 		if (
 			(reasoningStrategy === "iterative" || reasoningStrategy === "union") &&
-			deps.reasoning?.iterativePlanner
+			sourceDeps.reasoning?.iterativePlanner
 		) {
-			const planner = deps.reasoning.iterativePlanner;
+			const planner = sourceDeps.reasoning.iterativePlanner;
 			const result = await planner.plan({
 				query: input.query,
 				...(input.includeRetrievalDiagnostics ? { options: { collectDiagnostics: true } } : {}),
@@ -783,7 +818,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 							request.keywords.length > 0 ? request.keywords : deriveLexicalKeywords(input.query);
 						const lexicalHits = await measure("lexicalMs", () =>
 							runLexicalSearchForKeywords(
-								deps,
+								sourceDeps,
 								input,
 								keywords,
 								limit,
@@ -795,15 +830,15 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 						);
 
 						let semanticHits: UnifiedMemorySearchResult[] = [];
-						if (typeof deps.embedQuery === "function") {
+						if (typeof sourceDeps.embedQuery === "function") {
 							try {
 								semanticHits = await measure("semanticMs", async () => {
 									const semanticQuery = keywords.join(" ");
-									const queryEmbedder = deps.embedQuery;
+									const queryEmbedder = sourceDeps.embedQuery;
 									if (typeof queryEmbedder !== "function") return [];
 									const queryEmbedding = await embedQueryVariant(queryEmbedder, input, semanticQuery);
 									return runSemanticSearchForEmbedding(
-										deps,
+										sourceDeps,
 										input,
 										queryEmbedding,
 										limit,
@@ -879,8 +914,22 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			unionEvidence = evidence;
 		}
 
+		const lexicalFallback = async (): Promise<MemorySourceRun> => {
+			const lexical = await runLexicalSearchForKeywords(
+				sourceDeps,
+				input,
+				deriveLexicalKeywords(input.query),
+				limit,
+				logger,
+				peerPeers,
+				warnings,
+				runtimeContext,
+			);
+			return finish({ semantic: [], lexical: filterByDateRange(lexical, input.dateFrom, input.dateTo) });
+		};
+
 		// When no embedding is configured, use default lexical search as fallback
-		if (typeof deps.embedQuery !== "function") {
+		if (typeof sourceDeps.embedQuery !== "function") {
 			// Single warning that captures both the cause (no embedder wired)
 			// and the consequence (we fall back to lexical / BM25). Emitting
 			// two separate warnings — one for each half — used to fire a
@@ -892,22 +941,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					"No embedding provider is configured; using lexical (BM25) search as fallback. Pass an `embedQuery` function via `unified.embedQuery` to enable semantic retrieval.",
 			});
 
-			const keywords = deriveLexicalKeywords(input.query);
-			const lexical = filterByDateRange(
-				await runLexicalSearchForKeywords(
-					deps,
-					input,
-					keywords,
-					limit,
-					logger,
-					peerPeers,
-					warnings,
-					runtimeContext,
-				),
-				input.dateFrom,
-				input.dateTo,
-			);
-			return finish({ semantic: [], lexical });
+			return lexicalFallback();
 		}
 
 		let semantic: UnifiedMemorySearchResult[] = [];
@@ -916,53 +950,62 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		// At this point embedQuery is guaranteed to be a function because the
 		// non-function case returns early above. Capture it in a local constant so
 		// the narrowing is preserved inside the map() callbacks below.
-		const embedQuery = deps.embedQuery;
+		const embedQuery = sourceDeps.embedQuery;
 		const activeMergeStrategy = normalizeUnifiedMemoryMergeStrategy(
-			input.mergeStrategy ?? deps.reasoning?.defaultMergeStrategy ?? "rrf",
+			input.mergeStrategy ?? sourceDeps.reasoning?.defaultMergeStrategy ?? "rrf",
 		);
 		if (
 			reasoningStrategy === "none" &&
 			activeMergeStrategy === "rrf" &&
 			input.threshold === undefined &&
-			typeof deps.searchRawMessagesHybrid === "function"
+			typeof sourceDeps.searchRawMessagesHybrid === "function"
 		) {
-			const hybrid = await measure("hybridMs", async () => {
-				const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
-				const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
-				return (
-					await Promise.all(
-						filters.map((botId) =>
-							deps.searchRawMessagesHybrid?.({
-								userId: input.userId,
-								query: input.query,
-								queryEmbedding,
-								limit: Math.ceil(limit / filters.length),
-								botId,
-								...(runtimeContext ?? {}),
-							}),
-						),
+			try {
+				const hybrid = await measure("hybridMs", async () => {
+					const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
+					const filters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
+					return (
+						await Promise.all(
+							filters.map((botId) =>
+								sourceDeps.searchRawMessagesHybrid?.({
+									userId: input.userId,
+									query: input.query,
+									queryEmbedding,
+									limit: Math.ceil(limit / filters.length),
+									botId,
+									...(runtimeContext ?? {}),
+								}),
+							),
+						)
 					)
-				)
-					.flatMap((items) => items ?? [])
-					.filter(isRawMemorySemanticResult)
-					.map(toMemoryResult);
-			});
-			return finish({
-				semantic: [],
-				lexical: [],
-				hybrid: filterByDateRange(hybrid, input.dateFrom, input.dateTo),
-			});
+						.flatMap((items) => items ?? [])
+						.filter(isRawMemorySemanticResult)
+						.map(toMemoryResult);
+				});
+				return finish({
+					semantic: [],
+					lexical: [],
+					hybrid: filterByDateRange(hybrid, input.dateFrom, input.dateTo),
+				});
+			} catch (error) {
+				warnings.push({
+					source: "memory",
+					code: "memory_hybrid_search_failed",
+					message: error instanceof Error ? error.message : String(error),
+				});
+				return lexicalFallback();
+			}
 		}
 
 		// Rewrite strategy: embed multiple variants, then combine their candidates.
-		if (reasoningStrategy === "rewrite" && deps.reasoning?.queryRewriter) {
+		if (reasoningStrategy === "rewrite" && sourceDeps.reasoning?.queryRewriter) {
 			try {
-				const variants = await deps.reasoning.queryRewriter.rewrite({
+				const variants = await sourceDeps.reasoning.queryRewriter.rewrite({
 					query: input.query,
 					userId: input.userId,
 					authToken: input.authToken,
 				});
-				if (deps.reasoning.rewriteLexical === true) {
+				if (sourceDeps.reasoning.rewriteLexical === true) {
 					const seen = new Set<string>();
 					lexicalQueries = [input.query, ...variants]
 						.map((query) => query.trim())
@@ -979,7 +1022,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					// The rewriter catches its own LLM errors and degrades to
 					// `[original]` silently, so we ask it whether the last call
 					// fell back instead of relying on a thrown error.
-					if (deps.reasoning.queryRewriter.lastDegraded?.()) {
+					if (sourceDeps.reasoning.queryRewriter.lastDegraded?.()) {
 						reasoningInfo.degraded = true;
 					}
 				}
@@ -991,7 +1034,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					return Promise.all(
 						embeddings.map((embedding) =>
 							runSemanticSearchForEmbedding(
-								deps,
+								sourceDeps,
 								input,
 								embedding,
 								limit,
@@ -1006,7 +1049,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 				});
 				if (
 					activeMergeStrategy === "rrf" &&
-					deps.reasoning.rewriteSemanticMerge === "rrf" &&
+					sourceDeps.reasoning.rewriteSemanticMerge === "rrf" &&
 					lists.length > 1 &&
 					lists.some((hits) => hits.length > 0)
 				) {
@@ -1039,7 +1082,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 				semantic = await measure("semanticMs", async () => {
 					const queryEmbedding = await embedQueryVariant(embedQuery, input, input.query);
 					return runSemanticSearchForEmbedding(
-						deps,
+						sourceDeps,
 						input,
 						queryEmbedding,
 						limit,
@@ -1069,7 +1112,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 		if (
 			activeMergeStrategy === "rrf" &&
 			lexicalQueries.length > 1 &&
-			typeof deps.searchRawMessagesLexical === "function"
+			typeof sourceDeps.searchRawMessagesLexical === "function"
 		) {
 			const lists = await Promise.all(
 				lexicalQueries.map(async (query) => ({
@@ -1077,7 +1120,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					hits: dedupeChannelByParent(
 						await measure("lexicalMs", () =>
 							runLexicalSearchForKeywords(
-								deps,
+								sourceDeps,
 								input,
 								deriveLexicalKeywords(query),
 								limit,
@@ -1099,11 +1142,11 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			}));
 			if (reasoningInfo) reasoningInfo.lexicalRewrittenQueries = lexicalQueries;
 		} else if (keywords.length > 0) {
-			if (typeof deps.searchRawMessagesLexical === "function") {
+			if (typeof sourceDeps.searchRawMessagesLexical === "function") {
 				const lexicalStartedAt = monotonicNow();
 				try {
 					const lexFilters = input.botIds && input.botIds.length > 0 ? input.botIds : [undefined];
-					const searchRawMessagesLexical = deps.searchRawMessagesLexical;
+					const searchRawMessagesLexical = sourceDeps.searchRawMessagesLexical;
 					const factTypes = input.factTypes?.length ? input.factTypes : undefined;
 					const includeDeprecated = input.includeDeprecated === true;
 					lexical = (
@@ -1149,15 +1192,15 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			}
 		}
 
-		// Optional entity sub-query. Driven by `deps.entitySearch`; the
+		// Optional entity sub-query. Driven by `sourceDeps.entitySearch`; the
 		// sub-query is silent (no warning) when the host simply hasn't
 		// wired an entity search dep, except when RRF was explicitly
 		// requested — then we surface a not-configured warning that
 		// mirrors the lexical path.
 		let entity: UnifiedMemorySearchResult[] | undefined;
-		if (typeof deps.entitySearch === "function") {
+		if (typeof sourceDeps.entitySearch === "function") {
 			entity = filterByDateRange(
-				await runEntitySearchForQuery(deps, input, limit, logger, peerPeers, runtimeContext),
+				await runEntitySearchForQuery(sourceDeps, input, limit, logger, peerPeers, runtimeContext),
 				input.dateFrom,
 				input.dateTo,
 			);
@@ -1165,7 +1208,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 				entity = undefined;
 			} else if (
 				normalizeUnifiedMemoryMergeStrategy(
-					input.mergeStrategy ?? deps.reasoning?.defaultMergeStrategy ?? "rrf",
+					input.mergeStrategy ?? sourceDeps.reasoning?.defaultMergeStrategy ?? "rrf",
 				) !== "rrf"
 			) {
 				// Entity scores are fused via RRF; under a similarity merge the
@@ -1266,6 +1309,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 
 		if (sources.includes("memory")) {
 			let failed = false;
+			let availability: SearchSourceState["status"] = "not_ready";
 			// Only skip when storage is truly unavailable AND no provider
 			// is wired. The legacy check on `isRawMessageStorageAvailable`
 			// alone dropped hits when callers configured a custom
@@ -1289,6 +1333,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 						runtimeContext,
 					);
 					memorySubs = memoryRun.results;
+					availability = memoryRun.availability;
 					memoryTimings = memoryRun.timings;
 					memorySubs = {
 						semantic: dedupeChannelByParent(memorySubs.semantic, "memory-semantic"),
@@ -1342,21 +1387,10 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 					message: "Raw memory storage is not available in this environment.",
 				});
 			}
-			const memoryWarnings = warnings.filter(
-				(warning) =>
-					warning.source === "memory" &&
-					/failed|unavailable|not_configured|dimension_mismatch/.test(warning.code),
-			);
+			const memoryWarnings = warnings.filter((warning) => warning.source === "memory");
 			sourceStates.push({
 				source: "memory",
-				status:
-					failed && !memorySubs
-						? "failed"
-						: !memorySubs
-							? "not_ready"
-							: memoryWarnings.length
-								? "partial"
-								: "complete",
+				status: failed ? (memorySubs ? "partial" : "failed") : availability,
 				count: new Set(
 					[
 						...(memorySubs?.semantic ?? []),
@@ -1419,6 +1453,7 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 						content: hit.content,
 						similarity: hit.similarity,
 						metadata: hit.metadata,
+						provenance: hit.provenance,
 					});
 				}
 				sourceStates.push({ source: "insights", status: "complete", count: insightHits.length });
@@ -1764,6 +1799,17 @@ export function createUnifiedSearch(inputDeps: UnifiedSearchDeps = {}): UnifiedS
 			source: mapHitToEvidenceSource(hit),
 			snippet: hit.content,
 			score: hit.similarity,
+			provenance: {
+				citation: hit.provenance?.citation ?? null,
+				origin: hit.provenance?.origin ?? null,
+				businessReference: hit.provenance?.businessReference ?? null,
+				version: hit.provenance?.version ?? null,
+				contentHash: hit.provenance?.contentHash ?? null,
+				scope: hit.provenance?.scope ?? null,
+				derivedFrom: hit.provenance?.derivedFrom ?? null,
+				confirmation: hit.provenance?.confirmation ?? null,
+				freshness: hit.provenance?.freshness ?? null,
+			},
 			timestamp: getCandidateTimestamp(hit.metadata),
 			metadata: hit.metadata,
 		}));

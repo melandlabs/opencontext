@@ -215,6 +215,7 @@ export type {
 	SearchSource,
 	SearchTier,
 	SearchEvidence,
+	SearchEvidenceProvenance,
 	SearchSourceState,
 	UnifiedMemoryMergeStrategy,
 	UnifiedMemoryRankedList,
@@ -281,6 +282,7 @@ export type {
 	EmbedQueryFn,
 	UnifiedSearchKnowledgeResult,
 	UnifiedSearchInsightsResult,
+	UnifiedSearchTextResult,
 	UnifiedSearchReasoningDeps,
 	SearchProviderApplicabilityInput,
 } from "./config";
