@@ -1,8 +1,12 @@
 {
 	"name": "@melandlabs/workspace",
-	"version": "0.8.1",
+	"version": "0.9.0",
 	"type": "module",
-	"files": ["dist", "README.md", "LICENSE"],
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
 	"publishConfig": {
 		"access": "public"
 	},
@@ -36,7 +40,12 @@
 	},
 	"license": "Apache-2.0",
 	"description": "OpenContext · workspace module. Provides project-level indexing, hybrid retrieval, and cross-file reference edges over a project workspace.",
-	"keywords": ["opencontext", "project-context", "hybrid-search", "rag"],
+	"keywords": [
+		"opencontext",
+		"project-context",
+		"hybrid-search",
+		"rag"
+	],
 	"dependencies": {
 		"@melandlabs/contracts": "^0.8.1",
 		"@melandlabs/env-config": "^0.4.1",
