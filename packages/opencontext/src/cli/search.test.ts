@@ -190,6 +190,20 @@ async function getMockStore() {
 	};
 }
 
+function makeUnknownProvenance(): SearchOutput["evidence"][number]["provenance"] {
+	return {
+		citation: null,
+		origin: null,
+		businessReference: null,
+		version: null,
+		contentHash: null,
+		scope: null,
+		derivedFrom: null,
+		confirmation: null,
+		freshness: null,
+	};
+}
+
 function makeOutput(overrides: Partial<SearchOutput> = {}): SearchOutput {
 	return {
 		query: "x",
@@ -211,10 +225,16 @@ function makeOutput(overrides: Partial<SearchOutput> = {}): SearchOutput {
 				score: 0.87,
 				snippet: "discussed the roadmap with the team",
 				timestamp: Date.parse("2026-08-20T10:00:00Z"),
+				provenance: makeUnknownProvenance(),
 			},
 		],
 		reasoning: { strategy: "iterative", degraded: false, iterations: 2 },
 		warnings: [],
+		sourceStates: [
+			{ source: "memory", status: "complete", count: 1 },
+			{ source: "insights", status: "complete", count: 0 },
+			{ source: "knowledge", status: "complete", count: 0 },
+		],
 		...overrides,
 	};
 }
@@ -353,6 +373,7 @@ describe("runSearch", () => {
 						snippet: "We use tRPC",
 						timestamp: Date.parse("2026-08-15T10:00:00Z"),
 						metadata: { source: "meeting://2026-08-15" },
+						provenance: makeUnknownProvenance(),
 					},
 				],
 			}),
