@@ -15,6 +15,7 @@
  */
 
 import type Database from "better-sqlite3";
+import { workspaceIndexText } from "./search/tokenization";
 
 /**
  * Current schema version. Bump when adding a new table or column;
@@ -26,8 +27,9 @@ import type Database from "better-sqlite3";
  *                 workspace_jobs.
  * v2           — workspace_reference_edges.provenance (TEXT), DLQ support
  *                 via `index_status = 'dlq'` enum extension.
+ * v3           — derived lexical terms with Chinese bigrams and atomic reindex.
  */
-export const WORKSPACE_SCHEMA_VERSION = 2;
+export const WORKSPACE_SCHEMA_VERSION = 3;
 
 /**
  * Idempotent column-add helper for SQLite (which lacks `ADD COLUMN IF NOT
@@ -55,6 +57,9 @@ function addColumnIfMissing(db: Database.Database, table: string, column: string
  * workspace (no embeddings yet) never wastes disk on an empty vector table.
  */
 export function initializeWorkspaceSchema(db: Database.Database): void {
+	db.function("workspace_index_text", { deterministic: true }, (content: unknown) =>
+		workspaceIndexText(typeof content === "string" ? content : ""),
+	);
 	db.pragma("journal_mode = WAL");
 	db.pragma("busy_timeout = 30000");
 	db.pragma("foreign_keys = ON");
@@ -124,25 +129,6 @@ export function initializeWorkspaceSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_workspace_chunks_resource
       ON workspace_chunks(resource_id, version_id);
 
-    CREATE VIRTUAL TABLE IF NOT EXISTS workspace_chunks_fts USING fts5(
-      content,
-      content='workspace_chunks',
-      content_rowid='id'
-    );
-
-    CREATE TRIGGER IF NOT EXISTS workspace_chunks_ai AFTER INSERT ON workspace_chunks BEGIN
-      INSERT INTO workspace_chunks_fts(rowid, content) VALUES (new.id, new.content);
-    END;
-    CREATE TRIGGER IF NOT EXISTS workspace_chunks_ad AFTER DELETE ON workspace_chunks BEGIN
-      INSERT INTO workspace_chunks_fts(workspace_chunks_fts, rowid, content)
-      VALUES('delete', old.id, old.content);
-    END;
-    CREATE TRIGGER IF NOT EXISTS workspace_chunks_au AFTER UPDATE ON workspace_chunks BEGIN
-      INSERT INTO workspace_chunks_fts(workspace_chunks_fts, rowid, content)
-      VALUES('delete', old.id, old.content);
-      INSERT INTO workspace_chunks_fts(rowid, content) VALUES (new.id, new.content);
-    END;
-
     CREATE TABLE IF NOT EXISTS workspace_reference_edges (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       workspace_id TEXT NOT NULL,
@@ -189,6 +175,7 @@ export function initializeWorkspaceSchema(db: Database.Database): void {
 	// Stored as a JSON-encoded `EdgeProvenance` object — keeping it
 	// opaque at the SQL layer so we can grow the shape without DDL.
 	addColumnIfMissing(db, "workspace_reference_edges", "provenance", "TEXT");
+	initializeLexicalIndex(db);
 
 	// ─── Memory → Workspace promotion bridge (Tier 4.1) ─────────────────
 	//
@@ -212,4 +199,33 @@ export function initializeWorkspaceSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_workspace_resource_facts_resource
       ON workspace_resource_facts(resource_id, version_id);
   `);
+}
+
+function initializeLexicalIndex(db: Database.Database): void {
+	db.exec("CREATE TABLE IF NOT EXISTS workspace_schema_migrations (version INTEGER PRIMARY KEY)");
+	// Rebuild old indexes atomically. FTS stores derived terms, while source
+	// chunks retain their original text, offsets, hashes and version identity.
+	db.transaction(() => {
+		if (db.prepare("SELECT 1 FROM workspace_schema_migrations WHERE version = 3").get()) return;
+		db.exec(`
+      DROP TRIGGER IF EXISTS workspace_chunks_ai;
+      DROP TRIGGER IF EXISTS workspace_chunks_ad;
+      DROP TRIGGER IF EXISTS workspace_chunks_au;
+      DROP TABLE IF EXISTS workspace_chunks_fts;
+      CREATE VIRTUAL TABLE workspace_chunks_fts USING fts5(content);
+      INSERT INTO workspace_chunks_fts(rowid, content)
+        SELECT id, workspace_index_text(content) FROM workspace_chunks;
+      CREATE TRIGGER workspace_chunks_ai AFTER INSERT ON workspace_chunks BEGIN
+        INSERT INTO workspace_chunks_fts(rowid, content) VALUES (new.id, workspace_index_text(new.content));
+      END;
+      CREATE TRIGGER workspace_chunks_ad AFTER DELETE ON workspace_chunks BEGIN
+        DELETE FROM workspace_chunks_fts WHERE rowid = old.id;
+      END;
+      CREATE TRIGGER workspace_chunks_au AFTER UPDATE OF content ON workspace_chunks BEGIN
+        DELETE FROM workspace_chunks_fts WHERE rowid = old.id;
+        INSERT INTO workspace_chunks_fts(rowid, content) VALUES (new.id, workspace_index_text(new.content));
+      END;
+      INSERT INTO workspace_schema_migrations(version) VALUES (3);
+    `);
+	}).immediate();
 }

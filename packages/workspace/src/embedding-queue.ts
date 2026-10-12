@@ -54,6 +54,7 @@ interface QueueEntry {
 	version_id: number;
 	jobId?: number;
 	attempt: number;
+	jobIds: Set<number>;
 }
 
 class DefaultEmbeddingQueue implements EmbeddingQueue {
@@ -64,6 +65,8 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	private readonly batchTimeoutMs: number;
 	private readonly maxRetries: number;
 	private readonly pending: QueueEntry[] = [];
+	private readonly active = new Map<string, QueueEntry>();
+	private readonly retrying = new Set<string>();
 	private inFlight = 0;
 	private recentFailures = 0;
 
@@ -77,7 +80,18 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	}
 
 	enqueue(input: { resource_id: number; version_id: number; jobId?: number }): Promise<void> {
-		const entry: QueueEntry = { ...input, attempt: 0 };
+		const key = `${input.resource_id}:${input.version_id}`;
+		const existing = this.active.get(key);
+		if (existing) {
+			if (input.jobId !== undefined) existing.jobIds.add(input.jobId);
+			return Promise.resolve();
+		}
+		const entry: QueueEntry = {
+			...input,
+			attempt: 0,
+			jobIds: new Set(input.jobId === undefined ? [] : [input.jobId]),
+		};
+		this.active.set(key, entry);
 		this.pending.push(entry);
 		// Fire-and-forget; do not await from inside the synchronous enqueue.
 		queueMicrotask(() => this.tick());
@@ -86,7 +100,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 
 	async drain(): Promise<void> {
 		// Wait until both the pending list and the in-flight count settle.
-		while (this.pending.length > 0 || this.inFlight > 0) {
+		while (this.active.size > 0 || this.inFlight > 0) {
 			await delay(5);
 		}
 	}
@@ -94,7 +108,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	stats(): EmbeddingQueueStats {
 		const dlqJobs = this.store.getDlqJobs();
 		return {
-			queueDepth: this.pending.length,
+			queueDepth: this.pending.length + this.retrying.size,
 			inFlight: this.inFlight,
 			failedRecent: this.recentFailures,
 			dlqSize: dlqJobs.length,
@@ -155,7 +169,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	}
 
 	private async runJob(entry: QueueEntry): Promise<void> {
-		const { resource_id, version_id, jobId } = entry;
+		const { resource_id, version_id, jobIds } = entry;
 		try {
 			let totalProcessed = 0;
 			while (true) {
@@ -181,7 +195,10 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 							attempt: entry.attempt + 1,
 						};
 						const delayMs = backoffMs(entry.attempt);
+						const key = `${resource_id}:${version_id}`;
+						this.retrying.add(key);
 						setTimeout(() => {
+							this.retrying.delete(key);
 							this.pending.push(next);
 							this.tick();
 						}, delayMs);
@@ -190,7 +207,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 						return;
 					}
 					// Out of retries → DLQ.
-					this.store.markJobDlq(jobId ?? -1, message);
+					for (const jobId of jobIds) this.store.markJobDlq(jobId, message);
 					this.store.markIndexDlq(resource_id, version_id, message);
 					return;
 				}
@@ -205,13 +222,17 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 				if (batch.length < this.batchSize) break;
 			}
 			this.store.markVersionEmbeddingReady(resource_id, version_id);
-			if (jobId !== undefined && jobId >= 0) {
-				this.store.completeJob(jobId, totalProcessed);
+			for (const jobId of jobIds) {
+				if (jobId >= 0) this.store.completeJob(jobId, totalProcessed);
 			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			this.store.markJobFailed(jobId ?? null, message);
+			for (const jobId of jobIds) this.store.markJobFailed(jobId, message);
 			this.store.markVersionEmbeddingFailed(resource_id, version_id, message);
+		} finally {
+			// Release terminal work before another enqueue can attach a new consumer.
+			const key = `${resource_id}:${version_id}`;
+			if (!this.retrying.has(key)) this.active.delete(key);
 		}
 	}
 }

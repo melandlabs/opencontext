@@ -132,14 +132,15 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 		userId: z.string(),
 		query: z.string().min(1),
 		sources: z
-			.array(z.enum(["memory", "insights", "knowledge"]))
+			.array(z.enum(["memory", "insights", "knowledge", "workspace"]))
+			.min(1)
 			.optional()
-			.describe("Default: ['memory','insights','knowledge']"),
+			.describe("Default: ['memory','insights','knowledge','workspace']"),
 		tiers: z
-			.array(z.enum(["summary", "raw", "insight", "knowledge"]))
+			.array(z.enum(["summary", "raw", "insight", "knowledge", "workspace"]))
 			.optional()
 			.describe(
-				"Per-tier evidence scope for synthesis. Default: ['summary','raw','insight','knowledge']. Ignored when `synthesize` is falsy.",
+				"Evidence tiers. Default: ['raw','insight','knowledge','workspace']; synthesis additionally includes 'summary'.",
 			),
 		reasoningStrategy: z
 			.enum(["none", "rewrite", "iterative", "union"])
@@ -262,8 +263,8 @@ export async function startMcpServer(options: StartMcpServerOptions = {}): Promi
 			const a = args as {
 				userId: string;
 				query: string;
-				sources?: ("memory" | "insights" | "knowledge")[];
-				tiers?: Array<"summary" | "raw" | "insight" | "knowledge">;
+				sources?: ("memory" | "insights" | "knowledge" | "workspace")[];
+				tiers?: Array<"summary" | "raw" | "insight" | "knowledge" | "workspace">;
 				reasoningStrategy?: "none" | "rewrite" | "iterative" | "union";
 				synthesize?: boolean | { responseSchema?: Record<string, unknown> };
 				responseSchema?: Record<string, unknown>;

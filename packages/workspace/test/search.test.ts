@@ -6,6 +6,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -19,12 +20,20 @@ import { SqliteWorkspaceStore } from "../src/sqlite";
 import type { OkfFolderResource, WorkspaceSearchHit } from "../src/types";
 
 let scratchDir: string;
+const databases: Database.Database[] = [];
+
+function createStore(): SqliteWorkspaceStore {
+	const database = new Database(join(scratchDir, "store.db"));
+	databases.push(database);
+	return new SqliteWorkspaceStore({ db: database });
+}
 
 beforeEach(() => {
 	scratchDir = mkdtempSync(join(tmpdir(), "workspace-search-"));
 });
 
 afterEach(() => {
+	for (const database of databases.splice(0)) database.close();
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
@@ -87,7 +96,7 @@ async function indexThreeDocuments(store: SqliteWorkspaceStore): Promise<void> {
 
 describe("search pipeline", () => {
 	it("returns BM25-ranked lexical hits for matching keywords", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const hits = searchLexical(store, {
@@ -103,7 +112,7 @@ describe("search pipeline", () => {
 	});
 
 	it("returns no semantic hits when embeddings haven't been written", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const hits = searchSemantic(store, {
@@ -118,7 +127,7 @@ describe("search pipeline", () => {
 	});
 
 	it("fuses lexical + semantic candidates via RRF (k=60)", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const lexical = searchLexical(store, {
@@ -141,7 +150,7 @@ describe("search pipeline", () => {
 	});
 
 	it("expands hits via cites edges for cross-file search", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		const contract = await store.indexResource({
 			workspace_id: "p1",
@@ -181,7 +190,7 @@ describe("search pipeline", () => {
 	});
 
 	it("falls back to lexical-only when embeddings fail during hybrid search", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const result = await searchWorkspaceContext(
@@ -200,7 +209,7 @@ describe("search pipeline", () => {
 	});
 
 	it("resolves a citation back to its live content", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const hits = searchLexical(store, {
@@ -222,7 +231,7 @@ describe("search pipeline", () => {
 	});
 
 	it("detects drift when the chunk content has changed since the citation was issued", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const hits = searchLexical(store, {
@@ -249,7 +258,7 @@ describe("search pipeline", () => {
 	});
 
 	it("reports missing for non-workspace citations without a host resolver", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
 		const result = await resolveWorkspaceCitation({ user_id: "u1", request_id: "req-4" }, store, {
@@ -267,7 +276,7 @@ describe("search pipeline", () => {
 	});
 
 	it("delegates memory_fact citations to the host resolver", async () => {
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = createStore();
 		await store.init();
 		const result = await resolveWorkspaceCitation(
 			{ user_id: "u1", request_id: "req-5" },

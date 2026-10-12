@@ -27,6 +27,7 @@
 import { createHash } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { type Citation, type CitationEdge, buildCitationId } from "@melandlabs/contracts";
 import { getOpenContextPath } from "@melandlabs/env-config";
 import {
@@ -38,6 +39,7 @@ import { floatArrayToBuffer } from "@melandlabs/sqlite";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
 import { initializeWorkspaceSchema } from "./schema";
+import { workspaceFtsQuery, workspaceSearchWords } from "./search/tokenization";
 import type {
 	EdgeProvenance,
 	ListWorkspaceResourcesInput,
@@ -238,6 +240,8 @@ export interface ISqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
+		/** Compare within the index transaction; an identical committed revision may be retried. */
+		expected_version_id?: number | null;
 	}): Promise<{
 		resource_id: number;
 		version_id: number;
@@ -343,6 +347,8 @@ export interface ISqliteWorkspaceStore {
 		user_id: string;
 		query: string;
 		resource_types?: string[];
+		/** Host-authorized resource identities; an empty allowlist returns no hits. */
+		canonical_keys?: string[];
 		limit: number;
 	}): WorkspaceSearchHit[];
 
@@ -357,6 +363,7 @@ export interface ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
+		user_id: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -364,6 +371,7 @@ export interface ISqliteWorkspaceStore {
 
 	resolveCitation(input: {
 		workspace_id: string;
+		user_id: string;
 		citation: Citation;
 	}):
 		| {
@@ -650,6 +658,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		workspace_id: string;
 		user_id: string;
 		resource: OkfFolderResource;
+		expected_version_id?: number | null;
 	}): Promise<{
 		resource_id: number;
 		version_id: number;
@@ -663,13 +672,47 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		const tx = this.db.transaction(() => {
 			const existing = this.db
 				.prepare(
-					`SELECT id, current_version_id
+					`SELECT id, user_id, current_version_id, title, resource_type, metadata
                      FROM workspace_resources
                      WHERE workspace_id = ? AND canonical_key = ?`,
 				)
 				.get(workspace_id, resource.canonical_key) as
-				| { id: number; current_version_id: number | null }
+				| {
+						id: number;
+						user_id: string;
+						current_version_id: number | null;
+						title: string;
+						resource_type: string;
+						metadata: string | null;
+				  }
 				| undefined;
+			if (existing && existing.user_id !== user_id) throw new Error("Workspace resource owner mismatch");
+			const prevVersion =
+				existing?.current_version_id == null
+					? undefined
+					: (this.db
+							.prepare("SELECT sha256, metadata, source_path FROM workspace_resource_versions WHERE id = ?")
+							.get(existing.current_version_id) as
+							| { sha256: string; metadata: string | null; source_path: string | null }
+							| undefined);
+			const previousFrontMatter = parseJson<Record<string, unknown>>(prevVersion?.metadata, {});
+			const incomingFrontMatter =
+				resource.front_matter === undefined
+					? previousFrontMatter
+					: parseJson<Record<string, unknown>>(stringifyJson(resource.front_matter), {});
+			const sameRevision =
+				prevVersion?.sha256 === contentHash &&
+				isDeepStrictEqual(previousFrontMatter, incomingFrontMatter) &&
+				existing?.title === resource.title &&
+				existing.resource_type === resource.resource_type &&
+				prevVersion.source_path === resource.absolute_path;
+			if (
+				input.expected_version_id !== undefined &&
+				input.expected_version_id !== (existing?.current_version_id ?? null) &&
+				(!sameRevision || parseJson<Record<string, unknown>>(existing?.metadata, {}).deleted_at)
+			) {
+				throw new Error("Workspace resource version conflict");
+			}
 
 			let resourceId: number;
 			let currentVersionId: number | null = existing?.current_version_id ?? null;
@@ -708,10 +751,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			} else {
 				resourceId = existing.id;
 				if (currentVersionId !== null) {
-					const prevVersion = this.db
-						.prepare("SELECT sha256 FROM workspace_resource_versions WHERE id = ?")
-						.get(currentVersionId) as { sha256: string } | undefined;
-					if (prevVersion?.sha256 === contentHash) {
+					if (sameRevision) {
 						changeKind = "unchanged";
 						// A resource that was soft-deleted while its file was
 						// away must become visible again even though the body
@@ -757,7 +797,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					currentVersionId,
 					resource.absolute_path,
 					now,
-					stringifyJson(resource.front_matter),
+					stringifyJson(incomingFrontMatter),
 				);
 			const versionId = Number(insertVersion.lastInsertRowid);
 
@@ -793,6 +833,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				);
 			}
 
+			// Replace source metadata while retaining store-owned lifecycle markers.
+			const metadata = parseJson<Record<string, unknown>>(existing?.metadata, {});
+			for (const key of Object.keys(previousFrontMatter)) delete metadata[key];
+			Object.assign(metadata, incomingFrontMatter);
+			this.db
+				.prepare("UPDATE workspace_resources SET metadata = ? WHERE id = ?")
+				.run(stringifyJson(metadata), resourceId);
 			// Re-indexing a soft-deleted resource (file came back with a new
 			// body) restores it to list/search results.
 			this.clearSoftDeleteMarker(resourceId);
@@ -804,10 +851,10 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			this.db
 				.prepare(
 					`UPDATE workspace_resources
-                     SET current_version_id = ?, index_status = 'pending', updated_at = ?, title = ?
+                     SET current_version_id = ?, index_status = 'pending', updated_at = ?, title = ?, resource_type = ?
                      WHERE id = ?`,
 				)
-				.run(versionId, now, resource.title, resourceId);
+				.run(versionId, now, resource.title, resource.resource_type, resourceId);
 
 			currentVersionId = versionId;
 			return { resource_id: resourceId, version_id: versionId, change_kind: changeKind };
@@ -1347,17 +1394,23 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		user_id: string;
 		query: string;
 		resource_types?: string[];
+		canonical_keys?: string[];
 		limit: number;
 	}): WorkspaceSearchHit[] {
-		void input.user_id;
-		const keywords = tokenizeQuery(input.query);
+		if (input.canonical_keys?.length === 0) return [];
+		const keywords = workspaceSearchWords(input.query);
 		if (keywords.length === 0) return [];
-		const ftsQuery = keywords.map((kw) => `"${kw.replace(/"/g, '""')}"`).join(" OR ");
-		const params: Array<string | number> = [];
+		const ftsQuery = workspaceFtsQuery(keywords);
+		const params: Array<string | number> = [ftsQuery, input.workspace_id, input.user_id];
 		let resourceTypeFilter = "";
 		if (input.resource_types && input.resource_types.length > 0) {
 			resourceTypeFilter = `AND pr.resource_type IN (${input.resource_types.map(() => "?").join(",")})`;
 			params.push(...input.resource_types);
+		}
+		let canonicalKeyFilter = "";
+		if (input.canonical_keys) {
+			canonicalKeyFilter = "AND pr.canonical_key IN (SELECT value FROM json_each(?))";
+			params.push(JSON.stringify(input.canonical_keys));
 		}
 		const sql = `
             SELECT pc.chunk_id,
@@ -1375,12 +1428,14 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
             JOIN workspace_resources pr ON pr.id = pc.resource_id
             WHERE workspace_chunks_fts MATCH ?
               AND pc.workspace_id = ?
+              AND pr.user_id = ?
               AND json_extract(pr.metadata, '$.deleted_at') IS NULL
               ${resourceTypeFilter}
+              ${canonicalKeyFilter}
             ORDER BY bm25_score ASC
             LIMIT ?
         `;
-		params.unshift(ftsQuery, input.workspace_id, input.limit);
+		params.push(input.limit);
 		const rows = this.db.prepare(sql).all(...params) as Array<{
 			chunk_id: string;
 			resource_id: number;
@@ -1467,7 +1522,11 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 				input.resource_types && input.resource_types.length > 0
 					? `AND pr.resource_type IN (${input.resource_types.map(() => "?").join(",")})`
 					: "";
-			const params: Array<string | number> = [input.workspace_id, ...vecRows.map((r) => r.chunk_id)];
+			const params: Array<string | number> = [
+				input.workspace_id,
+				input.user_id,
+				...vecRows.map((r) => r.chunk_id),
+			];
 			if (input.resource_types && input.resource_types.length > 0) {
 				params.push(...input.resource_types);
 			}
@@ -1485,6 +1544,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                      FROM workspace_chunks pc
                      JOIN workspace_resources pr ON pr.id = pc.resource_id
                      WHERE pc.workspace_id = ?
+                       AND pr.user_id = ?
                        AND pc.chunk_id IN (${vecRows.map(() => "?").join(",")})
                        AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                        ${resourceTypeFilter}
@@ -1561,7 +1621,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	// Citation resolution (drift detection)
 	// -------------------------------------------------------------------------
 
-	resolveCitation(input: { workspace_id: string; citation: Citation }): ReturnType<
+	resolveCitation(input: { workspace_id: string; user_id: string; citation: Citation }): ReturnType<
 		ISqliteWorkspaceStore["resolveCitation"]
 	> {
 		const { workspace_id, citation } = input;
@@ -1580,11 +1640,14 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		this.ensureInitialized();
 		const row = this.db
 			.prepare(
-				`SELECT content, content_hash, resource_id, version_id, chunk_index
-                 FROM workspace_chunks
-                 WHERE workspace_id = ? AND chunk_id = ?`,
+				`SELECT pc.content, pc.content_hash, pc.resource_id, pc.version_id, pc.chunk_index
+                 FROM workspace_chunks pc
+                 JOIN workspace_resources pr ON pr.id = pc.resource_id
+                 WHERE pc.workspace_id = ? AND pc.chunk_id = ?
+                   AND pr.user_id = ?
+                   AND json_extract(pr.metadata, '$.deleted_at') IS NULL`,
 			)
-			.get(workspace_id, citation.chunk_id) as
+			.get(workspace_id, citation.chunk_id, input.user_id) as
 			| {
 					content: string;
 					content_hash: string;
@@ -1593,7 +1656,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 					chunk_index: number;
 			  }
 			| undefined;
-		if (!row) return { status: "missing", reason: "chunk_not_found" };
+		if (
+			!row ||
+			(citation.resource_id !== undefined && citation.resource_id !== row.resource_id) ||
+			(citation.version_id !== undefined && citation.version_id !== row.version_id)
+		) {
+			return { status: "missing", reason: "chunk_not_found" };
+		}
 		const drift = row.content_hash !== citation.content_hash;
 		if (drift) {
 			return {
@@ -1624,6 +1693,7 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 
 	expandNeighbors(input: {
 		workspace_id: string;
+		user_id: string;
 		hits: WorkspaceSearchHit[];
 		hops: 1 | 2;
 		limit: number;
@@ -1677,11 +1747,13 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                          FROM workspace_chunks pc
                          JOIN workspace_resources pr ON pr.id = pc.resource_id
                          WHERE pc.resource_id = ?
+                         AND pc.workspace_id = ?
+                         AND pr.user_id = ?
                          AND json_extract(pr.metadata, '$.deleted_at') IS NULL
                          ORDER BY pc.chunk_index ASC
                          LIMIT 1`,
 					)
-					.get(id) as
+					.get(id, input.workspace_id, input.user_id) as
 					| {
 							chunk_id: string;
 							resource_id: number;
@@ -1966,13 +2038,6 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 			.prepare("UPDATE workspace_jobs SET total = ?, updated_at = ? WHERE id = ?")
 			.run(total, currentUnixSeconds(), jobId);
 	}
-}
-
-function tokenizeQuery(query: string): string[] {
-	return query
-		.split(/\s+/u)
-		.map((token) => token.trim())
-		.filter((token) => token.length > 0);
 }
 
 function buildSnippet(content: string, keywords: string[]): string {

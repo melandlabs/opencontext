@@ -6,11 +6,20 @@
  * storage/search implementations.
  */
 
-import type { FactType } from "@melandlabs/contracts";
+import type { Citation, FactType } from "@melandlabs/contracts";
 import type { Peer } from "@melandlabs/contracts/peer";
+import type { MemoryApplicabilityContext } from "@melandlabs/memory-consolidation";
 import { mergeMatchedEvidence, withMatchedEvidence } from "./matched-evidence";
 
-export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge";
+export type UnifiedMemorySearchSource = "memory" | "insights" | "knowledge" | "workspace";
+
+/** Retrieval availability and candidate count before cross-source ranking and limits. */
+export interface SearchSourceState {
+	source: UnifiedMemorySearchSource;
+	status: "complete" | "partial" | "not_configured" | "not_ready" | "failed";
+	count: number;
+	message?: string;
+}
 
 /**
  * A retrieval channel that contributed to a hit's final score.
@@ -240,11 +249,13 @@ export interface SessionNeighborExpansionOptions {
 }
 
 export interface UnifiedMemorySearchResult {
-	type: "memory" | "insight" | "knowledge";
+	type: "memory" | "insight" | "knowledge" | "workspace";
 	id: string;
 	content: string;
 	similarity: number;
 	metadata: Record<string, unknown>;
+	/** Host-supplied evidence identity; absent fields remain explicitly unknown. */
+	provenance?: Partial<SearchEvidenceProvenance>;
 	/**
 	 * Optional per-channel score breakdown. Always populated by the
 	 * pipeline when at least one channel contributed a non-empty list;
@@ -259,6 +270,7 @@ export interface UnifiedMemorySearchOutput {
 	results: UnifiedMemorySearchResult[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	sourceStates: SearchSourceState[];
 	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	/**
 	 * Diagnostic information about reasoning and date filtering. Present
@@ -347,7 +359,7 @@ export type SearchSource = UnifiedMemorySearchSource;
  * Per-tier evidence bucket consulted by `reflect`-style synthesis.
  * Includes the `summary` tier that the read-only sources do not surface.
  */
-export type SearchTier = "summary" | "raw" | "insight" | "knowledge";
+export type SearchTier = "summary" | "raw" | "insight" | "knowledge" | "workspace";
 
 export interface SearchInput {
 	userId: string;
@@ -415,11 +427,26 @@ export interface SearchInput {
 	includeDeprecated?: boolean;
 }
 
+/** Host-owned provenance. Null means unknown, never inferred from ranking or index readiness. */
+export interface SearchEvidenceProvenance {
+	citation: Citation | null;
+	origin: string | null;
+	businessReference: string | null;
+	version: string | number | null;
+	contentHash: string | null;
+	scope: readonly MemoryApplicabilityContext[] | null;
+	/** Empty means known to have no derivation; null means unknown. */
+	derivedFrom: readonly string[] | null;
+	confirmation: "confirmed" | "unconfirmed" | null;
+	freshness: { sourceUpdatedAt: string | null; indexedAt: string | null } | null;
+}
+
 export interface SearchEvidence {
 	id: string;
 	source: SearchSource | SearchTier;
 	snippet: string;
 	score: number;
+	provenance: SearchEvidenceProvenance;
 	timestamp?: number;
 	/**
 	 * Forwarded from the underlying hit's `metadata`. Surfaces per-fact
@@ -437,6 +464,7 @@ export interface SearchOutput {
 	evidence: SearchEvidence[];
 	count: number;
 	warnings: UnifiedMemorySearchWarning[];
+	sourceStates: SearchSourceState[];
 	retrievalDiagnostics?: UnifiedMemoryRetrievalDiagnostics;
 	reasoning?: UnifiedMemoryReasoningInfo;
 	/** Only present when `synthesize` was truthy. */
@@ -445,12 +473,15 @@ export interface SearchOutput {
 
 const DEFAULT_LIMIT = 10;
 const DEFAULT_THRESHOLD = 0.7;
-const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge"];
+const DEFAULT_SOURCES: UnifiedMemorySearchSource[] = ["memory", "insights", "knowledge", "workspace"];
 const SOURCE_SET = new Set<UnifiedMemorySearchSource>(DEFAULT_SOURCES);
 
 export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMemorySearchSource[] {
-	if (!Array.isArray(sources) || sources.length === 0) {
+	if (sources === undefined) {
 		return [...DEFAULT_SOURCES];
+	}
+	if (!Array.isArray(sources) || sources.length === 0) {
+		throw new TypeError("Search sources must be a non-empty array when specified");
 	}
 
 	const normalized = sources
@@ -460,7 +491,9 @@ export function normalizeUnifiedMemorySearchSources(sources: unknown): UnifiedMe
 			SOURCE_SET.has(source as UnifiedMemorySearchSource),
 		);
 
-	return normalized.length > 0 ? Array.from(new Set(normalized)) : [...DEFAULT_SOURCES];
+	if (normalized.length !== sources.length)
+		throw new TypeError("Search sources contain an unsupported source");
+	return Array.from(new Set(normalized));
 }
 
 export function clampUnifiedMemorySearchLimit(limit: unknown): number {
@@ -523,6 +556,30 @@ export function normalizeUnifiedMemoryReasoningStrategy(
 
 const DEFAULT_RRF_K = 60;
 
+/** Fill missing provenance only for the same content identity; never mix conflicting versions. */
+export function mergeSearchResultProvenance(
+	preferred: UnifiedMemorySearchResult,
+	other: UnifiedMemorySearchResult,
+): UnifiedMemorySearchResult {
+	const first = preferred.provenance;
+	const second = other.provenance;
+	const firstVersion = first?.version ?? first?.citation?.version_id;
+	const secondVersion = second?.version ?? second?.citation?.version_id;
+	const firstHash = first?.contentHash ?? first?.citation?.content_hash;
+	const secondHash = second?.contentHash ?? second?.citation?.content_hash;
+	if (
+		(firstVersion != null && secondVersion != null && firstVersion !== secondVersion) ||
+		(firstHash != null && secondHash != null && firstHash !== secondHash) ||
+		(first?.citation && second?.citation && first.citation.id !== second.citation.id) ||
+		(preferred.content !== other.content && !(firstHash && firstHash === secondHash))
+	)
+		return preferred;
+	const metadata = { ...other.metadata, ...preferred.metadata };
+	if (!second) return { ...preferred, metadata };
+	const knownFirst = Object.fromEntries(Object.entries(first ?? {}).filter(([, value]) => value != null));
+	return { ...preferred, metadata, provenance: { ...second, ...knownFirst } };
+}
+
 /**
  * Reciprocal Rank Fusion across multiple ranked lists. Each list contributes
  * `1 / (k + rank + 1)` to a hit's accumulated score. Hits are de-duplicated by
@@ -549,6 +606,7 @@ export function mergeUnifiedMemorySearchResultsRrf(
 	const order: string[] = [];
 
 	for (const list of lists) {
+		const seenInList = new Set<string>();
 		const channel = listNameToChannel(list.name);
 		const configuredWeight = channel ? effectiveWeights[channel] : undefined;
 		const weight =
@@ -559,7 +617,8 @@ export function mergeUnifiedMemorySearchResultsRrf(
 		for (let index = 0; index < list.hits.length; index += 1) {
 			const hit = list.hits[index];
 			const key = `${hit.type}::${hit.id}`;
-			const contribution = weight / (safeK + index + 1);
+			const contribution = seenInList.has(key) ? 0 : weight / (safeK + seenInList.size + 1);
+			seenInList.add(key);
 			const existing = scores.get(key);
 			const rankedHit = hit.type === "memory" ? withMatchedEvidence(hit, list.name, index + 1) : hit;
 			if (existing) {
@@ -567,6 +626,7 @@ export function mergeUnifiedMemorySearchResultsRrf(
 				if (hit.type === "memory" && existing.hit.type === "memory") {
 					existing.hit = mergeMatchedEvidence(existing.hit, rankedHit);
 				}
+				existing.hit = mergeSearchResultProvenance(existing.hit, rankedHit);
 			} else {
 				scores.set(key, { hit: rankedHit, rrf: contribution });
 				order.push(key);

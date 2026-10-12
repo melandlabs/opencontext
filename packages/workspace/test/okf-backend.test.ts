@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { OKF_MAX_EXTRACT_BYTES, indexOkfFolder } from "../src/okf-backend";
-import { SqliteWorkspaceStore } from "../src/sqlite";
+import { createWorkspaceStoreFixture } from "./sqlite-fixture";
 
 // Wrap the real extractor with a call counter so fast-path tests can
 // assert extraction was skipped. The wrapper delegates to the actual
@@ -30,11 +30,13 @@ vi.mock("../src/parsers-adapter", async (importOriginal) => {
 
 let scratchDir: string;
 
+const { makeStore, closeAll } = createWorkspaceStoreFixture();
 beforeEach(() => {
 	scratchDir = mkdtempSync(join(tmpdir(), "workspace-okf-"));
 });
 
 afterEach(() => {
+	closeAll();
 	rmSync(scratchDir, { recursive: true, force: true });
 });
 
@@ -64,7 +66,7 @@ describe("indexOkfFolder", () => {
 			"---\ntype: Reference\n---\n# Policy\n\nThis policy is not linked from any other document.\n",
 		);
 
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const enqueued: Array<{ resource_id: number; version_id: number }> = [];
 		const result = await indexOkfFolder(store, {
@@ -125,7 +127,7 @@ describe("indexOkfFolder", () => {
 			"Public Law — Cap of Liability\n\nStatutory cap of liability is twelve months of fees.\nSee also [Limitation of Liability](./law.md).\n",
 		);
 
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store2.db") });
+		const store = makeStore(join(scratchDir, "store2.db"));
 		await store.init();
 		await indexOkfFolder(store, {
 			workspace_id: "p2",
@@ -154,7 +156,7 @@ describe("indexOkfFolder", () => {
 		mkdirSync(okfRoot, { recursive: true });
 		writeFile(okfRoot, "keep.md", "keep me");
 		writeFile(okfRoot, "drop.md", "delete me next run");
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -191,7 +193,7 @@ describe("indexOkfFolder", () => {
 		writeFile(okfRoot, "venv/notes.md", "noise");
 		writeFile(okfRoot, "__pycache__/cache.md", "noise");
 
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const result = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -215,7 +217,7 @@ describe("indexOkfFolder", () => {
 		writeFile(okfRoot, "keep.md", "keep");
 		writeFile(okfRoot, "build/out.md", "generated noise");
 
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const result = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -250,7 +252,7 @@ describe("indexOkfFolder", () => {
 		writeFile(okfRoot, "b.md", "# B\n\nbravo body\n");
 
 		extractTextCalls.length = 0;
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -284,7 +286,7 @@ describe("indexOkfFolder", () => {
 		writeFile(okfRoot, "b.md", "# B\n\nbravo body\n");
 
 		extractTextCalls.length = 0;
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -329,7 +331,7 @@ describe("indexOkfFolder", () => {
 		utimesSync(join(okfRoot, "a.md"), pinnedMtime, pinnedMtime);
 
 		extractTextCalls.length = 0;
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const first = await indexOkfFolder(store, {
 			workspace_id: "p1",
@@ -379,7 +381,7 @@ describe("indexOkfFolder", () => {
 		writeFile(okfRoot, "small.txt", "tiny body");
 
 		extractTextCalls.length = 0;
-		const store = new SqliteWorkspaceStore({ dbPath: join(scratchDir, "store.db") });
+		const store = makeStore(join(scratchDir, "store.db"));
 		await store.init();
 		const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 

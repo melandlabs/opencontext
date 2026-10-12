@@ -413,6 +413,7 @@ export function buildSynthesisPrompt(input: {
 		snippet: string;
 		score: number;
 		metadata?: Record<string, unknown>;
+		provenance?: SearchEvidence["provenance"];
 	}>;
 	responseSchema?: Record<string, unknown>;
 }): string {
@@ -424,7 +425,7 @@ export function buildSynthesisPrompt(input: {
 	}
 
 	const sections: string[] = [];
-	for (const tier of DEFAULT_TIERS) {
+	for (const tier of [...DEFAULT_TIERS, "workspace"] as const) {
 		const items = grouped.get(tier) ?? [];
 		if (items.length === 0) {
 			continue;
@@ -434,7 +435,8 @@ export function buildSynthesisPrompt(input: {
 				typeof item.metadata?.source === "string" && item.metadata.source.length > 0
 					? item.metadata.source
 					: (item.source ?? "unknown");
-			return `  [${index + 1}] (${item.id}, source=${factSource}, score=${item.score.toFixed(4)}) ${item.snippet}`;
+			const provenance = item.provenance ? ` provenance=${JSON.stringify(item.provenance)}` : "";
+			return `  [${index + 1}] (${item.id}, source=${factSource}, score=${item.score.toFixed(4)}) ${item.snippet}${provenance}`;
 		});
 		sections.push(`## ${tier}\n${lines.join("\n")}`);
 	}
@@ -533,6 +535,7 @@ export async function synthesizeAnswer(input: {
 		// Forward per-fact provenance (e.g. `metadata.source` from
 		// `opencontext add --source`) so the synthesis prompt can cite it.
 		metadata: item.metadata,
+		provenance: item.provenance,
 	}));
 	const warnings: UnifiedMemorySearchWarning[] = [];
 

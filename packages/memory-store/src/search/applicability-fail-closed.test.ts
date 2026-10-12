@@ -128,17 +128,31 @@ describe("built-in raw-message applicability fail-closed behaviour", () => {
 	});
 
 	it("does not fall back to SQLite when an applicability-aware ANN provider returns no hits", async () => {
+		const searchRawMessagesAnn = vi.fn<NonNullable<UnifiedSearchDeps["searchRawMessagesAnn"]>>(
+			async () => [],
+		);
 		const output = await searchRaw(
 			{
 				embedQuery: async () => [0.1, 0.2],
-				searchRawMessagesAnn: async () => [],
+				searchRawMessagesAnn,
 			},
 			{ applicabilityContexts: [{ scope: "project", key: "project-a" }] },
 		);
 
 		expect(output.results).toEqual([]);
+		expect(searchRawMessagesAnn).toHaveBeenCalledWith(
+			expect.objectContaining({ applicabilityContexts: [{ scope: "project", key: "project-a" }] }),
+		);
 		expect(builtIns.getRawMessageManager).not.toHaveBeenCalled();
-		expectApplicabilityWarning(output.warnings);
+		expect(builtIns.searchChroma).not.toHaveBeenCalled();
+		expect(builtIns.searchSqliteSemantic).not.toHaveBeenCalled();
+		expect(builtIns.searchSqliteLexical).not.toHaveBeenCalled();
+		expect(output.warnings).not.toContainEqual(
+			expect.objectContaining({ code: "memory_applicability_not_enforced" }),
+		);
+		expect(output.sourceStates).toEqual([
+			expect.objectContaining({ source: "memory", status: "complete", count: 0 }),
+		]);
 	});
 
 	it("preserves legacy Chroma retrieval when no runtime context is supplied", async () => {
