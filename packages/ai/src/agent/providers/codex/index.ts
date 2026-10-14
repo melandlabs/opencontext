@@ -17,6 +17,7 @@ import {
 	formatPlanForExecution,
 	parsePlanFromResponse,
 	parsePlanningResponse,
+	resolveCliShellCapability,
 } from "../../base";
 import { type AgentPlugin, defineAgentPlugin } from "../../plugin";
 import type {
@@ -205,6 +206,10 @@ export class CodexAgent extends BaseAgent {
 				options.aiSoulPrompt ?? undefined,
 				options.language ?? undefined,
 				options.timezone ?? undefined,
+				resolveCliShellCapability({
+					posixToolName: "shell",
+					windowsToolName: "shell",
+				}),
 			)}\n\nOriginal request: ${options.originalPrompt}`;
 
 			let sawError = false;

@@ -546,6 +546,41 @@ export function withClaudeCodeReadToolWorkaroundForSubagents(
 }
 
 /**
+ * What shell (if any) the host actually registered for this session.
+ *
+ * The workspace instruction must never name a tool the model cannot call:
+ * naming a missing tool makes the model emit "No such tool available", which
+ * is a hard error mid-task. Hosts therefore declare what they really wired up
+ * instead of letting the prompt assume a POSIX shell is always present.
+ */
+export type WorkspaceShellCapability =
+	| { kind: "none" }
+	| {
+			kind: "shell";
+			toolName: string;
+			dialect: "posix" | "powershell";
+	  };
+
+/**
+ * Build a `WorkspaceShellCapability` for a CLI provider that ships its own
+ * shell tool under different names per platform (e.g. Claude Code's `Bash` vs
+ * `PowerShell`).
+ */
+export function resolveCliShellCapability(options: {
+	posixToolName: string;
+	windowsToolName: string;
+	platform?: NodeJS.Platform;
+}): WorkspaceShellCapability {
+	const platform = options.platform ?? process.platform;
+	const isWindows = platform === "win32";
+	return {
+		kind: "shell",
+		toolName: isWindows ? options.windowsToolName : options.posixToolName,
+		dialect: isWindows ? "powershell" : "posix",
+	};
+}
+
+/**
  * Generate workspace instruction for prompts
  */
 export function getWorkspaceInstruction(
@@ -553,6 +588,7 @@ export function getWorkspaceInstruction(
 	sandbox?: SandboxOptions,
 	timezone?: string,
 	language?: string,
+	shell: WorkspaceShellCapability = { kind: "none" },
 ): string {
 	// Add current date info (using user's timezone or local timezone as fallback)
 	const now = new Date();
@@ -560,6 +596,58 @@ export function getWorkspaceInstruction(
 	const localDate = now.toLocaleDateString("zh-CN", {
 		timeZone: effectiveTimezone,
 	});
+
+	// Shell-dependent wording: every tool name and every command below must
+	// describe a tool the host really registered for this session.
+	const searchStrategies =
+		shell.kind === "none"
+			? `### Search strategies
+**No shell tool is available in this session.** You cannot list directories or run commands. Never call a shell/Bash/PowerShell tool — none is registered, and calling a missing tool is a hard error.
+- Use Glob with an absolute path (e.g. \`${workDir}/**/*.pdf\`) to locate files, then Read to open them.
+- If you also have no Glob tool, skip file search entirely and answer from the conversation and the content the user provided.`
+			: shell.dialect === "powershell"
+				? `### Search strategies
+Use the **${shell.toolName}** tool to execute these commands. Choose the appropriate strategy based on the situation:
+- **By modification time**: \`Get-ChildItem ~/Downloads -File | Where-Object LastWriteTime -gt (Get-Date).AddDays(-7)\` — files modified within N days
+- **By file type**: \`Get-ChildItem ~/Desktop -File -Recurse -Include *.pdf,*.xlsx,*.csv\` — filter by extension
+- **By size**: \`Get-ChildItem ~/Downloads -File | Where-Object Length -gt 1MB\` — files above a size threshold
+- **By keyword**: \`Get-ChildItem ~/Documents -Recurse -Filter *report*\` — filename contains a keyword
+- **Sorted listing**: \`Get-ChildItem ~/Downloads | Sort-Object LastWriteTime -Descending | Select-Object -First 20\` — most recent files first
+
+Combine strategies as needed. For example, to find recent large PDFs:
+\`Get-ChildItem ~/Downloads -File | Where-Object { $_.LastWriteTime -gt (Get-Date).AddDays(-3) -and $_.Name -like "*.pdf" -and $_.Length -gt 100KB }\``
+				: `### Search strategies
+Use the **${shell.toolName}** tool to execute these commands. Choose the appropriate strategy based on the situation:
+- **By modification time**: \`find ~/Downloads -maxdepth 1 -mtime -7 -type f\` — files modified within N days
+- **By file type**: \`find ~/Desktop -maxdepth 1 -name "*.pdf" -o -name "*.xlsx" -o -name "*.csv"\` — filter by extension
+- **By size**: \`find ~/Downloads -maxdepth 1 -size +1M -type f\` — files above a size threshold
+- **By keyword**: \`find ~/Documents -maxdepth 2 -name "*report*"\` — filename contains a keyword
+- **Sorted listing**: \`ls -lt ~/Downloads/ | head -20\` — most recent files first
+
+Combine strategies as needed. For example, to find recent large PDFs:
+\`find ~/Downloads -maxdepth 1 -mtime -3 -name "*.pdf" -size +100k -type f -exec ls -lh {} +\``;
+
+	// How to actually make the backup the BACKUP rule demands. Without a shell
+	// there is no way to copy, so the rule degrades to "confirm first".
+	const backupProcedure =
+		shell.kind === "none"
+			? `**Without a shell tool you cannot copy files, so a literal backup is impossible.** Ask the user for confirmation BEFORE any destructive operation outside ${workDir}/, and prefer a non-destructive approach (write to a new path instead of overwriting, leave the original untouched) whenever the task allows it.`
+			: shell.dialect === "powershell"
+				? `\`\`\`powershell
+New-Item -ItemType Directory -Force -Path "${workDir}/backup/"
+Copy-Item -Recurse -Force "<path-to-affected>" "${workDir}/backup/<name>_$(Get-Date -Format 'yyyyMMdd_HHmmss')"
+\`\`\``
+				: `\`\`\`bash
+mkdir -p "${workDir}/backup/"
+cp -r "<path-to-affected>" "${workDir}/backup/<name>_$(date +%Y%m%d_%H%M%S)"
+\`\`\``;
+
+	const systemPaths =
+		shell.kind === "none"
+			? "system directories"
+			: shell.dialect === "powershell"
+				? "system paths (e.g. C:\\Windows, C:\\Program Files)"
+				: "system paths (e.g. /etc, /usr, /var)";
 
 	let instruction = `
 **IMPORTANT: Today's date is ${localDate}.** Use this date as the reference point for any time-related questions or calculations.
@@ -594,16 +682,7 @@ Check these directories based on relevance to the user's question:
 
 When in doubt about which directory, scan ~/Downloads/ and ~/Desktop/ first — they are most likely to contain recent, relevant files.
 
-### Search strategies
-Use the **mcp__bash__Bash** tool (NOT the built-in Bash tool) to execute these commands. Choose the appropriate strategy based on the situation:
-- **By modification time**: \`find ~/Downloads -maxdepth 1 -mtime -7 -type f\` — files modified within N days
-- **By file type**: \`find ~/Desktop -maxdepth 1 -name "*.pdf" -o -name "*.xlsx" -o -name "*.csv"\` — filter by extension
-- **By size**: \`find ~/Downloads -maxdepth 1 -size +1M -type f\` — files above a size threshold
-- **By keyword**: \`find ~/Documents -maxdepth 2 -name "*report*"\` — filename contains a keyword
-- **Sorted listing**: \`ls -lt ~/Downloads/ | head -20\` — most recent files first
-
-Combine strategies as needed. For example, to find recent large PDFs:
-\`find ~/Downloads -maxdepth 1 -mtime -3 -name "*.pdf" -size +100k -type f -exec ls -lh {} +\`
+${searchStrategies}
 
 ### How to use results
 - If you find relevant files, read them directly and incorporate into your response — do NOT ask the user for permission first.
@@ -630,7 +709,7 @@ The \`agent-browser\` skill uses the user's active browser session and can bypas
 
 ## CRITICAL: Workspace Configuration
 **MANDATORY OUTPUT DIRECTORY: ${workDir}** — ALL files you create MUST be saved here using absolute paths starting with ${workDir}/. This is NON-NEGOTIABLE.
-- NEVER use any other directory: no ~/.claude/, no ~/Documents/, no /tmp/, no default paths, and no skill defaults like ~/pptx-workspace, ~/docx-workspace, ~/xlsx-workspace.
+- NEVER use any other directory: no ~/.claude/, no ~/Documents/, no system temp directories (e.g. /tmp on Linux/macOS, %TEMP% on Windows), no default paths, and no skill defaults like ~/pptx-workspace, ~/docx-workspace, ~/xlsx-workspace.
 - Scripts, documents, data files — EVERYTHING goes under ${workDir}/. Create subdirectories (e.g., ${workDir}/output/, ${workDir}/data/) as needed.
 
 ## CRITICAL: File Organization
@@ -650,10 +729,7 @@ Correct: \`open(os.path.join(OUTPUT_DIR, "results.json"), "w")\`. Wrong: \`open(
 
 ## MANDATORY: BACKUP BEFORE ANY DESTRUCTIVE OPERATION OUTSIDE THE WORKSPACE
 **NON-NEGOTIABLE for files OUTSIDE ${workDir}/. Failure to back up is a CRITICAL ERROR.** Before ANY destructive operation on files outside the workspace (~/Desktop, ~/Documents, ~/Downloads, system paths, any path not under ${workDir}/) — rm/delete, overwriting an existing file (Write), Edit, mv/move, rename, or clearing a directory — you MUST back up the affected files FIRST, then only afterwards perform the operation:
-\`\`\`bash
-mkdir -p "${workDir}/backup/"
-cp -r "<path-to-affected>" "${workDir}/backup/<name>_$(date +%Y%m%d_%H%M%S)"
-\`\`\`
+${backupProcedure}
 **Files INSIDE ${workDir}/ are EXEMPT — never back them up.** Workspace artifacts are conversation outputs: file versions referenced in chat are snapshotted automatically, and they can be regenerated on request. Do NOT copy workspace files into backup/, do NOT create renamed copies, and do NOT hesitate to Edit/overwrite an existing workspace file when the user asks for changes. Sole exception: a workspace file holding irreplaceable content you did NOT generate in this conversation (e.g. data the user placed there) — back that up first.
 
 ## CRITICAL: Image Processing - Use Direct Vision Analysis
@@ -662,7 +738,7 @@ When users provide images or ask about image content, use YOUR VISION CAPABILITI
 - Note: the Read tool may still open image files already saved to disk, but for NEW uploads from users, always use vision first.
 
 ### Additional Safety for Files Outside Workspace
-For paths NOT under ${workDir}/ (~/Desktop, ~/Documents, ~/Downloads, system paths /etc, /usr, /var, or any absolute path outside the workspace), also ask the user for confirmation first.
+For paths NOT under ${workDir}/ (~/Desktop, ~/Documents, ~/Downloads, ${systemPaths}, or any absolute path outside the workspace), also ask the user for confirmation first.
 
 ## Markdown Formatting Rules
 Always use native Markdown table syntax (| col | col |); NEVER wrap a table in a code block.
@@ -697,6 +773,7 @@ export function formatPlanForExecution(
 	aiSoulPrompt?: string,
 	language?: string,
 	timezone?: string,
+	shell?: WorkspaceShellCapability,
 ): string {
 	const stepsText = plan.steps.map((step, index) => `${index + 1}. ${step.description}`).join("\n");
 
@@ -710,7 +787,7 @@ export function formatPlanForExecution(
 	const languageInstruction = getLanguageInstructionForBase(language);
 
 	const workspaceNote = workDir
-		? getWorkspaceInstruction(workDir, sandbox, timezone, language)
+		? getWorkspaceInstruction(workDir, sandbox, timezone, language, shell)
 		: getProfessionalOutputStyleInstruction(language);
 
 	return `You are executing a pre-approved plan. Follow these steps in order:
