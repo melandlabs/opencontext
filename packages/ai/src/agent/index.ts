@@ -109,11 +109,13 @@ export {
 	parsePlanFromResponse,
 	getLanguageInstructionForBase,
 	getProfessionalOutputStyleInstruction,
+	resolveCliShellCapability,
 	withClaudeCodeReadToolWorkaroundForSubagents,
 	withClaudeCodeReadToolWorkaround,
 	type AgentCapabilities,
 	type SandboxOptions,
 	type PlanningResponse,
+	type WorkspaceShellCapability,
 } from "./base";
 
 // Auto-compact (transparent overflow-recovery wrapper around IAgent.run)

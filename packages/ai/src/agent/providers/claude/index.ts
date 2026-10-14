@@ -32,6 +32,7 @@ import {
 	formatPlanForExecution,
 	parsePlanFromResponse,
 	parsePlanningResponse,
+	resolveCliShellCapability,
 } from "../..";
 import { type ClaudeSdkMessageConversionOptions, convertClaudeSdkMessage } from "./message-converter";
 import { createClaudeCodeProcessSpawner } from "./process-spawner";
@@ -185,6 +186,10 @@ export class ClaudeAgent extends BaseAgent {
 				options.aiSoulPrompt ?? undefined,
 				options.language ?? undefined,
 				options.timezone ?? undefined,
+				resolveCliShellCapability({
+					posixToolName: "Bash",
+					windowsToolName: "PowerShell",
+				}),
 			)}\n\nOriginal request: ${options.originalPrompt}`;
 
 			let sawError = false;
