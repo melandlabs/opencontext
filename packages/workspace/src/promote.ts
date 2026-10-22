@@ -15,6 +15,7 @@
  *      facts so future search hits can expose `promoted_fact_ids`.
  */
 import type { OkfFrontMatter } from "@melandlabs/contracts";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "./sqlite-adapter";
 import type { EdgeProvenance, OkfFolderResource } from "./types";
 
 export interface PromoteFactsInput {
@@ -75,7 +76,7 @@ export interface PromoteFactsOutput {
  * `linkPromotedFacts` binds the page-version to the source facts.
  */
 export async function promoteFactsToPage(
-	store: import("./sqlite").SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: PromoteFactsInput & {
 		/**
 		 * Fact content source. Either pass `fact_ids` *and* a `factSource`
@@ -85,6 +86,7 @@ export async function promoteFactsToPage(
 		facts?: Array<PromotedFact>;
 	},
 ): Promise<PromoteFactsOutput> {
+	const workspace = toWorkspaceStore(store);
 	const warnings: Array<{ code: string; message: string }> = [];
 	const { workspace_id, user_id, runId, resource_type } = input;
 
@@ -145,7 +147,7 @@ export async function promoteFactsToPage(
 	const canonicalKey = input.canonical_key ?? `${slugify(title)}.md`;
 
 	// Avoid clobbering an existing page at the same canonical key.
-	const existing = store.findResourceByCanonicalKey({
+	const existing = await workspace.findResourceByCanonicalKey({
 		workspace_id,
 		canonical_key: canonicalKey,
 	});
@@ -195,14 +197,14 @@ export async function promoteFactsToPage(
 		front_matter: frontMatter,
 	};
 
-	const indexResult = await store.indexResource({
+	const indexResult = await workspace.indexResource({
 		workspace_id,
 		user_id,
 		resource: folderResource,
 	});
 
 	// 3. Bind facts to the page version.
-	const linkResult = store.linkPromotedFacts({
+	const linkResult = await workspace.linkPromotedFacts({
 		workspace_id,
 		resource_id: indexResult.resource_id,
 		version_id: indexResult.version_id,

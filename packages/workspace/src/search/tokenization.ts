@@ -8,14 +8,27 @@ export function workspaceSearchWords(text: string): string[] {
 	);
 }
 
-function indexWord(word: string): string {
-	if (!/^\p{Script=Han}+$/u.test(word)) return `w${word}`;
+/**
+ * The index tokens one word contributes, in order.
+ *
+ * A latin word contributes a single `w<word>` token. A Han word
+ * contributes one `h<character><character>` token per overlapping
+ * bigram (the last character is dropped), so `定价方案` becomes
+ * `h定价 h价方 h方案` — three tokens that have to appear next to each
+ * other for the word to match.
+ *
+ * Exported so the Postgres backend can build the matching query from
+ * the same token scheme instead of re-deriving it.
+ */
+export function indexWordTokens(word: string): string[] {
+	if (!/^\p{Script=Han}+$/u.test(word)) return [`w${word}`];
 	const characters = Array.from(word);
-	if (characters.length < 2) return `h${word}`;
-	return characters
-		.slice(0, -1)
-		.map((character, index) => `h${character}${characters[index + 1]}`)
-		.join(" ");
+	if (characters.length < 2) return [`h${word}`];
+	return characters.slice(0, -1).map((character, index) => `h${character}${characters[index + 1]}`);
+}
+
+function indexWord(word: string): string {
+	return indexWordTokens(word).join(" ");
 }
 
 /** Derived index text; the source body and citation hash stay untouched. */

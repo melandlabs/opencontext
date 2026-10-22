@@ -11,8 +11,9 @@
  *
  * The HTTP and MCP entry points (`src/http.ts`, `src/mcp.ts`) build the
  * `RuntimeContext` from request headers / tool args and pass it through
- * here. This layer is storage-agnostic: tests inject their own
- * `SqliteWorkspaceStore` and a mock embedding function.
+ * here. This layer is storage-agnostic: it talks to the `WorkspaceStore`
+ * contract, so the same call works against the local SQLite store and the
+ * Postgres store behind `@melandlabs/workspace/postgres`.
  */
 
 import type { Citation } from "@melandlabs/contracts";
@@ -22,7 +23,7 @@ import { searchCrossFile } from "./search/cross-file";
 import { fuseHybridHits } from "./search/hybrid";
 import { searchLexical } from "./search/lexical";
 import { searchSemantic } from "./search/semantic";
-import type { SqliteWorkspaceStore } from "./sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "./sqlite-adapter";
 import type {
 	ListWorkspaceResourcesInput,
 	ListWorkspaceResourcesResult,
@@ -40,7 +41,7 @@ import type {
  */
 export async function updateWorkspaceContext(
 	ctx_rt: RuntimeContext,
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: UpdateWorkspaceContextInput,
 	hooks: {
 		enqueueEmbedding?: (input: { resource_id: number; version_id: number; jobId?: number }) => Promise<void>;
@@ -75,7 +76,7 @@ export interface SearchWorkspaceContextDeps {
  */
 export async function searchWorkspaceContext(
 	ctx_rt: RuntimeContext,
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: SearchWorkspaceContextInput,
 	deps: SearchWorkspaceContextDeps = {},
 ): Promise<SearchWorkspaceContextResult> {
@@ -87,7 +88,7 @@ export async function searchWorkspaceContext(
 	const resourceTypes = input.options?.resource_types;
 
 	if (strategy === "lexical") {
-		const hits = searchLexical(store, {
+		const hits = await searchLexical(store, {
 			workspace_id: input.workspace_id,
 			user_id: ctx_rt.user_id,
 			query: input.query,
@@ -98,7 +99,7 @@ export async function searchWorkspaceContext(
 	}
 	if (strategy === "semantic") {
 		const embedding = await embed(input.query);
-		const hits = searchSemantic(store, {
+		const hits = await searchSemantic(store, {
 			workspace_id: input.workspace_id,
 			user_id: ctx_rt.user_id,
 			queryEmbedding: embedding,
@@ -111,7 +112,7 @@ export async function searchWorkspaceContext(
 		const finalHits =
 			hits.length > 0
 				? hits
-				: searchLexical(store, {
+				: await searchLexical(store, {
 						workspace_id: input.workspace_id,
 						user_id: ctx_rt.user_id,
 						query: input.query,
@@ -137,7 +138,7 @@ export async function searchWorkspaceContext(
 	}
 	// hybrid (default)
 	const candidateLimit = limit * 4;
-	const lexicalHits = searchLexical(store, {
+	const lexicalHits = await searchLexical(store, {
 		workspace_id: input.workspace_id,
 		user_id: ctx_rt.user_id,
 		query: input.query,
@@ -147,7 +148,7 @@ export async function searchWorkspaceContext(
 	let semanticHits: WorkspaceSearchHitRef[] = [];
 	try {
 		const embedding = await embed(input.query);
-		semanticHits = searchSemantic(store, {
+		semanticHits = await searchSemantic(store, {
 			workspace_id: input.workspace_id,
 			user_id: ctx_rt.user_id,
 			queryEmbedding: embedding,
@@ -169,12 +170,12 @@ type WorkspaceSearchHitRef = SearchWorkspaceContextResult["hits"][number];
 
 export async function listWorkspaceResources(
 	ctx_rt: RuntimeContext,
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: ListWorkspaceResourcesInput,
 ): Promise<ListWorkspaceResourcesResult> {
 	if (!input.workspace_id) throw new Error("workspace_id is required");
 	void ctx_rt; // Reserved for future per-user ACL filtering on the listing.
-	return store.listResources(input);
+	return toWorkspaceStore(store).listResources(input);
 }
 
 // ---------------------------------------------------------------------------
@@ -221,7 +222,7 @@ export interface ResolveWorkspaceCitationDeps {
  */
 export async function resolveWorkspaceCitation(
 	ctx_rt: RuntimeContext,
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: { citation: Citation; workspace_id?: string },
 	deps: ResolveWorkspaceCitationDeps = {},
 ): Promise<
@@ -239,7 +240,11 @@ export async function resolveWorkspaceCitation(
 		if (!workspaceId) {
 			return { status: "missing", citation, reason: "wrong_workspace" };
 		}
-		const result = store.resolveCitation({ workspace_id: workspaceId, user_id: ctx_rt.user_id, citation });
+		const result = await toWorkspaceStore(store).resolveCitation({
+			workspace_id: workspaceId,
+			user_id: ctx_rt.user_id,
+			citation,
+		});
 		if (result.status === "resolved") {
 			return { status: "resolved", citation, content: result.content, drift: false };
 		}

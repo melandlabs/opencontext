@@ -1,18 +1,22 @@
 import { defineConfig } from "tsup";
 
 /**
- * Multi-entry build for `@melandlabs/workspace`. Two entry points:
+ * Multi-entry build for `@melandlabs/workspace`. Four entry points:
  *
  *   - `index`     — public surface (api, types, schema, sqlite helpers)
  *   - `cli`       — `opencontext workspace …` subcommand for local indexing + search
  *   - `sqlite`    — convenience entry so tests and internal callers can
  *                   `import "@melandlabs/workspace/sqlite"` without dragging
  *                   the rest of the barrel
+ *   - `postgres`  — the Postgres backend. Deliberately separate from the
+ *                   root barrel so a serverless host never pulls
+ *                   `better-sqlite3` (a native module) into its bundle.
  */
 export default defineConfig({
 	entry: {
 		index: "src/index.ts",
 		sqlite: "src/sqlite.ts",
+		postgres: "src/postgres/index.ts",
 		cli: "src/cli.ts",
 	},
 	format: ["esm"],
@@ -27,6 +31,7 @@ export default defineConfig({
 		"better-sqlite3",
 		"sqlite-vec",
 		"hono",
+		"pg",
 		"zod",
 		"@modelcontextprotocol/sdk",
 		"@hono/node-server",

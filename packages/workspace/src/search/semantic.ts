@@ -1,12 +1,17 @@
 /**
- * `@melandlabs/workspace/search/semantic` — sqlite-vec KNN search.
+ * `@melandlabs/workspace/search/semantic` — vector KNN search.
  *
- * Wraps `SqliteWorkspaceStore.searchSemantic` so the API layer can stay
+ * Wraps `WorkspaceStore.searchSemantic` so the API layer can stay
  * store-agnostic. The store handles the widen-and-retry loop and the
  * "no embeddings yet → empty result" fallback.
+ *
+ * The SQLite backend searches a `sqlite-vec` child table; the Postgres
+ * backend searches a `pgvector` child table. Both are optional — a
+ * backend without the extension returns no hits and the caller falls
+ * back to lexical.
  */
 
-import type { SqliteWorkspaceStore } from "../sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "../sqlite-adapter";
 import type { WorkspaceSearchHit } from "../types";
 
 export interface SemanticSearchInput {
@@ -18,9 +23,9 @@ export interface SemanticSearchInput {
 	threshold: number;
 }
 
-export function searchSemantic(
-	store: SqliteWorkspaceStore,
+export async function searchSemantic(
+	store: AnyWorkspaceStore,
 	input: SemanticSearchInput,
-): WorkspaceSearchHit[] {
-	return store.searchSemantic(input);
+): Promise<WorkspaceSearchHit[]> {
+	return toWorkspaceStore(store).searchSemantic(input);
 }

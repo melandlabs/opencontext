@@ -16,6 +16,8 @@
  * When no extractor is configured the function short-circuits with a
  * warning (mirroring `distillRawMessage`'s degraded-mode pattern).
  */
+import { type AnyWorkspaceStore, toWorkspaceStore } from "./sqlite-adapter";
+import type { WorkspaceStore } from "./store-types";
 import type { EdgeProvenance, WorkspaceEdgeType } from "./types";
 
 export interface DistillResourceInput {
@@ -82,50 +84,24 @@ export interface DistillResourceOutput {
  * not throw — every failure mode degrades into a warning so the caller
  * can still ship best-effort output.
  *
- * The function is pure with respect to the SQLite store: it reads but
- * only writes when `autoUpsert: true`. Returns the same shape
- * regardless so callers can pipe through a manual review UI.
+ * The function is pure with respect to the store: it reads but only
+ * writes when `autoUpsert: true`. Returns the same shape regardless so
+ * callers can pipe through a manual review UI.
  */
 export async function distillResource(
-	store: import("./sqlite").SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: DistillResourceInput,
 ): Promise<DistillResourceOutput> {
+	const workspace = toWorkspaceStore(store);
 	const warnings: Array<{ code: string; message: string }> = [];
-
-	const resource = store.findResourceByCanonicalKey({
-		workspace_id: input.workspace_id,
-		canonical_key: "__nonexistent__",
-	});
-	// The above is a trick — findResourceByCanonicalKey takes a key. We
-	// actually want to look up by resource_id; use the low-level
-	// `__testDb` for that, then read body chunks separately.
-	void resource;
-	const db = (store as unknown as { __testDb?: unknown }).__testDb;
-	if (!db) {
-		warnings.push({
-			code: "distill_resource_store_handle_unavailable",
-			message: "Internal handle for reading resource body is unavailable in this build.",
-		});
-		return { proposals: [], resolved: 0, unresolved: 0, warnings };
-	}
 
 	const { workspace_id, resource_id, runId } = input;
 
-	// 1. Read source resource metadata.
-	const resourceRow = (db as { prepare: (sql: string) => { get: (...args: unknown[]) => unknown } })
-		.prepare(
-			`SELECT id, canonical_key, title, current_version_id, resource_type
-         FROM workspace_resources WHERE workspace_id = ? AND id = ?`,
-		)
-		.get(workspace_id, resource_id) as
-		| {
-				id: number;
-				canonical_key: string;
-				title: string;
-				current_version_id: number | null;
-				resource_type: string;
-		  }
-		| undefined;
+	// 1. Read the source resource's metadata and its current body.
+	const resourceRow = await workspace.readResourceBody({
+		workspace_id,
+		resource_id,
+	});
 	if (!resourceRow) {
 		warnings.push({
 			code: "distill_resource_not_found",
@@ -133,18 +109,11 @@ export async function distillResource(
 		});
 		return { proposals: [], resolved: 0, unresolved: 0, warnings };
 	}
+	const body = resourceRow.body;
 
-	// 2. Concatenate the current version's chunks into a body string.
-	const chunkRows = (db as { prepare: (sql: string) => { all: (...args: unknown[]) => unknown[] } })
-		.prepare(
-			`SELECT content FROM workspace_chunks WHERE resource_id = ? AND version_id = ?
-         ORDER BY chunk_index ASC`,
-		)
-		.all(resource_id, resourceRow.current_version_id) as Array<{ content: string }>;
-	const body = chunkRows.map((c) => c.content).join("\n\n");
-
-	// 3. Build candidate target list (unless caller supplied one).
-	const candidates = input.candidateTargets ?? buildDefaultCandidates(store, workspace_id, resource_id);
+	// 2. Build candidate target list (unless caller supplied one).
+	const candidates =
+		input.candidateTargets ?? (await buildDefaultCandidates(workspace, workspace_id, resource_id));
 
 	if (!input.edgeExtractor) {
 		warnings.push({
@@ -154,7 +123,7 @@ export async function distillResource(
 		return { proposals: [], resolved: 0, unresolved: 0, warnings };
 	}
 
-	// 4. Run the LLM.
+	// 3. Run the LLM.
 	let rawProposals: DistilledEdgeProposal[];
 	try {
 		rawProposals = await input.edgeExtractor({
@@ -173,7 +142,7 @@ export async function distillResource(
 		return { proposals: [], resolved: 0, unresolved: 0, warnings };
 	}
 
-	// 5. Normalize: drop unknown edge_type, drop targets that aren't in
+	// 4. Normalize: drop unknown edge_type, drop targets that aren't in
 	// the candidate set (closes the LLM-hallucination loophole), drop
 	// proposals that point at the source itself.
 	const validEdges: ReadonlySet<WorkspaceEdgeType> = new Set(["cites", "supersedes", "amends", "relates-to"]);
@@ -209,9 +178,22 @@ export async function distillResource(
 
 	if (input.autoUpsert && normalized.length > 0) {
 		// Resolve canonical_keys → resource_ids via the store.
-		const resolvedEdges = normalized.flatMap((p) => {
-			const targetResourceId = findResourceIdByCanonicalKey(store, workspace_id, p.target_canonical_key!);
-			if (targetResourceId === null) return [];
+		const resolvedEdges: Array<{
+			source_resource_id: number;
+			source_version_id: number | null;
+			target_resource_id: number;
+			target_version_id: number | null;
+			edge_type: WorkspaceEdgeType;
+			quote: string | null;
+			provenance: EdgeProvenance;
+		}> = [];
+		for (const p of normalized) {
+			const targetResourceId = await findResourceIdByCanonicalKey(
+				workspace,
+				workspace_id,
+				p.target_canonical_key!,
+			);
+			if (targetResourceId === null) continue;
 			const provenance: EdgeProvenance = {
 				source: "llm_distill",
 				run_id: runId,
@@ -220,20 +202,18 @@ export async function distillResource(
 				rationale: p.rationale,
 				resolved_at: Math.floor(Date.now() / 1000),
 			};
-			return [
-				{
-					source_resource_id: resourceRow.id,
-					source_version_id: resourceRow.current_version_id,
-					target_resource_id: targetResourceId,
-					target_version_id: null,
-					edge_type: p.edge_type,
-					quote: p.quote ?? null,
-					provenance,
-				},
-			];
-		});
+			resolvedEdges.push({
+				source_resource_id: resourceRow.id,
+				source_version_id: resourceRow.current_version_id,
+				target_resource_id: targetResourceId,
+				target_version_id: null,
+				edge_type: p.edge_type,
+				quote: p.quote ?? null,
+				provenance,
+			});
+		}
 		if (resolvedEdges.length > 0) {
-			store.upsertReferenceEdges({
+			await workspace.upsertReferenceEdges({
 				workspace_id,
 				edges: resolvedEdges,
 			});
@@ -243,12 +223,12 @@ export async function distillResource(
 	return output;
 }
 
-function buildDefaultCandidates(
-	store: import("./sqlite").SqliteWorkspaceStore,
+async function buildDefaultCandidates(
+	store: WorkspaceStore,
 	workspace_id: string,
 	resource_id: number,
-): Array<{ canonical_key: string; title: string; resource_type: string; excerpt?: string }> {
-	const result = store.listResources({ workspace_id, limit: 200, offset: 0 });
+): Promise<Array<{ canonical_key: string; title: string; resource_type: string; excerpt?: string }>> {
+	const result = await store.listResources({ workspace_id, limit: 200, offset: 0 });
 	return result.resources
 		.filter((r) => r.id !== resource_id)
 		.map((r) => ({
@@ -258,11 +238,11 @@ function buildDefaultCandidates(
 		}));
 }
 
-function findResourceIdByCanonicalKey(
-	store: import("./sqlite").SqliteWorkspaceStore,
+async function findResourceIdByCanonicalKey(
+	store: WorkspaceStore,
 	workspace_id: string,
 	canonical_key: string,
-): number | null {
-	const found = store.findResourceByCanonicalKey({ workspace_id, canonical_key });
+): Promise<number | null> {
+	const found = await store.findResourceByCanonicalKey({ workspace_id, canonical_key });
 	return found?.id ?? null;
 }

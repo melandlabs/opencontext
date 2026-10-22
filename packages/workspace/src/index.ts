@@ -4,6 +4,7 @@
  * Mirrors the OKF subpath shape:
  *   - root:                    low-level API surface (api, types, schema, sqlite)
  *   - `/sqlite`                `getSQLiteWorkspaceStore()` / `closeSQLiteWorkspaceStore()`
+ *   - `/postgres`              `createPostgresWorkspaceStore()` — the serverless backend
  *   - `/cli`                   `opencontext workspace …` subcommand
  */
 
@@ -17,6 +18,30 @@ export {
 export type { SqliteWorkspaceStore, SqliteWorkspaceStoreOptions } from "./sqlite";
 export { buildCitationId } from "@melandlabs/contracts";
 export type { Citation } from "@melandlabs/contracts";
+
+// ── store contract ──────────────────────────────────────────────────
+// The contract itself is runtime-free, so the Postgres entry point can
+// depend on it without dragging `better-sqlite3` along.
+export { WORKSPACE_STORE_BRAND } from "./store-types";
+export type {
+	ExpandNeighborsInput,
+	IndexResourceInput,
+	IndexResourceResult,
+	OkfSourceFreshness,
+	ResolveCitationInput,
+	ResolveCitationResult,
+	SemanticSearchInput,
+	UpsertReferenceEdgesInput,
+	WorkspaceChunkRow,
+	WorkspaceResourceBody,
+	WorkspaceStore,
+} from "./store-types";
+export {
+	SqliteWorkspaceStoreAdapter,
+	isWorkspaceStore,
+	toWorkspaceStore,
+} from "./sqlite-adapter";
+export type { AnyWorkspaceStore } from "./sqlite-adapter";
 
 export {
 	updateWorkspaceContext,
