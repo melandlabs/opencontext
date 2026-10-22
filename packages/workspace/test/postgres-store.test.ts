@@ -360,4 +360,62 @@ describe.skipIf(!POSTGRES_URL)("PostgresWorkspaceStore", () => {
 		expect(hits.length).toBeGreaterThan(0);
 		expect(hits[0]?.canonical_key).toBe("vector.md");
 	});
+
+	it("keeps one user's listing out of another user's hands", async () => {
+		await store.indexResource({
+			workspace_id: "w7",
+			user_id: "u1",
+			resource: makeResource({
+				canonical_key: "docs/mine.md",
+				body: "the first user's document",
+			}),
+		});
+		await store.indexResource({
+			workspace_id: "w7",
+			user_id: "u2",
+			resource: makeResource({
+				canonical_key: "docs/theirs.md",
+				body: "the second user's document",
+			}),
+		});
+
+		// A workspace id is not a user boundary: the listing has to be
+		// scoped by the owner, or a shared database hands one user
+		// another user's resources.
+		const mine = await store.listResources({
+			workspace_id: "w7",
+			user_id: "u1",
+			limit: 10,
+			offset: 0,
+		});
+		expect(mine.total).toBe(1);
+		expect(mine.resources.map((resource) => resource.canonical_key)).toEqual(["docs/mine.md"]);
+
+		const theirs = await store.listResources({
+			workspace_id: "w7",
+			user_id: "u2",
+			limit: 10,
+			offset: 0,
+		});
+		expect(theirs.total).toBe(1);
+		expect(theirs.resources.map((resource) => resource.canonical_key)).toEqual(["docs/theirs.md"]);
+
+		expect(
+			await store.findResourceByCanonicalKey({
+				workspace_id: "w7",
+				canonical_key: "docs/theirs.md",
+				user_id: "u1",
+			}),
+		).toBeNull();
+
+		// The search path was already user-scoped; the listing is the one
+		// that had to catch up.
+		const hits = await store.searchLexical({
+			workspace_id: "w7",
+			user_id: "u1",
+			query: "second",
+			limit: 10,
+		});
+		expect(hits).toEqual([]);
+	});
 });

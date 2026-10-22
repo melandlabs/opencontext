@@ -188,6 +188,8 @@ export interface WorkspaceStore {
 	findResourceByCanonicalKey(input: {
 		workspace_id: string;
 		canonical_key: string;
+		/** Owner filter — see {@link ListWorkspaceResourcesInput.user_id}. */
+		user_id?: string;
 	}): Promise<WorkspaceResource | null>;
 	getOkfSourceFreshness(input: { workspace_id: string }): Promise<Map<string, OkfSourceFreshness>>;
 	searchLexical(input: {
@@ -210,6 +212,8 @@ export interface WorkspaceStore {
 	readResourceBody(input: {
 		workspace_id: string;
 		resource_id: number;
+		/** Owner filter — see {@link ListWorkspaceResourcesInput.user_id}. */
+		user_id?: string;
 	}): Promise<WorkspaceResourceBody | null>;
 
 	// ── writes ───────────────────────────────────────────────────────────

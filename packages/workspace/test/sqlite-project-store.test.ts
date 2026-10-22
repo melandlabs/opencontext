@@ -376,4 +376,43 @@ describe("SqliteWorkspaceStore", () => {
 		expect(freshness.has("docs/c.md")).toBe(false);
 		await store.close();
 	});
+
+	it("scopes the listing and the canonical-key lookup to the owner", async () => {
+		const store = makeStore(join(scratchDir, "store.db"));
+		await store.init();
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u1",
+			resource: makeResource({ canonical_key: "docs/a.md", body: "alpha" }),
+		});
+		await store.indexResource({
+			workspace_id: "p1",
+			user_id: "u2",
+			resource: makeResource({ canonical_key: "docs/b.md", body: "bravo" }),
+		});
+
+		// A workspace id is not a user boundary: the listing has to be
+		// scoped by the owner, or a shared database hands one user
+		// another user's resources.
+		const mine = store.listResources({ workspace_id: "p1", user_id: "u1", limit: 50 });
+		expect(mine.total).toBe(1);
+		expect(mine.resources.map((resource) => resource.canonical_key)).toEqual(["docs/a.md"]);
+
+		const theirs = store.listResources({ workspace_id: "p1", user_id: "u2", limit: 50 });
+		expect(theirs.total).toBe(1);
+		expect(theirs.resources.map((resource) => resource.canonical_key)).toEqual(["docs/b.md"]);
+
+		// Without the owner filter the listing spans the whole workspace —
+		// which is why a multi-user host has to pass one.
+		const unscoped = store.listResources({ workspace_id: "p1", limit: 50 });
+		expect(unscoped.total).toBe(2);
+
+		expect(
+			store.findResourceByCanonicalKey({ workspace_id: "p1", canonical_key: "docs/b.md", user_id: "u1" }),
+		).toBeNull();
+		expect(
+			store.findResourceByCanonicalKey({ workspace_id: "p1", canonical_key: "docs/b.md", user_id: "u2" }),
+		).not.toBeNull();
+		await store.close();
+	});
 });

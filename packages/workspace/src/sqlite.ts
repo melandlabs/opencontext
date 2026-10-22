@@ -1348,6 +1348,14 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 		// the table for audit / resurrection, but are invisible here.
 		const where: string[] = ["workspace_id = ?", "json_extract(metadata, '$.deleted_at') IS NULL"];
 		const params: Array<string | number> = [input.workspace_id];
+		// The owner filter is what keeps one user's listing out of
+		// another user's hands on a shared database. It is optional so a
+		// single-user deployment (a local file) does not have to carry
+		// the discriminator around.
+		if (input.user_id) {
+			where.push("user_id = ?");
+			params.push(input.user_id);
+		}
 		if (input.resource_type) {
 			where.push("resource_type = ?");
 			params.push(input.resource_type);
@@ -1378,10 +1386,17 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
 	findResourceByCanonicalKey(input: {
 		workspace_id: string;
 		canonical_key: string;
+		user_id?: string;
 	}): WorkspaceResource | null {
+		const where = ["workspace_id = ?", "canonical_key = ?"];
+		const params: Array<string | number> = [input.workspace_id, input.canonical_key];
+		if (input.user_id) {
+			where.push("user_id = ?");
+			params.push(input.user_id);
+		}
 		const row = this.db
-			.prepare("SELECT * FROM workspace_resources WHERE workspace_id = ? AND canonical_key = ?")
-			.get(input.workspace_id, input.canonical_key) as WorkspaceResourceRow | undefined;
+			.prepare(`SELECT * FROM workspace_resources WHERE ${where.join(" AND ")}`)
+			.get(...params) as WorkspaceResourceRow | undefined;
 		return row ? toWorkspaceResource(row) : null;
 	}
 

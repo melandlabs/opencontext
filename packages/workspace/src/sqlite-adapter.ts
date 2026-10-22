@@ -61,6 +61,7 @@ export class SqliteWorkspaceStoreAdapter implements WorkspaceStore {
 	findResourceByCanonicalKey(input: {
 		workspace_id: string;
 		canonical_key: string;
+		user_id?: string;
 	}): Promise<WorkspaceResource | null> {
 		return Promise.resolve(this.store.findResourceByCanonicalKey(input));
 	}
@@ -97,14 +98,21 @@ export class SqliteWorkspaceStoreAdapter implements WorkspaceStore {
 	readResourceBody(input: {
 		workspace_id: string;
 		resource_id: number;
+		user_id?: string;
 	}): Promise<WorkspaceResourceBody | null> {
 		const db = this.store.__testDb;
+		const where = ["workspace_id = ?", "id = ?"];
+		const params: Array<string | number> = [input.workspace_id, input.resource_id];
+		if (input.user_id) {
+			where.push("user_id = ?");
+			params.push(input.user_id);
+		}
 		const row = db
 			.prepare(
 				`SELECT id, canonical_key, title, current_version_id, resource_type
-         FROM workspace_resources WHERE workspace_id = ? AND id = ?`,
+         FROM workspace_resources WHERE ${where.join(" AND ")}`,
 			)
-			.get(input.workspace_id, input.resource_id) as
+			.get(...params) as
 			| {
 					id: number;
 					canonical_key: string;

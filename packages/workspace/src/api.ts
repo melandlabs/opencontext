@@ -174,8 +174,13 @@ export async function listWorkspaceResources(
 	input: ListWorkspaceResourcesInput,
 ): Promise<ListWorkspaceResourcesResult> {
 	if (!input.workspace_id) throw new Error("workspace_id is required");
-	void ctx_rt; // Reserved for future per-user ACL filtering on the listing.
-	return toWorkspaceStore(store).listResources(input);
+	// The listing is scoped by the caller's user id: a workspace id is
+	// not a user boundary, and a shared database serves every user of a
+	// deployment. A host that passes its own `user_id` keeps it.
+	return toWorkspaceStore(store).listResources({
+		...input,
+		user_id: input.user_id ?? ctx_rt.user_id,
+	});
 }
 
 // ---------------------------------------------------------------------------

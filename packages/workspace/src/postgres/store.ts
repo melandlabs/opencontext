@@ -330,6 +330,13 @@ export class PostgresWorkspaceStore implements WorkspaceStore {
 		const params = new Params();
 		const where = ["workspace_id = $1", "(metadata->>'deleted_at' IS NULL)"];
 		params.add(input.workspace_id);
+		// The owner filter is what keeps one user's listing out of
+		// another user's hands on a shared database. It is optional so a
+		// single-user deployment (a local file) does not have to carry
+		// the discriminator around.
+		if (input.user_id) {
+			where.push(`user_id = ${params.add(input.user_id)}`);
+		}
 		if (input.resource_type) {
 			where.push(`resource_type = ${params.add(input.resource_type)}`);
 		}
@@ -362,11 +369,19 @@ export class PostgresWorkspaceStore implements WorkspaceStore {
 	async findResourceByCanonicalKey(input: {
 		workspace_id: string;
 		canonical_key: string;
+		user_id?: string;
 	}): Promise<WorkspaceResource | null> {
 		await this.ensureInitialized();
+		const params = new Params();
+		const where = ["workspace_id = $1", "canonical_key = $2"];
+		params.add(input.workspace_id);
+		params.add(input.canonical_key);
+		if (input.user_id) {
+			where.push(`user_id = ${params.add(input.user_id)}`);
+		}
 		const result = await this.pool.query<ResourceRow>(
-			"SELECT * FROM workspace_resources WHERE workspace_id = $1 AND canonical_key = $2",
-			[input.workspace_id, input.canonical_key],
+			`SELECT * FROM workspace_resources WHERE ${where.join(" AND ")}`,
+			params.all(),
 		);
 		const row = result.rows[0];
 		return row ? toWorkspaceResource(row) : null;
@@ -375,8 +390,16 @@ export class PostgresWorkspaceStore implements WorkspaceStore {
 	async readResourceBody(input: {
 		workspace_id: string;
 		resource_id: number;
+		user_id?: string;
 	}): Promise<WorkspaceResourceBody | null> {
 		await this.ensureInitialized();
+		const params = new Params();
+		const where = ["workspace_id = $1", "id = $2"];
+		params.add(input.workspace_id);
+		params.add(input.resource_id);
+		if (input.user_id) {
+			where.push(`user_id = ${params.add(input.user_id)}`);
+		}
 		const resourceResult = await this.pool.query<{
 			id: number;
 			canonical_key: string;
@@ -386,8 +409,8 @@ export class PostgresWorkspaceStore implements WorkspaceStore {
 		}>(
 			`SELECT id, canonical_key, title, current_version_id, resource_type
        FROM workspace_resources
-       WHERE workspace_id = $1 AND id = $2`,
-			[input.workspace_id, input.resource_id],
+       WHERE ${where.join(" AND ")}`,
+			params.all(),
 		);
 		const resource = resourceResult.rows[0];
 		if (!resource) return null;

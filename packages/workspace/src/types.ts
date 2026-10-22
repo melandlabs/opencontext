@@ -222,6 +222,16 @@ export interface SearchWorkspaceContextResult {
 
 export interface ListWorkspaceResourcesInput {
 	workspace_id: string;
+	/**
+	 * Owner filter. When set, only resources owned by this user are
+	 * listed.
+	 *
+	 * A workspace id is not a user boundary: a shared database serves
+	 * every user of a deployment, and a listing scoped by `workspace_id`
+	 * alone would hand one user another user's resource titles. Every
+	 * host that serves more than one user has to pass this.
+	 */
+	user_id?: string;
 	resource_type?: string;
 	index_status?: WorkspaceIndexStatus;
 	limit?: number;
