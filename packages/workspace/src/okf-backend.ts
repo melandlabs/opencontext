@@ -21,7 +21,7 @@ import { join, relative, sep } from "node:path";
 import { extname } from "node:path";
 import { type WikiGraph, type WikiNode, buildGraphFromDir } from "@melandlabs/okf";
 import { extractText } from "./parsers-adapter";
-import type { SqliteWorkspaceStore } from "./sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "./sqlite-adapter";
 import type { OkfFolderResource, UpdateWorkspaceContextResult, WorkspaceEdgeType } from "./types";
 
 /**
@@ -260,7 +260,7 @@ export async function listOkfFolderResources(
  * unchanged.
  */
 export async function indexOkfFolder(
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: {
 		workspace_id: string;
 		user_id: string;
@@ -270,10 +270,11 @@ export async function indexOkfFolder(
 		ignoreDirNames?: ReadonlySet<string>;
 	},
 ): Promise<UpdateWorkspaceContextResult> {
+	const workspace = toWorkspaceStore(store);
 	const entries = await walkOkfFolderEntries(input.path, {
 		ignoreDirNames: input.ignoreDirNames,
 	});
-	const freshness = store.getOkfSourceFreshness({ workspace_id: input.workspace_id });
+	const freshness = await workspace.getOkfSourceFreshness({ workspace_id: input.workspace_id });
 
 	const presentKeys = new Set<string>();
 	let filesAdded = 0;
@@ -297,7 +298,11 @@ export async function indexOkfFolder(
 		toIndex.push(entry);
 	}
 
-	const job = store.createJob({ workspace_id: input.workspace_id, kind: "index", total: toIndex.length });
+	const job = await workspace.createJob({
+		workspace_id: input.workspace_id,
+		kind: "index",
+		total: toIndex.length,
+	});
 
 	const indexedIds: Array<{ resource_id: number; version_id: number; canonical_key: string }> = [];
 
@@ -329,7 +334,7 @@ export async function indexOkfFolder(
 			source_mtime: entry.mtimeMs,
 		};
 		presentKeys.add(resource.canonical_key);
-		const result = await store.indexResource({
+		const result = await workspace.indexResource({
 			workspace_id: input.workspace_id,
 			user_id: input.user_id,
 			resource,
@@ -353,7 +358,7 @@ export async function indexOkfFolder(
 	// Extraction failures above never reach indexResource, so the job
 	// total tracks successfully indexed files (matches pre-fast-path
 	// semantics where listOkfFolderResources had already swallowed them).
-	store.updateJobTotal(job.id, indexedCount);
+	await workspace.updateJobTotal(job.id, indexedCount);
 
 	// Edge pass: rebuild cites edges from BOTH the on-disk markdown
 	// graph (via buildGraphFromDir) AND from markdown links inside
@@ -448,7 +453,7 @@ export async function indexOkfFolder(
 	}
 
 	if (wikiEdges.length > 0) {
-		store.upsertReferenceEdges({
+		await workspace.upsertReferenceEdges({
 			workspace_id: input.workspace_id,
 			edges: wikiEdges.map((edge) => ({
 				...edge,
@@ -460,7 +465,7 @@ export async function indexOkfFolder(
 
 	// Soft-delete detection: any canonical key not in `presentKeys` and
 	// not already marked `deleted_at` is flipped to soft-deleted.
-	const deleted = store.softDeleteMissingResources({
+	const deleted = await workspace.softDeleteMissingResources({
 		workspace_id: input.workspace_id,
 		presentKeys,
 	});

@@ -9,7 +9,7 @@
  *      heavily linked resources surface higher.
  */
 
-import type { SqliteWorkspaceStore } from "../sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "../sqlite-adapter";
 import type { WorkspaceSearchHit } from "../types";
 import { fuseHybridHits } from "./hybrid";
 
@@ -27,7 +27,7 @@ export interface CrossFileSearchInput {
 		query: string;
 		resource_types?: string[];
 		limit: number;
-	}) => WorkspaceSearchHit[];
+	}) => Promise<WorkspaceSearchHit[]>;
 	semanticSearch: (input: {
 		workspace_id: string;
 		user_id: string;
@@ -35,16 +35,16 @@ export interface CrossFileSearchInput {
 		resource_types?: string[];
 		limit: number;
 		threshold: number;
-	}) => WorkspaceSearchHit[];
+	}) => Promise<WorkspaceSearchHit[]>;
 	generateEmbedding?: (text: string) => Promise<number[]>;
 }
 
 export async function searchCrossFile(
-	store: SqliteWorkspaceStore,
+	store: AnyWorkspaceStore,
 	input: CrossFileSearchInput,
 ): Promise<WorkspaceSearchHit[]> {
 	const candidateLimit = input.limit * 4;
-	const lexicalHits = input.lexicalSearch({
+	const lexicalHits = await input.lexicalSearch({
 		workspace_id: input.workspace_id,
 		user_id: input.user_id,
 		query: input.query,
@@ -54,7 +54,7 @@ export async function searchCrossFile(
 	let semanticHits: WorkspaceSearchHit[] = [];
 	if (input.generateEmbedding) {
 		const embedding = await input.generateEmbedding(input.query);
-		semanticHits = input.semanticSearch({
+		semanticHits = await input.semanticSearch({
 			workspace_id: input.workspace_id,
 			user_id: input.user_id,
 			queryEmbedding: embedding,
@@ -64,7 +64,7 @@ export async function searchCrossFile(
 		});
 	}
 	const fused = fuseHybridHits({ lexical: lexicalHits, semantic: semanticHits, limit: candidateLimit });
-	return store.expandNeighbors({
+	return toWorkspaceStore(store).expandNeighbors({
 		workspace_id: input.workspace_id,
 		user_id: input.user_id,
 		hits: fused,

@@ -99,7 +99,7 @@ describe("search pipeline", () => {
 		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
-		const hits = searchLexical(store, {
+		const hits = await searchLexical(store, {
 			workspace_id: "p1",
 			user_id: "u1",
 			query: "limitation liability",
@@ -115,7 +115,7 @@ describe("search pipeline", () => {
 		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
-		const hits = searchSemantic(store, {
+		const hits = await searchSemantic(store, {
 			workspace_id: "p1",
 			user_id: "u1",
 			queryEmbedding: makeDeterministicVector(1),
@@ -130,7 +130,7 @@ describe("search pipeline", () => {
 		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
-		const lexical = searchLexical(store, {
+		const lexical = await searchLexical(store, {
 			workspace_id: "p1",
 			user_id: "u1",
 			query: "limitation",
@@ -212,7 +212,7 @@ describe("search pipeline", () => {
 		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
-		const hits = searchLexical(store, {
+		const hits = await searchLexical(store, {
 			workspace_id: "p1",
 			user_id: "u1",
 			query: "limitation",
@@ -234,7 +234,7 @@ describe("search pipeline", () => {
 		const store = createStore();
 		await store.init();
 		await indexThreeDocuments(store);
-		const hits = searchLexical(store, {
+		const hits = await searchLexical(store, {
 			workspace_id: "p1",
 			user_id: "u1",
 			query: "limitation",

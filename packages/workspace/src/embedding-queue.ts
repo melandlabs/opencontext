@@ -15,7 +15,8 @@
  * `EmbeddingQueueDeps` shape, plus optional v2 options.
  */
 import { workspaceEmbedDocuments, workspaceEmbeddingModelName } from "./embedding-provider";
-import type { SqliteWorkspaceStore } from "./sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "./sqlite-adapter";
+import type { WorkspaceStore } from "./store-types";
 
 const DEFAULT_BATCH_SIZE = 100;
 const DEFAULT_DIMENSIONS = 384;
@@ -24,7 +25,7 @@ const DEFAULT_BATCH_TIMEOUT_MS = 30_000;
 const DEFAULT_MAX_RETRIES = 3;
 
 export interface EmbeddingQueueDeps {
-	store: SqliteWorkspaceStore;
+	store: AnyWorkspaceStore;
 	batchSize?: number;
 	dimensions?: number;
 	/** v2 — number of parallel jobs (default 2). */
@@ -45,7 +46,7 @@ export interface EmbeddingQueueStats {
 export interface EmbeddingQueue {
 	enqueue(input: { resource_id: number; version_id: number; jobId?: number }): Promise<void>;
 	drain(): Promise<void>;
-	stats(): EmbeddingQueueStats;
+	stats(): Promise<EmbeddingQueueStats>;
 	retryDlq(dlqEntryIds?: number[]): Promise<{ requeued: number }>;
 }
 
@@ -58,7 +59,7 @@ interface QueueEntry {
 }
 
 class DefaultEmbeddingQueue implements EmbeddingQueue {
-	private readonly store: SqliteWorkspaceStore;
+	private readonly store: WorkspaceStore;
 	private readonly batchSize: number;
 	private readonly dimensions: number;
 	private readonly concurrency: number;
@@ -71,7 +72,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	private recentFailures = 0;
 
 	constructor(deps: EmbeddingQueueDeps) {
-		this.store = deps.store;
+		this.store = toWorkspaceStore(deps.store);
 		this.batchSize = deps.batchSize ?? DEFAULT_BATCH_SIZE;
 		this.dimensions = deps.dimensions ?? DEFAULT_DIMENSIONS;
 		this.concurrency = deps.concurrency ?? DEFAULT_CONCURRENCY;
@@ -105,8 +106,8 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 		}
 	}
 
-	stats(): EmbeddingQueueStats {
-		const dlqJobs = this.store.getDlqJobs();
+	async stats(): Promise<EmbeddingQueueStats> {
+		const dlqJobs = await this.store.getDlqJobs();
 		return {
 			queueDepth: this.pending.length + this.retrying.size,
 			inFlight: this.inFlight,
@@ -116,7 +117,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 	}
 
 	async retryDlq(dlqEntryIds?: number[]): Promise<{ requeued: number }> {
-		const allDlq = this.store.getDlqJobs();
+		const allDlq = await this.store.getDlqJobs();
 		const target = dlqEntryIds ? allDlq.filter((j) => dlqEntryIds.includes(j.id)) : allDlq;
 		let requeued = 0;
 		for (const job of target) {
@@ -126,7 +127,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 			// requeue using the job's "kind=index" semantics: enqueue
 			// every ready resource under that workspace.
 			if (job.kind === "index") {
-				const listed = this.store.listResources({
+				const listed = await this.store.listResources({
 					workspace_id: job.workspace_id,
 					index_status: "dlq",
 					limit: 100,
@@ -173,7 +174,7 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 		try {
 			let totalProcessed = 0;
 			while (true) {
-				const batch = this.store.fetchPendingChunks(version_id, this.batchSize);
+				const batch = await this.store.fetchPendingChunks(version_id, this.batchSize);
 				if (batch.length === 0) break;
 				const texts = batch.map((row) => row.content);
 				let embeddings: number[][];
@@ -203,17 +204,17 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 							this.tick();
 						}, delayMs);
 						// Mark partial so callers can see progress.
-						this.store.markVersionEmbeddingPartial(resource_id, version_id, message);
+						await this.store.markVersionEmbeddingPartial(resource_id, version_id, message);
 						return;
 					}
 					// Out of retries → DLQ.
-					for (const jobId of jobIds) this.store.markJobDlq(jobId, message);
-					this.store.markIndexDlq(resource_id, version_id, message);
+					for (const jobId of jobIds) await this.store.markJobDlq(jobId, message);
+					await this.store.markIndexDlq(resource_id, version_id, message);
 					return;
 				}
 				const dimensions = embeddings[0]?.length ?? this.dimensions;
-				this.store.ensureChildVectorTable(dimensions);
-				this.store.writeChunkEmbeddings(
+				await this.store.ensureChildVectorTable(dimensions);
+				await this.store.writeChunkEmbeddings(
 					batch.map((row, i) => ({ chunkId: row.chunk_id, embedding: embeddings[i] ?? [] })),
 					model,
 					dimensions,
@@ -221,14 +222,14 @@ class DefaultEmbeddingQueue implements EmbeddingQueue {
 				totalProcessed += batch.length;
 				if (batch.length < this.batchSize) break;
 			}
-			this.store.markVersionEmbeddingReady(resource_id, version_id);
+			await this.store.markVersionEmbeddingReady(resource_id, version_id);
 			for (const jobId of jobIds) {
-				if (jobId >= 0) this.store.completeJob(jobId, totalProcessed);
+				if (jobId >= 0) await this.store.completeJob(jobId, totalProcessed);
 			}
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
-			for (const jobId of jobIds) this.store.markJobFailed(jobId, message);
-			this.store.markVersionEmbeddingFailed(resource_id, version_id, message);
+			for (const jobId of jobIds) await this.store.markJobFailed(jobId, message);
+			await this.store.markVersionEmbeddingFailed(resource_id, version_id, message);
 		} finally {
 			// Release terminal work before another enqueue can attach a new consumer.
 			const key = `${resource_id}:${version_id}`;

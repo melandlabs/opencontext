@@ -1,14 +1,16 @@
 /**
- * `@melandlabs/workspace/search/lexical` — FTS5 lexical search.
+ * `@melandlabs/workspace/search/lexical` — lexical search.
  *
- * Mirrors `packages/sqlite/src/raw-message-manager.ts:332-338` for the
- * FTS5 query construction (`"<term>" OR "<term>"`) and `bm25()` ranking.
- * Per the plan, the lexical pass is the fallback when embeddings haven't
- * been written yet, so it must remain functional before the embedding
- * queue drains.
+ * Wraps `WorkspaceStore.searchLexical` so the API layer can stay
+ * store-agnostic. The SQLite backend matches with FTS5; the Postgres
+ * backend matches with a `tsvector` — both rank the same derived token
+ * stream, so a query that hits one hits the other.
+ *
+ * The call is asynchronous because the contract is: a Postgres round trip
+ * cannot be hidden behind a synchronous signature.
  */
 
-import type { SqliteWorkspaceStore } from "../sqlite";
+import { type AnyWorkspaceStore, toWorkspaceStore } from "../sqlite-adapter";
 import type { WorkspaceSearchHit } from "../types";
 
 export interface LexicalSearchInput {
@@ -19,6 +21,9 @@ export interface LexicalSearchInput {
 	limit: number;
 }
 
-export function searchLexical(store: SqliteWorkspaceStore, input: LexicalSearchInput): WorkspaceSearchHit[] {
-	return store.searchLexical(input);
+export async function searchLexical(
+	store: AnyWorkspaceStore,
+	input: LexicalSearchInput,
+): Promise<WorkspaceSearchHit[]> {
+	return toWorkspaceStore(store).searchLexical(input);
 }
