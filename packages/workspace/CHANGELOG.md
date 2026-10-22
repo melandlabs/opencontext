@@ -1,5 +1,21 @@
 # @melandlabs/workspace
 
+## 0.11.0
+
+### Minor Changes
+
+- Scope the workspace read paths by owner.
+
+  A workspace id is not a user boundary: a shared database serves every user
+  of a deployment, and a listing scoped by `workspace_id` alone handed one
+  user another user's resource titles, canonical keys and statuses.
+
+  `listResources`, `findResourceByCanonicalKey` and `readResourceBody` now
+  take an optional `user_id`, and `listWorkspaceResources` fills it in from
+  the caller's runtime context. Hosts that serve more than one user get the
+  filter for free; single-user deployments (a local SQLite file) can leave it
+  unset.
+
 ## 0.10.0
 
 ### Minor Changes
