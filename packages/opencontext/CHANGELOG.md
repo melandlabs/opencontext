@@ -1,5 +1,12 @@
 # @melandlabs/opencontext
 
+## 0.13.5
+
+### Patch Changes
+
+- Updated dependencies [34bac93]
+  - @melandlabs/workspace@0.10.0
+
 ## 0.13.4
 
 ### Patch Changes
