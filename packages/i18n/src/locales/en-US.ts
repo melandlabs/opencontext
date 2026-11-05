@@ -500,7 +500,6 @@ const enUS = {
 			sendReply: "Sending Reply",
 			createInsight: "Creating Insight",
 			modifyInsight: "Modifying Insight",
-			searchKnowledgeBase: "Searching Knowledge Base",
 			getFullDocumentContent: "Reading Document",
 			listKnowledgeBaseDocuments: "Listing Knowledge Base Documents",
 			searchMemoryPath: "Searching Memory",

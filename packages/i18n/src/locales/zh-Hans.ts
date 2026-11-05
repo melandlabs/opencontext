@@ -487,7 +487,6 @@ const zhHans = {
 			sendReply: "发送回复",
 			createInsight: "创建洞察",
 			modifyInsight: "修改洞察",
-			searchKnowledgeBase: "搜索知识库",
 			getFullDocumentContent: "读取文档",
 			listKnowledgeBaseDocuments: "列出知识库文档",
 			searchMemoryPath: "搜索记忆",

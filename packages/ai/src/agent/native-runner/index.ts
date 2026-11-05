@@ -565,12 +565,12 @@ function buildRagDocumentPromptContext(ragDocuments: Array<{ id: string; name: s
 	const documentContext = `[System Note: The user has uploaded the following documents to their strategy memory:
 ${ragDocumentNames.map((name, i) => `- ${name} (ID: ${ragDocumentIds[i]})`).join("\n")}
 
-**CRITICAL INSTRUCTION**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or references "this document", they are referring to the document(s) listed above. You MUST use the searchKnowledgeBase tool with the documentIds parameter set to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
+**CRITICAL INSTRUCTION**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or references "this document", they are referring to the document(s) listed above. You MUST use the searchContext tool with the documentIds parameter set to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
 
 System Note: User has uploaded the following documents to strategy memory:
 ${ragDocumentNames.map((name, i) => `- ${name} (ID: ${ragDocumentIds[i]})`).join("\n")}
 
-**IMPORTANT**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or uses expressions like "this document", they are referring to the document(s) listed above. You MUST use the searchKnowledgeBase tool and set the documentIds parameter to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
+**IMPORTANT**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or uses expressions like "this document", they are referring to the document(s) listed above. You MUST use the searchContext tool and set the documentIds parameter to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
 
 For general questions about the user's strategy memory or previous uploads, you can omit the documentIds parameter to search all documents.
 For general questions about the user's entire strategy memory or previously uploaded documents, you can omit the documentIds parameter to search all documents.
@@ -675,8 +675,8 @@ async function buildFocusedInsightsPromptContext(
 					documentIds.push(doc.id);
 				});
 				if (documentIds.length > 0) {
-					content += `     Note: You can use searchKnowledgeBase tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
-					content += `     Tip: You can use searchKnowledgeBase tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
+					content += `     Note: You can use searchContext tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
+					content += `     Tip: You can use searchContext tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
 				}
 			}
 
@@ -693,7 +693,7 @@ ${insightsContent}
 **CRITICAL INSTRUCTION**: When the user asks questions like "in this", "this", "here", or any reference that could point to these focused insights, you MUST:
 1. FIRST check if their question refers to the focused insights listed above
 2. Answer based on the insight details, notes, and files shown above
-3. For files listed above, you can use searchKnowledgeBase tool with the documentIds parameter to retrieve their full content from the knowledge base
+3. For files listed above, you can use searchContext tool with the documentIds parameter to retrieve their full content from the knowledge base
 4. ONLY search all strategy memory if the question is clearly NOT about these insights
 
 System Note: User is currently focusing on ${focusedInsights.length} specific Insights. Below are the details of each focused insight (including related notes and files):
@@ -703,7 +703,7 @@ ${insightsContent}
 **IMPORTANT**: When the user asks questions like "in this", "this", "here", etc., you MUST:
 1. FIRST check if their question refers to the focused insights listed above
 2. Answer based on the insight details, notes, and files shown above
-3. For files listed above, you can use searchKnowledgeBase tool and set documentIds parameter to retrieve full content from the knowledge base
+3. For files listed above, you can use searchContext tool and set documentIds parameter to retrieve full content from the knowledge base
 4. ONLY search all strategy memory when the question is clearly NOT about these insights
 
 ]\n\n`;

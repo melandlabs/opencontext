@@ -1,5 +1,29 @@
 # @melandlabs/i18n
 
+## 0.3.4
+
+### Patch Changes
+
+- fix(agent): name the live retrieval tool in the native-runner document hints
+
+  The native-runner prompt contexts told the model to call `searchKnowledgeBase`
+  with a `documentIds` parameter — six times, across the RAG-document hint and
+  the focused-insight hint. No `searchKnowledgeBase` tool is registered any
+  more: the knowledge base, raw chat history and structured conversation
+  insights were fused into one `searchContext` retrieval tool, and the legacy
+  knowledge-document tools were dropped along with it.
+
+  A prompt that names an unregistered tool makes the model emit "No such tool
+  available", which is a hard mid-task error rather than a degraded answer.
+
+  All six references now name `searchContext`, which is the single context
+  retrieval tool the host registers. The `documentIds` parameter it points at is
+  the knowledge-document selection on that tool, so "search ONLY within these
+  specific documents" stays executable.
+
+  The dead `common.toolNames.searchKnowledgeBase` i18n label is dropped so the
+  only context tool label is `common.toolNames.searchContext`.
+
 ## 0.3.3
 
 ### Patch Changes

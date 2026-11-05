@@ -1,5 +1,13 @@
 # @melandlabs/memory-store
 
+## 1.4.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@1.1.3
+  - @melandlabs/okf@0.3.5
+
 ## 1.4.2
 
 ### Patch Changes
