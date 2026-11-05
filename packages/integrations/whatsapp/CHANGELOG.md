@@ -1,5 +1,12 @@
 # @melandlabs/integrations-whatsapp
 
+## 0.3.22
+
+### Patch Changes
+
+- Updated dependencies
+  - @melandlabs/ai@1.1.4
+
 ## 0.3.21
 
 ### Patch Changes

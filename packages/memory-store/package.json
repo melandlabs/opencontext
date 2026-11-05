@@ -1,6 +1,6 @@
 {
 	"name": "@melandlabs/memory-store",
-	"version": "1.4.3",
+	"version": "1.4.4",
 	"type": "module",
 	"files": ["dist", "README.md", "LICENSE"],
 	"main": "./dist/index.js",

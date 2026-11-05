@@ -1,5 +1,28 @@
 # @melandlabs/ai
 
+## 1.1.4
+
+### Patch Changes
+
+- fix(agent): stop repeating the native-runner document context twice
+
+  Every prompt context the native runner builds carried its content twice — a
+  "System Note: The user has ..." block followed by a near-identical "System
+  Note: User has ..." block, each with its own instruction paragraph, and the
+  focused-insight block repeated the same `Note:` / `Tip:` sentence verbatim.
+  Four blocks were affected: the RAG document hint, the focused-insight hint,
+  the saved file attachments hint, and the saved RAG documents hint.
+
+  The model reads the same instruction list twice on every turn that carries
+  documents or insights, and the two copies disagree on wording, so the second
+  one is pure token cost with no extra meaning. Each block is now emitted once,
+  keeping the more precise phrasing of the pair.
+
+  The dead `common.toolNames` labels for tools that are no longer registered —
+  `getFullDocumentContent`, `listKnowledgeBaseDocuments`, `searchUnifiedMemory`,
+  `getRawMessages` and `searchRawMessages` — are dropped as well, so the only
+  context retrieval label left is `common.toolNames.searchContext`.
+
 ## 1.1.3
 
 ### Patch Changes

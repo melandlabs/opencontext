@@ -567,13 +567,7 @@ ${ragDocumentNames.map((name, i) => `- ${name} (ID: ${ragDocumentIds[i]})`).join
 
 **CRITICAL INSTRUCTION**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or references "this document", they are referring to the document(s) listed above. You MUST use the searchContext tool with the documentIds parameter set to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
 
-System Note: User has uploaded the following documents to strategy memory:
-${ragDocumentNames.map((name, i) => `- ${name} (ID: ${ragDocumentIds[i]})`).join("\n")}
-
-**IMPORTANT**: When the user asks questions like "What's in THIS document?", "Summarize THIS file", or uses expressions like "this document", they are referring to the document(s) listed above. You MUST use the searchContext tool and set the documentIds parameter to [${ragDocumentIds.join(", ")}] to search ONLY within these specific documents.
-
 For general questions about the user's strategy memory or previous uploads, you can omit the documentIds parameter to search all documents.
-For general questions about the user's entire strategy memory or previously uploaded documents, you can omit the documentIds parameter to search all documents.
 ]\n\n`;
 
 	return documentContext;
@@ -676,7 +670,6 @@ async function buildFocusedInsightsPromptContext(
 				});
 				if (documentIds.length > 0) {
 					content += `     Note: You can use searchContext tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
-					content += `     Tip: You can use searchContext tool with documentIds parameter [${documentIds.join(", ")}] to retrieve full content from these files.\n`;
 				}
 			}
 
@@ -695,17 +688,6 @@ ${insightsContent}
 2. Answer based on the insight details, notes, and files shown above
 3. For files listed above, you can use searchContext tool with the documentIds parameter to retrieve their full content from the knowledge base
 4. ONLY search all strategy memory if the question is clearly NOT about these insights
-
-System Note: User is currently focusing on ${focusedInsights.length} specific Insights. Below are the details of each focused insight (including related notes and files):
-
-${insightsContent}
-
-**IMPORTANT**: When the user asks questions like "in this", "this", "here", etc., you MUST:
-1. FIRST check if their question refers to the focused insights listed above
-2. Answer based on the insight details, notes, and files shown above
-3. For files listed above, you can use searchContext tool and set documentIds parameter to retrieve full content from the knowledge base
-4. ONLY search all strategy memory when the question is clearly NOT about these insights
-
 ]\n\n`;
 
 	host.logger?.log("[NativeAgentRunner] Injecting focused insights context:", {
@@ -727,7 +709,7 @@ async function buildSavedFilesPromptContext(
 			const savedFilePaths = await saveFileAttachmentsToWorkspace(body.fileAttachments, body.workDir, host);
 
 			if (savedFilePaths.length > 0) {
-				savedFilesContext = `\n[System Note: The user has attached ${savedFilePaths.length} file(s) that have been saved to your workspace directory (${body.workDir}):\n${savedFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nYou can access these files using standard file operations like Read, Write, Edit, etc.\n\nSystem Note: User has attached ${savedFilePaths.length} file(s) that have been saved to the workspace directory (${body.workDir}):\n${savedFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nYou can access these files using Read, Write, Edit, and other tools.\n]\n\n`;
+				savedFilesContext = `\n[System Note: The user has attached ${savedFilePaths.length} file(s) that have been saved to your workspace directory (${body.workDir}):\n${savedFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nYou can access these files using Read, Write, Edit, and other tools.\n]\n\n`;
 
 				host.logger?.log(
 					`[NativeAgentRunner] Saved ${savedFilePaths.length} file(s) to workspace:`,
@@ -744,7 +726,7 @@ async function buildSavedFilesPromptContext(
 			const savedRAGFilePaths = await saveRAGDocumentsToWorkspace(body.ragDocuments, body.workDir, host);
 
 			if (savedRAGFilePaths.length > 0) {
-				const ragContext = `\n[System Note: The user has uploaded ${savedRAGFilePaths.length} RAG document(s) from strategy memory that have been reconstructed and saved to your workspace directory (${body.workDir}):\n${savedRAGFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nNote: These are text-based reconstructions from the original documents. You can access these files using standard file operations like Read, Write, Edit, etc.\n\nSystem Note: User has extracted ${savedRAGFilePaths.length} RAG document(s) from strategy memory and reconstructed and saved them to the workspace directory (${body.workDir}):\n${savedRAGFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nNote: These are text-based reconstructions from original documents. You can access these files using Read, Write, Edit, and other tools.\n]\n\n`;
+				const ragContext = `\n[System Note: The user has uploaded ${savedRAGFilePaths.length} RAG document(s) from strategy memory that have been reconstructed and saved to your workspace directory (${body.workDir}):\n${savedRAGFilePaths.map((p) => `- ${path.basename(p)}`).join("\n")}\n\nNote: These are text-based reconstructions from the original documents. You can access these files using Read, Write, Edit, and other tools.\n]\n\n`;
 
 				savedFilesContext = ragContext + savedFilesContext;
 
