@@ -1,5 +1,27 @@
 # @melandlabs/i18n
 
+## 0.3.3
+
+### Patch Changes
+
+- fix(agent): name live search tools in the workspace instruction
+
+  The "Search Rules" block told the model to call `searchKnowledgeBase`,
+  `searchRawMessages` and `chatInsight` in parallel. None of those three tools
+  exist any more — the knowledge base, raw chat history and structured
+  conversation insights were fused into one `searchContext` retrieval tool. A
+  prompt that names an unregistered tool makes the model emit
+  "No such tool available", which is a hard mid-task error rather than a
+  degraded answer.
+
+  The block now names `searchContext` (knowledge base docs/files/uploads, chat
+  history, structured conversation insights) and `searchMemoryPath`, both of
+  which are registered. The `searchMemoryPath` co-call invariant is unchanged
+  apart from following the rename.
+
+  The `common.toolNames.chatInsight` i18n key is renamed to
+  `common.toolNames.searchContext` to match.
+
 ## 0.3.2
 
 ### Patch Changes

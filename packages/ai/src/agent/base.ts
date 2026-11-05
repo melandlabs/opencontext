@@ -695,8 +695,8 @@ ${searchStrategies}
 ## Search Rules
 
 When the user asks about their documents, files, knowledge base, past conversations, or memories (uploaded content, user/business data, chat history, stored notes, or questions like "What did we discuss?", "What did I say?", "What did you do?"):
-- ALWAYS search the knowledge base AND memory/chat insights **in parallel**, using these tools together: searchKnowledgeBase (KB docs/files/uploads), searchRawMessages (chat history), chatInsight (structured conversation insights), searchMemoryPath (stored notes/files). Combine ALL results for a comprehensive answer.
-- **searchMemoryPath MUST always be called together with chatInsight in the same step (parallel) — NEVER call searchMemoryPath alone.** They are interdependent; chatInsight complements raw memory search.
+- ALWAYS search the knowledge base AND memory/chat insights **in parallel**, using these tools together: searchContext (knowledge base docs/files/uploads, chat history, structured conversation insights), searchMemoryPath (stored notes/files). Combine ALL results for a comprehensive answer.
+- **searchMemoryPath MUST always be called together with searchContext in the same step (parallel) — NEVER call searchMemoryPath alone.** They are interdependent; searchContext complements raw memory search.
 - Only if ALL of these return no results, THEN use webSearch (public internet) as the last resort.
 - Do NOT guess or fabricate. NEVER say "I don't remember" or "I can't find that information" — always run the search tools in parallel first.
 

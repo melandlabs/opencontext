@@ -481,7 +481,7 @@ const zhHans = {
 			Skill: "调用技能",
 			LSP: "代码分析",
 			TodoWrite: "管理待办",
-			chatInsight: "查询聊天洞察",
+			searchContext: "检索上下文",
 			queryContacts: "查询联系人",
 			queryIntegrations: "查询集成",
 			sendReply: "发送回复",

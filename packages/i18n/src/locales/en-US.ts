@@ -494,7 +494,7 @@ const enUS = {
 			Skill: "Calling Skill",
 			LSP: "Code Analysis",
 			TodoWrite: "Managing Todo",
-			chatInsight: "Querying Chat Insights",
+			searchContext: "Searching Context",
 			queryContacts: "Querying Contacts",
 			queryIntegrations: "Querying Integrations",
 			sendReply: "Sending Reply",
