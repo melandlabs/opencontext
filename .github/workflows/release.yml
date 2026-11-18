@@ -93,6 +93,25 @@ jobs:
           }
           NODE_SCRIPT
 
+      # A npm that knows trusted publishing.
+      #
+      # npm's long-lived automation tokens are being retired, and this
+      # repository's token has already stopped working — the publish
+      # failed with a bare "exit code 1" until the step below started
+      # printing the reason. Trusted publishing replaces the secret
+      # entirely: the CLI exchanges this workflow's OIDC identity for a
+      # short-lived publish credential, and the package has to name this
+      # repository and workflow as its trusted publisher for that to
+      # work. It needs npm 11.5.1 or newer, and the version that ships
+      # with the pinned Node is older, so the CLI is upgraded here.
+      #
+      # npm tries the exchange first and falls back to the token when the
+      # package has no trusted publisher, so the token stays in place as
+      # the second way in.
+      - name: Install a npm that knows trusted publishing
+        run: npm install -g npm@latest
+        shell: bash
+
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
       # avoids changesets trying to push a tag (we let the version PR do
       # that); `--tag latest` is the default but stated explicitly.
@@ -106,6 +125,10 @@ jobs:
         env:
           NPM_ACCESS_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_ACCESS_TOKEN }}
+          # Verbose npm output: the trusted-publishing exchange reports
+          # why it did or did not happen, and without it a failed publish
+          # only says "exit code 1".
+          npm_config_loglevel: verbose
         run: |
           # `set -e` is on for this shell, so a failing publish would abort
           # the step on the assignment below — before `rc=$?` and before
