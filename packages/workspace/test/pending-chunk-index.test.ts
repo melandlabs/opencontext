@@ -15,9 +15,21 @@
 import Database from "better-sqlite3";
 import { describe, expect, it } from "vitest";
 
+import { WORKSPACE_POSTGRES_DDL } from "../src/postgres/schema";
 import { SqliteWorkspaceStore } from "../src/sqlite";
 
 const PENDING_INDEX = "idx_workspace_chunks_version_pending";
+
+/**
+ * The statement, in the shape both backends have to agree on.
+ *
+ * The Postgres DDL is a list of statements, so it is checked as text: the
+ * Postgres side of the index is only executed against a live database,
+ * and this keeps a typo in the DDL from reaching that far unnoticed.
+ */
+const PENDING_INDEX_PATTERN = new RegExp(
+	`CREATE INDEX IF NOT EXISTS ${PENDING_INDEX}\\s+ON workspace_chunks\\s*\\(\\s*version_id\\s*,\\s*chunk_index\\s*\\)\\s*WHERE embedding IS NULL`,
+);
 
 function insertChunk(
 	db: Database.Database,
@@ -42,6 +54,15 @@ function insertChunk(
 }
 
 describe("workspace_chunks — pending-chunk index", () => {
+	it("carries the same index on Postgres", () => {
+		// A store that moves from one backend to the other keeps the same
+		// index under the same name — and the statement itself is checked
+		// here, because the Postgres DDL only ever runs against a live
+		// database.
+		const ddl = WORKSPACE_POSTGRES_DDL.join("\n");
+		expect(PENDING_INDEX_PATTERN.test(ddl)).toBe(true);
+	});
+
 	it("indexes the chunks that still wait for a vector", async () => {
 		const db = new Database(":memory:");
 		const store = new SqliteWorkspaceStore({ db });
