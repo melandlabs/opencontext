@@ -246,6 +246,20 @@ export interface WorkspaceStore {
 
 	// ── embedding queue surface ──────────────────────────────────────────
 	fetchPendingChunks(versionId: number, limit: number): Promise<WorkspaceChunkRow[]>;
+	/**
+	 * Which of these versions still have a chunk without a vector.
+	 *
+	 * The same question `fetchPendingChunks` answers, asked about many
+	 * versions at once: the caller passes the versions it cares about and
+	 * gets back the subset that is not done. One round trip instead of one
+	 * per version — the difference between a sweep that asks about a
+	 * hundred pending resources in a single query and one that asks a
+	 * hundred times.
+	 *
+	 * The versions that are not returned are fully embedded; the ones that
+	 * are returned may have any number of chunks left.
+	 */
+	filterVersionsWithPendingChunks(versionIds: number[]): Promise<number[]>;
 	writeChunkEmbeddings(
 		entries: Array<{ chunkId: string; embedding: number[] }>,
 		model: string,

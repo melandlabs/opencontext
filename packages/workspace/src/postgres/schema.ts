@@ -98,6 +98,15 @@ export const WORKSPACE_POSTGRES_DDL: string[] = [
     ON workspace_chunks (workspace_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_workspace_chunks_resource
     ON workspace_chunks (resource_id, version_id)`,
+	// The pending-chunk question: "does this version still have a chunk
+	// without a vector?". Neither index above can answer it — the leading
+	// column of each is not version_id — so every answer cost a scan of
+	// the whole table, and the question is asked once per version after
+	// every embedding job and once per pending resource on every sweep.
+	// Partial, because only the chunks that still wait for a vector are
+	// interesting: the index holds the pending rows and nothing else.
+	`CREATE INDEX IF NOT EXISTS idx_workspace_chunks_version_pending
+    ON workspace_chunks (version_id, chunk_index) WHERE embedding IS NULL`,
 	`CREATE INDEX IF NOT EXISTS idx_workspace_chunks_search_vector
     ON workspace_chunks USING GIN (search_vector)`,
 

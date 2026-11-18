@@ -97,6 +97,22 @@ describe.skipIf(!POSTGRES_URL)("PostgresWorkspaceStore", () => {
 		expect(tables.total).toBe(0);
 	});
 
+	it("indexes the chunks that still wait for a vector", async () => {
+		// The pending-chunk question — "does this version still have a chunk
+		// without a vector?" — is asked after every embedding job and for
+		// every pending resource on every sweep. Without this index each
+		// answer scans the whole table.
+		const indexes = await withSchemaClient(async (client) => {
+			const result = await client.query(
+				`SELECT indexname FROM pg_indexes
+         WHERE tablename = 'workspace_chunks' AND schemaname = $1`,
+				[SCHEMA],
+			);
+			return result.rows.map((row) => row.indexname as string);
+		});
+		expect(indexes).toContain("idx_workspace_chunks_version_pending");
+	});
+
 	it("indexes a resource, versions it, and dedups on re-index", async () => {
 		const resource = makeResource({
 			canonical_key: "docs/intro.md",
@@ -125,6 +141,26 @@ describe.skipIf(!POSTGRES_URL)("PostgresWorkspaceStore", () => {
 		expect(modified.change_kind).toBe("modified");
 		expect(modified.version_id).not.toBe(created.version_id);
 		expect(modified.resource_id).toBe(created.resource_id);
+	});
+
+	it("answers the pending-chunk question for a whole batch in one round trip", async () => {
+		const resource = makeResource({
+			canonical_key: "docs/pending.md",
+			body: "A document whose chunks have not been embedded yet.",
+		});
+		const created = await store.indexResource({
+			workspace_id: "w1",
+			user_id: "u1",
+			resource,
+		});
+		// The version was just written and has no vector yet; the version
+		// next to it does not exist.
+		const pending = await store.filterVersionsWithPendingChunks([
+			created.version_id,
+			created.version_id + 9999,
+		]);
+		expect(pending).toEqual([created.version_id]);
+		expect(await store.filterVersionsWithPendingChunks([])).toEqual([]);
 	});
 
 	it("finds an indexed document with a lexical query", async () => {
