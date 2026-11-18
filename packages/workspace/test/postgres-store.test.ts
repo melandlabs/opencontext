@@ -97,6 +97,22 @@ describe.skipIf(!POSTGRES_URL)("PostgresWorkspaceStore", () => {
 		expect(tables.total).toBe(0);
 	});
 
+	it("indexes the chunks that still wait for a vector", async () => {
+		// The pending-chunk question — "does this version still have a chunk
+		// without a vector?" — is asked after every embedding job and for
+		// every pending resource on every sweep. Without this index each
+		// answer scans the whole table.
+		const indexes = await withSchemaClient(async (client) => {
+			const result = await client.query(
+				`SELECT indexname FROM pg_indexes
+         WHERE tablename = 'workspace_chunks' AND schemaname = $1`,
+				[SCHEMA],
+			);
+			return result.rows.map((row) => row.indexname as string);
+		});
+		expect(indexes).toContain("idx_workspace_chunks_version_pending");
+	});
+
 	it("indexes a resource, versions it, and dedups on re-index", async () => {
 		const resource = makeResource({
 			canonical_key: "docs/intro.md",
