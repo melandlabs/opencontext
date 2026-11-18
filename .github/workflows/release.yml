@@ -105,11 +105,16 @@ jobs:
       # work. It needs npm 11.5.1 or newer, and the version that ships
       # with the pinned Node is older, so the CLI is upgraded here.
       #
+      # Pinned to the 11.x line rather than `latest`: npm 12 dropped the
+      # `--no-git-checks` flag that changesets passes to `npm publish`,
+      # and every publish fails on the unknown flag before it reaches
+      # the registry at all.
+      #
       # npm tries the exchange first and falls back to the token when the
       # package has no trusted publisher, so the token stays in place as
       # the second way in.
       - name: Install a npm that knows trusted publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
         shell: bash
 
       # Publish with the access token from NPM_ACCESS_TOKEN. `--no-git-tag`
