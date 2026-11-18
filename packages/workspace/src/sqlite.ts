@@ -38,6 +38,7 @@ import {
 import { floatArrayToBuffer } from "@melandlabs/sqlite";
 import Database from "better-sqlite3";
 import * as sqliteVec from "sqlite-vec";
+import { SQLITE_MAX_BOUND_PARAMETERS, chunk } from "./batch";
 import { initializeWorkspaceSchema } from "./schema";
 import { workspaceFtsQuery, workspaceSearchWords } from "./search/tokenization";
 import type {
@@ -219,6 +220,15 @@ export interface ISqliteWorkspaceStore {
 	close(): Promise<void>;
 
 	fetchPendingChunks(versionId: number, limit: number): Array<WorkspaceChunkRow>;
+	/**
+	 * Which of these versions still have a chunk without a vector.
+	 *
+	 * One statement for the whole batch, instead of one statement per
+	 * version — the difference between a sweep that asks about a hundred
+	 * pending resources in a single query and one that asks a hundred
+	 * times.
+	 */
+	filterVersionsWithPendingChunks(versionIds: number[]): number[];
 	writeChunkEmbeddings(
 		entries: Array<{ chunkId: string; embedding: number[] }>,
 		model: string,
@@ -536,6 +546,31 @@ export class SqliteWorkspaceStore implements ISqliteWorkspaceStore {
                  LIMIT ?`,
 			)
 			.all(versionId, limit) as Array<WorkspaceChunkRow>;
+	}
+
+	/**
+	 * Which of these versions still have a chunk without a vector.
+	 *
+	 * The partial index on `(version_id, chunk_index) WHERE embedding IS
+	 * NULL` holds exactly the rows this question is about, so each version
+	 * is an index lookup and the whole batch is one statement.
+	 */
+	filterVersionsWithPendingChunks(versionIds: number[]): number[] {
+		if (versionIds.length === 0) return [];
+		const found = new Set<number>();
+		// SQLite caps the number of bound parameters; the batch is split so
+		// a long list of resources cannot trip over the limit.
+		for (const batch of chunk(versionIds, SQLITE_MAX_BOUND_PARAMETERS)) {
+			const placeholders = batch.map(() => "?").join(", ");
+			const rows = this.db
+				.prepare(
+					`SELECT DISTINCT version_id FROM workspace_chunks
+             WHERE embedding IS NULL AND version_id IN (${placeholders})`,
+				)
+				.all(...batch) as Array<{ version_id: number }>;
+			for (const row of rows) found.add(row.version_id);
+		}
+		return [...found];
 	}
 
 	writeChunkEmbeddings(

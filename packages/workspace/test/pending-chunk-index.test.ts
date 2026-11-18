@@ -105,4 +105,34 @@ describe("workspace_chunks — pending-chunk index", () => {
 		expect(indexed()).toEqual([]);
 		await store.close();
 	});
+
+	it("answers the pending-chunk question for a whole batch in one statement", async () => {
+		const db = new Database(":memory:");
+		const store = new SqliteWorkspaceStore({ db });
+		await store.init();
+		insertChunk(db, { chunk_id: "c1", version_id: 7, chunk_index: 0 });
+		insertChunk(db, { chunk_id: "c2", version_id: 7, chunk_index: 1, embedded: true });
+		insertChunk(db, { chunk_id: "c3", version_id: 8, chunk_index: 0 });
+		insertChunk(db, { chunk_id: "c4", version_id: 9, chunk_index: 0, embedded: true });
+
+		// Version 7 still waits for a vector, version 8 does not, version 9
+		// was never asked about.
+		expect(store.filterVersionsWithPendingChunks([7, 8, 9])).toEqual([7, 8]);
+		expect(store.filterVersionsWithPendingChunks([9])).toEqual([]);
+		expect(store.filterVersionsWithPendingChunks([])).toEqual([]);
+		await store.close();
+	});
+
+	it("splits a batch that is longer than SQLite allows in one statement", async () => {
+		const db = new Database(":memory:");
+		const store = new SqliteWorkspaceStore({ db });
+		await store.init();
+		const versionIds = Array.from({ length: 1200 }, (_, index) => index + 1);
+		insertChunk(db, { chunk_id: "c1", version_id: 1, chunk_index: 0 });
+		insertChunk(db, { chunk_id: "c2", version_id: 900, chunk_index: 0 });
+
+		const found = store.filterVersionsWithPendingChunks(versionIds);
+		expect(found.sort((a, b) => a - b)).toEqual([1, 900]);
+		await store.close();
+	});
 });

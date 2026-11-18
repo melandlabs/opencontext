@@ -10,6 +10,7 @@ The store is asked the same question over and over: *does this version still hav
 
 - `workspace_chunks` gains `idx_workspace_chunks_version_pending`, a partial index on `(version_id, chunk_index)` over the rows where `embedding IS NULL`. It is partial on purpose: only the chunks that still wait for a vector are indexed, so the index stays small however large the table grows, and a chunk leaves the index as soon as its vector is written.
 - Both backends get it — the SQLite schema bootstrap and the Postgres DDL — under the same name and the same definition, so a store that is moved between them keeps the same plan.
+- The store contract gains `filterVersionsWithPendingChunks(versionIds)`: the pending-chunk question asked about many versions at once. It answers with the subset that is not done, in one statement (SQLite) or one round trip (Postgres) instead of one per version. A sweep that asks about a hundred pending resources now asks once.
 
 **Effect**
 
@@ -26,4 +27,4 @@ Building the index costs about 100 ms once, on a store that has not seen it befo
 
 **Testing**
 
-`test/pending-chunk-index.test.ts` pins the index's existence, the query plan of both pending-chunk queries, and the fact that a chunk leaves the index once its vector is written. `test/postgres-store.test.ts` checks the Postgres side carries the same index (gated on `WORKSPACE_POSTGRES_URL`).
+`test/pending-chunk-index.test.ts` pins the index's existence, the query plan of both pending-chunk queries, the fact that a chunk leaves the index once its vector is written, and the batched query on both the SQLite and the Postgres side. `test/postgres-store.test.ts` checks the Postgres side carries the same index (gated on `WORKSPACE_POSTGRES_URL`).

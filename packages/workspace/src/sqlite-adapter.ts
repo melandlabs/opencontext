@@ -187,6 +187,10 @@ export class SqliteWorkspaceStoreAdapter implements WorkspaceStore {
 		return Promise.resolve(this.store.fetchPendingChunks(versionId, limit));
 	}
 
+	filterVersionsWithPendingChunks(versionIds: number[]): Promise<number[]> {
+		return Promise.resolve(this.store.filterVersionsWithPendingChunks(versionIds));
+	}
+
 	writeChunkEmbeddings(
 		entries: Array<{ chunkId: string; embedding: number[] }>,
 		model: string,

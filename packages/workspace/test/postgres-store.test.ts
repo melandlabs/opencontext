@@ -143,6 +143,26 @@ describe.skipIf(!POSTGRES_URL)("PostgresWorkspaceStore", () => {
 		expect(modified.resource_id).toBe(created.resource_id);
 	});
 
+	it("answers the pending-chunk question for a whole batch in one round trip", async () => {
+		const resource = makeResource({
+			canonical_key: "docs/pending.md",
+			body: "A document whose chunks have not been embedded yet.",
+		});
+		const created = await store.indexResource({
+			workspace_id: "w1",
+			user_id: "u1",
+			resource,
+		});
+		// The version was just written and has no vector yet; the version
+		// next to it does not exist.
+		const pending = await store.filterVersionsWithPendingChunks([
+			created.version_id,
+			created.version_id + 9999,
+		]);
+		expect(pending).toEqual([created.version_id]);
+		expect(await store.filterVersionsWithPendingChunks([])).toEqual([]);
+	});
+
 	it("finds an indexed document with a lexical query", async () => {
 		const hits = await store.searchLexical({
 			workspace_id: "w1",

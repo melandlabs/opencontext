@@ -44,6 +44,7 @@ import {
 } from "@melandlabs/shared";
 import { Pool, type PoolClient, type PoolConfig } from "pg";
 
+import { POSTGRES_MAX_BOUND_PARAMETERS, chunk } from "../batch";
 import { workspaceIndexText, workspaceSearchWords } from "../search/tokenization";
 import {
 	type ExpandNeighborsInput,
@@ -1085,6 +1086,31 @@ export class PostgresWorkspaceStore implements WorkspaceStore {
 			...row,
 			embedding_updated_at: row.embedding_updated_at === null ? null : Number(row.embedding_updated_at),
 		}));
+	}
+
+	/**
+	 * Which of these versions still have a chunk without a vector.
+	 *
+	 * The partial index on `(version_id, chunk_index) WHERE embedding IS
+	 * NULL` holds exactly the rows this question is about, so each version
+	 * is an index lookup and the whole batch is one round trip.
+	 */
+	async filterVersionsWithPendingChunks(versionIds: number[]): Promise<number[]> {
+		if (versionIds.length === 0) return [];
+		await this.ensureInitialized();
+		const found = new Set<number>();
+		// Postgres caps the number of bind parameters per statement (65535).
+		// The batch is split so a long list of resources cannot trip over it.
+		for (const batch of chunk(versionIds, POSTGRES_MAX_BOUND_PARAMETERS)) {
+			const placeholders = batch.map((_, index) => `$${index + 1}`).join(", ");
+			const result = await this.pool.query<{ version_id: number }>(
+				`SELECT DISTINCT version_id FROM workspace_chunks
+         WHERE embedding IS NULL AND version_id IN (${placeholders})`,
+				batch,
+			);
+			for (const row of result.rows) found.add(row.version_id);
+		}
+		return [...found];
 	}
 
 	async writeChunkEmbeddings(
