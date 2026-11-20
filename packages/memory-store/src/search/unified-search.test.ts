@@ -323,8 +323,11 @@ describe("createUnifiedSearch", () => {
 			includeRetrievalDiagnostics: true,
 		});
 		expect(output.results.map((hit) => hit.id)).toEqual(["m3", "m2"]);
-		expect(output.results[0].content).toContain("messageSequence: 3");
-		expect(output.results[0].content.match(/\[Message order guidance\]/g)).toHaveLength(1);
+		// Compact presentation: the evidence text stays clean, the sequence
+		// and the chunk index stay in the metadata.
+		expect(output.results[0].content).toBe("three");
+		expect(output.results[0].content).not.toMatch(/\[Message order guidance\]/g);
+		expect(output.results[0].metadata?.messageSequence).toBe(3);
 		expect(output.retrievalDiagnostics?.final).toEqual(output.results);
 		expect(output.retrievalDiagnostics?.fusedBeforeRerank[0].content).toBe("one");
 		expect(output.retrievalDiagnostics?.reranker?.enabled).toBe(true);

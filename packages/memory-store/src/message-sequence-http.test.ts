@@ -80,8 +80,11 @@ it("HTTP ingest and search expose core numbering and explanations without changi
 			timestamp: 123000,
 			sourceChunkIndex: 0,
 		});
-		expect(newHit.content).toContain("messageSequence: 2");
-		expect(newHit.content).toContain("Historical facts retain their original meaning.");
+		// Compact evidence presentation: the event time is rendered into the
+		// text, the ingestion order stays in the metadata.
+		expect(newHit.content).toBe("Shanghai is still my home.");
+		expect(newHit.content).not.toContain("messageSequence");
+		expect(oldHit.content).toContain("[1970-01-01 00:02]");
 		expect(newHit.metadata).not.toHaveProperty("timestamp");
 		expect(output.retrievalDiagnostics.reranker.enabled).toBe(true);
 		expect(rerank).toHaveBeenCalledOnce();
