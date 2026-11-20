@@ -34,13 +34,20 @@ hosted evaluation the system is wired as:
   making retries idempotent. `user_id` is passed through verbatim as the
   isolation scope.
 - **Read path** — each `Search` runs hybrid retrieval (BM25 + vector with
-  reciprocal-rank fusion) over sqlite-vec, returning the top-k memories
-  relevance-ordered. An optional LLM reasoning layer (query rewrite /
-  iterative multi-step retrieval) exists but is **off** in the submission
-  image.
-- **Models** — local ONNX embeddings only; the Add/Search chain calls no
-  external LLM, so it satisfies the platform's model constraints by
-  construction.
+  reciprocal-rank fusion) over sqlite-vec, followed by a cross-encoder
+  reranker (local ONNX `ms-marco-MiniLM-L-6-v2`), returning the top-k
+  memories relevance-ordered. An optional LLM reasoning layer (query
+  rewrite / iterative multi-step retrieval) exists but is **off** in the
+  submission image.
+- **Evidence rendering** — every returned memory is rendered as
+  `[YYYY-MM-DD HH:MM] speaker: text`. The answer model reads `content`
+  verbatim, so it has to carry *when* the memory was said and *who* said
+  it — the judge compares time granularity strictly (DAY↔DAY,
+  MONTH↔MONTH), and a memory without a date cannot answer a "when"
+  question.
+- **Models** — local ONNX embeddings and a local ONNX reranker only; the
+  Add/Search chain calls no external LLM, so it satisfies the platform's
+  model constraints by construction.
 
 ## Attribution / prior work
 
@@ -91,6 +98,7 @@ python run_label.py official --image sha256:<digest>
 | `POST /search` response `data[]`, top_k honored | `handle_search` maps daemon hits to `{id, content, score, created_at}`, `limit=top_k` |
 | Per-sample isolation | `user_id` passed through verbatim as the OpenContext `userId` (both handlers) |
 | `GET /health` 200 | `Handler.do_GET` |
+| Readiness before the run (reranker on, model matches the index, Add→Search round trip) | [gate_check.py](./gate_check.py) |
 | Auth: Memory System Key / Eval Key | `_authorized` + `EVAL_KEY_HEADERS` (top of serve.py) |
 | Retry contract (Add: 408/409/425/429/5xx; Search: same minus 409) | 4xx marked `retriable: false`; 5xx via `_send_retriable` with `Retry-After` |
 | Schema-validate examples | `fixtures/*.example.json` + `python test_contract.py [--live]` |
@@ -101,7 +109,9 @@ python run_label.py official --image sha256:<digest>
 ## Before-you-submit checklist
 
 - [ ] Docker image builds and `/health` is 200 (see [DEPLOY.md](./DEPLOY.md))
+- [ ] `python gate_check.py --adapter-url http://127.0.0.1:7422 --daemon-url http://127.0.0.1:7421` passes every gate
 - [ ] `python test_contract.py --live <base-url> --api-key $AML_SYSTEM_KEY` passes
+- [ ] The volume was created **after** the current embedding model / chunk rules were chosen — an index is not migrated when either changes
 - [ ] `AML_SYSTEM_KEY` set; auth verified on (401 without the key)
 - [ ] Eval Key wired into `AML_EVAL_KEY` once issued; header names in
       `EVAL_KEY_HEADERS` confirmed against the platform's real requests
