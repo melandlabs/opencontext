@@ -229,6 +229,7 @@ export interface UnifiedSearchDeps extends SearchExecutionBudget {
 		childCount: number;
 		embeddedChildCount: number;
 		indexedDimensions: number[];
+		indexedEmbeddingModels?: string[];
 		semanticReady: boolean;
 		lexicalReady: boolean;
 		semanticDegradedReason?: string;

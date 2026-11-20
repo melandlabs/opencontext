@@ -246,6 +246,26 @@ describe("SQLite RawMessage child index", () => {
 		await manager.close();
 	});
 
+	it("reports the embedding models that wrote the index", async () => {
+		// A vector written by one model cannot be compared with the vector of
+		// another, so the index has to say which models it holds.
+		const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "store.db") });
+		await manager.storeMessage(longMessage());
+		const chunks = await manager.getRawMessageSearchChunks({ messageIds: [longMessage().messageId] });
+		await manager.storeMessagesWithSearchChunks(
+			[longMessage()],
+			chunks.map((chunk) => ({
+				...chunk,
+				embedding: [1, 0, 0],
+				embeddingModel: "fixture-embedding",
+				embeddingDimensions: 3,
+				embeddingUpdatedAt: 1,
+			})),
+		);
+		expect((await manager.getRawMessageSearchIndexStats()).embeddingModels).toEqual(["fixture-embedding"]);
+		await manager.close();
+	});
+
 	it("keeps an all-zero caller vector out of the semantic child index", async () => {
 		const manager = new SQLiteRawMessageManager({ dbPath: join(scratchDir, "store.db") });
 		await manager.storeMessage({ ...longMessage(), content: "short text", embedding: [0, 0, 0] });
