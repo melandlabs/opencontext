@@ -35,16 +35,33 @@ COPY benchmark/aml-local/docker-entrypoint.sh /app/docker-entrypoint.sh
 # Normalize line endings (repo may be checked out with CRLF on Windows).
 RUN sed -i 's/\r$//' /app/docker-entrypoint.sh && chmod +x /app/docker-entrypoint.sh
 
-# Memory data + local embedding model cache. Persist this volume for the
-# duration of the evaluation (30-day stability window).
+# The volume holds everything the evaluation needs to survive a restart:
+#   /data/memory/store.db   the SQLite store (the ingested messages)
+#   /data/models/…          the ONNX embedding + reranker model cache
+# The entrypoint points MEMORY_STORE_DB_PATH / OPENCONTEXT_HOME /
+# LOCAL_*_CACHE_DIR at those paths, so persisting this volume is what keeps
+# the 30-day stability window. Persist it for the whole evaluation.
+#
+# The reranker is ON by default: the local cross-encoder is worth roughly
+# +15 points of source recall over the RRF order alone (see the benchmark
+# reports under benchmark/beam/docs). Its model is downloaded on first use,
+# like the embedding model.
+#
+# Switching EMBEDDING_PROVIDER, EMBEDDING_MODEL or the chunk rules changes
+# the index layout — existing indexes are not migrated. Start such a run
+# with a fresh volume.
 VOLUME /data
 ENV OPENCONTEXT_DATA_DIR=/data \
     AML_ADAPTER_PORT=7422 \
     EMBEDDING_PROVIDER=local \
+    RERANKER_PROVIDER=local \
     MEMORY_BACKEND=sqlite-vec
     # AML_SYSTEM_KEY  — Memory System Key (you generate, share with platform); REQUIRED in production
     # AML_EVAL_KEY    — Eval Key (platform issues to you after approval)
     # LOCAL_EMBEDDING_REMOTE_HOST — optional mirror for the local ONNX model download
+    # EMBEDDING_BASE_URL / EMBEDDING_API_KEY / EMBEDDING_MODEL / EMBEDDING_DIMENSIONS
+    #   — switch to an OpenAI-compatible endpoint (e.g. DashScope
+    #     text-embedding-v4 at 1024 dimensions) instead of the local model.
 
 EXPOSE 7422
 HEALTHCHECK --interval=30s --timeout=5s --start-period=300s --retries=3 \

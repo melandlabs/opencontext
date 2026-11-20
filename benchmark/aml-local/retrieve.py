@@ -29,6 +29,11 @@ from typing import Any, Callable
 BENCH_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUT_DIR = Path(__file__).resolve().parent / "outputs"
 BATCH_SIZE = 25
+# The public AML Add boundary: at most 20 messages or 2,000 words per request.
+# The platform sends one request per batch, so the local harness has to do the
+# same — a batch is what the adapter's idempotency key is derived from.
+AML_ADD_BATCH_SIZE = 20
+AML_ADD_MAX_WORDS = 2000
 BENCHMARKS = ("longmemeval", "locomo", "clbench", "beam", "personamem", "scriptmem")
 OUTPUT_NAMES = {
     "longmemeval": "longmemeval-s",
@@ -81,15 +86,21 @@ def load_beam_resume_ids(path: Path) -> set[str]:
         }
 
 
-def parse_timestamp(value: Any, fallback: int) -> int:
-    if isinstance(value, (int, float)):
+def event_timestamp(value: Any) -> int | None:
+    """The event time of a turn in Unix milliseconds.
+
+    `None` when the dataset has no date for it. A made-up timestamp would be
+    rendered into the evidence prefix and could put a date into the answer
+    that nobody ever said.
+    """
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
         return int(value)
     if value:
         try:
             return int(datetime.fromisoformat(str(value).replace("Z", "+00:00")).timestamp() * 1000)
         except ValueError:
-            pass
-    return fallback
+            return None
+    return None
 
 
 def iso_from_ms(value: Any) -> str | None:
@@ -107,6 +118,42 @@ def scope_id(benchmark: str, dataset: Path, sample_id: str) -> str:
     return f"aml_{benchmark}_{digest}"
 
 
+def default_top_k() -> int:
+    """The Top-K the platform asks for: up to 100 memories per question."""
+    return 100
+
+
+def require_reranker() -> bool:
+    """Whether a local run must have the reranker switched on.
+
+    The submitted image runs the reranker; a measurement without it describes
+    a different system. `AML_REQUIRE_RERANKER=0` waives the rule for an
+    explicit ablation run.
+    """
+    return os.environ.get("AML_REQUIRE_RERANKER", "1").strip().lower() not in {"0", "false", "no"}
+
+
+def aml_add_batches(messages: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
+    """Split messages into the public AML Add batches.
+
+    AML's frozen Adapter word counter is not published; whitespace counting
+    is the reproducible local approximation, not a claim of byte parity.
+    """
+    batches: list[list[dict[str, Any]]] = []
+    batch: list[dict[str, Any]] = []
+    words = 0
+    for message in messages:
+        message_words = len(str(message.get("content", "")).split())
+        if batch and (len(batch) >= AML_ADD_BATCH_SIZE or words + message_words > AML_ADD_MAX_WORDS):
+            batches.append(batch)
+            batch, words = [], 0
+        batch.append(message)
+        words += message_words
+    if batch:
+        batches.append(batch)
+    return batches
+
+
 def message_id(user_id: str, unit_id: str) -> str:
     digest = hashlib.sha256(f"{user_id}\0{unit_id}".encode("utf-8")).hexdigest()[:16]
     return f"{user_id}:{digest}"
@@ -117,17 +164,31 @@ def raw_message(
     user_id: str,
     unit_id: str,
     content: str,
-    timestamp: int,
+    timestamp: int | None,
+    *,
+    role: str | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
-    return {
+    """One raw message for the direct-daemon path.
+
+    `timestamp` is the *event* time and stays unset when the dataset has no
+    date: a fabricated date would be rendered into the evidence prefix and
+    could make the answer model answer with a date nobody ever said.
+    """
+    message: dict[str, Any] = {
         "messageId": message_id(user_id, unit_id),
         "userId": user_id,
         "platform": "benchmark",
         "botId": f"aml-{benchmark}",
-        "timestamp": timestamp,
-        "createdAt": timestamp,
+        "createdAt": int(time.time()),
         "content": content,
     }
+    if timestamp is not None:
+        message["timestamp"] = timestamp
+    metadata = {key: value for key, value in (("role", role), ("sessionId", session_id)) if value}
+    if metadata:
+        message["metadata"] = metadata
+    return message
 
 
 def hit_texts(hits: list[dict[str, Any]]) -> list[str]:
@@ -268,10 +329,35 @@ class OpenContextClient:
             if response.status != 200:
                 raise RuntimeError(f"OpenContext daemon unhealthy: HTTP {response.status}")
 
-    def ingest(self, user_id: str, messages: list[dict[str, Any]]) -> int:
+    def ingest(
+        self,
+        user_id: str,
+        messages: list[dict[str, Any]],
+        *,
+        benchmark: str = "benchmark",
+        session_id: str | None = None,
+    ) -> int:
+        """Write AML-style messages straight into the daemon.
+
+        This path bypasses the AML adapter, so it is only used when the
+        harness runs against a bare daemon. The submitted system is measured
+        through `AmlClient.ingest`.
+        """
+        raw = [
+            raw_message(
+                benchmark,
+                user_id,
+                str(message.get("unit_id") or index),
+                str(message.get("content", "")),
+                message.get("timestamp"),
+                role=message.get("role"),
+                session_id=session_id,
+            )
+            for index, message in enumerate(messages)
+        ]
         count = 0
-        for start in range(0, len(messages), BATCH_SIZE):
-            batch = messages[start : start + BATCH_SIZE]
+        for start in range(0, len(raw), BATCH_SIZE):
+            batch = raw[start : start + BATCH_SIZE]
             result = self._post(
                 "/v1/raw-messages",
                 {"userId": user_id, "messages": batch, "embedOnInsert": True},
@@ -306,8 +392,45 @@ class AmlClient(OpenContextClient):
             if response.status != 200:
                 raise RuntimeError(f"AML adapter unhealthy: HTTP {response.status}")
             status = json.loads(response.read().decode("utf-8"))
-        if status.get("ok") is not True or (status.get("retrieval") or {}).get("rerankerReady") is not True:
+        if status.get("ok") is not True:
+            raise RuntimeError("AML adapter is not healthy")
+        # The reranker is worth roughly +15 points of source recall. A run
+        # without it measures a different system than the one that is
+        # submitted, so the harness refuses it unless it is waived.
+        if require_reranker() and (status.get("retrieval") or {}).get("rerankerReady") is not True:
             raise RuntimeError("AML adapter is not ready with an active reranker")
+
+    def ingest(
+        self,
+        user_id: str,
+        messages: list[dict[str, Any]],
+        *,
+        benchmark: str = "benchmark",
+        session_id: str | None = None,
+    ) -> int:
+        """Send the messages through the public Add contract.
+
+        The platform sends one Add request per batch of at most 20 messages
+        or 2,000 words; the local harness does the same so the adapter's
+        idempotency keys, the batch boundaries and the write path are the
+        ones the evaluation will exercise.
+        """
+        del benchmark
+        # One Add request per session, the way the platform scopes a
+        # conversation, and inside a session the public 20-message/2,000-word
+        # batch boundary applies.
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for message in messages:
+            key = str(message.get("session_id") or session_id or user_id)
+            grouped.setdefault(key, []).append(
+                {"role": message.get("role", "user"), "content": str(message.get("content", "")),
+                 **({"timestamp": int(message["timestamp"])} if message.get("timestamp") is not None else {})}
+            )
+        for group_index, (group_session, group_messages) in enumerate(grouped.items()):
+            for batch_index, batch in enumerate(aml_add_batches(group_messages)):
+                request_id = f"{user_id}:session:{group_index}:batch:{batch_index}"
+                self.add(request_id, user_id, group_session, batch)
+        return len(messages)
 
     def add(self, request_id: str, user_id: str, session_id: str, messages: list[dict[str, Any]]) -> None:
         result = self._post(
@@ -383,24 +506,8 @@ def beam_messages(chat: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def beam_add_chunks(messages: list[dict[str, Any]]) -> list[list[dict[str, Any]]]:
-    """Approximate public 20-message/2,000-word Add boundaries.
-
-    AML's frozen Adapter word counter is not published; whitespace counting
-    is the reproducible local approximation, not a claim of byte parity.
-    """
-    chunks: list[list[dict[str, Any]]] = []
-    chunk: list[dict[str, Any]] = []
-    words = 0
-    for message in messages:
-        message_words = len(message["content"].split())
-        if chunk and (len(chunk) >= 20 or words + message_words > 2000):
-            chunks.append(chunk)
-            chunk, words = [], 0
-        chunk.append(message)
-        words += message_words
-    if chunk:
-        chunks.append(chunk)
-    return chunks
+    """Approximate public 20-message/2,000-word Add boundaries."""
+    return aml_add_batches(messages)
 
 
 def completed_beam_add_requests(
@@ -596,22 +703,26 @@ def run_longmemeval(
         for index, turns in enumerate(sessions):
             session_id = str(session_ids[index]) if index < len(session_ids) else f"session_{index}"
             date = dates[index] if index < len(dates) else None
-            body = "\n".join(
-                f"{'User' if turn.get('role') == 'user' else 'Assistant'}: {turn.get('content', '')}"
-                for turn in turns
-            )
-            content = f"# Conversation Session {session_id}\n# Date: {date or ''}\n\n{body}"
-            messages.append(
-                raw_message(
-                    "longmemeval",
-                    user_id,
-                    session_id,
-                    content,
-                    parse_timestamp(date, index + 1),
+            timestamp = event_timestamp(date)
+            # One memory per turn, exactly like the platform's Add. A whole
+            # session in one memory would be chunked arbitrarily, would carry
+            # a single date for every turn, and would hide the turn that
+            # actually answers the question.
+            for turn_index, turn in enumerate(turns):
+                content = str(turn.get("content", "") or "").strip()
+                if not content:
+                    continue
+                messages.append(
+                    {
+                        "role": "user" if turn.get("role") == "user" else "assistant",
+                        "content": content,
+                        "timestamp": timestamp,
+                        "unit_id": f"{session_id}:{turn_index}",
+                        "session_id": session_id,
+                    }
                 )
-            )
         if not skip_ingest and messages:
-            client.ingest(user_id, messages)
+            client.ingest(user_id, messages, benchmark="longmemeval")
         hits = client.search(user_id, str(entry["question"]))
         records.append(
             {
@@ -651,18 +762,43 @@ def run_locomo(
             for key in conversation
             if key.startswith("session_") and not key.endswith("_date_time")
         )
-        for index, key in enumerate(session_keys):
+        # The first speaker of the conversation is the "user"; every other
+        # speaker is the "assistant". The public Add contract only knows
+        # those two roles.
+        speakers: list[str] = []
+        for key in session_keys:
+            for turn in conversation.get(key) or []:
+                speaker = str(turn.get("speaker") or "").strip()
+                if speaker and speaker not in speakers:
+                    speakers.append(speaker)
+        for key in session_keys:
             turns = conversation.get(key) or []
             if not isinstance(turns, list) or not turns:
                 continue
             date = conversation.get(f"{key}_date_time")
-            body = "\n".join(f"{turn.get('speaker', '?')}: {turn.get('text', '')}" for turn in turns)
-            content = f"# Conversation {key}\n# Date: {date or ''}\n\n{body}"
-            messages.append(
-                raw_message("locomo", user_id, key, content, parse_timestamp(date, index + 1))
-            )
+            timestamp = event_timestamp(date)
+            # One memory per turn: the platform ingests messages, not
+            # sessions, and a question like "what did James say in the
+            # museum session" needs the turn — with its own date — back.
+            for turn_index, turn in enumerate(turns):
+                text = str(turn.get("text") or "").strip()
+                if not text:
+                    continue
+                speaker = str(turn.get("speaker") or "").strip()
+                role = "user" if not speaker or speaker == speakers[0] else "assistant"
+                messages.append(
+                    {
+                        "role": role,
+                        # Keep the speaker in the text: the answer model has to
+                        # tell "Caroline said" from "James said".
+                        "content": f"{speaker}: {text}" if speaker else text,
+                        "timestamp": timestamp,
+                        "unit_id": f"{key}:{turn_index}",
+                        "session_id": key,
+                    }
+                )
         if not skip_ingest and messages:
-            client.ingest(user_id, messages)
+            client.ingest(user_id, messages, benchmark="locomo")
 
         questions = entry.get("qa") or entry.get("qa_pairs") or []
         if max_questions:
@@ -721,17 +857,19 @@ def run_clbench(
                 context, question = inline_task
                 context_messages = [{"role": source_messages[0].get("role", "user"), "content": context}]
         messages = [
-            raw_message(
-                "clbench",
-                user_id,
-                f"message_{message_index}",
-                f"{str(message.get('role', 'user')).capitalize()}: {message.get('content', '')}",
-                message_index + 1,
-            )
+            {
+                # CL-bench tasks are not dated conversations: no timestamp is
+                # invented, so the evidence never carries a made-up date.
+                "role": "user" if str(message.get("role", "user")) == "user" else "assistant",
+                "content": str(message.get("content", "") or "").strip(),
+                "timestamp": None,
+                "unit_id": f"message_{message_index}",
+            }
             for message_index, message in enumerate(context_messages)
         ]
+        messages = [message for message in messages if message["content"]]
         if not skip_ingest and messages:
-            client.ingest(user_id, messages)
+            client.ingest(user_id, messages, benchmark="clbench")
         hits = client.search(user_id, question[:2000])
         selected = []
         for hit in hits:
@@ -1005,17 +1143,22 @@ def run_personamem(
         history_payload = read_json(history_path)
         history = history_payload.get("chat_history", history_payload)
         messages: list[dict[str, Any]] = []
-        for chunk_index, start in enumerate(range(0, len(history), 20)):
-            chunk = history[start : start + 20]
-            body = "\n".join(
-                f"{str(message.get('role', 'user')).capitalize()}: {message.get('content', '')}"
-                for message in chunk
-            )
+        # One memory per chat message, like the platform's Add. The persona
+        # history has no dates, so no timestamp is invented for it.
+        for index, message in enumerate(history):
+            content = str(message.get("content", "") or "").strip()
+            if not content:
+                continue
             messages.append(
-                raw_message("personamem", user_id, f"chunk_{chunk_index}", body, chunk_index + 1)
+                {
+                    "role": "user" if str(message.get("role", "user")) == "user" else "assistant",
+                    "content": content,
+                    "timestamp": None,
+                    "unit_id": f"history_{index}",
+                }
             )
         if not skip_ingest and messages:
-            client.ingest(user_id, messages)
+            client.ingest(user_id, messages, benchmark="personamem")
 
         questions = persona["questions"]
         if max_questions:
@@ -1091,25 +1234,32 @@ def run_scriptmem(
                 key=session_sort_key,
             )
             messages: list[dict[str, Any]] = []
-            for session_index, key in enumerate(session_keys):
+            for key in session_keys:
                 turns = conversation.get(key) or []
                 if not isinstance(turns, list) or not turns:
                     continue
                 date = conversation.get(f"{key}_date_time")
-                body = "\n".join(
-                    f"{turn.get('speaker') or 'Narration'}: {turn.get('text', '')}" for turn in turns
-                )
-                messages.append(
-                    raw_message(
-                        "scriptmem",
-                        user_id,
-                        key,
-                        body,
-                        parse_timestamp(date, session_index + 1),
+                timestamp = event_timestamp(date)
+                # One memory per turn, like the platform's Add: the answer
+                # model has to be able to attribute a statement to the
+                # speaker who made it, with the date of that session.
+                for turn_index, turn in enumerate(turns):
+                    text = str(turn.get("text") or "").strip()
+                    if not text:
+                        continue
+                    speaker = str(turn.get("speaker") or "Narration").strip() or "Narration"
+                    role = "user" if not speakers or speaker == speakers[0] else "assistant"
+                    messages.append(
+                        {
+                            "role": role,
+                            "content": f"{speaker}: {text}",
+                            "timestamp": timestamp,
+                            "unit_id": f"{key}:{turn_index}",
+                            "session_id": key,
+                        }
                     )
-                )
             if not skip_ingest and messages:
-                client.ingest(user_id, messages)
+                client.ingest(user_id, messages, benchmark="scriptmem")
 
             questions = entry.get("qa") or []
             if max_questions:
@@ -1228,14 +1378,17 @@ def main() -> int:
     if reasoning not in {"none", "rewrite", "iterative", "union"}:
         parameter_errors.append("AML_REASONING_STRATEGY must be none, rewrite, iterative, or union")
         reasoning = "none"
+    # The platform asks for up to 100 memories per question. Measuring with
+    # a smaller Top-K under-reports the submitted system: the answer model
+    # then sees fewer memories than it will see during the evaluation.
     try:
-        top_k = int(os.environ.get("AML_TOP_K", "12" if args.benchmark == "beam" else "10"))
+        top_k = int(os.environ.get("AML_TOP_K", str(default_top_k())))
     except ValueError:
         parameter_errors.append("AML_TOP_K must be an integer")
-        top_k = 12 if args.benchmark == "beam" else 10
+        top_k = default_top_k()
     if top_k < 1:
         parameter_errors.append("AML_TOP_K must be at least 1")
-        top_k = 12 if args.benchmark == "beam" else 10
+        top_k = default_top_k()
     candidate_k: int | None = None
     if os.environ.get("AML_CANDIDATE_K"):
         try:
@@ -1260,9 +1413,11 @@ def main() -> int:
                     parameter_errors.append("BEAM resume database contains no committed AML messages")
             except sqlite3.Error as exc:
                 parameter_errors.append(f"BEAM resume database cannot be read: {exc}")
-    client_type = AmlClient if args.benchmark == "beam" else OpenContextClient
-    client = client_type(
-        os.environ.get("AML_ADAPTER_URL", "http://127.0.0.1:7422") if args.benchmark == "beam" else os.environ.get("OPENCONTEXT_URL", "http://127.0.0.1:7421"),
+    # Every benchmark goes through the public AML adapter, so a local number
+    # describes the system that is actually submitted — the same Add batches,
+    # the same idempotency keys, the same Search response shape.
+    client = AmlClient(
+        os.environ.get("AML_ADAPTER_URL", "http://127.0.0.1:7422"),
         top_k,
         reasoning,
         candidate_k,
@@ -1283,7 +1438,7 @@ def main() -> int:
             print(f"- {error}", file=sys.stderr)
         return 2
     print(
-        f"[aml-local] daemon={client.base_url} top_k={top_k} candidate_k={candidate_k or 'auto'} "
+        f"[aml-local] adapter={client.base_url} top_k={top_k} candidate_k={candidate_k or 'auto'} "
         f"reasoning={reasoning} benchmark={args.benchmark}"
     )
     if args.preflight_only:

@@ -8,12 +8,43 @@ DATA_DIR="${OPENCONTEXT_DATA_DIR:-/data}"
 mkdir -p "$DATA_DIR"
 cd "$DATA_DIR"
 
-echo "[entrypoint] starting opencontext daemon on 127.0.0.1:7421 (backend=${MEMORY_BACKEND:-sqlite-vec}, embeddings=${EMBEDDING_PROVIDER:-local})"
+# The daemon resolves its SQLite store from MEMORY_STORE_DB_PATH and falls
+# back to $OPENCONTEXT_HOME/memory/store.db. Without these exports the store
+# lands in /root/.opencontext — inside the container's writable layer — so
+# every ingested memory disappears on the next restart and the 30-day
+# stability window is broken.
+export OPENCONTEXT_HOME="$DATA_DIR"
+export MEMORY_STORE_DB_PATH="${MEMORY_STORE_DB_PATH:-$DATA_DIR/memory/store.db}"
+mkdir -p "$(dirname "$MEMORY_STORE_DB_PATH")"
+
+# Keep the ONNX models on the same volume. A cold cache re-downloads them on
+# every start, and the download is the slowest part of a cold first Add.
+export LOCAL_EMBEDDING_CACHE_DIR="${LOCAL_EMBEDDING_CACHE_DIR:-$DATA_DIR/models/embeddings}"
+export LOCAL_RERANKER_CACHE_DIR="${LOCAL_RERANKER_CACHE_DIR:-$DATA_DIR/models/reranker}"
+mkdir -p "$LOCAL_EMBEDDING_CACHE_DIR" "$LOCAL_RERANKER_CACHE_DIR"
+
+EMBEDDING_PROVIDER="${EMBEDDING_PROVIDER:-local}"
+RERANKER_PROVIDER="${RERANKER_PROVIDER:-local}"
+
+# The local embedder truncates at 512 model tokens. The default child size
+# (400 *estimated* tokens ≈ 2 000 characters) is bigger than that for
+# English text, so the tail of a child was silently dropped before it was
+# ever indexed. Tokenizer-aware chunking keeps every child inside the
+# model's input window.
+CHUNK_ARGS=""
+if [ "$EMBEDDING_PROVIDER" = "local" ]; then
+  CHUNK_ARGS="--chunk-max-tokens ${CHUNK_MAX_TOKENS:-384} --chunk-overlap-tokens ${CHUNK_OVERLAP_TOKENS:-64}"
+fi
+
+echo "[entrypoint] starting opencontext daemon on 127.0.0.1:7421 (backend=${MEMORY_BACKEND:-sqlite-vec}, embeddings=${EMBEDDING_PROVIDER}, reranker=${RERANKER_PROVIDER})"
+# shellcheck disable=SC2086 # CHUNK_ARGS is a deliberate word-split list
 node /opt/opencontext/dist/cli/opencontext.js http \
   --host 127.0.0.1 \
   --port 7421 \
-  --embedding-provider "${EMBEDDING_PROVIDER:-local}" \
-  --memory-backend "${MEMORY_BACKEND:-sqlite-vec}" &
+  --embedding-provider "$EMBEDDING_PROVIDER" \
+  --reranker-provider "$RERANKER_PROVIDER" \
+  --memory-backend "${MEMORY_BACKEND:-sqlite-vec}" \
+  $CHUNK_ARGS &
 DAEMON_PID=$!
 
 # Note: the first request with --embedding-provider local downloads the ONNX

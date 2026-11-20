@@ -1,8 +1,9 @@
 # Local AML-style evaluation driver for OpenContext.
 #
 # Plays the AML orchestrator locally:
-#   1. retrieve.py  — BEAM calls the AML Add/Search adapter (:7422); other datasets use the daemon,
-#                     emit AML-compatible input JSONL under aml-local/outputs/<bench>/
+#   1. retrieve.py  — every dataset calls the AML Add/Search adapter (:7422), the same
+#                     boundary the platform uses, and emits AML-compatible input JSONL
+#                     under aml-local/outputs/<bench>/
 #   2. AML pipeline answer    — benchmark/AML-agent-memory-leaderboard/data/<bench>/pipeline.py
 #   3. AML pipeline evaluate  — same file
 #
@@ -151,7 +152,9 @@ if ($Bench -eq "beam") {
   }
 }
 
-$topK = if ($Bench -eq "beam") { 12 } else { 10 }
+# The platform asks for up to 100 memories per question. Measuring with a
+# smaller Top-K under-reports the system that is actually submitted.
+$topK = 100
 $candidateK = $null
 if ($TopK -gt 0) { $topK = $TopK }
 if ($TopK -lt 0) { $preflightErrors.Add("-TopK must be zero or a positive integer") }
@@ -163,7 +166,7 @@ if ($CandidateK -gt 0) {
 } else {
   Remove-Item Env:AML_CANDIDATE_K -ErrorAction SilentlyContinue
 }
-if ($Bench -ne "beam" -and $env:AML_TOP_K) {
+if ($env:AML_TOP_K) {
   $parsedTopK = 0
   if (-not [int]::TryParse($env:AML_TOP_K, [ref]$parsedTopK) -or $parsedTopK -lt 1) {
     $preflightErrors.Add("AML_TOP_K must be an integer of at least 1")
@@ -179,11 +182,11 @@ if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
   if (-not (Test-Path -LiteralPath $datasetPath)) {
     $preflightErrors.Add("benchmark dataset is missing: $datasetPath")
   }
-  $daemonUrl = if ($env:OPENCONTEXT_URL) { $env:OPENCONTEXT_URL.TrimEnd("/") } else { "http://127.0.0.1:7421" }
+  $adapterUrl = if ($env:AML_ADAPTER_URL) { $env:AML_ADAPTER_URL.TrimEnd("/") } else { "http://127.0.0.1:7422" }
   try {
-    $null = Invoke-WebRequest "$daemonUrl/health" -TimeoutSec 5
+    $null = Invoke-WebRequest "$adapterUrl/health" -TimeoutSec 5
   } catch {
-    $preflightErrors.Add("OpenContext daemon is unavailable at $daemonUrl")
+    $preflightErrors.Add("AML adapter is unavailable at $adapterUrl")
   }
 } else {
   $null = & $python -c "import httpx" 2>&1
@@ -315,7 +318,7 @@ $manifest = [ordered]@{
   judge_model = $JudgeModel
   judge_rubric_routing = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_JUDGE_PROVIDER) { $env:AML_BEAM_JUDGE_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "NextBit" } else { "auto" }); response_format = "json_object"; invalid_format = "skip_after_bounded_retries" } } else { $null }
   judge_event_alignment = if ($Bench -eq "beam") { [ordered]@{ provider = $(if ($env:AML_BEAM_EVENT_PROVIDER) { $env:AML_BEAM_EVENT_PROVIDER } elseif ($JudgeModel -eq "qwen/qwen3-14b") { "Alibaba" } else { "auto" }); reasoning = "none"; initial_max_tokens = 8 } } else { $null }
-  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = if ($Bench -eq "beam") { 100 } else { $null }; local_top_k_override = ($Bench -eq "beam"); reasoning_model = if ($env:OPENCONTEXT_LLM_MODEL) { $env:OPENCONTEXT_LLM_MODEL } else { "auto" }; reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" }; reasoning_effort = if ($env:OPENCONTEXT_LLM_REASONING_EFFORT) { $env:OPENCONTEXT_LLM_REASONING_EFFORT } else { "auto" } }
+  retrieval = [ordered]@{ strategy = $Reasoning; top_k = $topK; official_top_k = 100; local_top_k_override = ($topK -ne 100); reasoning_model = if ($env:OPENCONTEXT_LLM_MODEL) { $env:OPENCONTEXT_LLM_MODEL } else { "auto" }; reasoning_provider = if ($env:OPENCONTEXT_LLM_PROVIDER) { $env:OPENCONTEXT_LLM_PROVIDER } else { "auto" }; reasoning_effort = if ($env:OPENCONTEXT_LLM_REASONING_EFFORT) { $env:OPENCONTEXT_LLM_REASONING_EFFORT } else { "auto" } }
   resume = [bool]$ResumeDbPath
   started_at = $startedAt.ToString("o")
   finished_at = $finishedAt.ToString("o")

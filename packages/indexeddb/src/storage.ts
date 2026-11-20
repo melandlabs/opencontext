@@ -95,6 +95,13 @@ export interface RawMessageSearchIndexStats {
 	chunkCount: number;
 	embeddedChunkCount: number;
 	embeddingDimensions: number[];
+	/**
+	 * The distinct embedding models that produced the vectors in this index.
+	 * An index written by one model must not be searched with another model's
+	 * vectors — the scores are not comparable, so a mismatch has to be
+	 * reported instead of silently degrading recall.
+	 */
+	embeddingModels: string[];
 	lexicalReady: boolean;
 	semanticReady: boolean;
 }

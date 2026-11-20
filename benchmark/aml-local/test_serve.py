@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import sys
 import unittest
 from pathlib import Path
@@ -50,12 +51,42 @@ class AdapterContractTests(unittest.TestCase):
                     })
                 post.assert_not_called()
 
-    def test_add_does_not_acknowledge_degraded_embedding(self) -> None:
+    def test_add_accepts_a_batch_the_daemon_only_warned_about(self) -> None:
+        # A warning means "written, but the write could not be enriched"
+        # (for example the embedding provider was unreachable). The messages
+        # are persisted and the lexical channel still finds them, so the
+        # batch is acknowledged: refusing it would make the platform retry a
+        # request that can never succeed, and a rejected batch scores nothing.
         body = {"request_id": "req", "user_id": "user", "session_id": "session",
                 "messages": [{"role": "user", "content": "text"}]}
         with patch.object(serve, "oc_post", return_value={"ok": True, "count": 1, "warnings": [{"code": "semantic_unavailable"}]}):
+            result = serve.handle_add(body)
+        self.assertTrue(result["success"])
+
+    def test_add_fails_when_the_daemon_did_not_accept_the_write(self) -> None:
+        body = {"request_id": "req", "user_id": "user", "session_id": "session",
+                "messages": [{"role": "user", "content": "text"}]}
+        with patch.object(serve, "oc_post", return_value={"ok": False, "count": 0}):
             with self.assertRaises(RuntimeError):
                 serve.handle_add(body)
+
+    def test_add_without_a_request_id_still_keys_the_batch_by_content(self) -> None:
+        # An empty request_id would collapse every sample onto `aml::0`,
+        # `aml::1`, ... and later batches would overwrite earlier ones.
+        body = {"user_id": "user", "session_id": "session",
+                "messages": [{"role": "user", "content": "text"}]}
+        with patch.object(serve, "oc_post", return_value={"ok": True, "count": 1}) as post:
+            serve.handle_add(body)
+        first_id = post.call_args.args[1]["messages"][0]["messageId"]
+        self.assertTrue(first_id.startswith("aml:content-"), first_id)
+        with patch.object(serve, "oc_post", return_value={"ok": True, "count": 1}) as post:
+            serve.handle_add(body)
+        self.assertEqual(post.call_args.args[1]["messages"][0]["messageId"], first_id)
+        # A different batch gets a different key.
+        other = dict(body, messages=[{"role": "user", "content": "other"}])
+        with patch.object(serve, "oc_post", return_value={"ok": True, "count": 1}) as post:
+            serve.handle_add(other)
+        self.assertNotEqual(post.call_args.args[1]["messages"][0]["messageId"], first_id)
 
     def test_search_keeps_relevance_order_and_respects_top_k(self) -> None:
         hits = [
@@ -116,6 +147,40 @@ class AdapterContractTests(unittest.TestCase):
         self.assertEqual(result["_local_diagnostics"]["reasoning"]["strategy"], "union")
         self.assertEqual(post.call_args.args[1]["reasoningStrategy"], "union")
         self.assertEqual(body, {"query": "what?", "user_id": "user", "top_k": 12})
+
+
+class SessionNeighborExpansionTests(unittest.TestCase):
+    """The expansion is an explicit experiment, off in the submitted run."""
+
+    def test_it_is_off_by_default(self) -> None:
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("AML_SESSION_NEIGHBOR_EXPANSION", None)
+            self.assertIsNone(serve.session_neighbor_expansion())
+
+    def test_the_off_values_are_honoured(self) -> None:
+        for value in ("", "off", "0", "false", "none"):
+            with patch.dict(os.environ, {"AML_SESSION_NEIGHBOR_EXPANSION": value}, clear=False):
+                self.assertIsNone(serve.session_neighbor_expansion())
+
+    def test_an_unknown_mode_is_rejected(self) -> None:
+        with patch.dict(os.environ, {"AML_SESSION_NEIGHBOR_EXPANSION": "sometimes"}, clear=False):
+            with self.assertRaises(ValueError):
+                serve.session_neighbor_expansion()
+
+    def test_the_expansion_reaches_the_daemon_only_when_it_is_enabled(self) -> None:
+        hit = {"id": "memory-1", "content": "answer", "similarity": 0.8}
+        body = {"query": "what?", "user_id": "user", "top_k": 12}
+        with patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("AML_SESSION_NEIGHBOR_EXPANSION", None)
+            with patch.object(serve, "oc_post", return_value={"results": [hit]}) as post:
+                serve.handle_search(body)
+            self.assertNotIn("sessionNeighborExpansion", post.call_args.args[1])
+        with patch.dict(os.environ, {"AML_SESSION_NEIGHBOR_EXPANSION": "protected"}, clear=False):
+            with patch.object(serve, "oc_post", return_value={"results": [hit]}) as post:
+                serve.handle_search(body)
+            expansion = post.call_args.args[1]["sessionNeighborExpansion"]
+            self.assertEqual(expansion["mode"], "protected")
+            self.assertGreaterEqual(expansion["window"], 1)
 
 
 if __name__ == "__main__":

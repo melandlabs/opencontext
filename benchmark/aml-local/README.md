@@ -1,16 +1,22 @@
 # aml-local — Local pre-evaluation for AML (Agent Memory Leaderboard)
 
 Replays the [Agent Memory Leaderboard](https://github.com/AML-memory/agent-memory-leaderboard)
-evaluation pipeline locally, with the **OpenContext daemon** (`http://127.0.0.1:7421`)
-as the memory backend:
+evaluation pipeline locally, through the **same public Add/Search boundary the
+platform calls** (the AML adapter on `http://127.0.0.1:7422`, which forwards to
+the OpenContext daemon on `http://127.0.0.1:7421`):
 
 ```
-dataset -> retrieve.py -> OpenContext (POST /v1/raw-messages ingest, per-sample userId isolation)
-                        -> per-question POST /v1/search -> AML-format input.jsonl
+dataset -> retrieve.py -> AML adapter (POST /add, per-sample userId isolation)
+                        -> per-question POST /search -> AML-format input.jsonl
         -> official AML pipeline.py answer (generate answers)
         -> official AML pipeline.py evaluate (scoring)
         -> judged.jsonl + aggregate score
 ```
+
+Measuring through the adapter is deliberate: a local run that talks to the
+daemon directly would exercise a different write path, a different batch
+boundary and a different response shape than the submitted system, so its
+numbers would not transfer.
 
 This is the **AML-compatible local evaluation** path. It uses public/local
 datasets with the vendored AML answer and scoring pipelines, so it is distinct
@@ -23,12 +29,26 @@ from both:
 
 ## Prerequisites
 
-- The OpenContext daemon is running (`curl http://127.0.0.1:7421/health`):
+- The OpenContext daemon **and** the AML adapter are running:
 
 ```powershell
-cd benchmark\.opencontext-data
+# The daemon resolves its SQLite store from MEMORY_STORE_DB_PATH and falls
+# back to $OPENCONTEXT_HOME/memory/store.db — the working directory is
+# irrelevant. Point OPENCONTEXT_HOME at the benchmark data directory so a
+# local run never writes into the personal store.
+$env:OPENCONTEXT_HOME="$PWD\benchmark\.opencontext-data"
 $env:LOCAL_EMBEDDING_REMOTE_HOST='https://hf-mirror.com'
-node ..\..\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
+node packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --reranker-provider local --memory-backend sqlite-vec
+# in a second shell
+python benchmark\aml-local\serve.py
+```
+
+- The deployment passes the readiness gates (they assert that the reranker
+  is on, that the index was written by the running embedding model, and that
+  an added memory can be found again):
+
+```powershell
+python benchmark\aml-local\gate_check.py --adapter-url http://127.0.0.1:7422 --daemon-url http://127.0.0.1:7421
 ```
 
 - AML pipeline environment (vendored at `benchmark/AML-agent-memory-leaderboard/`):
@@ -61,13 +81,44 @@ All six AML textual benchmarks (`beam`, `clbench`, `locomo-refined`, `longmemeva
 Common flags: `-Limit N` (number of samples; for personamem = number of personas),
 `-MaxQuestions N` (cap questions per sample/persona), `-SkipIngest` (reuse
 already-ingested memories, re-retrieve only), `-Dataset beam_1m.json` (switch BEAM
-dataset), `-Mode mcq|generative` (personamem only, default mcq).
+dataset), `-Mode mcq|generative` (personamem only, default mcq), `-TopK N`
+(override the Top-K; the default is 100, the platform's own value).
+
+Two rules keep a local number comparable with the leaderboard:
+
+- **Top-K is 100 by default.** The platform asks for up to 100 memories per
+  question; a smaller local Top-K under-reports the submitted system.
+- **One memory per turn.** LongMemEval-S, LoCoMo, PersonaMem and ScriptMem are
+  ingested message by message, the way the platform's `Add` delivers them, so a
+  retrieved memory carries its own date and its own speaker. Datasets without
+  dates (CL-bench, PersonaMem histories) get **no** timestamp: an invented date
+  would be rendered into the evidence and could put a date into the answer that
+  nobody ever said.
 
 Before retrieval, ingest, or model calls, the runner checks the dataset and
 sample filter, daemon, `OPENROUTER_API_KEY`, AML Python interpreter and `httpx`,
 pipeline files, output path, and arguments. All detected failures are reported
 together without printing secret values. `python retrieve.py --help` does not run
 preflight.
+
+## Experiments: session-neighbour expansion
+
+A memory is a *turn*: "the trip was wonderful" carries no subject, and the
+subject usually sits in the previous turn. The adapter can add the
+neighbouring turns of every top hit as extra candidates:
+
+| Variable | Default | Effect |
+| --- | --- | --- |
+| `AML_SESSION_NEIGHBOR_EXPANSION` | off | `protected` keeps the direct hits in front and fills the remaining slots with neighbours; `union` hands every candidate to the reranker |
+| `AML_SESSION_NEIGHBOR_WINDOW` | 1 | how many messages on each side of a hit count as neighbours |
+| `AML_SESSION_NEIGHBOR_SLOTS` | 4 | how many neighbours may enter the result in `protected` mode |
+
+It is **off in the submitted configuration** — the submitted run is the
+measured one, and the AML judge counts an extra item in a list answer as
+WRONG, so more context can also mean more wrong answers. Switch it on for one
+arm of an A/B, keep everything else (volume, model, chunk rules, dataset
+slice) fixed, and record both run manifests. See
+[DEPLOY.md](./DEPLOY.md) for the full experiment protocol.
 
 PersonaMem-v2 reads `benchmark/personamem-v2/dataset/benchmark.csv` plus the
 per-persona 32k chat histories — fetch them with
@@ -139,12 +190,12 @@ when the LLM call fails. No code changes are needed — the CLI wires the
 providers automatically when an LLM key is present. Start the daemon with:
 
 ```powershell
-cd benchmark\.opencontext-data
+$env:OPENCONTEXT_HOME="$PWD\benchmark\.opencontext-data"
 $env:LOCAL_EMBEDDING_REMOTE_HOST='https://hf-mirror.com'
 $env:OPENCONTEXT_LLM_API_KEY=$env:OPENROUTER_API_KEY          # any OpenAI-compatible key
 $env:OPENCONTEXT_LLM_BASE_URL='https://openrouter.ai/api/v1'  # this is the default
 $env:OPENCONTEXT_LLM_MODEL='qwen/qwen3-14b'                   # reasoning model (planner/rewriter); any cheap chat model works
-node ..\..\packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
+node packages\opencontext\dist\cli\opencontext.js http --embedding-provider local --memory-backend sqlite-vec
 # expect in the log: reasoning wired (model=...; request reasoningStrategy=rewrite|iterative to use it)
 ```
 

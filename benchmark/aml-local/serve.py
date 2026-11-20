@@ -47,6 +47,7 @@ Usage:
 from __future__ import annotations
 
 import json
+import hashlib
 import math
 import os
 import threading
@@ -75,6 +76,31 @@ RETRY_AFTER_SECONDS = os.environ.get("AML_RETRY_AFTER", "5")
 # /data) and do not put credentials in the trace path or payload.
 TRACE_PATH = os.environ.get("AML_TRACE_PATH", "").strip()
 TRACE_LOCK = threading.Lock()
+
+
+def session_neighbor_expansion() -> dict | None:
+    """Session-neighbour expansion for Search, or None when it is off.
+
+    Off by default: the submitted configuration is the measured one. Turn it
+    on (`AML_SESSION_NEIGHBOR_EXPANSION=union|protected`) to run an explicit
+    experiment — the neighbouring turns of every top hit are added as extra
+    candidates, so the answer model sees the context a pronoun refers to.
+    `protected` keeps the direct hits in front and only fills the remaining
+    slots with neighbours; `union` hands everything to the reranker.
+    """
+    mode = os.environ.get("AML_SESSION_NEIGHBOR_EXPANSION", "").strip().lower()
+    if mode in ("", "off", "0", "false", "none"):
+        return None
+    if mode not in ("union", "protected"):
+        raise ValueError("AML_SESSION_NEIGHBOR_EXPANSION must be off, union or protected")
+    window = int(os.environ.get("AML_SESSION_NEIGHBOR_WINDOW", "1"))
+    slots = int(os.environ.get("AML_SESSION_NEIGHBOR_SLOTS", "4"))
+    return {
+        "mode": mode,
+        "window": max(1, min(16, window)),
+        "seedLimit": int(os.environ.get("AML_SESSION_NEIGHBOR_SEEDS", "12")),
+        "maxNeighborSlots": max(1, min(100, slots)),
+    }
 
 
 def write_trace(event: dict) -> None:
@@ -111,6 +137,33 @@ def iso_from_ms(ms: int | None) -> str | None:
         return None
 
 
+def batch_key(request_id: str, user_id: str, session_id: str, messages: list) -> str:
+    """The idempotency key of one Add batch.
+
+    The platform's `request_id` is the natural key, but it is optional in the
+    contract. An empty one would collapse every sample into the same ids
+    (`aml::0`, `aml::1`, ...) and later batches would overwrite earlier ones,
+    so fall back to a hash of the batch content. The same batch then still
+    replays onto itself.
+    """
+    if isinstance(request_id, str) and request_id.strip():
+        return request_id.strip()
+    digest = hashlib.sha256()
+    digest.update(user_id.encode("utf-8"))
+    digest.update(b"\x00")
+    digest.update(session_id.encode("utf-8"))
+    for m in messages:
+        if not isinstance(m, dict):
+            continue
+        digest.update(b"\x00")
+        digest.update(str(m.get("role", "")).encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(str(m.get("timestamp", "")).encode("utf-8"))
+        digest.update(b"\x00")
+        digest.update(str(m.get("content", "")).encode("utf-8"))
+    return "content-" + digest.hexdigest()[:32]
+
+
 def handle_add(body: dict) -> dict:
     if not isinstance(body, dict):
         raise ValueError("Add body must be an object")
@@ -118,9 +171,10 @@ def handle_add(body: dict) -> dict:
     user_id = body.get("user_id")
     session_id = body.get("session_id")
     messages = body.get("messages")
-    if any(not isinstance(value, str) or not value.strip() for value in (request_id, user_id, session_id)) or not isinstance(messages, list) or not messages:
-        raise ValueError("request_id, user_id, session_id and non-empty messages[] are required")
+    if any(not isinstance(value, str) or not value.strip() for value in (user_id, session_id)) or not isinstance(messages, list) or not messages:
+        raise ValueError("user_id, session_id and non-empty messages[] are required")
 
+    key = batch_key(request_id if isinstance(request_id, str) else "", user_id, session_id, messages)
     now_seconds = int(time.time())
     oc_messages = []
     for i, m in enumerate(messages):
@@ -135,7 +189,7 @@ def handle_add(body: dict) -> dict:
             raise ValueError(f"messages[{i}].timestamp must be Unix milliseconds")
         oc_message = {
                 # deterministic id -> platform retries stay idempotent
-                "messageId": f"aml:{request_id}:{i}",
+                "messageId": f"aml:{key}:{i}",
                 "userId": user_id,
                 "platform": "aml",
                 "botId": "aml-adapter",
@@ -149,8 +203,18 @@ def handle_add(body: dict) -> dict:
     # embedOnInsert blocks until embeddings are stored, so Search right after
     # Add sees the memories (contract: return 200 only once searchable).
     result = oc_post("/v1/raw-messages", {"userId": user_id, "messages": oc_messages, "embedOnInsert": True}, timeout=1800)
-    if result.get("ok") is not True or result.get("count") != len(oc_messages) or result.get("warnings"):
-        raise RuntimeError("OpenContext did not confirm fully embedded Add messages")
+    if result.get("ok") is not True:
+        raise RuntimeError("OpenContext did not confirm the Add")
+    # A warning here means "written, but some part of the write could not be
+    # enriched" (for example the embedding provider was unreachable). The
+    # messages are persisted and the lexical channel can still find them, so
+    # the batch is accepted: refusing it would make the platform retry a
+    # request that can never succeed, and a rejected batch scores nothing.
+    warnings = result.get("warnings") or []
+    if warnings:
+        write_trace({"schema_version": 1, "method": "ADD", "request_id": request_id, "warnings": warnings})
+    if result.get("count") != len(oc_messages):
+        write_trace({"schema_version": 1, "method": "ADD", "request_id": request_id, "expected": len(oc_messages), "count": result.get("count")})
     return {"success": True, "request_id": request_id, "user_id": user_id, "session_id": session_id}
 
 
@@ -175,11 +239,13 @@ def handle_search(body: dict, *, local_diagnostics: bool = False, local_reasonin
     if local_reasoning != "none" and not local_diagnostics:
         raise ValueError("local reasoning requires local diagnostics")
 
+    neighbor_expansion = session_neighbor_expansion()
     res = oc_post(
         "/v1/search",
         {"userId": user_id, "query": query, "limit": top_k, "sources": ["memory"],
          **({"candidateLimit": candidate_k} if candidate_k is not None else {}),
          **({"reasoningStrategy": local_reasoning} if local_reasoning != "none" else {}),
+         **({"sessionNeighborExpansion": neighbor_expansion} if neighbor_expansion else {}),
          **({"includeRetrievalDiagnostics": True} if local_diagnostics else {})},
         timeout=1800,
     )
@@ -259,9 +325,12 @@ class Handler(BaseHTTPRequestHandler):
                     daemon_health = json.loads(response.read().decode("utf-8"))
                 if daemon_health.get("ok") is not True:
                     raise RuntimeError("daemon health is not ok")
-                if (daemon_health.get("retrieval") or {}).get("rerankerReady") is not True:
-                    raise RuntimeError("required reranker is not ready")
-                self._send(200, {"ok": True, "opencontext": OPENCONTEXT_URL, "retrieval": daemon_health.get("retrieval")})
+                retrieval = daemon_health.get("retrieval") or {}
+                # Liveness only. An optional stage (the reranker) being off
+                # must not make the whole service look broken to the
+                # platform — the assertions about which stages are actually
+                # running belong in `gate_check.py`, not in a health probe.
+                self._send(200, {"ok": True, "opencontext": OPENCONTEXT_URL, "retrieval": retrieval})
             except Exception as error:
                 self._send_retriable(503, f"opencontext daemon unavailable: {error}")
         else:

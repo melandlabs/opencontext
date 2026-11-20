@@ -651,11 +651,19 @@ export class SQLiteRawMessageManager implements RawMessageStorageManager {
 				)
 				.all() as Array<{ dimensions: number }>
 		).map((row) => row.dimensions);
+		const embeddingModels = (
+			this.db
+				.prepare(
+					"SELECT DISTINCT embedding_model AS model FROM raw_message_chunks WHERE embedding_model IS NOT NULL AND embedding_model != '' ORDER BY embedding_model",
+				)
+				.all() as Array<{ model: string }>
+		).map((row) => row.model);
 		return {
 			messageCount: counts.message_count,
 			chunkCount: counts.chunk_count,
 			embeddedChunkCount: counts.embedded_chunk_count ?? 0,
 			embeddingDimensions: dimensions,
+			embeddingModels,
 			lexicalReady: this.tableExists("raw_message_chunks_fts"),
 			semanticReady:
 				(counts.embedded_chunk_count ?? 0) > 0 && dimensions.some((d) => this.childVectorTableExists(d)),
