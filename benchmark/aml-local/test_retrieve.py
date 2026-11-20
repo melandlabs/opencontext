@@ -116,6 +116,7 @@ class RetrieveFixtureTests(unittest.TestCase):
         host, port = cls.server.server_address
         cls.client = retrieve.OpenContextClient(f"http://{host}:{port}", top_k=3)
         cls.aml_client = retrieve.AmlClient(f"http://{host}:{port}", top_k=12)
+        cls.aml_client_small = retrieve.AmlClient(f"http://{host}:{port}", top_k=3)
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -258,7 +259,9 @@ class RetrieveFixtureTests(unittest.TestCase):
 
     def run_case(self, benchmark: str, dataset: Path, output_root: Path) -> tuple[list[dict], list[str]]:
         self.server.requests.clear()
-        client = self.aml_client if benchmark == "beam" else self.client
+        # Every benchmark goes through the public AML adapter, so the local
+        # run measures the system that is actually submitted.
+        client = self.aml_client_small
         client.health()
         output = retrieve.run_benchmark(
             benchmark,
@@ -269,35 +272,23 @@ class RetrieveFixtureTests(unittest.TestCase):
         )
         rows = [json.loads(line) for line in output.read_text(encoding="utf-8").splitlines()]
 
-        add_path, search_path = ("/add", "/search") if benchmark == "beam" else ("/v1/raw-messages", "/v1/search")
-        add_requests = [payload for path, payload in self.server.requests if path == add_path]
-        search_requests = [payload for path, payload in self.server.requests if path == search_path]
+        add_requests = [payload for path, payload in self.server.requests if path == "/add"]
+        search_requests = [payload for path, payload in self.server.requests if path == "/search"]
         self.assertTrue(add_requests, f"{benchmark} did not ingest fixture messages")
         self.assertTrue(search_requests, f"{benchmark} did not search fixture questions")
 
-        if benchmark == "beam":
-            added_user_ids = {payload["user_id"] for payload in add_requests}
-            for payload in add_requests:
-                self.assertTrue(all(message["role"] in ("user", "assistant") for message in payload["messages"]))
-                self.assertLessEqual(len(payload["messages"]), 20)
-            for payload in search_requests:
-                self.assertIn(payload["user_id"], added_user_ids)
-                self.assertEqual(payload["top_k"], 12)
-        else:
-            added_user_ids = {payload["userId"] for payload in add_requests}
-            for payload in add_requests:
-                self.assertTrue(payload["embedOnInsert"])
-                for message in payload["messages"]:
-                    self.assertEqual(payload["userId"], message["userId"])
-            for payload in search_requests:
-                self.assertIn(payload["userId"], added_user_ids)
-                self.assertEqual(payload["limit"], 3)
-                self.assertEqual(payload["sources"], ["memory"])
+        added_user_ids = {payload["user_id"] for payload in add_requests}
+        for payload in add_requests:
+            self.assertTrue(all(message["role"] in ("user", "assistant") for message in payload["messages"]))
+            self.assertLessEqual(len(payload["messages"]), 20)
+        for payload in search_requests:
+            self.assertIn(payload["user_id"], added_user_ids)
+            self.assertEqual(payload["top_k"], 3)
 
         message_ids = [
-            message.get("messageId", f"{payload['request_id']}:{index}" if benchmark == "beam" else "")
+            f"{payload['request_id']}:{index}"
             for payload in add_requests
-            for index, message in enumerate(payload["messages"])
+            for index, _ in enumerate(payload["messages"])
         ]
         self.assertEqual(len(message_ids), len(set(message_ids)))
         return rows, message_ids
@@ -498,6 +489,44 @@ class RetrieveFixtureTests(unittest.TestCase):
         self.assertEqual(sleep.call_count, 2)
         self.assertEqual(len([path for path, _ in self.server.requests if path == "/add"]), 1)
 
+    def test_every_turn_is_ingested_as_its_own_message(self) -> None:
+        # The platform ingests messages, not sessions. One memory per turn is
+        # what makes a dated, attributed answer possible.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = HERE / "fixtures" / "retrieve" / "locomo.json"
+            retrieve.run_benchmark("locomo", dataset, self.aml_client_small, Path(temp_dir) / "outputs")
+        add_requests = [payload for path, payload in self.server.requests if path == "/add"]
+        messages = [message for payload in add_requests for message in payload["messages"]]
+        self.assertEqual(len(messages), 2)
+        self.assertEqual(messages[0]["content"], "Caroline: My favorite color is green.")
+        self.assertEqual(messages[0]["role"], "user")
+        self.assertEqual(messages[1]["role"], "assistant")
+        # The session date is the event time of the turn.
+        self.assertEqual(messages[0]["timestamp"], 1_704_186_000_000)
+
+    def test_undated_datasets_never_receive_a_made_up_timestamp(self) -> None:
+        # A fabricated date would be rendered into the evidence prefix and
+        # could put a date into the answer that nobody ever said.
+        with tempfile.TemporaryDirectory() as temp_dir:
+            dataset = HERE / "fixtures" / "retrieve" / "clbench.jsonl"
+            retrieve.run_benchmark("clbench", dataset, self.aml_client_small, Path(temp_dir) / "outputs")
+        add_requests = [payload for path, payload in self.server.requests if path == "/add"]
+        messages = [message for payload in add_requests for message in payload["messages"]]
+        self.assertTrue(messages)
+        for message in messages:
+            self.assertNotIn("timestamp", message)
+
+    def test_add_batches_follow_the_public_boundary(self) -> None:
+        batches = retrieve.aml_add_batches([{"role": "user", "content": "word"}] * 21)
+        self.assertEqual([len(batch) for batch in batches], [20, 1])
+        long_batch = retrieve.aml_add_batches([{"role": "user", "content": "w " * 1200}] * 3)
+        self.assertEqual([len(batch) for batch in long_batch], [1, 1, 1])
+
+    def test_the_default_top_k_matches_the_platform(self) -> None:
+        # The platform asks for up to 100 memories per question; a local run
+        # with fewer under-reports the submitted system.
+        self.assertEqual(retrieve.default_top_k(), 100)
+
     def test_clbench_single_message_splits_inline_context_and_task(self) -> None:
         row = {
             "metadata": {"task_id": "inline-task"},
@@ -512,14 +541,17 @@ class RetrieveFixtureTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             dataset = Path(temp_dir) / "CL-bench-Life.jsonl"
             dataset.write_text(json.dumps(row) + "\n", encoding="utf-8")
-            output = retrieve.run_benchmark("clbench", dataset, self.client, Path(temp_dir) / "outputs")
+            output = retrieve.run_benchmark("clbench", dataset, self.aml_client_small, Path(temp_dir) / "outputs")
 
             result = json.loads(output.read_text(encoding="utf-8"))
             self.assertEqual(result["question"], "What kind of desk do I use?")
 
-        add_requests = [payload for path, payload in self.server.requests if path == "/v1/raw-messages"]
-        search_requests = [payload for path, payload in self.server.requests if path == "/v1/search"]
-        self.assertEqual(add_requests[0]["messages"][0]["content"], "User: Historical note: I use a standing desk.")
+        add_requests = [payload for path, payload in self.server.requests if path == "/add"]
+        search_requests = [payload for path, payload in self.server.requests if path == "/search"]
+        # The role travels in the Add message, not as a prefix of the text:
+        # the adapter renders it as the speaker of the evidence.
+        self.assertEqual(add_requests[0]["messages"][0]["content"], "Historical note: I use a standing desk.")
+        self.assertEqual(add_requests[0]["messages"][0]["role"], "user")
         self.assertEqual(search_requests[0]["query"], "What kind of desk do I use?")
 
 
