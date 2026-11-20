@@ -23,15 +23,21 @@ import {
 	createIterativeRecallPlanner,
 } from "../search/iterative-recall";
 import { createUserVoiceRewriter } from "../search/query-rewriter";
+import { evaluateEmbeddingFingerprint } from "../search/utilities";
 import { RawMessageChildVectorIndex } from "../storage/raw-message-child-vector-index";
 import { createRawMessageStore } from "../storage/raw-message-store";
 import { isInsightSQLiteVecEnabled, searchInsightsWithSQLiteVec } from "../storage/sqlite-vector-index";
 
 export interface UnifiedArgs {
-	embeddingProvider: "local" | "openrouter" | "none";
+	embeddingProvider: "local" | "openrouter" | "openai-compatible" | "none";
 	embeddingModel?: string;
 	embeddingCacheDir?: string;
 	embeddingPooling?: "mean" | "cls";
+	/** Base URL of an OpenAI-compatible /embeddings endpoint (DashScope, OpenAI, vLLM, ...). */
+	embeddingBaseUrl?: string;
+	embeddingApiKey?: string;
+	/** Requested embedding width. Providers that support it (e.g. DashScope text-embedding-v4) honour it. */
+	embeddingDimensions?: number;
 	chunkMaxTokens?: number;
 	chunkOverlapTokens?: number;
 	rerankerProvider: "local" | "none";
@@ -146,6 +152,9 @@ export function unifiedArgsFromEnv(env: NodeJS.ProcessEnv = process.env): Unifie
 		embeddingProvider: (env.EMBEDDING_PROVIDER as UnifiedArgs["embeddingProvider"] | undefined) ?? "none",
 		embeddingModel: env.EMBEDDING_MODEL,
 		embeddingCacheDir: env.LOCAL_EMBEDDING_CACHE_DIR,
+		embeddingBaseUrl: env.EMBEDDING_BASE_URL,
+		embeddingApiKey: env.EMBEDDING_API_KEY,
+		embeddingDimensions: env.EMBEDDING_DIMENSIONS ? Number.parseInt(env.EMBEDDING_DIMENSIONS, 10) : undefined,
 		rerankerProvider: (env.RERANKER_PROVIDER as UnifiedArgs["rerankerProvider"] | undefined) ?? "none",
 		rerankerModel: env.LOCAL_RERANKER_MODEL,
 		rerankerCacheDir: env.LOCAL_RERANKER_CACHE_DIR,
@@ -209,6 +218,15 @@ export function applyUnifiedFlag(args: UnifiedArgs, arg: string, takeValue: () =
 			break;
 		case "--embedding-cache-dir":
 			args.embeddingCacheDir = takeValue();
+			break;
+		case "--embedding-base-url":
+			args.embeddingBaseUrl = takeValue();
+			break;
+		case "--embedding-api-key":
+			args.embeddingApiKey = takeValue();
+			break;
+		case "--embedding-dimensions":
+			args.embeddingDimensions = Number.parseInt(takeValue(), 10);
 			break;
 		case "--embedding-pooling":
 			args.embeddingPooling = takeValue() as UnifiedArgs["embeddingPooling"];
@@ -303,7 +321,12 @@ export function validateUnifiedArgs(args: UnifiedArgs, logPrefix = "[memory-stor
 			throw new Error(`${logPrefix} ${name} must be one of: ${allowed.join(", ")} (got "${value}")`);
 		}
 	};
-	validate("--embedding-provider", args.embeddingProvider, ["local", "openrouter", "none"]);
+	validate("--embedding-provider", args.embeddingProvider, [
+		"local",
+		"openrouter",
+		"openai-compatible",
+		"none",
+	]);
 	validate("--reranker-provider", args.rerankerProvider, ["local", "none"]);
 	validate("--memory-backend", args.memoryBackend, ["sqlite-vec", "chroma", "lancedb", "milvus", "none"]);
 	validate("--insights-backend", args.insightsBackend, ["sqlite-vec", "chroma", "none"]);
@@ -388,6 +411,22 @@ export function parseUnifiedArgs(argv: string[]): UnifiedArgs {
 	return args;
 }
 
+/**
+ * L2-normalize a vector.
+ *
+ * The vector stores compare vectors with a cosine distance that assumes unit
+ * length (`1 - d²/2`), so every provider has to hand over normalized
+ * vectors — the local one does it inside Transformers.js, an HTTP provider
+ * has to do it here.
+ */
+function l2Normalize(vector: number[]): number[] {
+	let sum = 0;
+	for (const value of vector) sum += value * value;
+	const norm = Math.sqrt(sum);
+	if (!Number.isFinite(norm) || norm === 0) return vector;
+	return vector.map((value) => value / norm);
+}
+
 export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps> {
 	const unified: UnifiedSearchDeps = {};
 	const log = (msg: string) => console.warn(`[memory-store/cli] ${msg}`);
@@ -467,6 +506,59 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			log("To fix: Ensure the model is downloaded or check your network connection to huggingface.co");
 			// Don't set unified.embedQuery - the system will fall back to lexical search
 		}
+	} else if (args.embeddingProvider === "openai-compatible") {
+		const baseURL = (args.embeddingBaseUrl ?? "").replace(/\/+$/, "");
+		if (!baseURL) {
+			throw new Error(
+				"--embedding-provider openai-compatible requires --embedding-base-url (or EMBEDDING_BASE_URL)",
+			);
+		}
+		const model = args.embeddingModel ?? "text-embedding-v4";
+		const endpoint = baseURL.endsWith("/embeddings") ? baseURL : `${baseURL}/embeddings`;
+		const apiKey = args.embeddingApiKey ?? process.env.EMBEDDING_API_KEY ?? "";
+		unified.embeddingInfo = { provider: "openai-compatible", model };
+		const embed = async (texts: string[]): Promise<number[][]> => {
+			const response = await fetch(endpoint, {
+				method: "POST",
+				headers: {
+					"content-type": "application/json",
+					...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+				},
+				body: JSON.stringify({
+					model,
+					input: texts,
+					...(args.embeddingDimensions ? { dimensions: args.embeddingDimensions } : {}),
+				}),
+			});
+			if (!response.ok) {
+				throw new Error(`openai-compatible embeddings failed: ${response.status} ${await response.text()}`);
+			}
+			const body = (await response.json()) as { data?: Array<{ index?: number; embedding?: number[] }> };
+			const data = body.data ?? [];
+			if (data.length !== texts.length) {
+				throw new Error(
+					`openai-compatible embeddings returned ${data.length} vectors for ${texts.length} inputs`,
+				);
+			}
+			const ordered = [...data].sort((left, right) => (left.index ?? 0) - (right.index ?? 0));
+			return ordered.map((item) => {
+				if (!Array.isArray(item.embedding)) {
+					throw new Error("openai-compatible embeddings response contained a vector without numbers");
+				}
+				return l2Normalize(item.embedding);
+			});
+		};
+		unified.embedQuery = async ({ query }) => {
+			const embedding = (await embed([query]))[0];
+			if (unified.embeddingInfo) unified.embeddingInfo.dimensions = embedding.length;
+			return embedding;
+		};
+		unified.embedDocuments = async ({ texts }) => {
+			const embeddings = await embed(texts);
+			if (embeddings[0] && unified.embeddingInfo) unified.embeddingInfo.dimensions = embeddings[0].length;
+			return embeddings;
+		};
+		log(`embedQuery wired via openai-compatible endpoint (model=${model}, endpoint=${endpoint})`);
 	} else if (args.embeddingProvider === "openrouter") {
 		const apiKey = process.env.OPENROUTER_API_KEY;
 		if (!apiKey) {
@@ -680,31 +772,41 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 			// biome-ignore lint/style/noNonNullAssertion: guarded above
 			const stats = await manager.getRawMessageSearchIndexStats!();
 			const embeddingDimensions = unified.embeddingInfo?.dimensions;
-			const dimensionMismatch =
-				embeddingDimensions !== undefined &&
-				stats.embeddingDimensions.length > 0 &&
-				!stats.embeddingDimensions.includes(embeddingDimensions);
+			const embeddingModel = unified.embeddingInfo?.model;
+			// Vectors written by a different model are not comparable with the
+			// current query vector, so the semantic channel has to report itself
+			// as not ready instead of returning quietly wrong neighbours.
+			const { dimensionMismatch, modelMismatch } = evaluateEmbeddingFingerprint({
+				model: embeddingModel,
+				dimensions: embeddingDimensions,
+				indexedModels: stats.embeddingModels,
+				indexedDimensions: stats.embeddingDimensions,
+			});
 			const semanticReady =
 				Boolean(unified.embedQuery) &&
 				(args.memoryBackend === "sqlite-vec" ? stats.semanticReady : stats.embeddedChunkCount > 0) &&
-				!dimensionMismatch;
+				!dimensionMismatch &&
+				!modelMismatch;
 			return {
 				backend: args.memoryBackend,
 				embeddingProvider: unified.embeddingInfo?.provider,
-				embeddingModel: unified.embeddingInfo?.model,
+				embeddingModel,
 				embeddingDimensions,
 				childCount: stats.chunkCount,
 				embeddedChildCount: stats.embeddedChunkCount,
 				indexedDimensions: stats.embeddingDimensions,
+				indexedEmbeddingModels: stats.embeddingModels,
 				semanticReady,
 				lexicalReady: stats.lexicalReady,
 				semanticDegradedReason: dimensionMismatch
 					? "semantic_dimension_mismatch"
-					: !unified.embedQuery
-						? "semantic_unavailable"
-						: stats.embeddedChunkCount === 0
-							? "semantic_child_vectors_empty"
-							: undefined,
+					: modelMismatch
+						? "semantic_model_mismatch"
+						: !unified.embedQuery
+							? "semantic_unavailable"
+							: stats.embeddedChunkCount === 0
+								? "semantic_child_vectors_empty"
+								: undefined,
 				rerankerProvider: unified.rerankerInfo?.provider,
 				rerankerModel: unified.rerankerInfo?.model,
 				rerankerReady: unified.rerankerInfo?.ready ?? false,
@@ -905,13 +1007,20 @@ export async function buildUnified(args: UnifiedArgs): Promise<UnifiedSearchDeps
 export function printUnifiedHelp(): void {
 	// biome-ignore lint/suspicious/noConsole: intentional CLI help output
 	console.log(`Embedding (wires unified.embedQuery):
-  --embedding-provider <name>     local | openrouter | none
+  --embedding-provider <name>     local | openrouter | openai-compatible | none
                                   (env: EMBEDDING_PROVIDER, default: none)
   --embedding-model <name>        Model name
   --embedding-pooling <mode>      Local mean (default) or cls pooling; BGE-M3 uses cls
                                   (env: EMBEDDING_MODEL; local → Xenova/all-MiniLM-L6-v2,
-                                  openrouter → text-embedding-3-small)
+                                  openrouter → text-embedding-3-small,
+                                  openai-compatible → text-embedding-v4)
 	--embedding-cache-dir <path>    Local embedding cache (env: LOCAL_EMBEDDING_CACHE_DIR)
+  --embedding-base-url <url>      OpenAI-compatible /embeddings base URL
+                                  (env: EMBEDDING_BASE_URL; e.g. DashScope
+                                  https://dashscope-intl.aliyuncs.com/compatible-mode/v1)
+  --embedding-api-key <key>       Bearer key for the endpoint above (env: EMBEDDING_API_KEY)
+  --embedding-dimensions <int>    Requested vector width (env: EMBEDDING_DIMENSIONS;
+                                  text-embedding-v4 supports 1024)
   --chunk-max-tokens <int>        Opt-in exact model-tokenizer document size (e.g. 384)
   --chunk-overlap-tokens <int>    Required overlap with --chunk-max-tokens (e.g. 64)
                                   Requires local embeddings; existing indexes are not migrated
