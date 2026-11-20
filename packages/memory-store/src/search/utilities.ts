@@ -81,22 +81,175 @@ export const HIT_CHANNELS: readonly HitChannel[] = [
 ] as const;
 
 /**
- * Derive simple lexical keywords from a query string. Splits on any
- * non-letter/non-digit Unicode boundary, lowercases, drops tokens
- * shorter than 2 chars, deduplicates in first-occurrence order, and caps
- * the unique list at 16. Used by the unified
- * search lexical sub-query and by the `derive` primitive's candidate
- * fetch fallback.
+ * English function words that carry no retrieval signal.
+ *
+ * A natural-language question is mostly function words. OR-ing them into
+ * the FTS5 query ("what OR did OR she OR say OR about ...") makes every
+ * document match and flattens the BM25 scores, so the lexical half of the
+ * hybrid stops discriminating. Negations ("not", "never", "without") and
+ * temporal words are deliberately *not* in this list: they change what the
+ * question is about.
+ *
+ * The last group is common conversational filler that carries no topic.
+ */
+const LEXICAL_STOP_WORDS = new Set(
+	"a about above after again against all also am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers herself him himself his how i if in into is it its itself just me more most my myself of off on once only or other our ours ourselves out over own same she should so some such than that the their theirs them themselves then there these they this those through to too under until up us very was we were what when where which while who whom whose why will with would you your yours yourself yourselves ask get give gonna hey hi know like look make many much please say tell thanks think want way well yeah yes".split(
+		/\s+/,
+	),
+);
+
+/** Words that keep their retrieval value even though they are short. */
+const LEXICAL_KEEP = new Set(
+	"am an as at be by do go he in is it me my no of on or so to up us we".split(/\s+/),
+);
+
+/** Words that answer "when" questions. Month and weekday names are here on
+ * purpose — a query's "May" is almost always the month, not the modal verb. */
+const LEXICAL_TEMPORAL = new Set(
+	"today yesterday tomorrow tonight week weeks month months year years day days hour hours minute minutes date time times morning afternoon evening night weekend monday tuesday wednesday thursday friday saturday sunday january february march april may june july august september october november december".split(
+		/\s+/,
+	),
+);
+
+const LEXICAL_KEYWORD_BUDGET = 16;
+
+interface QueryToken {
+	/** The token as it appears in the query. */
+	raw: string;
+	/** Lowercased token. */
+	lower: string;
+	/** True when the token looks like a name (capitalised, or all caps). */
+	name: boolean;
+	/** True for title-case tokens only ("Caroline", not "CAROLINE"). */
+	titleCase: boolean;
+}
+
+/**
+ * Split a query into tokens that keep their original case, so a name can be
+ * told apart from a common word that merely starts the sentence.
+ */
+function tokenizeQuery(query: string): QueryToken[] {
+	const tokens: QueryToken[] = [];
+	const parts = query.split(/[^\p{L}\p{N}]+/u);
+	for (const part of parts) {
+		if (!part) continue;
+		const lower = part.toLowerCase();
+		// "All caps" has to mean the token *has* case: a CJK run is equal to
+		// its own upper-case form and must not be mistaken for a name.
+		const isAllCaps =
+			part.length > 1 && part !== part.toLowerCase() && part === part.toUpperCase() && /[\p{L}]/u.test(part);
+		const startsUpper = /^\p{Lu}/u.test(part);
+		tokens.push({ raw: part, lower, name: isAllCaps || startsUpper, titleCase: startsUpper && !isAllCaps });
+	}
+	return tokens;
+}
+
+/**
+ * Derive lexical keywords from a query string.
+ *
+ * Function words are dropped, names are kept (and adjacent names are kept as
+ * a phrase, so "John Smith" is also searched as one term), and the result is
+ * capped. Used by the unified search lexical sub-query and by the `derive`
+ * primitive's candidate fetch fallback.
  */
 export function deriveLexicalKeywords(query: string): string[] {
-	return Array.from(
-		new Set(
-			query
-				.toLowerCase()
-				.split(/[^\p{L}\p{N}]+/u)
-				.filter((token) => token.length >= 2),
-		),
-	).slice(0, 16);
+	const tokens = tokenizeQuery(query);
+	if (tokens.length === 0) return [];
+
+	const meaningful: string[] = [];
+	const names: string[] = [];
+	// Adjacent capitalised tokens are one name: "John" + "Smith".
+	const phrases: string[] = [];
+	let phrase: string[] = [];
+
+	const flushPhrase = (): void => {
+		if (phrase.length >= 2) phrases.push(phrase.join(" "));
+		phrase = [];
+	};
+
+	for (const [index, token] of tokens.entries()) {
+		const isName =
+			token.name &&
+			!LEXICAL_STOP_WORDS.has(token.lower) &&
+			// A capitalised first word is usually just sentence case.
+			!(index === 0 && LEXICAL_STOP_WORDS.has(token.lower));
+		if (isName) {
+			names.push(token.lower);
+			// Only title-case words join a name phrase. An all-caps token is
+			// usually emphasis ("WITHOUT"), not the first half of a name.
+			if (token.titleCase) {
+				phrase.push(token.raw);
+				continue;
+			}
+			flushPhrase();
+			continue;
+		}
+		flushPhrase();
+		if (token.lower.length < 2) continue;
+		if (LEXICAL_STOP_WORDS.has(token.lower) && !LEXICAL_KEEP.has(token.lower)) continue;
+		meaningful.push(token.lower);
+	}
+	flushPhrase();
+
+	if (meaningful.length === 0 && names.length === 0) {
+		// Nothing but function words: fall back to every token so the lexical
+		// channel is not silently empty.
+		return Array.from(new Set(tokens.map((token) => token.lower).filter((token) => token.length >= 2))).slice(
+			0,
+			LEXICAL_KEYWORD_BUDGET,
+		);
+	}
+
+	const ordered = [
+		...phrases.map((value) => value.toLowerCase()),
+		...names,
+		...meaningful.filter((value) => !LEXICAL_TEMPORAL.has(value)),
+		...meaningful.filter((value) => LEXICAL_TEMPORAL.has(value)),
+	];
+	return Array.from(new Set(ordered)).slice(0, LEXICAL_KEYWORD_BUDGET);
+}
+
+/**
+ * The embedding fingerprint of the running model versus the vectors that are
+ * already in the index.
+ *
+ * Two vectors can only be compared when they were produced by the same model
+ * at the same width. A volume that was written by another model has to be
+ * reported as degraded instead of quietly answering with neighbours that
+ * only look similar.
+ */
+export interface EmbeddingFingerprint {
+	/** The model the running daemon embeds with. */
+	model?: string;
+	/** The width of the vectors the running daemon produces. */
+	dimensions?: number;
+	/** The distinct models that wrote the vectors in the index. */
+	indexedModels: string[];
+	/** The distinct widths of the vectors in the index. */
+	indexedDimensions: number[];
+}
+
+export interface EmbeddingFingerprintVerdict {
+	dimensionMismatch: boolean;
+	modelMismatch: boolean;
+	/** True when the index holds vectors the running model cannot compare. */
+	mismatch: boolean;
+}
+
+export function evaluateEmbeddingFingerprint(fingerprint: EmbeddingFingerprint): EmbeddingFingerprintVerdict {
+	// A *mixed* index is as broken as a foreign one: if even one row was
+	// written by another model, the neighbours coming from that row are not
+	// comparable with the running model's query vector. So the index has to
+	// be uniformly written by the running model — not merely contain it.
+	const dimensionMismatch =
+		fingerprint.dimensions !== undefined &&
+		fingerprint.indexedDimensions.length > 0 &&
+		!fingerprint.indexedDimensions.every((dimension) => dimension === fingerprint.dimensions);
+	const modelMismatch =
+		fingerprint.model !== undefined &&
+		fingerprint.indexedModels.length > 0 &&
+		!fingerprint.indexedModels.every((model) => model === fingerprint.model);
+	return { dimensionMismatch, modelMismatch, mismatch: dimensionMismatch || modelMismatch };
 }
 
 export type UnifiedMemoryReasoningStrategy = "none" | "rewrite" | "iterative" | "union";

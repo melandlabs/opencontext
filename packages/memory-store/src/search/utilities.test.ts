@@ -15,6 +15,7 @@ import {
 	type UnifiedMemorySearchInput,
 	type UnifiedMemorySearchResult,
 	deriveLexicalKeywords,
+	evaluateEmbeddingFingerprint,
 	listNameToChannel,
 	materializeSignals,
 	mergeUnifiedMemorySearchResults,
@@ -31,10 +32,10 @@ describe("deriveLexicalKeywords", () => {
 	it("preserves first occurrence, Unicode, numbers and negative terms", () => {
 		expect(deriveLexicalKeywords("NEVER never 2025 北京 北京 WITHOUT Alpha alpha")).toEqual([
 			"never",
-			"2025",
-			"北京",
 			"without",
 			"alpha",
+			"2025",
+			"北京",
 		]);
 	});
 
@@ -43,6 +44,102 @@ describe("deriveLexicalKeywords", () => {
 		expect(deriveLexicalKeywords(words.join(" "))).toEqual(words.slice(0, 16));
 		expect(deriveLexicalKeywords("A b x_n v2")).toEqual(["v2"]);
 		expect(deriveLexicalKeywords("")).toEqual([]);
+	});
+
+	it("drops the function words that dilute an OR query", () => {
+		const keywords = deriveLexicalKeywords("What did the user say about the invoice last month?");
+		expect(keywords).not.toContain("what");
+		expect(keywords).not.toContain("did");
+		expect(keywords).not.toContain("the");
+		expect(keywords).not.toContain("about");
+		expect(keywords).toContain("invoice");
+		expect(keywords).toContain("month");
+	});
+
+	it("keeps negations, because they change what the question asks", () => {
+		const keywords = deriveLexicalKeywords("which album did she NOT buy");
+		expect(keywords).toContain("not");
+		expect(keywords).toContain("buy");
+	});
+
+	it("keeps a name and searches it as a phrase as well", () => {
+		const keywords = deriveLexicalKeywords("Where did John Smith meet Caroline?");
+		expect(keywords).toContain("john smith");
+		expect(keywords).toContain("caroline");
+	});
+
+	it("does not read an emphasised word as the start of a name", () => {
+		const keywords = deriveLexicalKeywords("WITHOUT Alpha");
+		expect(keywords).not.toContain("without alpha");
+	});
+
+	it("falls back to the raw tokens when a query is only function words", () => {
+		const keywords = deriveLexicalKeywords("what is it");
+		expect(keywords.length).toBeGreaterThan(0);
+	});
+});
+
+describe("evaluateEmbeddingFingerprint", () => {
+	it("accepts an index written by the running model", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 384,
+			indexedModels: ["fixture-embedding"],
+			indexedDimensions: [384],
+		});
+		expect(verdict.mismatch).toBe(false);
+	});
+
+	it("reports a model mismatch, so the index is not searched with foreign vectors", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 384,
+			indexedModels: ["another-embedding"],
+			indexedDimensions: [384],
+		});
+		expect(verdict.modelMismatch).toBe(true);
+		expect(verdict.mismatch).toBe(true);
+	});
+
+	it("reports a dimension mismatch", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 1024,
+			indexedModels: ["fixture-embedding"],
+			indexedDimensions: [384],
+		});
+		expect(verdict.dimensionMismatch).toBe(true);
+	});
+
+	it("does not judge an empty index", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 384,
+			indexedModels: [],
+			indexedDimensions: [],
+		});
+		expect(verdict.mismatch).toBe(false);
+	});
+
+	it("reports a mixed index, even when the running model is part of it", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 384,
+			indexedModels: ["fixture-embedding", "another-embedding"],
+			indexedDimensions: [384],
+		});
+		expect(verdict.modelMismatch).toBe(true);
+		expect(verdict.mismatch).toBe(true);
+	});
+
+	it("reports mixed dimensions", () => {
+		const verdict = evaluateEmbeddingFingerprint({
+			model: "fixture-embedding",
+			dimensions: 384,
+			indexedModels: ["fixture-embedding"],
+			indexedDimensions: [384, 1024],
+		});
+		expect(verdict.dimensionMismatch).toBe(true);
 	});
 });
 
