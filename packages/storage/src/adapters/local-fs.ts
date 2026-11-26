@@ -4,11 +4,12 @@
  */
 
 import { existsSync, mkdirSync } from "node:fs";
-import { readFile, readdir, stat, unlink as unlinkCb, writeFile } from "node:fs";
+import { readFile, readdir, stat, unlink as unlinkCb } from "node:fs";
+import { rm, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
+import { pipeline } from "node:stream/promises";
 import { promisify } from "node:util";
 
-const writeFileAsync = promisify(writeFile);
 const unlinkAsync = promisify(unlinkCb);
 const readdirAsync = promisify(readdir);
 const statAsync = promisify(stat);
@@ -28,11 +29,17 @@ export type LocalFileMeta = {
 };
 
 /**
- * Upload file to local file system
+ * Upload file to local file system.
+ *
+ * `data` may be a stream (any async iterable of bytes, such as a Node
+ * `Readable`). Its chunks are written as they arrive, so a large upload never
+ * has to be held in memory as a whole. If the write fails part-way (for
+ * example the stream errors because the client disconnected), the partially
+ * written file is removed so a failed upload stores nothing.
  */
 export async function uploadToLocalFs(
 	pathname: string,
-	data: ArrayBuffer | Buffer,
+	data: ArrayBuffer | Buffer | AsyncIterable<Uint8Array>,
 	_contentType: string, // Kept for interface consistency, but not used for local file system
 	storageBasePath: string,
 ): Promise<LocalUploadResult> {
@@ -44,9 +51,19 @@ export async function uploadToLocalFs(
 		mkdirSync(dir, { recursive: true });
 	}
 
-	// Write file
-	const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
-	await writeFileAsync(fullPath, buffer);
+	// Write file. pipeline() takes over a stream source's errors the moment it
+	// is called, so a source that fails while the file is still being opened
+	// (e.g. the client disconnected) rejects this call instead of surfacing as
+	// an unhandled 'error' event that would crash the process. writeFile closes
+	// its file handle before it settles, and pipeline() waits for it, so the
+	// cleanup below never races a file that is opened after the failure.
+	const source = Symbol.asyncIterator in data ? data : [Buffer.isBuffer(data) ? data : Buffer.from(data)];
+	try {
+		await pipeline(source, (chunks: AsyncIterable<Uint8Array>) => writeFile(fullPath, chunks));
+	} catch (error) {
+		await rm(fullPath, { force: true });
+		throw error;
+	}
 
 	// Generate local access URL (using proxy API)
 	const downloadUrl = `/api/files/download?path=${encodeURIComponent(pathname)}`;
