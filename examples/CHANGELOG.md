@@ -1,5 +1,12 @@
 # @melandlabs/opencontext-examples
 
+## 0.3.16
+
+### Patch Changes
+
+- Updated dependencies [5c96e69]
+  - @melandlabs/storage@0.4.0
+
 ## 0.3.15
 
 ### Patch Changes
