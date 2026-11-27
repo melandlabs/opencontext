@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { Readable } from "node:stream";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
 	deleteFromLocalFs,
@@ -150,6 +151,40 @@ describe("local-fs adapter", () => {
 		expect(result.pathname).toBe("files/ab.bin");
 		const written = await fs.readFile(path.join(tempDir, "files/ab.bin"), "utf8");
 		expect(written).toBe("array buffer content");
+	});
+
+	it("streams a Readable to disk chunk by chunk", async () => {
+		const chunks = [Buffer.from("first "), Buffer.from("second "), Buffer.from("third")];
+		const result = await uploadToLocalFs("streams/node.txt", Readable.from(chunks), "text/plain", tempDir);
+
+		expect(result.pathname).toBe("streams/node.txt");
+		expect(result.url).toBe("/api/files/download?path=streams%2Fnode.txt");
+		const written = await fs.readFile(path.join(tempDir, "streams/node.txt"), "utf8");
+		expect(written).toBe("first second third");
+	});
+
+	it("leaves no file behind when the stream fails part-way", async () => {
+		async function* interrupted() {
+			yield Buffer.from("partial bytes");
+			throw new Error("client disconnected");
+		}
+
+		await expect(uploadToLocalFs("streams/broken.txt", interrupted(), "text/plain", tempDir)).rejects.toThrow(
+			"client disconnected",
+		);
+		expect(localFileExists("streams/broken.txt", tempDir)).toBe(false);
+	});
+
+	it("rejects instead of crashing when the stream errors before the file is open", async () => {
+		// A request body whose client disconnects while the target file is still
+		// being opened: nothing is iterating the stream yet, so an unhandled
+		// 'error' event would take down the whole process.
+		const body = new Readable({ read() {} });
+		const upload = uploadToLocalFs("streams/early.txt", body, "text/plain", tempDir);
+		body.destroy(new Error("aborted before open"));
+
+		await expect(upload).rejects.toThrow("aborted before open");
+		expect(localFileExists("streams/early.txt", tempDir)).toBe(false);
 	});
 
 	it("deletes an uploaded file", async () => {
